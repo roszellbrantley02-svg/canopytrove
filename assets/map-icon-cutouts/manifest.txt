@@ -1,0 +1,4 @@
+Cut from source sheets without labels/backgrounds.
+Icons: 4x4 sheet from image (5).svg
+Digits: sheet from image (6).svg
+Current pass uses tighter crop windows only. No app integration.

@@ -1,0 +1,93 @@
+import { StyleSheet } from 'react-native';
+import { colors, radii, spacing, typography } from '../../theme/tokens';
+
+export const styles = StyleSheet.create({
+  list: {
+    gap: spacing.lg,
+  },
+  contextBar: {
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceGlass,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
+  },
+  contextBarText: {
+    color: colors.accent,
+    fontSize: typography.caption,
+    fontWeight: '800',
+    lineHeight: 18,
+    letterSpacing: 0.3,
+  },
+  loadMoreButton: {
+    minHeight: 50,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 200, 106, 0.22)',
+    backgroundColor: 'rgba(245, 200, 106, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  loadMoreButtonDisabled: {
+    opacity: 0.72,
+  },
+  loadMoreButtonText: {
+    color: colors.goldSoft,
+    fontSize: typography.body,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  emptyState: {
+    gap: spacing.md,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceGlass,
+  },
+  emptyActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+  },
+  emptyActionButton: {
+    minHeight: 40,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.cardMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  emptyActionButtonText: {
+    color: colors.goldSoft,
+    fontSize: typography.caption,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  emptyTitle: {
+    color: colors.text,
+    fontSize: typography.title,
+    fontWeight: '900',
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: typography.body,
+    lineHeight: 23,
+  },
+});

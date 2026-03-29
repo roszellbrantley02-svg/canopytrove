@@ -1,0 +1,30 @@
+{
+  "name": "canopytrove-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "release:check": "tsx ./scripts/check-release-readiness.ts",
+    "test": "tsx --test src/**/*.test.ts",
+    "favorite-deals:dispatch": "tsx src/scripts/dispatchFavoriteDealAlerts.ts",
+    "smoke": "node ./scripts/smoke-api.mjs",
+    "benchmark": "node ./scripts/benchmark-storefront-api.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.7.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.5.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

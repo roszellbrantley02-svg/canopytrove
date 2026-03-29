@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Canopy Trove Brand Presentation</title>
+  <style>
+    :root {
+      --ink: #121614;
+      --ivory: #f3ebdd;
+      --green: #5e866e;
+      --gold: #c8a66a;
+      --mint: #9fd4ae;
+      --panel: #1a211d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--ink);
+      color: var(--ivory);
+      font-family: Arial, sans-serif;
+    }
+    .deck {
+      display: grid;
+      gap: 28px;
+      padding: 28px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    .slide {
+      min-height: 720px;
+      border-radius: 30px;
+      padding: 48px;
+      background:
+        radial-gradient(circle at top right, rgba(159, 212, 174, 0.12), transparent 26%),
+        radial-gradient(circle at bottom left, rgba(200, 166, 106, 0.10), transparent 30%),
+        var(--panel);
+      border: 1px solid rgba(243, 235, 221, 0.08);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25);
+    }
+    h1, h2, h3, p { margin: 0; }
+    .kicker {
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: rgba(243, 235, 221, 0.66);
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+    .title {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2.6rem, 5vw, 4.8rem);
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+      max-width: 9ch;
+      margin-bottom: 20px;
+    }
+    .body {
+      color: rgba(243, 235, 221, 0.78);
+      font-size: 20px;
+      line-height: 1.6;
+      max-width: 50ch;
+    }
+    .cols {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 32px;
+      height: 100%;
+    }
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+    .box {
+      border-radius: 24px;
+      border: 1px solid rgba(243, 235, 221, 0.08);
+      background: rgba(243, 235, 221, 0.03);
+      padding: 22px;
+    }
+    .box h3 {
+      margin-bottom: 8px;
+      font-size: 22px;
+    }
+    .muted {
+      color: rgba(243, 235, 221, 0.72);
+      line-height: 1.55;
+      font-size: 16px;
+    }
+    .palette {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 28px;
+    }
+    .swatch {
+      min-height: 180px;
+      border-radius: 22px;
+      padding: 18px;
+      display: flex;
+      align-items: end;
+      font-size: 13px;
+      border: 1px solid rgba(243, 235, 221, 0.08);
+    }
+    .icon-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .icon-card {
+      padding: 24px;
+      border-radius: 24px;
+      background: rgba(243, 235, 221, 0.03);
+      border: 1px solid rgba(243, 235, 221, 0.08);
+      text-align: center;
+    }
+    .icon-card img {
+      width: 180px;
+      height: 180px;
+      margin-bottom: 16px;
+    }
+    .phone {
+      width: 320px;
+      height: 650px;
+      border-radius: 42px;
+      padding: 24px;
+      background: linear-gradient(180deg, rgba(94, 134, 110, 0.18), rgba(18, 22, 20, 1));
+      border: 1px solid rgba(243, 235, 221, 0.08);
+      margin-top: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .phone:before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top center, rgba(200, 166, 106, 0.18), transparent 30%);
+    }
+    .brand-mark {
+      position: relative;
+      z-index: 1;
+      margin-top: 90px;
+      text-align: center;
+    }
+    .brand-mark img {
+      width: 128px;
+      height: 128px;
+    }
+    .brand-name {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 34px;
+      margin-top: 18px;
+      letter-spacing: -0.03em;
+    }
+    .subtitle {
+      margin-top: 10px;
+      color: rgba(243, 235, 221, 0.72);
+      font-size: 15px;
+    }
+    .footer-note {
+      position: absolute;
+      bottom: 28px;
+      left: 48px;
+      right: 48px;
+      color: rgba(243, 235, 221, 0.54);
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    @media (max-width: 980px) {
+      .cols, .icon-row, .palette { grid-template-columns: 1fr; }
+      .phone { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck">
+    <section class="slide">
+      <div class="kicker">Slide 1</div>
+      <div class="cols">
+        <div>
+          <h1 class="title">Canopy Trove brand direction.</h1>
+          <p class="body">
+            Canopy Trove is a curated shelter for legal cannabis discovery. It should feel trusted,
+            elevated, and welcoming, with enough warmth and fun to support badges, follows, deals,
+            and premium storefront status without turning cold or elitist.
+          </p>
+        </div>
+        <div class="stack">
+          <div class="box">
+            <h3>Tagline</h3>
+            <p class="muted">Where legal cannabis feels chosen.</p>
+          </div>
+          <div class="box">
+            <h3>App subtitle</h3>
+            <p class="muted">Dispensaries, deals, reviews</p>
+          </div>
+          <div class="box">
+            <h3>Brand promise</h3>
+            <p class="muted">Legal confidence with good energy.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer-note">Trusted discovery • premium energy • real personality</div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Slide 2</div>
+      <h2 class="title">Color system.</h2>
+      <p class="body">Warm premium, not cold luxury. The palette should support trust, curation, and celebratory highlights.</p>
+      <div class="palette">
+        <div class="swatch" style="background:#121614;color:#F3EBDD;">Near-black<br>#121614</div>
+        <div class="swatch" style="background:#F3EBDD;color:#121614;">Soft ivory<br>#F3EBDD</div>
+        <div class="swatch" style="background:#5E866E;color:#F3EBDD;">Canopy green<br>#5E866E</div>
+        <div class="swatch" style="background:#C8A66A;color:#121614;">Muted gold<br>#C8A66A</div>
+        <div class="swatch" style="background:#9FD4AE;color:#121614;">Badge green<br>#9FD4AE</div>
+      </div>
+      <div class="footer-note">Use gold for delight and badges, not overload</div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Slide 3</div>
+      <h2 class="title">Icon directions.</h2>
+      <div class="icon-row">
+        <div class="icon-card">
+          <img src="../assets/brand/canopy-trove/canopy-arc.svg" alt="Canopy Arc" />
+          <h3>Canopy Arc</h3>
+          <p class="muted">Best default. Strongest at app-icon size and easiest to scale.</p>
+        </div>
+        <div class="icon-card">
+          <img src="../assets/brand/canopy-trove/shelter-mark.svg" alt="Shelter Mark" />
+          <h3>Shelter Mark</h3>
+          <p class="muted">More editorial and premium. Strong for site, wordmark, and pitch use.</p>
+        </div>
+        <div class="icon-card">
+          <img src="../assets/brand/canopy-trove/crest-icon.svg" alt="Crest Icon" />
+          <h3>Crest Icon</h3>
+          <p class="muted">Best for owner-premium, verification, and higher-status moments.</p>
+        </div>
+      </div>
+      <div class="footer-note">Recommended launch mark: Canopy Arc</div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Slide 4</div>
+      <div class="cols">
+        <div>
+          <h2 class="title">Splash and app-store preview.</h2>
+          <p class="body">
+            The app launch should feel clean, dark, and memorable. Negative space matters more than
+            decoration. The icon should arrive like a discovered badge, not a loud promo card.
+          </p>
+          <div class="stack" style="margin-top:28px;">
+            <div class="box">
+              <h3>Splash line</h3>
+              <p class="muted">Where legal cannabis feels chosen.</p>
+            </div>
+            <div class="box">
+              <h3>Store tone</h3>
+              <p class="muted">Curated, social, premium, and legally grounded.</p>
+            </div>
+          </div>
+        </div>
+        <div class="phone">
+          <div class="brand-mark">
+            <img src="../assets/brand/canopy-trove/canopy-arc.svg" alt="Canopy Trove splash icon" />
+            <div class="brand-name">Canopy Trove</div>
+            <div class="subtitle">Dispensaries, deals, reviews</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer-note">Dark canvas • calm glow • one memorable mark</div>
+    </section>
+  </div>
+</body>
+</html>

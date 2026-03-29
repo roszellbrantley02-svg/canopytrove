@@ -1,0 +1,82 @@
+import { CollectionReference } from 'firebase-admin/firestore';
+import { getBackendFirebaseDb } from '../firebase';
+import { backendStorefrontSourceStatus } from '../sources';
+import { StorefrontRouteStateApiDocument } from '../types';
+
+const ROUTE_STATE_COLLECTION = 'route_state';
+
+const DEFAULT_ROUTE_STATE = (profileId: string): StorefrontRouteStateApiDocument => ({
+  profileId,
+  savedStorefrontIds: [],
+  recentStorefrontIds: [],
+  activeRouteSession: null,
+  routeSessions: [],
+  plannedRouteStorefrontIds: [],
+});
+
+const routeStateStore = new Map<string, StorefrontRouteStateApiDocument>();
+
+function getRouteStateCollection() {
+  const db = getBackendFirebaseDb();
+  if (!db || backendStorefrontSourceStatus.activeMode !== 'firestore') {
+    return null;
+  }
+
+  return db.collection(ROUTE_STATE_COLLECTION) as CollectionReference<StorefrontRouteStateApiDocument>;
+}
+
+function normalizeRouteState(routeState: StorefrontRouteStateApiDocument) {
+  const normalizedState: StorefrontRouteStateApiDocument = {
+    profileId: routeState.profileId,
+    savedStorefrontIds: Array.isArray(routeState.savedStorefrontIds)
+      ? routeState.savedStorefrontIds.slice(0, 64)
+      : [],
+    recentStorefrontIds: Array.isArray(routeState.recentStorefrontIds)
+      ? routeState.recentStorefrontIds.slice(0, 24)
+      : [],
+    activeRouteSession: routeState.activeRouteSession ?? null,
+    routeSessions: Array.isArray(routeState.routeSessions) ? routeState.routeSessions.slice(0, 12) : [],
+    plannedRouteStorefrontIds: Array.isArray(routeState.plannedRouteStorefrontIds)
+      ? routeState.plannedRouteStorefrontIds.slice(0, 12)
+      : [],
+  };
+
+  return normalizedState;
+}
+
+export async function getRouteState(profileId: string) {
+  const collectionRef = getRouteStateCollection();
+  if (collectionRef) {
+    const snapshot = await collectionRef.doc(profileId).get();
+    if (!snapshot.exists) {
+      return DEFAULT_ROUTE_STATE(profileId);
+    }
+
+    return normalizeRouteState(snapshot.data() as StorefrontRouteStateApiDocument);
+  }
+
+  return routeStateStore.get(profileId) ?? DEFAULT_ROUTE_STATE(profileId);
+}
+
+export async function saveRouteState(routeState: StorefrontRouteStateApiDocument) {
+  const normalizedState = normalizeRouteState(routeState);
+
+  const collectionRef = getRouteStateCollection();
+  if (collectionRef) {
+    await collectionRef.doc(routeState.profileId).set(normalizedState);
+    return normalizedState;
+  }
+
+  routeStateStore.set(routeState.profileId, normalizedState);
+  return normalizedState;
+}
+
+export async function deleteRouteState(profileId: string) {
+  const collectionRef = getRouteStateCollection();
+  if (collectionRef) {
+    await collectionRef.doc(profileId).delete();
+    return true;
+  }
+
+  return routeStateStore.delete(profileId);
+}

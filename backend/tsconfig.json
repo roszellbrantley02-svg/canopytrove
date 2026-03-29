@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "outDir": "dist"
+  },
+  "include": [
+    "src/**/*",
+    "scripts/**/*",
+    "../src/data/mockFirestoreSeed.ts",
+    "../src/adapters/firestoreDocumentAdapter.ts",
+    "../src/adapters/storefrontAdapter.ts",
+    "../src/data/mockStorefrontRecords.ts",
+    "../src/domain/canopyTroveGamification.ts",
+    "../src/types/firestoreDocuments.ts",
+    "../src/types/ownerPortal.ts",
+    "../src/types/storefront.ts",
+    "../src/types/storefrontRecord.ts",
+    "../src/utils/ownerPromotionPlacement.ts"
+  ]
+}

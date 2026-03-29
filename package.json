@@ -1,0 +1,51 @@
+{
+  "name": "canopytrove",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "test": "vitest run",
+    "backend": "npm --prefix backend run dev",
+    "backend:mock": "powershell -ExecutionPolicy Bypass -File ./scripts/start-backend.ps1 -Source mock",
+    "backend:firestore": "powershell -ExecutionPolicy Bypass -File ./scripts/start-backend.ps1 -Source firestore",
+    "dev:api": "powershell -ExecutionPolicy Bypass -File ./scripts/start-api-dev.ps1",
+    "generate:ocm-verified-seed": "node ./scripts/generate-ocm-verified-seed.mjs",
+    "check:all": "npx tsc --noEmit && npm --prefix backend run check",
+    "release:check": "node ./scripts/check-release-readiness.mjs && npm --prefix backend run release:check"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-navigation/bottom-tabs": "^7.15.7",
+    "@react-navigation/native": "^7.2.0",
+    "@react-navigation/native-stack": "^7.14.7",
+    "expo": "~55.0.9",
+    "expo-dev-client": "~55.0.19",
+    "expo-document-picker": "~55.0.9",
+    "expo-font": "~55.0.4",
+    "expo-image-picker": "~55.0.14",
+    "expo-linear-gradient": "~55.0.9",
+    "expo-location": "~55.1.4",
+    "expo-notifications": "~55.0.14",
+    "expo-status-bar": "~55.0.4",
+    "expo-task-manager": "~55.0.10",
+    "firebase": "^12.11.0",
+    "react": "19.2.0",
+    "react-native": "^0.83.4",
+    "react-native-gesture-handler": "~2.30.0",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-svg": "15.15.3"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "@types/react-test-renderer": "^19.1.0",
+    "react-test-renderer": "^19.2.0",
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.1"
+  },
+  "private": true
+}

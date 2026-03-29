@@ -1,0 +1,152 @@
+import { StyleSheet } from 'react-native';
+import { colors, radii, spacing, typography } from '../../theme/tokens';
+
+export const styles = StyleSheet.create({
+  list: {
+    gap: spacing.lg,
+  },
+  locationStateBar: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: 2,
+  },
+  locationStateLabel: {
+    color: colors.textSoft,
+    fontSize: typography.caption,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  locationStateValue: {
+    color: colors.text,
+    fontSize: typography.body,
+    fontWeight: '800',
+  },
+  locationPanel: {
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.card,
+  },
+  locationPanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  locationPanelTitleWrap: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  locationPanelTitle: {
+    color: colors.text,
+    fontSize: typography.section,
+    fontWeight: '800',
+  },
+  locationPanelSubtitle: {
+    color: colors.textMuted,
+    fontSize: typography.body,
+    lineHeight: 20,
+  },
+  closeButton: {
+    minHeight: 36,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  closeButtonText: {
+    color: colors.text,
+    fontSize: typography.caption,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  locationActionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  emptyState: {
+    gap: spacing.sm,
+    paddingVertical: spacing.xl,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+  },
+  emptyTitle: {
+    color: colors.text,
+    fontSize: typography.section,
+    fontWeight: '800',
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: typography.body,
+    lineHeight: 22,
+  },
+  errorText: {
+    color: colors.warning,
+    fontSize: typography.caption,
+    lineHeight: 18,
+    paddingTop: spacing.xs,
+  },
+  infoBanner: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  infoBannerText: {
+    color: colors.textMuted,
+    fontSize: typography.caption,
+    lineHeight: 18,
+    fontWeight: '700',
+  },
+  primaryButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: radii.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  secondaryButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  primaryButtonText: {
+    color: colors.background,
+    fontSize: typography.body,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  secondaryButtonText: {
+    color: colors.text,
+    fontSize: typography.body,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  buttonDisabled: {
+    opacity: 0.55,
+  },
+});

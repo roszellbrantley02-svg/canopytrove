@@ -1,0 +1,203 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        (request.auth.token.admin == true || request.auth.token.role == 'admin');
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function ownerProfileDoc(uid) {
+      return get(/databases/$(database)/documents/ownerProfiles/$(uid));
+    }
+
+    function userRole(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid))
+        ? userDoc(uid).data.role
+        : null;
+    }
+
+    function isOwner(uid) {
+      return isSelf(uid) && userRole(uid) == 'owner';
+    }
+
+    function ownsDispensary(dispensaryId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/dispensaries/$(dispensaryId)) &&
+        get(/databases/$(database)/documents/dispensaries/$(dispensaryId)).data.ownerUid == request.auth.uid;
+    }
+
+    function ownerVerified(uid) {
+      return exists(/databases/$(database)/documents/ownerProfiles/$(uid)) &&
+        ownerProfileDoc(uid).data.businessVerificationStatus == 'verified' &&
+        ownerProfileDoc(uid).data.identityVerificationStatus == 'verified';
+    }
+
+    function ownerSubscribed(uid) {
+      return exists(/databases/$(database)/documents/ownerProfiles/$(uid)) &&
+        ownerProfileDoc(uid).data.subscriptionStatus in ['trial', 'active'];
+    }
+
+    match /users/{uid} {
+      allow create: if isSelf(uid);
+      allow read, update: if isSelf(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /ownerProfiles/{uid} {
+      allow create: if isOwner(uid) || isAdmin();
+      allow read: if isSelf(uid) || isAdmin();
+      allow update: if isSelf(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /dispensaries/{dispensaryId} {
+      allow read: if resource.data.listingStatus in ['public', 'active'];
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (
+        ownsDispensary(dispensaryId) &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.licenseNumber == resource.data.licenseNumber &&
+        request.resource.data.licenseType == resource.data.licenseType &&
+        request.resource.data.claimStatus == resource.data.claimStatus &&
+        request.resource.data.averageRating == resource.data.averageRating &&
+        request.resource.data.reviewCount == resource.data.reviewCount
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /dispensaryClaims/{claimId} {
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        userRole(request.auth.uid) == 'owner';
+      allow read: if isAdmin() || (
+        isSignedIn() && resource.data.ownerUid == request.auth.uid
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    match /businessVerifications/{verificationId} {
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow read: if isAdmin() || (
+        isSignedIn() && resource.data.ownerUid == request.auth.uid
+      );
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /identityVerifications/{verificationId} {
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow read: if isAdmin() || (
+        isSignedIn() && resource.data.ownerUid == request.auth.uid
+      );
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /subscriptions/{subscriptionId} {
+      allow read: if isAdmin() || (
+        isSignedIn() && resource.data.ownerUid == request.auth.uid
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.provider == 'internal_prelaunch' &&
+        request.resource.data.status == 'trial' &&
+        request.resource.data.externalSubscriptionId == null &&
+        request.resource.data.cancelAtPeriodEnd == false;
+      allow update, delete: if isAdmin();
+    }
+
+    match /deals/{dealId} {
+      allow read: if resource.data.status == 'active' &&
+        resource.data.moderationStatus == 'approved';
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        ownsDispensary(request.resource.data.dispensaryId) &&
+        ownerVerified(request.auth.uid) &&
+        ownerSubscribed(request.auth.uid);
+      allow update: if isAdmin() || (
+        isSignedIn() &&
+        resource.data.ownerUid == request.auth.uid &&
+        ownsDispensary(resource.data.dispensaryId) &&
+        ownerVerified(request.auth.uid) &&
+        ownerSubscribed(request.auth.uid)
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /storefrontPhotos/{photoId} {
+      allow read: if (resource.data.approved == true && resource.data.moderationStatus == 'approved') ||
+        isAdmin() ||
+        (isSignedIn() && resource.data.ownerUid == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        ownsDispensary(request.resource.data.dispensaryId) &&
+        ownerVerified(request.auth.uid) &&
+        ownerSubscribed(request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    match /badges/{badgeId} {
+      allow read: if resource.data.active == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /badgeProgress/{ownerUid} {
+      allow read: if isSelf(ownerUid) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /ownerTasks/{taskId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /adminActions/{actionId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /analytics_events/{eventId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /analytics_daily_app_metrics/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /analytics_daily_storefront_metrics/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /analytics_daily_deal_metrics/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /analytics_daily_search_metrics/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /analytics_daily_signup_metrics/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /analytics_daily_query_metrics/{docId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

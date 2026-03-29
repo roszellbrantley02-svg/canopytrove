@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Canopy Trove Moodboard</title>
+  <style>
+    :root {
+      --ink: #121614;
+      --ivory: #f3ebdd;
+      --green: #5e866e;
+      --gold: #c8a66a;
+      --mint: #9fd4ae;
+      --panel: #1a211d;
+      --panel-soft: #202922;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(circle at top right, rgba(159, 212, 174, 0.12), transparent 32%),
+        radial-gradient(circle at bottom left, rgba(200, 166, 106, 0.10), transparent 28%),
+        var(--ink);
+      color: var(--ivory);
+    }
+    .wrap {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 48px 28px 72px;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 28px;
+      align-items: stretch;
+      margin-bottom: 28px;
+    }
+    .panel {
+      background: rgba(26, 33, 29, 0.84);
+      border: 1px solid rgba(243, 235, 221, 0.08);
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(10px);
+    }
+    h1, h2, h3, p { margin: 0; }
+    h1 {
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      line-height: 0.95;
+      margin-bottom: 18px;
+      letter-spacing: -0.03em;
+    }
+    .eyebrow, .chip {
+      display: inline-block;
+      border: 1px solid rgba(243, 235, 221, 0.14);
+      background: rgba(243, 235, 221, 0.03);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(243, 235, 221, 0.72);
+    }
+    .eyebrow { margin-bottom: 20px; }
+    .hero p {
+      font-family: Arial, sans-serif;
+      color: rgba(243, 235, 221, 0.78);
+      max-width: 52ch;
+      line-height: 1.55;
+      font-size: 17px;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+    .visual-card {
+      min-height: 420px;
+      background:
+        radial-gradient(circle at 50% 24%, rgba(159, 212, 174, 0.22), transparent 30%),
+        linear-gradient(160deg, rgba(94, 134, 110, 0.28), rgba(18, 22, 20, 0.92));
+      position: relative;
+      overflow: hidden;
+    }
+    .wordmark {
+      position: absolute;
+      inset: auto 28px 28px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+    }
+    .brand {
+      font-size: 38px;
+      letter-spacing: -0.03em;
+    }
+    .mini {
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(243, 235, 221, 0.64);
+    }
+    .icon {
+      position: absolute;
+      inset: 28px 28px auto auto;
+      width: 86px;
+      opacity: 0.95;
+      filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.35));
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .swatch {
+      border-radius: 18px;
+      padding: 16px;
+      min-height: 124px;
+      display: flex;
+      flex-direction: column;
+      justify-content: end;
+      border: 1px solid rgba(243, 235, 221, 0.08);
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+    }
+    .ui-card {
+      background: var(--panel-soft);
+      border-radius: 22px;
+      padding: 18px;
+      border: 1px solid rgba(243, 235, 221, 0.08);
+    }
+    .phone {
+      border-radius: 32px;
+      background: linear-gradient(180deg, rgba(94, 134, 110, 0.18), rgba(18, 22, 20, 1));
+      min-height: 360px;
+      padding: 18px;
+      border: 1px solid rgba(243, 235, 221, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+    .phone::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top center, rgba(200, 166, 106, 0.16), transparent 32%);
+      pointer-events: none;
+    }
+    .card {
+      background: rgba(243, 235, 221, 0.05);
+      border: 1px solid rgba(243, 235, 221, 0.08);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+      font-family: Arial, sans-serif;
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(200, 166, 106, 0.18);
+      color: var(--gold);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .headline {
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+    .muted {
+      font-family: Arial, sans-serif;
+      color: rgba(243, 235, 221, 0.68);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .cta {
+      display: inline-block;
+      margin-top: 14px;
+      background: var(--gold);
+      color: var(--ink);
+      font-family: Arial, sans-serif;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 12px 16px;
+    }
+    @media (max-width: 900px) {
+      .hero, .grid, .swatches { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="panel">
+        <span class="eyebrow">Canopy Trove Moodboard</span>
+        <h1>Warm premium, not cold luxury.</h1>
+        <p>
+          Canopy Trove should feel like a curated shelter for legal cannabis discovery:
+          trusted enough for first-time users, elevated enough for premium dispensaries,
+          and alive enough to keep the product social, celebratory, and worth returning to.
+        </p>
+        <div class="chips">
+          <span class="chip">trusted</span>
+          <span class="chip">elevated</span>
+          <span class="chip">welcoming</span>
+          <span class="chip">curated</span>
+          <span class="chip">celebratory</span>
+        </div>
+      </div>
+      <div class="panel visual-card">
+        <img class="icon" src="../assets/brand/canopy-trove/canopy-arc.svg" alt="Canopy Arc icon" />
+        <div class="wordmark">
+          <div>
+            <div class="mini">Consumer discovery brand</div>
+            <div class="brand">Canopy Trove</div>
+          </div>
+          <div class="mini">Where legal cannabis feels chosen.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Palette</h2>
+      <div class="swatches">
+        <div class="swatch" style="background:#121614;color:#F3EBDD;">Near-black<br>#121614</div>
+        <div class="swatch" style="background:#F3EBDD;color:#121614;">Soft ivory<br>#F3EBDD</div>
+        <div class="swatch" style="background:#5E866E;color:#F3EBDD;">Canopy green<br>#5E866E</div>
+        <div class="swatch" style="background:#C8A66A;color:#121614;">Muted gold<br>#C8A66A</div>
+        <div class="swatch" style="background:#9FD4AE;color:#121614;">Badge green<br>#9FD4AE</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel ui-card">
+        <h3>Consumer feel</h3>
+        <p class="muted">Safe enough for trust. Bright enough for fun. Refined without feeling exclusive or stiff.</p>
+      </div>
+      <div class="panel ui-card">
+        <h3>Owner feel</h3>
+        <p class="muted">A premium place to be seen, followed, reviewed, and chosen. Status comes through curation, not pretension.</p>
+      </div>
+      <div class="panel ui-card">
+        <h3>Avoid</h3>
+        <p class="muted">No map pins, no roads, no smoke, no weed clichés, no medical chill, no bargain-bin chaos.</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel phone">
+        <div class="badge">Select Store</div>
+        <div class="headline">Trusted dispensaries. Better vibes.</div>
+        <div class="card">
+          <strong>Platinum Badge</strong>
+          <div class="muted">A premium presentation system that still feels social and alive.</div>
+        </div>
+        <div class="card">
+          <strong>Deal pulse</strong>
+          <div class="muted">Live offers, curated cards, calm hierarchy, warmer energy.</div>
+        </div>
+        <span class="cta">Explore dispensaries</span>
+      </div>
+      <div class="panel phone">
+        <div class="badge">Owner premium</div>
+        <div class="headline">A better canopy for dispensaries.</div>
+        <div class="card">
+          <strong>Elevated listing</strong>
+          <div class="muted">Featured status should feel boutique, not corporate.</div>
+        </div>
+        <div class="card">
+          <strong>Analytics tone</strong>
+          <div class="muted">Calm, curated, and high-value instead of raw dashboards.</div>
+        </div>
+        <span class="cta">Claim your store</span>
+      </div>
+      <div class="panel phone">
+        <div class="badge">Brand outcome</div>
+        <div class="headline">A curated place for legal cannabis.</div>
+        <div class="card">
+          <strong>Shelter</strong>
+          <div class="muted">Canopy as a place people want to be under.</div>
+        </div>
+        <div class="card">
+          <strong>Discovery</strong>
+          <div class="muted">Trove as something worth finding, following, and joining.</div>
+        </div>
+        <span class="cta">Find your next spot</span>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

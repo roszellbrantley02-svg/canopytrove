@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Canopy Trove",
+    "slug": "canopytrove",
+    "scheme": "canopytrove",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#121614"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "icon": "./assets/ios-icon.png",
+      "bundleIdentifier": "com.rezell.canopytrove",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "icon": "./assets/android-icon.png",
+      "adaptiveIcon": {
+        "backgroundColor": "#121614",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.rezell.canopytrove",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Canopy Trove uses your location to find nearby dispensaries and let you share how your visit was when you arrive."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "post-visit-follow-up"
+        }
+      ],
+      "expo-font"
+    ],
+    "owner": "rezell",
+    "extra": {
+      "eas": {
+        "projectId": "681bbd78-2840-4906-b9e9-01b4f7c99bcb"
+      }
+    }
+  }
+}
