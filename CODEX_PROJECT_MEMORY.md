@@ -3163,3 +3163,59 @@ No product code changes were made during this follow-up audit phase.
 — Agent One
 
 **Memory file note**: Agent One placed this entry at line 730 (out of chronological order) and truncated the tail of the memory file (Agent Two's implementation report cut mid-sentence at Fix 2). Restored by Agent Two from git (commit f81d7b6) and appended here at the correct chronological position. This is the 13th truncation event for the memory file.
+
+---
+
+### Entry — Agent Two: Follow-Up Audit Implementation (Post-Write Decoupling)
+
+**Date**: 2026-04-03
+**Commit**: `ef923a4` — Decouple post-write detail fetch from community route responses
+**Trigger**: Agent One's focused follow-up audit identified that `getStorefrontDetail()` was still awaited unprotected after successful writes in 3 community routes, leaving the same class of post-write coupling that gamification had before.
+
+#### Fix — Decouple Detail Fetch from Community Write Responses
+
+**Problem**: After the gamification decoupling fix (`15392b4`), the community routes still had one remaining unprotected post-write dependency: `getStorefrontDetail(storefrontId)`. This call rehydrates the storefront detail for the response. If it threw (e.g., `StorefrontDataUnavailableError` for a storefront with summary but no detail, or any transient network/cache failure), the route would return a 500 even though the review/report/vote was already persisted. Same user confusion pattern as the gamification bug.
+
+**Solution**: Wrapped all 3 `getStorefrontDetail()` calls in try/catch. On failure, `detail` is set to `null` and the error is logged. The response still returns 200 because the primary write succeeded.
+
+**File changed**: `backend/src/routes/communityRoutes.ts`
+
+- **Review submission** (~line 106): `const detail = await getStorefrontDetail(...)` → try/catch, logs `[community] post-write detail refresh failed for review_submitted:`
+- **Review update** (~line 180): same pattern, logs `review_updated`
+- **Helpful vote** (~line 390): `detail: await getStorefrontDetail(...)` inline in response → extracted to variable with try/catch, logs `helpful_vote`
+
+All three log `[community] post-write detail refresh failed for {action}:` on failure.
+
+#### Test Coverage Note
+
+Agent One's finding 2 (Medium) identified no regression test coverage for the post-write failure path. After investigation, the existing test architecture (integration tests via `startTestServer()` with module-level imports) makes it impractical to inject a `getStorefrontDetail` failure without significant test infrastructure changes. The `getStorefrontDetail` function returns `null` for unknown storefronts (doesn't throw), so testing the `throw` path requires a storefront with a summary but no detail record in the mock source, which isn't straightforward to set up.
+
+The code fix is verified by TypeScript compilation and manual code review. A proper failure-injection regression test would require one of:
+- dependency injection at the route level (not currently supported)
+- a mock service layer that can be configured to throw on demand
+- a test-only mode that forces `getStorefrontDetail` to reject
+
+This is noted as a known test gap. The code pattern is identical to the already-validated gamification try/catch pattern from the previous fix.
+
+#### Agent One's Finding 3 (Owner-Entry Routing Tests) — Deferred
+
+App-side regression tests for owner-entry/profile routing and demo gating would require a React Native test harness with navigation mocking. This is a meaningful gap but is test infrastructure work, not a code behavior fix. Deferred to a future session.
+
+#### Verification
+
+- `npx tsc --noEmit` (frontend) — clean compile
+- `npx tsc -p tsconfig.json --noEmit` (backend) — clean compile
+- Backend changes take effect on next backend restart/deploy
+
+#### Git History at This Point
+
+```
+ef923a4 Decouple post-write detail fetch from community route responses
+346e58f Reposition Agent One's follow-up audit entry chronologically, restore truncated memory tail
+15392b4 Fix 4 high/medium findings from broad repo audit
+f58774c Reposition Agent One's broad repo audit entry chronologically, restore truncated memory tail
+f81d7b6 Append broad repo audit implementation report to project memory
+38aa7b8 Implement all 4 UI audit fixes
+```
+
+— Agent Two
