@@ -11,7 +11,7 @@ import { getOwnerPortalAccessState } from '../../services/ownerPortalService';
 import type { CanopyTroveAuthSession } from '../../types/identity';
 import type { RootStackParamList } from '../../navigation/RootNavigator';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ownerPortalPreviewEnabled } from '../../config/ownerPortalConfig';
+
 
 type UseProfileActionsArgs = {
   authSession: CanopyTroveAuthSession;
@@ -158,13 +158,7 @@ export function useProfileActions({
     openOwnerSignIn: () => {
       navigation.navigate('OwnerPortalAccess');
     },
-    openOwnerPortal: () =>
-      navigation.navigate(
-        ownerPortalPreviewEnabled && ownerPortalAccess.enabled
-          ? 'OwnerPortalHome'
-          : 'OwnerPortalAccess',
-        ownerPortalPreviewEnabled && ownerPortalAccess.enabled ? { preview: true } : undefined,
-      ),
+    openOwnerPortal: () => navigation.navigate('OwnerPortalAccess'),
     saveDisplayName: () => {
       void handleSaveDisplayName();
     },

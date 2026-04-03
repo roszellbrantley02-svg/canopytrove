@@ -276,11 +276,11 @@ export function ProfileAccountSection({
           </View>
           <View style={styles.accountSnapshotCard}>
             <Text style={styles.accountSnapshotValue}>
-              {ownerPortalEnabled ? 'Ready' : 'Locked'}
+              {ownerPortalEnabled ? 'Available' : 'Locked'}
             </Text>
             <Text style={styles.accountSnapshotLabel}>Business portal</Text>
             <Text style={styles.accountSnapshotBody}>
-              {ownerPortalEnabled ? 'Active and connected.' : 'Not enabled.'}
+              {ownerPortalEnabled ? 'Sign in to connect your business.' : 'Not enabled.'}
             </Text>
           </View>
         </View>

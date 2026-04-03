@@ -103,17 +103,22 @@ communityRoutes.post('/storefront-details/:storefrontId/reviews', async (request
     },
   });
 
-  const [detail, rewardResult] = await Promise.all([
-    getStorefrontDetail(storefrontId),
-    applyGamificationEvent(input.profileId, {
+  const detail = await getStorefrontDetail(storefrontId);
+
+  // Gamification is a side effect — must not fail the primary write response
+  let rewardResult: Awaited<ReturnType<typeof applyGamificationEvent>> | null = null;
+  try {
+    rewardResult = await applyGamificationEvent(input.profileId, {
       activityType: 'review_submitted',
       payload: {
         rating: input.rating,
         textLength: input.text.length,
         photoCount: reviewSubmission.photoModeration?.submittedCount ?? review.photoCount,
       },
-    }),
-  ]);
+    });
+  } catch (gamificationError) {
+    console.error('[community] gamification side effect failed for review_submitted:', gamificationError);
+  }
 
   response.json({
     detail,
@@ -307,9 +312,16 @@ communityRoutes.post(
 
     await ensureProfileWriteAccess(request, input.profileId);
     const report = await submitStorefrontReport(input);
-    const rewardResult = await applyGamificationEvent(input.profileId, {
-      activityType: 'report_submitted',
-    });
+
+    // Gamification is a side effect — must not fail the primary write response
+    let rewardResult: Awaited<ReturnType<typeof applyGamificationEvent>> | null = null;
+    try {
+      rewardResult = await applyGamificationEvent(input.profileId, {
+        activityType: 'report_submitted',
+      });
+    } catch (gamificationError) {
+      console.error('[community] gamification side effect failed for report_submitted:', gamificationError);
+    }
 
     void notifyOwnersOfStorefrontActivity({
       storefrontId,
@@ -348,17 +360,22 @@ communityRoutes.post('/storefront-details/:storefrontId/reviews/:reviewId/helpfu
 
   invalidateCachedStorefrontDetail(storefrontId);
 
+  // Gamification is a side effect — must not fail the primary write response
   if (
     helpfulResult.didApply &&
     helpfulResult.reviewAuthorProfileId &&
     helpfulResult.reviewAuthorProfileId !== body.profileId
   ) {
-    await applyGamificationEvent(helpfulResult.reviewAuthorProfileId, {
-      activityType: 'helpful_vote_received',
-      payload: {
-        count: 1,
-      },
-    });
+    try {
+      await applyGamificationEvent(helpfulResult.reviewAuthorProfileId, {
+        activityType: 'helpful_vote_received',
+        payload: {
+          count: 1,
+        },
+      });
+    } catch (gamificationError) {
+      console.error('[community] gamification side effect failed for helpful_vote_received:', gamificationError);
+    }
   }
 
   response.json({
