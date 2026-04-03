@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+
+if [ "${CANOPYTROVE_ENABLE_LINT_STAGED:-0}" != "1" ]; then
+  echo "Skipping lint-staged pre-commit in the current large worktree."
+  echo "Run 'npm run precheck' or 'npm run check:all' manually before commit."
+  echo "Set CANOPYTROVE_ENABLE_LINT_STAGED=1 to re-enable this hook."
+  exit 0
+fi
+
+npx lint-staged
