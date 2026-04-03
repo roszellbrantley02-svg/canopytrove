@@ -22,6 +22,19 @@ function buildAddressDestination(
   return parts.join(', ');
 }
 
+async function tryOpenUrl(url: string) {
+  if (!(await Linking.canOpenURL(url))) {
+    return false;
+  }
+
+  try {
+    await Linking.openURL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function openStorefrontRoute(
   storefront: Pick<
     StorefrontSummary,
@@ -53,8 +66,8 @@ export async function openStorefrontRoute(
 
   const addressDestination = buildAddressDestination(storefront);
   const encodedAddress = encodeURIComponent(addressDestination);
-  const encodedLabel = encodeURIComponent(storefront.displayName);
   const coordinateFallback = `${storefront.coordinates.latitude},${storefront.coordinates.longitude}`;
+  const coordinateFallbackUrl = `https://www.google.com/maps/dir/?api=1&destination=${coordinateFallback}&travelmode=driving`;
 
   // Prefer address-based destination so the maps app resolves the actual
   // building location rather than relying on our geocoded coordinates.
@@ -76,13 +89,16 @@ export async function openStorefrontRoute(
 
   const preferredUrl = routeMode === 'verified' ? nativeRouteUrl : webRouteUrl;
 
-  if (await Linking.canOpenURL(preferredUrl)) {
-    await Linking.openURL(preferredUrl);
+  if (await tryOpenUrl(preferredUrl)) {
     return;
   }
 
-  // Final fallback: use raw coordinates if address-based URL fails to open.
-  await Linking.openURL(
-    `https://www.google.com/maps/dir/?api=1&destination=${coordinateFallback}&travelmode=driving`
-  );
+  // Address-based web route as second attempt.
+  if (preferredUrl !== webRouteUrl && (await tryOpenUrl(webRouteUrl))) {
+    return;
+  }
+
+  // Final fallback: use raw coordinates if address-based URLs fail.
+  await Linking.openURL(coordinateFallbackUrl);
 }
+ 

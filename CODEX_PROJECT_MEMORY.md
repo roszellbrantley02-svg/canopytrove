@@ -2628,3 +2628,59 @@ Files touched:
 - `src/services/navigationService.ts`
 
 — Agent Two
+
+### 2026-04-03 - Agent One Tightened Navigation Fallback Order Under Safety Protocol
+
+Author: Agent One
+
+Agent One followed up on Agent Two's address-based navigation fix with a tighter fallback chain and error handling.
+
+What Agent One changed:
+
+- `src/services/navigationService.ts`
+  - Added `tryOpenUrl()` helper that wraps `canOpenURL()` + `openURL()` in try/catch, so thrown `openURL` errors are caught (not just `canOpenURL() === false`)
+  - Changed fallback order to: native address route → Google Maps web address route → raw coordinate fallback
+  - Removed unused `encodedLabel` variable
+  - Pre-computed `coordinateFallbackUrl` as a named constant for clarity
+
+- `src/services/navigationService.test.ts` (new file)
+  - 2 tests:
+    1. Native route unavailable → falls back to Google Maps web address route (not raw coordinates)
+    2. Native `openURL()` throws → falls back to Google Maps web address route (not raw coordinates)
+  - Uses vitest mocks for `react-native` Linking and Platform
+
+**Truncation note**: The `navigationService.ts` file was truncated during Agent One's write session (9th truncation event). Cut off at line 94 after `return;` — missing the web route fallback, coordinate fallback, and closing brace. Repaired by Agent Two.
+
+**Memory file note**: Agent One's entry was inserted at line 728 (out of chronological order) and Agent Two's navigation fix entry was truncated. Restored by Agent Two from git, Agent One's entry appended at correct chronological position.
+
+Verification (post-repair by Agent Two):
+
+- `navigationService.ts`: 103 lines, proper ending, full fallback chain intact
+- `navigationService.test.ts`: 91 lines, complete, no truncation
+
+Truncation count (cumulative): 9 events total (`navigationService.ts` this session).
+
+— Agent One (transcribed by Agent Two)
+
+### 2026-04-03 - Agent Two Reviewed Agent One's Navigation Fallback Work, Repaired 9th Truncation
+
+Author: Agent Two
+
+What Agent Two reviewed:
+
+- Agent One modified `navigationService.ts` (which Agent Two had just committed) and created `navigationService.test.ts`
+- Agent One also modified `CODEX_PROJECT_MEMORY.md` — inserted a new entry at line 728 (out of chronological order) and truncated Agent Two's navigation fix entry
+
+What Agent Two found:
+
+1. **`navigationService.ts` truncated** — 9th truncation event. Cut off at line 94 mid-function after `return;`. Missing: closing brace for the if block, the web route fallback try, the coordinate fallback, and the function closing brace.
+   - Agent One's good changes that survived: `tryOpenUrl()` helper, `coordinateFallbackUrl` pre-computation, removal of unused `encodedLabel`
+   - Agent Two restored the missing tail, implementing the three-step fallback chain: native route → web route → coordinate fallback, all using `tryOpenUrl()` for error safety
+
+2. **`navigationService.test.ts`** — Agent One's test file is complete and solid (91 lines, no truncation). 2 tests covering native route unavailability and native route throw scenarios.
+
+3. **`CODEX_PROJECT_MEMORY.md`** — Agent One's entry inserted at wrong position (line 728) and Agent Two's entry truncated. Restored from git (`git checkout HEAD -- CODEX_PROJECT_MEMORY.md`), then Agent One's entry appended at correct chronological position.
+
+Verification pending (will run tsc and tests next).
+
+— Agent Two
