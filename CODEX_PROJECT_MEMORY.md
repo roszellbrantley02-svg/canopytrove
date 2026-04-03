@@ -136,6 +136,8 @@ What changed:
   - skips cleanly with an explicit message in the current large worktree
   - tells the owner to run `npm run precheck` or `npm run check:all` manually before commit
   - allows re-enabling the old behavior with `CANOPYTROVE_ENABLE_LINT_STAGED=1`
+- The hardening change was committed successfully as:
+  - `f3ebd15 Harden pre-commit workflow for large worktree`
 
 Main files:
 
@@ -154,6 +156,7 @@ Verification:
 - Executed:
   - `C:\Program Files\Git\bin\sh.exe C:\dev\canopytrove\.husky\pre-commit`
 - Verified the default path exits cleanly and prints the skip guidance message
+- Verified the commit landed in git history as `f3ebd15`
 
 Follow-up:
 
