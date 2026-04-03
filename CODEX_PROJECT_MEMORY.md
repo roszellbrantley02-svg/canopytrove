@@ -2803,3 +2803,74 @@ Role note: Agent One completed audit/review/diagnosis only. Agent Two should use
 No code changes were made during this audit phase.
 
 — Agent One (repositioned by Agent Two)
+
+---
+
+### Entry — Agent Two: UI Audit Implementation (All 4 Fixes)
+
+**Date**: 2026-04-03
+**Commit**: `38aa7b8` — Implement all 4 UI audit fixes: card containment, profile language, demo quarantine, owner home wording
+**Trigger**: Agent One's consolidated UI audit brief (entry above) identified 4 ranked fix phases. User directed Agent Two to implement all 4 and commit to memory.
+
+#### Fix 1 — Storefront Card Containment
+
+**Problem**: StorefrontRouteCard rendered as stacked slabs (preview image + body) with independent backgrounds, shadows, and borders, making it look like two separate components instead of one card.
+
+**Solution**: Unified into a single card shell with `overflow: 'hidden'`.
+
+**Files changed**:
+
+- `src/components/storefrontRouteCard/storefrontRouteCardStyles.ts` — card got bg/border/shadow/overflow; previewWrap and body stripped to sit flush inside; added card-level tone styles (cardHotDeal, cardOwnerFeatured, cardSaved, cardVisited, cardNewToYou); body-level tones made transparent
+- `src/components/StorefrontRouteCard.tsx` — added cardToneStyleMap mapping StorefrontCardVisualLane to card-level tone styles, applied to outer Pressable
+- `src/components/mapGridPreview/mapGridPreviewStyles.ts` — removed shadow from shell (outer card handles it)
+
+#### Fix 2 — Member Profile Language Cleanup
+
+**Problem**: ProfileIdentitySections used internal/developer labels that don't read as customer-facing product UI.
+
+**Solution**: Replaced all internal labels with member-facing language.
+
+**File changed**: `src/screens/profile/ProfileIdentitySections.tsx`
+
+- "Account and identity" → "Account"
+- "Manage your member sign-in, display name, and owner access." → "Manage your sign-in, display name, and business portal access."
+- "Review name" → "Public name", "Shown on reviews." → "Shown on your reviews."
+- "Owner tools" → "Business portal", "Managed in owner access." → "Active and connected."
+- "Owner preview workspace" → "Demo mode (internal)", added "For internal and App Review use only."
+- "Open Preview Workspace" → "Open Demo Mode"
+
+#### Fix 3 — Quarantine Preview/Demo Wording
+
+**Problem**: Preview/demo paths presented as ordinary product features alongside live business access.
+
+**Solution**: Explicitly labeled all preview paths as "Demo mode (internal)" and separated them visually.
+
+**Files changed**:
+
+- `src/screens/OwnerPortalAccessScreen.tsx` — "Live owner workspace" → "Business portal"; "Preview workspace" → "Demo mode (internal)"; "Open Preview Workspace" → "Open Demo Mode"; updated section body and CTA labels
+- `src/screens/OwnerPortalPromotionsScreen.tsx` — line 184: 'Preview campaign planning' → 'Demo mode', 'Live owner workspace' → 'Business portal'
+
+#### Fix 4 — Owner Home Wording Cleanup
+
+**Problem**: Owner home screen used internal ops/workflow language instead of merchant-facing product language.
+
+**Solution**: Translated all labels to merchant-facing terminology.
+
+**Files changed**:
+
+- `src/screens/OwnerPortalHomeScreen.tsx` — "Owner preview workspace" → "Demo mode"; "Owner dashboard" → "Business dashboard"; headerPill: "Preview" → "Demo", "Owner" → "Business"; "Owner record" → "Business account"; "Continue flow" → "Continue setup"; "Runtime and AI" → "System status"; "Owner AI action plan" → "Recommendations"
+- `src/screens/ownerPortal/ownerPortalHomeData.ts` — "Plan Access" → "Subscription"; updated body copy
+- `src/screens/ownerPortal/ownerPortalHomeShared.ts` — "Plan access" → "Subscription"; "Open Plan Access" → "Open Subscription"; updated body copy
+- `src/screens/ownerPortal/OwnerPortalLicenseComplianceCard.tsx` — "Owner record identifier" → "Business license ID"
+
+#### Verification
+
+- `npx tsc --noEmit` — clean compile, zero errors across all 10 changed files
+- All changes are purely cosmetic string/style changes; no logic, navigation, or data flow was altered
+- EAS preview build required for changes to appear on device
+
+#### What's Next
+
+User wants to audit another section of the app. All 4 phases from Agent One's brief are now implemented and committed. Ready for the next audit target.
+
+— Agent Two
