@@ -160,3 +160,4 @@ export type ImageStyle = any;
 export type ColorValue = string;
 export type GestureResponderEvent = any;
 export type LayoutChangeEvent = any;
+export type NativeSyntheticEvent<T = any> = any;

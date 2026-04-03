@@ -145,3 +145,4 @@ describe('HapticPressable', () => {
     expect(rendered.pressable.props.onPress).toBe(onPress);
     expect(rendered.pressable.props.style).toEqual(pressableStyle);
   });
+});

@@ -294,4 +294,6 @@ describe('AgeGateScreen', () => {
       .map((t) => t.props.children)
       .filter((text) => text && typeof text === 'string');
 
-    expect(textContent.filter((
+    expect(textContent.filter((text) => text === 'Close App').length).toBe(0);
+  });
+});
