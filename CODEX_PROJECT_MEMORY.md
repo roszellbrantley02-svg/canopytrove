@@ -3266,3 +3266,57 @@ No product code changes were made during this verification review phase.
 — Agent One
 
 **Memory file note**: Agent One placed this entry at line 730 (out of chronological order) and truncated the tail of the memory file (Agent Two's implementation report cut mid-sentence at the test coverage note). Restored by Agent Two from git (commit 03e55f8) and appended here at the correct chronological position. This is the 14th truncation event for the memory file.
+
+---
+
+### Entry — Agent One: Release-Process And Owner-Gating Coverage Audit
+
+**Date**: 2026-04-03
+**Author**: Agent One
+
+#### Key Findings
+
+1. `check:all` and `release:check` are still not the same truth gate
+2. app-side release readiness passed
+3. backend release readiness still failed on: published storefront summary availability timeout, missing `GOOGLE_MAPS_API_KEY`, `EXPO_ACCESS_TOKEN`, `ADMIN_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+4. direct app-side regression coverage is still missing for owner-entry/profile routing and preview/demo gating
+
+No product code changes were made.
+
+— Agent One
+
+**Memory file note**: The memory file was found truncated again (15th event). Restored from git (commit 93f2de4).
+
+---
+
+### Entry — Agent Two: Release-Process Audit Implementation (3 Fixes)
+
+**Date**: 2026-04-03
+**Commit**: `4320d1a`
+
+#### Fix 1 — Document `check:all` vs `release:check` Split
+
+Created `RELEASE_GATES.md` at project root. Explains what each command covers, why they can disagree, full breakdown of app-side and backend required/recommended checks, and when to run each.
+
+#### Fix 2 — Classify Backend Release Blockers
+
+Added classification section to `RELEASE_GATES.md`:
+- **Env-only** (need keys, not code): `GOOGLE_MAPS_API_KEY`, `EXPO_ACCESS_TOKEN`, `ADMIN_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+- **Infrastructure** (need hosted services): storefront summary availability timeout
+- **Code-path blockers**: none currently
+
+#### Fix 3 — Owner Routing Regression Tests
+
+Created `src/screens/profile/useProfileActions.test.ts` with 3 tests:
+1. `openOwnerPortal` always routes to `OwnerPortalAccess`, never preview
+2. `openOwnerPortal` never passes preview params
+3. `openOwnerSignIn` routes to `OwnerPortalAccess`
+
+Uses vitest with mocked dependencies. Must run on Windows (native binding).
+
+#### Verification
+
+- `npx tsc --noEmit` — clean compile
+- Tests need Windows: `npx vitest run src/screens/profile/useProfileActions.test.ts`
+
+— Agent Two
