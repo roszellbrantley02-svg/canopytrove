@@ -47,7 +47,7 @@ Purpose: persistent working memory for this repo so future Codex sessions can re
 
 5. **Local `release:check` backend failures are expected** — they read from local env which is now scrubbed. The hosted backend has the secrets and is serving.
 
-### Honest Assessment (updated after commits `d99a7d7` and `d116d78`)
+### Honest Assessment (updated after commits `d99a7d7`, `d116d78`, `3677fd0`)
 
 **What's solid:**
 
@@ -57,7 +57,7 @@ Purpose: persistent working memory for this repo so future Codex sessions can re
 - App-side release check is fully green (23/23)
 - Backend is deployed and healthy on Cloud Run with secrets wired
 - All changes are committed — worktree is clean (only untracked: `canopy-trove-product-readiness.docx`)
-- Commits: `d99a7d7` (test fixes + config + packages), `d116d78` (memory fix)
+- Commits: `d99a7d7` (test fixes + config + packages), `d116d78` (memory tail fix), `3677fd0` (memory front matter fix)
 
 **What's still open / why confidence isn't 100%:**
 
@@ -3587,8 +3587,13 @@ All values set to empty. Non-secret config (PORT, CORS_ORIGIN, model name, email
 - **Finding inner elements**: `findByProps` finds the component receiving the prop. For host elements rendered by the component, use `findByType()`.
 - **Mock completeness**: When `vi.mock('react-native')` overrides the Vite resolveId plugin, the mock must export EVERY API the component uses — check imports in the source file.
 
-#### Worktree State After Commit `d99a7d7`
+#### Worktree State After Commit `3677fd0`
 
-Worktree is clean. Only untracked file is `canopy-trove-product-readiness.docx` (standalone deliverable, not source code). All test fixes, eslint config, formatting, and memory updates are committed.
+Worktree is clean. `git diff HEAD` shows no changes for any source files. Only untracked file is `canopy-trove-product-readiness.docx` (standalone deliverable, not source code, not gitignored). All test fixes, eslint config, formatting, and memory updates are committed.
+
+Commit chain:
+- `d99a7d7` — test fixes, eslint config, vitest setup, packages, react-native mock
+- `d116d78` — fixed truncated memory tail (16th truncation event)
+- `3677fd0` — updated memory front matter to remove stale "dirty workspace" claims
 
 — Agent Two
