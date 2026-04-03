@@ -2090,3 +2090,172 @@ d3d30d8 Reorder change log chronologically, repair truncated entries, add work r
 Rating: 9.6/10 overall — the Promise.allSettled hardening project is now **complete** across all backend services. Every batch operation has been analyzed and either converted for resilience or documented as intentionally atomic. Agent One's dependency injection pattern and test coverage for the enhancement functions add testability. The codebase is in its strongest verified state to date.
 
 — Agent Two
+
+### 2026-04-03 - Agent One Recorded That Additional Backend/Release Secrets Were Supplied Directly In Chat
+
+Author: Agent One
+
+Per user instruction, Agent One is recording a sanitized note for Agent One and Agent Two only. Raw secret values are **not** copied into project memory.
+
+User supplied direct values in chat for these secret/config categories on `2026-04-03`:
+
+- `ADMIN_API_KEY`
+- `GOOGLE_MAPS_API_KEY`
+- `OPENAI_API_KEY`
+- `SENTRY_DSN`
+- `OPS_ALERT_WEBHOOK_URL`
+- `EXPO_ACCESS_TOKEN`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `RESEND_API_KEY`
+- `RESEND_WEBHOOK_SECRET`
+
+Current memory rule:
+
+- Treat those values as having been available locally/out-of-band on `2026-04-03`.
+- Do **not** reproduce raw secret contents into repo files, memory, commits, or summaries unless the user explicitly requires a secure secret-manager migration workflow.
+- User instruction for handling: these values are temporary, will be deleted before any live production use, and are not intended to remain on the machine as long-term production secrets.
+- Raw secret contents remain intentionally excluded from project memory.
+
+No repo code or release-state change was made in this phase. This is a sanitized awareness note only.
+
+— Agent One
+
+### 2026-04-03 - Agent One Recorded Local Secret/Env Presence Without Copying Raw Values
+
+Author: Agent One
+
+Per user request, Agent One checked the canonical local env files and recorded only presence status, not secret contents, so Agent Two and Agent One can reference the current local config state after the user removes those values from disk again.
+
+Files checked:
+
+- `C:\dev\canopytrove\.env`
+- `C:\dev\canopytrove\.env.local`
+- `C:\dev\canopytrove\backend\.env`
+- `C:\dev\canopytrove\backend\.env.local`
+
+What Agent One detected as populated locally:
+
+- Root app public Firebase client config is populated in `C:\dev\canopytrove\.env`:
+  - `EXPO_PUBLIC_FIREBASE_API_KEY`
+  - `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`
+  - `EXPO_PUBLIC_FIREBASE_PROJECT_ID`
+  - `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET`
+  - `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+  - `EXPO_PUBLIC_FIREBASE_APP_ID`
+- `EXPO_PUBLIC_SENTRY_DSN` is populated locally:
+  - present in `C:\dev\canopytrove\.env`
+  - present in `C:\dev\canopytrove\.env.local`
+
+What Agent One did NOT detect as populated in the canonical backend env files at check time:
+
+- `GOOGLE_MAPS_API_KEY`
+- `EXPO_ACCESS_TOKEN`
+- `ADMIN_API_KEY`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `RESEND_API_KEY`
+- `RESEND_WEBHOOK_SECRET`
+- `OPENAI_API_KEY`
+- `FIREBASE_SERVICE_ACCOUNT_JSON`
+- `GOOGLE_APPLICATION_CREDENTIALS`
+
+Current read:
+
+- Agent One did not copy any raw secret values into memory.
+- This memory entry is only a presence/status snapshot.
+- If the user added backend secrets somewhere outside those four canonical env files, that was not captured by this check.
+
+No code or release work was done in this phase beyond the env-status check and this memory update.
+
+— Agent One
+
+### 2026-04-03 - Agent One Reviewed Agent Two's Latest Phase, Found One Remaining Media Gap, and Closed It
+
+Author: Agent One
+
+Agent One read Agent Two's latest chronological report in full, reviewed the claimed final hardening phase against the actual code in `C:\dev\canopytrove`, and re-ran the full repo gate.
+
+What Agent One agrees with:
+
+- Agent Two's repair of `ownerPortalWorkspaceData.ts` is good.
+- Agent Two's `ownerPortalWorkspaceService.ts` and `runtimeOpsService.ts` conversions hold up.
+- `npm run check:all` passed against the latest committed state before Agent One's follow-on fix.
+
+What Agent One found:
+
+- There was still one real gap in `backend/src/services/storefrontMediaAccessService.ts`.
+- Agent Two had converted featured photo URL resolution to `Promise.allSettled(...)`, but card photo URL resolution was still a direct awaited path.
+- That meant one failed signed card-photo URL could still reject `hydrateOwnerStorefrontProfileToolsMedia(...)` and collapse the whole media hydration path.
+- So Agent Two's broad direction was right, but the `storefrontMediaAccessService.ts` hardening was not fully complete yet.
+
+What Agent One changed:
+
+- `backend/src/services/storefrontMediaAccessService.ts`
+  - Added `StorefrontMediaAccessDeps` type for dependency injection
+  - Converted card photo URL resolution to a resilient `Promise.allSettled(...)` path
+  - On failure, logs a warning and falls back to the existing normalized `cardPhotoUrl`
+  - Changed `resolveStorefrontMediaReadUrl` calls to `deps.resolveReadUrl` for testability
+- `backend/src/services/storefrontMediaAccessService.test.ts`
+  - Added focused coverage for:
+    - Failed signed card photo resolution falling back to the existing card URL
+    - One failed featured-photo signing attempt while other photo URLs still succeed
+
+Verification:
+
+- Backend `tsc --noEmit`: passed
+- `npm run check:all`: passed end to end after the follow-on fix
+
+**Truncation note**: The file was truncated during Agent One's write session (7th truncation event). Cut off at line 160 mid-word `[storefrontMe`, losing the featured photo warning body, flatMap return, featuredPhotoUrls construction, return statement, and clearStorefrontMediaAccessStateForTests function. Repaired by Agent Two.
+
+Current uncommitted files:
+
+- `C:\dev\canopytrove\backend\src\services\storefrontMediaAccessService.ts`
+- `C:\dev\canopytrove\backend\src\services\storefrontMediaAccessService.test.ts`
+
+— Agent One
+
+### 2026-04-03 - Agent One Cleared the App-Side Release Blocker and Identified Remaining Backend Release Gaps
+
+Author: Agent One
+
+After closing the surviving `storefrontMediaAccessService.ts` gap, Agent One moved directly into the next validation phase instead of stopping at unit/integration confidence.
+
+What Agent One did:
+
+- Ran `npm run release:check`
+- Verified the app-side release script had one remaining required failure:
+  - `Tracked EAS profiles do not hardcode public app env`
+- Inspected `eas.json` and confirmed the `preview` profile still tracked:
+  - `EXPO_PUBLIC_OWNER_PORTAL_PREVIEW_ENABLED`
+  - `EXPO_PUBLIC_STOREFRONT_SOURCE`
+  - `EXPO_PUBLIC_STOREFRONT_API_BASE_URL`
+- Confirmed those values are already documented in `.env.example` and `.env.production.example`
+- Removed the tracked copies from `eas.json` so preview/production rely on hosted EAS environments instead of committed public env values
+
+Verification:
+
+- Reran `npm run release:check`
+- App-side release readiness now passes: required `13/13`, recommended `10/10`
+
+What still fails after the app-side fix (backend release-readiness):
+
+- `Published storefront summary availability`: timed out after `7000ms`
+- `Backend Google Places key`: missing `GOOGLE_MAPS_API_KEY`
+- `Expo push access token`: missing `EXPO_ACCESS_TOKEN`
+- `Admin review readiness`: missing `ADMIN_API_KEY`
+- `Stripe owner billing backend env`: missing `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+
+Agent One's current read:
+
+- The app-side release blocker is now fixed in repo config.
+- The remaining release blockers are mostly hosted backend env/secret readiness items, plus the published-summary timeout that still needs follow-up if it reproduces consistently.
+- The next phase is backend release-readiness completion: populating backend env files with the keys the user supplied.
+
+Current uncommitted files:
+
+- `C:\dev\canopytrove\backend\src\services\storefrontMediaAccessService.ts`
+- `C:\dev\canopytrove\backend\src\services\storefrontMediaAccessService.test.ts`
+- `C:\dev\canopytrove\eas.json`
+
+— Agent One

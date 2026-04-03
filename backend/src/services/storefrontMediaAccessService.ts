@@ -12,6 +12,10 @@ const signedStorefrontMediaUrlCache = new Map<
   }
 >();
 
+type StorefrontMediaAccessDeps = {
+  resolveReadUrl: typeof resolveStorefrontMediaReadUrl;
+};
+
 function normalizeOptionalHttpUrl(value: string | null | undefined) {
   if (typeof value !== 'string') {
     return null;
@@ -114,20 +118,35 @@ export async function resolveStorefrontMediaReadUrl(input: {
 }
 
 export async function hydrateOwnerStorefrontProfileToolsMedia(
-  profileTools: OwnerStorefrontProfileToolsDocument | null
+  profileTools: OwnerStorefrontProfileToolsDocument | null,
+  deps: StorefrontMediaAccessDeps = {
+    resolveReadUrl: resolveStorefrontMediaReadUrl,
+  }
 ) {
   if (!profileTools) {
     return null;
   }
 
-  const cardPhotoUrl = await resolveStorefrontMediaReadUrl({
-    storagePath: profileTools.cardPhotoPath ?? null,
-    fallbackUrl: profileTools.cardPhotoUrl,
-  });
+  const cardPhotoResult = await Promise.allSettled([
+    deps.resolveReadUrl({
+      storagePath: profileTools.cardPhotoPath ?? null,
+      fallbackUrl: profileTools.cardPhotoUrl,
+    }),
+  ]);
+  const cardPhotoUrl =
+    cardPhotoResult[0]?.status === 'fulfilled'
+      ? cardPhotoResult[0].value
+      : normalizeOptionalHttpUrl(profileTools.cardPhotoUrl);
+  if (cardPhotoResult[0]?.status === 'rejected') {
+    console.warn(
+      `[storefrontMediaAccess] failed to resolve card photo URL for path ${profileTools.cardPhotoPath ?? 'unknown'}:`,
+      cardPhotoResult[0].reason
+    );
+  }
 
   const featuredPhotoResults = await Promise.allSettled(
     (profileTools.featuredPhotoPaths ?? []).map((storagePath) =>
-      resolveStorefrontMediaReadUrl({
+      deps.resolveReadUrl({
         storagePath,
         fallbackUrl: null,
       })
