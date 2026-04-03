@@ -1809,3 +1809,73 @@ e8d04d1 chore: establish canopy trove baseline
 ```
 
 Rating: 9.5/10 overall — codebase health unchanged, memory file now properly organized and complete.
+
+### 2026-04-03 - Agent Two Hardened reviewPhotoModerationService.ts (Top Roadmap Item)
+
+Author: Agent Two
+
+What Agent Two reviewed:
+
+- Read the memory file. Agent One's latest session made no code changes and no new commits (working tree was clean, HEAD still at `d3d30d8`). Agent One read the file and reported back to the owner but did not write an entry.
+- Ran corruption check: frontend tsc 0 errors, backend tsc 0 errors. No truncation detected.
+- Picked up the highest-priority item from the roadmap: `reviewPhotoModerationService.ts` with 6 remaining `Promise.all` sites.
+
+Analysis of the 6 sites:
+
+Agent Two analyzed each `Promise.all` site individually to determine whether it should convert to `Promise.allSettled` (resilient, partial success) or stay atomic (fail-fast, all-or-nothing):
+
+1. **Line 835 — photo record validation** (`getStoredPhotoRecord` lookups): This is an input validation gate. If any photo is missing, the entire operation should fail with a 404. **Kept atomic.** Rationale: partial photo attachment with missing records would leave the review in a broken state.
+
+2. **Line 863 — review photo attachment** (move/save photos during review submission): Each photo is moved to its final storage path and saved. If one fails mid-attachment, the review would have partial photo state. **Kept atomic.** Rationale: a clean failure is better than a review with some photos attached and others silently dropped.
+
+3. **Line 948 — moderation queue listing** (build admin queue with signed URLs): Read-only admin view. One bad signed URL for one photo should not crash the entire moderation queue listing. **Converted to allSettled.** Failed entries are logged and skipped.
+
+4. **Line 1036 — profile photo cleanup** (bulk delete all photos for a profile): Cleanup/teardown operation. One failed delete should not prevent cleaning up the remaining photos. **Converted to allSettled.** Failed deletes are logged as warnings.
+
+5. **Line 1067 — approved photo record lookup** (fetch records by ID for URL generation): Read-only lookup feeding into the URL pipeline. One missing or failed record lookup should not crash the whole URL response. **Converted to allSettled.** Failed lookups are logged and skipped.
+
+6. **Line 1072 — approved photo URL generation** (create signed URLs for approved photos): Read-only URL generation. One failed signed URL should not kill the entire response. **Converted to allSettled.** Failed URL generations are logged and skipped; only successful URLs are returned.
+
+Summary: 4 of 6 sites converted, 2 intentionally kept atomic. The 2 atomic sites are both in the user-facing review submission flow where partial success would be worse than a clean error.
+
+What Agent Two changed:
+
+- `backend/src/services/reviewPhotoModerationService.ts`:
+  - `getReviewPhotoModerationQueue()`: `Promise.all` → `Promise.allSettled` with `flatMap` extraction and per-record error logging
+  - `deleteReviewPhotoUploadsForProfile()`: `Promise.all` → `Promise.allSettled` with per-delete error logging
+  - `getApprovedReviewPhotoUrls()`: Both the record-lookup `Promise.all` and the URL-generation `Promise.all` converted to `Promise.allSettled` with `flatMap` extraction and per-item error logging
+
+Main files touched:
+
+- `C:\dev\canopytrove\backend\src\services\reviewPhotoModerationService.ts`
+
+Verification:
+
+- Backend `tsc --noEmit`: 0 errors
+- Frontend `tsc --noEmit`: 0 errors
+- `eslint .`: 0 errors
+- File integrity verified: 1122 lines, proper closing, no truncation
+- Remaining `Promise.all` sites in this file: exactly 2 (lines 835 and 863), both intentionally atomic
+
+Committed as `554a266`: "Harden reviewPhotoModerationService.ts: convert 4 of 6 Promise.all to allSettled"
+
+Updated roadmap status:
+
+- `reviewPhotoModerationService.ts`: **DONE** (was 6 sites, now 2 intentionally atomic + 4 converted). This was the #1 priority item.
+- Next highest priority: the remaining 27 `Promise.all` sites across 17 other backend files (admin, billing, community, ops services). These are lower risk because they are less user-facing.
+
+Git history (current):
+
+```
+554a266 Harden reviewPhotoModerationService.ts: convert 4 of 6 Promise.all to allSettled
+d3d30d8 Reorder change log chronologically, repair truncated entries, add work roadmap
+4eba33e Update CODEX_PROJECT_MEMORY.md with git rollback workflow and session report
+257dce2 Verified-clean rollback point: all agent hardening work through 2026-04-03
+7243738 Record pre-commit hardening in project memory
+f3ebd15 Harden pre-commit workflow for large worktree
+76a74cf Fix package.json truncation and add lint-staged config
+18e345c Add CODEX_PROJECT_MEMORY.md as persistent project memory
+e8d04d1 chore: establish canopy trove baseline
+```
+
+Rating: 9.5/10 overall — the last major unhardened backend service is now resilient. Remaining Promise.all sites are in lower-risk admin/ops flows.
