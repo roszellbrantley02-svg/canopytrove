@@ -945,7 +945,7 @@ export async function listReviewPhotoModerationQueue(limit = 50) {
       .slice(0, normalizedLimit);
   }
 
-  const queue = await Promise.all(
+  const settledQueue = await Promise.allSettled(
     records.map(async (record) => ({
       ...record,
       publicUrl:
@@ -958,6 +958,16 @@ export async function listReviewPhotoModerationQueue(limit = 50) {
           : await createSignedReadUrl(record.pendingStoragePath),
     }))
   );
+  const queue = settledQueue.flatMap((result, index) => {
+    if (result.status === 'fulfilled') {
+      return [result.value];
+    }
+    console.warn(
+      `[reviewPhotoModerationService] failed to build queue entry for record ${records[index]?.id ?? 'unknown'}:`,
+      result.reason
+    );
+    return [];
+  });
 
   return queue;
 }
@@ -1033,13 +1043,21 @@ export async function deleteReviewPhotoUploadsForProfile(profileId: string) {
   const collectionRef = getReviewPhotoCollection();
   if (collectionRef) {
     const snapshot = await collectionRef.where('profileId', '==', profileId).get();
-    await Promise.all(
+    const deleteResults = await Promise.allSettled(
       snapshot.docs.map(async (documentSnapshot) => {
         const record = normalizeStoredRecord(documentSnapshot.data() as Partial<StoredReviewPhotoUploadSession>);
         await deletePhotoStorage(record);
         await documentSnapshot.ref.delete();
       })
     );
+    for (const result of deleteResults) {
+      if (result.status === 'rejected') {
+        console.warn(
+          '[reviewPhotoModerationService] failed to delete a photo upload during profile cleanup:',
+          result.reason
+        );
+      }
+    }
     return;
   }
 
@@ -1064,19 +1082,39 @@ export async function discardReviewPhotoUpload(photoId: string) {
 }
 
 export async function getApprovedReviewPhotoUrls(photoIds: string[]) {
-  const photoRecords = await Promise.all(photoIds.map((photoId) => getStoredPhotoRecord(photoId)));
+  const settledRecords = await Promise.allSettled(photoIds.map((photoId) => getStoredPhotoRecord(photoId)));
+  const photoRecords = settledRecords.flatMap((result, index) => {
+    if (result.status === 'fulfilled') {
+      return result.value ? [result.value] : [];
+    }
+    console.warn(
+      `[reviewPhotoModerationService] failed to fetch photo record ${photoIds[index] ?? 'unknown'}:`,
+      result.reason
+    );
+    return [];
+  });
   const approvedRecords = photoRecords.filter(
-    (photo): photo is StoredReviewPhotoUploadSession => Boolean(photo && photo.moderationStatus === 'approved')
+    (photo): photo is StoredReviewPhotoUploadSession => photo.moderationStatus === 'approved'
   );
 
-  return Promise.all(
+  const settledUrls = await Promise.allSettled(
     approvedRecords.map(async (photo) => ({
       id: photo.id,
       url: (await createSignedReadUrl(photo.approvedStoragePath)) ?? null,
     }))
-  ).then((items) =>
-    items.map((item) => item.url).filter((value): value is string => Boolean(value))
   );
+  return settledUrls.flatMap((result, index) => {
+    if (result.status === 'fulfilled' && result.value.url) {
+      return [result.value.url];
+    }
+    if (result.status === 'rejected') {
+      console.warn(
+        `[reviewPhotoModerationService] failed to generate signed URL for photo ${approvedRecords[index]?.id ?? 'unknown'}:`,
+        result.reason
+      );
+    }
+    return [];
+  });
 }
 
 export async function getReviewPhotoUploadSession(photoId: string) {
