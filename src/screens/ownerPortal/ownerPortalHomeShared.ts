@@ -46,9 +46,9 @@ export function getNextStepContent(step: OwnerOnboardingStep): OwnerPortalNextSt
       };
     case 'subscription':
       return {
-        title: 'Plan access',
-        body: 'Choose your live owner plan and manage billing access for premium storefront tools.',
-        actionLabel: 'Open Plan Access',
+        title: 'Subscription',
+        body: 'Choose your plan and manage billing for premium storefront tools.',
+        actionLabel: 'Open Subscription',
         routeName: 'OwnerPortalSubscription',
       };
     case 'completed':

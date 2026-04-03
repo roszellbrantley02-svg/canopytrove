@@ -183,9 +183,9 @@ export function getProfileSummaryTiles(
       body: 'Where the owner journey currently resumes.',
     },
     {
-      label: 'Plan Access',
+      label: 'Subscription',
       value: formatOwnerValue(ownerProfile.subscriptionStatus),
-      body: 'Current premium plan state for this owner account.',
+      body: 'Current plan for your business account.',
     },
   ];
 }

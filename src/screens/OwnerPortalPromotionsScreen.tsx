@@ -181,7 +181,7 @@ export function OwnerPortalPromotionsScreen() {
           <View style={styles.portalHeroMetaRow}>
             <View style={styles.metaChip}>
               <Text style={styles.metaChipText}>
-                {preview ? 'Preview campaign planning' : 'Live owner workspace'}
+                {preview ? 'Demo mode' : 'Business portal'}
               </Text>
             </View>
             <View style={styles.metaChip}>

@@ -166,13 +166,13 @@ export function OwnerPortalHomeScreen() {
   return (
     <ScreenShell
       eyebrow="Owner Portal"
-      title={preview ? 'Owner preview workspace' : 'Owner dashboard'}
+      title={preview ? 'Demo mode' : 'Business dashboard'}
       subtitle={
         preview
-          ? 'Review the full owner flow with preview data.'
-          : 'Manage listing access, verification, deals, media, and billing.'
+          ? 'Explore business tools with sample data. For internal use only.'
+          : 'Manage your listing, verification, deals, media, and billing.'
       }
-      headerPill={preview ? 'Preview' : 'Owner'}
+      headerPill={preview ? 'Demo' : 'Business'}
     >
       <MotionInView delay={70}>
         <OwnerPortalHomeHero
@@ -275,7 +275,7 @@ export function OwnerPortalHomeScreen() {
                 <View style={styles.portalHeroMetaRow}>
                   <View style={styles.metaChip}>
                     <Text style={styles.metaChipText}>
-                      {preview ? 'Preview workspace' : 'Live owner workspace'}
+                      {preview ? 'Demo mode' : 'Business portal'}
                     </Text>
                   </View>
                   <View style={styles.metaChip}>
@@ -290,8 +290,8 @@ export function OwnerPortalHomeScreen() {
 
           <MotionInView delay={180}>
             <SectionCard
-              title="Owner record"
-              body="Onboarding, verification, listing, and plan access."
+              title="Business account"
+              body="Onboarding, verification, listing, and subscription."
             >
               <OwnerPortalHomeProfileSection
                 errorText={errorText}
@@ -308,7 +308,7 @@ export function OwnerPortalHomeScreen() {
                 <View style={styles.ctaPanel}>
                   <View style={styles.splitHeaderRow}>
                     <View style={styles.splitHeaderCopy}>
-                      <Text style={styles.sectionEyebrow}>Continue flow</Text>
+                      <Text style={styles.sectionEyebrow}>Continue setup</Text>
                       <Text style={styles.splitHeaderTitle}>{nextStep.title}</Text>
                       <Text style={styles.splitHeaderBody}>{nextStep.body}</Text>
                     </View>
@@ -423,7 +423,7 @@ export function OwnerPortalHomeScreen() {
           </MotionInView>
 
           <MotionInView delay={210}>
-            <SectionCard title="Runtime and AI" body="System status and AI action plan.">
+            <SectionCard title="System status" body="Operations health and recommendations.">
               <View
                 style={[
                   styles.statusPanel,
@@ -458,7 +458,7 @@ export function OwnerPortalHomeScreen() {
                   <View style={styles.plannerPanel}>
                     <View style={styles.splitHeaderRow}>
                       <View style={styles.splitHeaderCopy}>
-                        <Text style={styles.sectionEyebrow}>Owner AI action plan</Text>
+                        <Text style={styles.sectionEyebrow}>Recommendations</Text>
                         <Text style={styles.splitHeaderTitle}>Weekly priorities</Text>
                         <Text style={styles.splitHeaderBody}>
                           AI-generated next actions for your storefront.

@@ -84,7 +84,7 @@ export function OwnerPortalLicenseComplianceCard({ workspace, isSaving = false, 
         >
           <Text style={styles.metricLabel}>License number</Text>
           <Text style={styles.metricValue}>{licenseNumber}</Text>
-          <Text style={styles.metricCaption}>Owner record identifier</Text>
+          <Text style={styles.metricCaption}>Business license ID</Text>
         </LinearGradient>
 
         <LinearGradient

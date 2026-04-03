@@ -8,10 +8,6 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 10,
   },
   imageBackground: {
     ...StyleSheet.absoluteFillObject,

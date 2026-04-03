@@ -3,63 +3,68 @@ import { colors, fontFamilies, radii, spacing, textStyles } from '../../theme/to
 
 export const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'transparent',
-    borderRadius: radii.xl,
-    gap: 0,
-  },
-  cardCompact: {
-    gap: 0,
-  },
-  cardPressed: {
-    opacity: 0.94,
-    transform: [{ scale: 0.988 }],
-  },
-  previewWrap: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: 0,
-    zIndex: 1,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
-  },
-  body: {
-    marginTop: -spacing.xl,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.xl + spacing.sm,
-    gap: spacing.md,
     backgroundColor: colors.surfaceGlassStrong,
-    borderRadius: 28,
+    borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: colors.borderSoft,
+    overflow: 'hidden',
     shadowColor: colors.shadow,
     shadowOpacity: 0.26,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 12 },
     elevation: 10,
   },
-  bodyHotDeal: {
+  cardCompact: {
+    // Compact variant inherits the unified card shell.
+  },
+  cardHotDeal: {
     backgroundColor: 'rgba(33, 16, 17, 0.96)',
     borderColor: 'rgba(255,122,122,0.22)',
   },
-  bodyOwnerFeatured: {
+  cardOwnerFeatured: {
     backgroundColor: 'rgba(18, 34, 29, 0.96)',
     borderColor: 'rgba(0,245,140,0.22)',
   },
-  bodySaved: {
+  cardSaved: {
     backgroundColor: 'rgba(15, 27, 21, 0.96)',
     borderColor: 'rgba(0,245,140,0.18)',
   },
-  bodyVisited: {
+  cardVisited: {
     backgroundColor: 'rgba(14, 23, 36, 0.96)',
     borderColor: 'rgba(77,156,255,0.18)',
   },
-  bodyNewToYou: {
+  cardNewToYou: {
     backgroundColor: 'rgba(36, 28, 14, 0.96)',
     borderColor: 'rgba(247,199,101,0.20)',
+  },
+  cardPressed: {
+    opacity: 0.94,
+    transform: [{ scale: 0.988 }],
+  },
+  previewWrap: {
+    // Preview sits flush inside the unified card shell — no extra padding or shadow.
+  },
+  body: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+    paddingTop: spacing.lg,
+    gap: spacing.md,
+    backgroundColor: 'transparent',
+  },
+  bodyHotDeal: {
+    backgroundColor: 'transparent',
+  },
+  bodyOwnerFeatured: {
+    backgroundColor: 'transparent',
+  },
+  bodySaved: {
+    backgroundColor: 'transparent',
+  },
+  bodyVisited: {
+    backgroundColor: 'transparent',
+  },
+  bodyNewToYou: {
+    backgroundColor: 'transparent',
   },
   kickerRow: {
     flexDirection: 'row',

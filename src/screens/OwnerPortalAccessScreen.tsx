@@ -120,13 +120,13 @@ export function OwnerPortalAccessScreen() {
       <MotionInView delay={180}>
         <SectionCard
           title="Owner access options"
-          body="Choose business access or a preview workspace."
+          body="Sign in with your business email or explore demo mode."
         >
           <View style={styles.actionGrid}>
             <View style={styles.ctaPanel}>
               <View style={styles.splitHeaderRow}>
                 <View style={styles.splitHeaderCopy}>
-                  <Text style={styles.sectionEyebrow}>Live owner workspace</Text>
+                  <Text style={styles.sectionEyebrow}>Business portal</Text>
                   <Text style={styles.splitHeaderTitle}>
                     {accessState.enabled
                       ? 'Use your approved business email'
@@ -156,8 +156,8 @@ export function OwnerPortalAccessScreen() {
               <View style={[styles.ctaPanel, styles.onboardingInfoCardWarm]}>
                 <View style={styles.splitHeaderRow}>
                   <View style={styles.splitHeaderCopy}>
-                    <Text style={styles.sectionEyebrow}>Preview workspace</Text>
-                    <Text style={styles.splitHeaderTitle}>Review the owner journey safely</Text>
+                    <Text style={styles.sectionEyebrow}>Demo mode (internal)</Text>
+                    <Text style={styles.splitHeaderTitle}>Explore business tools safely</Text>
                   </View>
                   <AppUiIcon name="eye-outline" size={20} color="#9CC5B4" />
                 </View>
@@ -165,7 +165,7 @@ export function OwnerPortalAccessScreen() {
                   onPress={() => navigation.navigate('OwnerPortalHome', { preview: true })}
                   style={styles.secondaryButton}
                 >
-                  <Text style={styles.secondaryButtonText}>Open Preview Workspace</Text>
+                  <Text style={styles.secondaryButtonText}>Open Demo Mode</Text>
                 </Pressable>
               </View>
             ) : null}

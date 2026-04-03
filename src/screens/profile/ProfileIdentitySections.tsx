@@ -227,8 +227,8 @@ export function ProfileAccountSection({
 
   return (
     <SectionCard
-      title="Account and identity"
-      body="Manage your member sign-in, display name, and owner access."
+      title="Account"
+      body="Manage your sign-in, display name, and business portal access."
     >
       <View style={styles.previewCard}>
         <View style={styles.previewCardHeader}>
@@ -271,16 +271,16 @@ export function ProfileAccountSection({
             <Text style={styles.accountSnapshotValue} numberOfLines={1} ellipsizeMode="tail">
               {displayNameInput.trim() ? displayNameInput.trim() : 'Not set'}
             </Text>
-            <Text style={styles.accountSnapshotLabel}>Review name</Text>
-            <Text style={styles.accountSnapshotBody}>Shown on reviews.</Text>
+            <Text style={styles.accountSnapshotLabel}>Public name</Text>
+            <Text style={styles.accountSnapshotBody}>Shown on your reviews.</Text>
           </View>
           <View style={styles.accountSnapshotCard}>
             <Text style={styles.accountSnapshotValue}>
               {ownerPortalEnabled ? 'Ready' : 'Locked'}
             </Text>
-            <Text style={styles.accountSnapshotLabel}>Owner tools</Text>
+            <Text style={styles.accountSnapshotLabel}>Business portal</Text>
             <Text style={styles.accountSnapshotBody}>
-              {ownerPortalEnabled ? 'Managed in owner access.' : 'Not enabled.'}
+              {ownerPortalEnabled ? 'Active and connected.' : 'Not enabled.'}
             </Text>
           </View>
         </View>
@@ -387,7 +387,7 @@ export function ProfileAccountSection({
       {ownerPortalEnabled && ownerPortalPreviewEnabled && showOwnerPreview ? (
         <View style={styles.previewCard}>
           <View style={styles.previewCardHeader}>
-            <Text style={styles.previewCardTitle}>Owner preview workspace</Text>
+            <Text style={styles.previewCardTitle}>Demo mode (internal)</Text>
             {onDismissOwnerPreview ? (
               <Pressable
                 accessibilityRole="button"
@@ -401,7 +401,7 @@ export function ProfileAccountSection({
             ) : null}
           </View>
           <Text style={styles.previewCardBody}>
-            Review owner tools without affecting live storefront data.
+            Preview business tools without affecting live data. For internal and App Review use only.
           </Text>
           <View style={styles.heroActions}>
             <Pressable
@@ -411,7 +411,7 @@ export function ProfileAccountSection({
               onPress={onOpenOwnerPreviewPortal}
               style={styles.primaryButton}
             >
-              <Text style={styles.primaryButtonText}>Open Preview Workspace</Text>
+              <Text style={styles.primaryButtonText}>Open Demo Mode</Text>
             </Pressable>
           </View>
         </View>

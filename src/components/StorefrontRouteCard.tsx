@@ -7,7 +7,17 @@ import {
   StorefrontRouteCardBody,
 } from './storefrontRouteCard/StorefrontRouteCardSections';
 import { styles } from './storefrontRouteCard/storefrontRouteCardStyles';
+import type { StorefrontCardVisualLane } from './storefrontRouteCard/storefrontRouteCardVisualState';
 import { hasStorefrontPromotion } from '../utils/storefrontPromotions';
+
+const cardToneStyleMap: Record<StorefrontCardVisualLane, typeof styles.cardHotDeal | null> = {
+  hotDeal: styles.cardHotDeal,
+  ownerFeatured: styles.cardOwnerFeatured,
+  saved: styles.cardSaved,
+  visited: styles.cardVisited,
+  newToYou: styles.cardNewToYou,
+  default: null,
+};
 
 type StorefrontRouteCardProps = {
   storefront: StorefrontSummary;
@@ -75,6 +85,7 @@ function StorefrontRouteCardComponent({
       onPressIn={onPressIn}
       style={({ pressed }) => [
         styles.card,
+        cardToneStyleMap[cardVisualLane],
         compact && styles.cardCompact,
         pressed && styles.cardPressed,
       ]}
