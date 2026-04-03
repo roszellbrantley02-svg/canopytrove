@@ -3320,3 +3320,53 @@ Uses vitest with mocked dependencies. Must run on Windows (native binding).
 - Tests need Windows: `npx vitest run src/screens/profile/useProfileActions.test.ts`
 
 — Agent Two
+
+---
+
+### Entry — Agent Two: Test File Repair and Backend Test Gap Documentation
+
+**Date**: 2026-04-03
+
+#### Fix 1 — Repair `useProfileActions.test.ts` for Vitest Compatibility
+
+Agent One's verification review identified that the test file created in commit `4320d1a` would not actually run under Vitest. The problems:
+
+1. **`require()` inside `renderHook`** — Vitest uses ESM module resolution. The original test used `require('./useProfileActions')` inside the `renderHook` callback, which doesn't work with Vitest's module system.
+2. **Mock wiring** — `getOwnerPortalAccessState` was mocked as a static return value instead of using `vi.hoisted()` for proper mock reference sharing.
+
+**Fix applied:**
+- Replaced `require()` pattern with standard top-level ESM import (`import { useProfileActions } from './useProfileActions'`)
+- Moved `getOwnerPortalAccessState` mock to `vi.hoisted()` block for proper reference sharing
+- All three tests use `renderHook(() => useProfileActions(args))` with the direct ESM import
+- Preserved all three test cases and all assertions unchanged
+
+**Verification:**
+- `npx tsc --noEmit` — clean
+- `npx eslint src/screens/profile/useProfileActions.test.ts --max-warnings 0` — clean
+- `npx prettier --check src/screens/profile/useProfileActions.test.ts` — clean
+- Actual test execution requires Windows: `npx vitest run src/screens/profile/useProfileActions.test.ts`
+
+#### Backend Recovery Regression Test Gap — Documented as Harness-Constrained
+
+Agent One's audit item 3 asked to either add backend recovery regression tests for the `communityRoutes.ts` try/catch decoupling (gamification + detail fetch) or document the gap.
+
+**Decision: document as harness-constrained.** Reasons:
+
+1. The backend uses `node:test` (not vitest), and the community route tests require a running Express server with Firebase Firestore integration.
+2. Testing that a try/catch wrapper correctly swallows errors and allows the response to succeed would require:
+   - A mock Firestore that can be instructed to throw on specific calls (gamification or detail fetch) while succeeding on the primary write
+   - The Express route handler wired with those partial-failure mocks
+   - Assertion that the HTTP response is still 200/201 despite the side-effect failure
+3. The existing backend test harness does not have partial-failure injection for Firestore operations. Building that infrastructure for three try/catch wrappers is disproportionate to the risk.
+4. The try/catch pattern is a standard defensive wrapper — the correctness is self-evident from code review.
+
+**If a future session adds partial-failure injection to the backend test harness**, the following tests should be added:
+- `POST /reviews` returns 201 even when `applyGamificationEvent` throws
+- `POST /reviews` returns 201 even when `getStorefrontDetail` throws
+- `POST /reports` returns 201 even when `applyGamificationEvent` throws
+- `POST /reviews/:id` (update) returns 200 even when `getStorefrontDetail` throws
+- `POST /reviews/:id/helpful` returns 200 even when `getStorefrontDetail` throws
+
+**Files touched**: `src/screens/profile/useProfileActions.test.ts`
+
+— Agent Two
