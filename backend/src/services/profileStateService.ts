@@ -7,6 +7,7 @@ import {
   getGamificationState,
   saveGamificationState,
 } from './gamificationPersistenceService';
+import { applyEarlyAdopterLaunchProgramToGamificationState } from './launchProgramService';
 import { getProfile, saveProfile } from './profileService';
 import { getRouteState, saveRouteState } from './routeStateService';
 
@@ -69,10 +70,20 @@ export async function saveProfileState(
   profileState: SaveProfileStateInput | undefined
 ) {
   const profileDocument = buildProfileDocument(profileId, profileState?.profile);
+  const currentGamificationState = await getGamificationState(profileId, profileDocument.createdAt);
+  const nextGamificationState = await applyEarlyAdopterLaunchProgramToGamificationState({
+    profileId,
+    accountId: profileDocument.accountId,
+    currentState: currentGamificationState,
+    nextState: profileState?.gamificationState,
+    joinedDate: profileDocument.createdAt,
+    now: profileDocument.updatedAt,
+  });
+
   const [profile, routeState, gamificationState] = await Promise.all([
     saveProfile(profileDocument),
     saveRouteState(buildRouteStateDocument(profileId, profileState?.routeState)),
-    saveGamificationState(profileId, profileState?.gamificationState, profileDocument.createdAt),
+    saveGamificationState(profileId, nextGamificationState, profileDocument.createdAt),
   ]);
 
   return {

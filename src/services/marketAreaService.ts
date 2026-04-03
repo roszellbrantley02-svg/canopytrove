@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { brand } from '../config/brand';
 import { storefrontApiBaseUrl, storefrontSourceMode } from '../config/storefrontSourceConfig';
 import { mockAreas } from '../data/mockAreas';
-import { MarketArea } from '../types/storefront';
+import type { MarketArea } from '../types/storefront';
 import { getStorefrontBackendMarketAreas } from './storefrontBackendService';
 
 const MARKET_AREAS_CACHE_KEY = `${brand.storageNamespace}:market-areas`;

@@ -107,11 +107,79 @@ function readAppIdentity() {
   return parsed.expo ?? {};
 }
 
+function readEasConfig() {
+  const easJsonPath = path.join(projectRoot, 'eas.json');
+  if (!fs.existsSync(easJsonPath)) {
+    return {};
+  }
+
+  return JSON.parse(fs.readFileSync(easJsonPath, 'utf8'));
+}
+
 const appIdentity = readAppIdentity();
+const easConfig = readEasConfig();
 const checks = [];
 
 function pushCheck(name, ok, detail, severity = 'required') {
   checks.push({ name, ok, detail, severity });
+}
+
+async function fetchJsonWithTimeout(url, timeoutMs = 2500) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'user-agent': 'canopytrove-release-check/1.0',
+      },
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    return {
+      ok: response.ok,
+      status: response.status,
+      json: text ? JSON.parse(text) : null,
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function probeHostedStorefrontApi(baseUrl) {
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
+
+  try {
+    const health = await fetchJsonWithTimeout(`${normalizedBaseUrl}/health`);
+    const summaries = await fetchJsonWithTimeout(
+      `${normalizedBaseUrl}/storefront-summaries?limit=3&offset=0`
+    );
+
+    const items = Array.isArray(summaries.json?.items) ? summaries.json.items : [];
+    const placeIdCoverage =
+      items.length > 0
+        ? items.filter((item) => typeof item?.placeId === 'string' && item.placeId.trim()).length /
+          items.length
+        : 0;
+    const allClosed = items.length > 0 && items.every((item) => item?.openNow === false);
+
+    return {
+      ok: true,
+      health,
+      summaries,
+      itemCount: items.length,
+      placeIdCoverage,
+      allClosed,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown hosted storefront probe failure.',
+    };
+  }
 }
 
 const storefrontSource = readValue('EXPO_PUBLIC_STOREFRONT_SOURCE').toLowerCase();
@@ -132,6 +200,60 @@ pushCheck(
     : 'Set EXPO_PUBLIC_STOREFRONT_API_BASE_URL to a public non-local http(s) URL.'
 );
 
+const hostedStorefrontProbe =
+  storefrontSource === 'api' && isPublicHttpUrl(storefrontApiBaseUrl)
+    ? await probeHostedStorefrontApi(storefrontApiBaseUrl)
+    : null;
+
+if (hostedStorefrontProbe) {
+  pushCheck(
+    'Hosted storefront API health probe',
+    hostedStorefrontProbe.ok && hostedStorefrontProbe.health.ok && hostedStorefrontProbe.health.json?.ok === true,
+    hostedStorefrontProbe.ok
+      ? hostedStorefrontProbe.health.ok && hostedStorefrontProbe.health.json?.ok === true
+        ? `Public health endpoint responded with HTTP ${hostedStorefrontProbe.health.status}.`
+        : `Public health endpoint returned HTTP ${hostedStorefrontProbe.health.status}.`
+      : `Unable to reach the hosted storefront API: ${hostedStorefrontProbe.error}.`,
+    'recommended'
+  );
+
+  pushCheck(
+    'Hosted storefront summary probe',
+    hostedStorefrontProbe.ok &&
+      hostedStorefrontProbe.summaries.ok &&
+      hostedStorefrontProbe.itemCount > 0,
+    hostedStorefrontProbe.ok
+      ? hostedStorefrontProbe.summaries.ok && hostedStorefrontProbe.itemCount > 0
+        ? `Hosted storefront summaries returned ${hostedStorefrontProbe.itemCount} sampled item${hostedStorefrontProbe.itemCount === 1 ? '' : 's'}.`
+        : `Hosted storefront summaries returned HTTP ${hostedStorefrontProbe.summaries.status} or no sampled items.`
+      : `Unable to probe hosted storefront summaries: ${hostedStorefrontProbe.error}.`,
+    'recommended'
+  );
+
+  pushCheck(
+    'Hosted storefront summary freshness signal',
+    !hostedStorefrontProbe.ok ||
+      hostedStorefrontProbe.itemCount === 0 ||
+      !hostedStorefrontProbe.allClosed ||
+      hostedStorefrontProbe.placeIdCoverage > 0,
+    !hostedStorefrontProbe.ok || hostedStorefrontProbe.itemCount === 0
+      ? 'Hosted storefront freshness signal could not be evaluated.'
+      : !hostedStorefrontProbe.allClosed || hostedStorefrontProbe.placeIdCoverage > 0
+        ? `Hosted summary sample is not uniformly closed, and ${(hostedStorefrontProbe.placeIdCoverage * 100).toFixed(0)}% of sampled items expose place IDs.`
+        : 'Hosted summary sample is uniformly closed and has no place IDs. Open/closed state may be stale.',
+    'recommended'
+  );
+}
+
+const publicAdminApiKey = readValue('EXPO_PUBLIC_ADMIN_API_KEY');
+pushCheck(
+  'No public admin API key in app env',
+  !publicAdminApiKey,
+  !publicAdminApiKey
+    ? 'No EXPO_PUBLIC_ADMIN_API_KEY is present in app env.'
+    : 'Remove EXPO_PUBLIC_ADMIN_API_KEY from app env. Admin runtime access must use authenticated admin accounts, not a bundled shared secret.'
+);
+
 const firebaseRequiredEnvVars = [
   'EXPO_PUBLIC_FIREBASE_API_KEY',
   'EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN',
@@ -149,13 +271,45 @@ pushCheck(
     : `Missing Firebase client env: ${missingFirebaseEnvVars.join(', ')}.`
 );
 
-const mapsClientKey = readValue('EXPO_PUBLIC_GOOGLE_MAPS_API_KEY');
+const easBuildProfiles = ['preview', 'production'];
+const hardcodedEasEnvEntries = easBuildProfiles.flatMap((profileName) => {
+  const profileEnv = easConfig.build?.[profileName]?.env ?? {};
+  return Object.keys(profileEnv)
+    .filter((name) => name.startsWith('EXPO_PUBLIC_'))
+    .map((name) => `${profileName}.${name}`);
+});
 pushCheck(
-  'Google Maps client key',
-  Boolean(mapsClientKey),
-  mapsClientKey
-    ? 'Client Google Maps key is configured.'
-    : 'Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY for storefront operational-data recovery.',
+  'Tracked EAS profiles do not hardcode public app env',
+  hardcodedEasEnvEntries.length === 0,
+  hardcodedEasEnvEntries.length === 0
+    ? 'Preview and production EAS profiles rely on hosted env instead of tracked EXPO_PUBLIC values.'
+    : `Move these values out of eas.json and into hosted EAS environments: ${hardcodedEasEnvEntries.join(', ')}.`
+);
+
+const sentryClientDsn = readValue('EXPO_PUBLIC_SENTRY_DSN');
+pushCheck(
+  'Mobile crash monitoring DSN',
+  Boolean(sentryClientDsn),
+  sentryClientDsn
+    ? 'EXPO_PUBLIC_SENTRY_DSN is configured.'
+    : 'Set EXPO_PUBLIC_SENTRY_DSN to enable hosted mobile crash monitoring.',
+  'recommended'
+);
+
+const sentryBuildOrg = readValue('SENTRY_ORG');
+const sentryBuildProject = readValue('SENTRY_PROJECT');
+const sentryBuildAuthToken = readValue('SENTRY_AUTH_TOKEN');
+const hasSentryBuildMetadata = Boolean(sentryBuildOrg && sentryBuildProject);
+pushCheck(
+  'Sentry mobile source map upload config',
+  !sentryClientDsn ||
+    (!hasSentryBuildMetadata && !sentryBuildAuthToken) ||
+    (hasSentryBuildMetadata && Boolean(sentryBuildAuthToken)),
+  !sentryClientDsn
+    ? 'Mobile Sentry DSN is not configured yet, so source map upload is not expected.'
+    : hasSentryBuildMetadata && sentryBuildAuthToken
+      ? 'Sentry build metadata is configured for native source map upload.'
+      : 'If you want release crash stacks to resolve back to source lines, set SENTRY_ORG, SENTRY_PROJECT, and SENTRY_AUTH_TOKEN in hosted build env.',
   'recommended'
 );
 
@@ -205,6 +359,16 @@ pushCheck(
   ownerPreviewEnabled
     ? 'Disable EXPO_PUBLIC_OWNER_PORTAL_PREVIEW_ENABLED for public release builds.'
     : 'Owner preview is off for public release checks.'
+);
+
+const ownerPrelaunchEnabled = isTruthy(readValue('EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED'));
+pushCheck(
+  'Owner prelaunch disabled for public release',
+  !ownerPrelaunchEnabled,
+  !ownerPrelaunchEnabled
+    ? 'Owner portal prelaunch mode is off for public release checks.'
+    : 'Set EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=false for a neutral production app bundle. Use the backend OWNER_PORTAL_ALLOWLIST privately if you still want a controlled rollout.',
+  'recommended'
 );
 
 const publicMonthlyCheckoutUrl = readValue('EXPO_PUBLIC_OWNER_PORTAL_MONTHLY_CHECKOUT_URL');

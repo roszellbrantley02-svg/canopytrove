@@ -100,6 +100,130 @@ function toSummaryDocument(
   };
 }
 
+function hasNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function hasFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function hasBooleanOrNull(value: unknown): value is boolean | null {
+  return typeof value === 'boolean' || value === null;
+}
+
+export function isCompleteStorefrontSummaryDocument(
+  document: Partial<StorefrontSummaryDocument> | undefined
+) {
+  if (!document) {
+    return false;
+  }
+
+  return (
+    hasNonEmptyString(document.licenseId) &&
+    hasNonEmptyString(document.marketId) &&
+    hasNonEmptyString(document.displayName) &&
+    hasNonEmptyString(document.legalName) &&
+    hasNonEmptyString(document.addressLine1) &&
+    hasNonEmptyString(document.city) &&
+    hasNonEmptyString(document.state) &&
+    hasNonEmptyString(document.zip) &&
+    hasFiniteNumber(document.latitude) &&
+    hasFiniteNumber(document.longitude) &&
+    hasFiniteNumber(document.distanceMiles) &&
+    hasFiniteNumber(document.travelMinutes) &&
+    hasFiniteNumber(document.rating) &&
+    hasFiniteNumber(document.reviewCount) &&
+    hasBooleanOrNull(document.openNow) &&
+    typeof document.isVerified === 'boolean' &&
+    hasNonEmptyString(document.mapPreviewLabel)
+  );
+}
+
+export function seedFirestoreStorefrontSourceCacheForTests() {
+  if (process.env.NODE_ENV !== 'test') {
+    return;
+  }
+
+  const expiresAt = Date.now() + 60_000;
+  const items: StorefrontSummaryApiDocument[] = [
+    {
+      id: 'test-storefront',
+      licenseId: 'license-1',
+      marketId: 'nyc',
+      displayName: 'Canopy Trove Test',
+      legalName: 'Canopy Trove Test',
+      addressLine1: '1 Example Ave',
+      city: 'New York',
+      state: 'NY',
+      zip: '10001',
+      latitude: 40.75,
+      longitude: -73.99,
+      distanceMiles: 1.2,
+      travelMinutes: 6,
+      rating: 4.8,
+      reviewCount: 12,
+      openNow: true,
+      isVerified: true,
+      mapPreviewLabel: '1.2 mi route preview',
+      promotionText: null,
+      promotionBadges: [],
+      promotionExpiresAt: null,
+      activePromotionId: null,
+      favoriteFollowerCount: null,
+      menuUrl: null,
+      verifiedOwnerBadgeLabel: null,
+      ownerFeaturedBadges: [],
+      ownerCardSummary: null,
+      premiumCardVariant: 'standard',
+      promotionPlacementSurfaces: [],
+      promotionPlacementScope: null,
+      placeId: undefined,
+      thumbnailUrl: null,
+    },
+  ];
+
+  scopedSummaryCache.set('test-scope', {
+    expiresAt,
+    items,
+  });
+  scopedSummaryInFlight.set('test-scope', Promise.resolve(items));
+  nearbySummaryCache.set('test-nearby', {
+    expiresAt,
+    page: {
+      items,
+      total: items.length,
+      limit: items.length,
+      offset: 0,
+    },
+  });
+  nearbySummaryInFlight.set(
+    'test-nearby',
+    Promise.resolve({
+      items,
+      total: items.length,
+      limit: items.length,
+      offset: 0,
+    })
+  );
+  materializedSummaryCache = {
+    expiresAt,
+    items,
+  };
+  materializedSummaryInFlight = Promise.resolve(items);
+}
+
+export function getFirestoreStorefrontSourceCacheStateForTests() {
+  return {
+    scopedSummaryCacheSize: scopedSummaryCache.size,
+    scopedSummaryInFlightSize: scopedSummaryInFlight.size,
+    nearbySummaryCacheSize: nearbySummaryCache.size,
+    nearbySummaryInFlightSize: nearbySummaryInFlight.size,
+    hasMaterializedSummaryCache: Boolean(materializedSummaryCache),
+    hasMaterializedSummaryInFlight: Boolean(materializedSummaryInFlight),
+  };
+}
+
 function toDetailDocument(
   storefrontId: string,
   document: StorefrontDetailDocument
@@ -143,7 +267,13 @@ async function getSummarySnapshots(
   const collectionRef = db.collection(SUMMARY_COLLECTION) as CollectionReference<StorefrontSummaryDocument>;
   const target = buildQuery ? buildQuery(collectionRef) : collectionRef;
   const snapshots = await target.get();
-  return snapshots.docs.map((snapshot) => toSummaryDocument(snapshot.id, snapshot.data()));
+  return snapshots.docs
+    .map((snapshot) => ({
+      id: snapshot.id,
+      data: snapshot.data(),
+    }))
+    .filter(({ data }) => isCompleteStorefrontSummaryDocument(data))
+    .map(({ id, data }) => toSummaryDocument(id, data as StorefrontSummaryDocument));
 }
 
 function refreshMaterializedSummaries() {
@@ -173,8 +303,7 @@ async function getMaterializedSummaries() {
       return materializedSummaryCache.items;
     }
 
-    void refreshMaterializedSummaries();
-    return materializedSummaryCache.items;
+    return refreshMaterializedSummaries();
   }
 
   return refreshMaterializedSummaries();

@@ -5,7 +5,7 @@ import {
   getFirebaseDetailsById,
   getFirebaseSummariesByIds,
 } from './firebaseStorefrontReader';
-import { StorefrontSource } from './storefrontSource';
+import type { StorefrontSource } from './storefrontSource';
 
 export const firebaseStorefrontSource: StorefrontSource = {
   async getAllSummaries() {

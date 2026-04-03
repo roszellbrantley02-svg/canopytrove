@@ -1,4 +1,4 @@
-import {
+import type {
   AppProfile,
   GamificationBadgeDefinition,
   StorefrontGamificationState,
@@ -29,19 +29,25 @@ export function getProfileInitials(label: string) {
 
 export function getJoinedDays(joinedDate: string) {
   const joinedTime = new Date(joinedDate).getTime();
-  return Number.isFinite(joinedTime) ? Math.max(0, Math.floor((Date.now() - joinedTime) / 86400000)) : 0;
+  return Number.isFinite(joinedTime)
+    ? Math.max(0, Math.floor((Date.now() - joinedTime) / 86400000))
+    : 0;
 }
 
 export function getLevelProgress(state: StorefrontGamificationState) {
   const currentLevelFloor = getPointsForLevel(Math.max(1, state.level));
   const nextLevelPoints = Math.max(currentLevelFloor, state.nextLevelPoints);
-  const progress = Math.min(1, Math.max(0, state.totalPoints - currentLevelFloor) / Math.max(1, nextLevelPoints - currentLevelFloor));
+  const progress = Math.min(
+    1,
+    Math.max(0, state.totalPoints - currentLevelFloor) /
+      Math.max(1, nextLevelPoints - currentLevelFloor),
+  );
   return { progress, pointsToNext: Math.max(0, nextLevelPoints - state.totalPoints) };
 }
 
 function getBadgeMetricValue(
   badge: GamificationBadgeDefinition,
-  state: StorefrontGamificationState
+  state: StorefrontGamificationState,
 ) {
   switch (badge.id) {
     case 'reviewer_1':
@@ -83,7 +89,7 @@ function getBadgeMetricValue(
 export function buildBadgeProgressItems(
   badgeDefinitions: readonly GamificationBadgeDefinition[],
   earnedBadgeIds: Set<string>,
-  state: StorefrontGamificationState
+  state: StorefrontGamificationState,
 ) {
   return badgeDefinitions
     .filter((badge) => !earnedBadgeIds.has(badge.id) && badge.requirement > 0)
@@ -101,5 +107,9 @@ export function buildBadgeProgressItems(
       };
     })
     .filter((item): item is BadgeProgressItem => item !== null)
-    .sort((a, b) => (b.progress !== a.progress ? b.progress - a.progress : a.badge.requirement - b.badge.requirement));
+    .sort((a, b) =>
+      b.progress !== a.progress
+        ? b.progress - a.progress
+        : a.badge.requirement - b.badge.requirement,
+    );
 }

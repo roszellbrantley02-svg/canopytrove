@@ -6,7 +6,7 @@ export type StorefrontSummaryApiDocument = {
   legalName: string;
   addressLine1: string;
   city: string;
-  state: 'NY';
+  state: string;
   zip: string;
   latitude: number;
   longitude: number;
@@ -14,13 +14,14 @@ export type StorefrontSummaryApiDocument = {
   travelMinutes: number;
   rating: number;
   reviewCount: number;
-  openNow: boolean;
+  openNow: boolean | null;
   isVerified: boolean;
   mapPreviewLabel: string;
   promotionText?: string | null;
   promotionBadges?: string[];
   promotionExpiresAt?: string | null;
   activePromotionId?: string | null;
+  activePromotionCount?: number | null;
   favoriteFollowerCount?: number | null;
   menuUrl?: string | null;
   verifiedOwnerBadgeLabel?: string | null;
@@ -44,6 +45,16 @@ export type StorefrontDetailApiDocument = {
   verifiedOwnerBadgeLabel?: string | null;
   favoriteFollowerCount?: number | null;
   ownerFeaturedBadges?: string[];
+  activePromotions?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    badges: string[];
+    startsAt: string;
+    endsAt: string;
+    cardTone: 'standard' | 'owner_featured' | 'hot_deal';
+  }>;
+  photoCount?: number;
   appReviewCount: number;
   appReviews: Array<{
     id: string;
@@ -53,6 +64,7 @@ export type StorefrontDetailApiDocument = {
     relativeTime: string;
     text: string;
     gifUrl?: string | null;
+    photoUrls?: string[];
     tags: string[];
     helpfulCount: number;
     ownerReply?: {

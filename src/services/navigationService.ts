@@ -1,5 +1,5 @@
 import { Linking, Platform } from 'react-native';
-import { StorefrontSummary } from '../types/storefront';
+import type { StorefrontSummary } from '../types/storefront';
 import { startPostVisitJourney } from './postVisitPromptService';
 
 type RouteMode = 'preview' | 'verified';
@@ -13,7 +13,7 @@ export async function openStorefrontRoute(
     isAuthenticated: boolean;
     sourceScreen?: string | null;
     storefront: StorefrontSummary;
-  }
+  },
 ) {
   if (trackingOptions?.profileId) {
     try {

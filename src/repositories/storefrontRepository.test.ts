@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { StorefrontDetails, StorefrontSummary } from '../types/storefront';
+import type { StorefrontDetails, StorefrontSummary } from '../types/storefront';
 
 const sourceMocks = vi.hoisted(() => ({
   getSummaryPage: vi.fn(),
   getAllSummaries: vi.fn(),
   getSummariesByIds: vi.fn(),
   getDetailsById: vi.fn(),
+}));
+
+const storefrontPromotionOverrideMocks = vi.hoisted(() => ({
+  applyStorefrontPromotionOverrides: vi.fn(async (items: unknown) => items),
 }));
 
 vi.mock('../sources', () => ({
@@ -24,6 +28,15 @@ vi.mock('../config/storefrontSourceConfig', () => ({
 
 vi.mock('../services/storefrontCommunityLocalService', () => ({
   mergeLocalStorefrontCommunityIntoDetail: (detail: unknown) => detail,
+}));
+
+vi.mock('../services/storefrontMemberDealAccessService', () => ({
+  getStorefrontMemberAccessCacheKey: vi.fn(() => 'signed-out'),
+}));
+
+vi.mock('../services/storefrontPromotionOverrideService', () => ({
+  applyStorefrontPromotionOverrides:
+    storefrontPromotionOverrideMocks.applyStorefrontPromotionOverrides,
 }));
 
 import { clearStorefrontRepositoryCache, storefrontRepository } from './storefrontRepository';
@@ -92,6 +105,10 @@ describe('storefrontRepository.getNearbySummaries', () => {
     sourceMocks.getAllSummaries.mockReset();
     sourceMocks.getSummariesByIds.mockReset();
     sourceMocks.getDetailsById.mockReset();
+    storefrontPromotionOverrideMocks.applyStorefrontPromotionOverrides.mockReset();
+    storefrontPromotionOverrideMocks.applyStorefrontPromotionOverrides.mockImplementation(
+      async (items: unknown) => items,
+    );
   });
 
   it('returns the radius-bounded first page when it already has three results', async () => {
@@ -123,9 +140,13 @@ describe('storefrontRepository.getNearbySummaries', () => {
     });
   });
 
-  it('falls back to unrestricted origin search when the radius page underfills', async () => {
+  it('retries the nearby radius page when the first request underfills', async () => {
     const localItems = [createSummary('a', 0.8), createSummary('b', 1.2)];
-    const fallbackItems = [createSummary('a', 0.8), createSummary('b', 1.2), createSummary('c', 36.4)];
+    const retriedItems = [
+      createSummary('a', 0.8),
+      createSummary('b', 1.2),
+      createSummary('c', 36.4),
+    ];
 
     sourceMocks.getSummaryPage
       .mockResolvedValueOnce({
@@ -135,7 +156,7 @@ describe('storefrontRepository.getNearbySummaries', () => {
         offset: 0,
       })
       .mockResolvedValueOnce({
-        items: fallbackItems,
+        items: retriedItems,
         total: 3,
         limit: 3,
         offset: 0,
@@ -148,7 +169,7 @@ describe('storefrontRepository.getNearbySummaries', () => {
       locationLabel: 'New York, NY',
     });
 
-    expect(result).toEqual(fallbackItems);
+    expect(result).toEqual(retriedItems);
     expect(sourceMocks.getSummaryPage).toHaveBeenCalledTimes(2);
     expect(sourceMocks.getSummaryPage).toHaveBeenNthCalledWith(1, {
       searchQuery: '',
@@ -162,6 +183,7 @@ describe('storefrontRepository.getNearbySummaries', () => {
     expect(sourceMocks.getSummaryPage).toHaveBeenNthCalledWith(2, {
       searchQuery: '',
       origin: { latitude: 40.7128, longitude: -74.006 },
+      radiusMiles: 35,
       sortKey: 'distance',
       limit: 3,
       offset: 0,
@@ -175,6 +197,10 @@ describe('storefrontRepository.getBrowseSummaries', () => {
     clearStorefrontRepositoryCache();
     sourceMocks.getSummaryPage.mockReset();
     sourceMocks.getAllSummaries.mockReset();
+    storefrontPromotionOverrideMocks.applyStorefrontPromotionOverrides.mockReset();
+    storefrontPromotionOverrideMocks.applyStorefrontPromotionOverrides.mockImplementation(
+      async (items: unknown) => items,
+    );
   });
 
   it('pages statewide browse results without the nearby radius cap', async () => {
@@ -200,7 +226,7 @@ describe('storefrontRepository.getBrowseSummaries', () => {
       },
       'distance',
       4,
-      0
+      0,
     );
 
     expect(result).toEqual({
@@ -212,6 +238,65 @@ describe('storefrontRepository.getBrowseSummaries', () => {
     });
     expect(sourceMocks.getSummaryPage).toHaveBeenCalledWith({
       areaId: undefined,
+      searchQuery: '',
+      origin: { latitude: 40.7128, longitude: -74.006 },
+      sortKey: 'distance',
+      limit: 4,
+      offset: 0,
+      prioritySurface: 'browse',
+    });
+  });
+
+  it('falls back to unrestricted browse when a stale area id returns an empty page', async () => {
+    const browseItems = [
+      createSummary('a', 2.1),
+      createSummary('b', 6.4),
+      createSummary('c', 42.8),
+    ];
+
+    sourceMocks.getSummaryPage
+      .mockResolvedValueOnce({
+        items: [],
+        total: 0,
+        limit: 4,
+        offset: 0,
+      })
+      .mockResolvedValueOnce({
+        items: browseItems,
+        total: 12,
+        limit: 4,
+        offset: 0,
+      });
+
+    const result = await storefrontRepository.getBrowseSummaries(
+      {
+        areaId: 'upstate-all',
+        searchQuery: '',
+        origin: { latitude: 40.7128, longitude: -74.006 },
+        locationLabel: 'New York, NY',
+      },
+      'distance',
+      4,
+      0,
+    );
+
+    expect(result).toEqual({
+      items: browseItems,
+      total: 12,
+      limit: 4,
+      offset: 0,
+      hasMore: true,
+    });
+    expect(sourceMocks.getSummaryPage).toHaveBeenNthCalledWith(1, {
+      areaId: 'upstate-all',
+      searchQuery: '',
+      origin: { latitude: 40.7128, longitude: -74.006 },
+      sortKey: 'distance',
+      limit: 4,
+      offset: 0,
+      prioritySurface: 'browse',
+    });
+    expect(sourceMocks.getSummaryPage).toHaveBeenNthCalledWith(2, {
       searchQuery: '',
       origin: { latitude: 40.7128, longitude: -74.006 },
       sortKey: 'distance',
@@ -247,7 +332,7 @@ describe('storefrontRepository.getBrowseSummaries', () => {
       },
       'distance',
       4,
-      0
+      0,
     );
 
     expect(sourceMocks.getSummaryPage).not.toHaveBeenCalled();
@@ -256,12 +341,57 @@ describe('storefrontRepository.getBrowseSummaries', () => {
     expect(result.items.map((item) => item.id)).toEqual(['deal-1', 'deal-3']);
     expect(result.hasMore).toBe(false);
   });
+
+  it('falls back to all known summaries when browse pages stay empty', async () => {
+    const catalogItems = [createSummary('a', 2.1), createSummary('b', 6.4)];
+
+    sourceMocks.getSummaryPage
+      .mockResolvedValueOnce({
+        items: [],
+        total: 0,
+        limit: 4,
+        offset: 0,
+      })
+      .mockResolvedValueOnce({
+        items: [],
+        total: 0,
+        limit: 4,
+        offset: 0,
+      });
+    sourceMocks.getAllSummaries.mockResolvedValue(catalogItems);
+
+    const result = await storefrontRepository.getBrowseSummaries(
+      {
+        areaId: 'upstate-all',
+        searchQuery: '',
+        origin: { latitude: 40.7128, longitude: -74.006 },
+        locationLabel: 'New York, NY',
+      },
+      'distance',
+      4,
+      0,
+    );
+
+    expect(sourceMocks.getSummaryPage).toHaveBeenCalledTimes(2);
+    expect(sourceMocks.getAllSummaries).toHaveBeenCalledTimes(1);
+    expect(result.total).toBe(2);
+    expect(result.limit).toBe(4);
+    expect(result.offset).toBe(0);
+    expect(result.hasMore).toBe(false);
+    expect(result.items.map((item) => item.id)).toEqual(['a', 'b']);
+    expect(result.items.map((item) => item.distanceMiles)).toEqual([0.1, 0.4]);
+    expect(result.items.map((item) => item.travelMinutes)).toEqual([2, 3]);
+  });
 });
 
 describe('storefrontRepository.getStorefrontDetails', () => {
   beforeEach(() => {
     clearStorefrontRepositoryCache();
     sourceMocks.getDetailsById.mockReset();
+    storefrontPromotionOverrideMocks.applyStorefrontPromotionOverrides.mockReset();
+    storefrontPromotionOverrideMocks.applyStorefrontPromotionOverrides.mockImplementation(
+      async (items: unknown) => items,
+    );
   });
 
   it('reuses the in-memory detail cache for repeat loads', async () => {
@@ -274,5 +404,14 @@ describe('storefrontRepository.getStorefrontDetails', () => {
     expect(first).toEqual(detail);
     expect(second).toEqual(detail);
     expect(sourceMocks.getDetailsById).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns null when the source has no storefront detail', async () => {
+    sourceMocks.getDetailsById.mockResolvedValue(null);
+
+    const result = await storefrontRepository.getStorefrontDetails('missing-store');
+
+    expect(result).toBeNull();
+    expect(sourceMocks.getDetailsById).toHaveBeenCalledWith('missing-store');
   });
 });

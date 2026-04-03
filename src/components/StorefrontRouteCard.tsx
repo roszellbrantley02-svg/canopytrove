@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable } from 'react-native';
-import { StorefrontSummary } from '../types/storefront';
+import type { StorefrontSummary } from '../types/storefront';
 import { useStorefrontOperationalStatus } from '../hooks/useStorefrontOperationalStatus';
 import {
   getStorefrontRouteCardState,
@@ -25,6 +25,18 @@ type StorefrontRouteCardProps = {
   showPromotionText?: boolean;
 };
 
+function areStringArraysEqual(previous: string[] | undefined, next: string[] | undefined) {
+  if (previous === next) {
+    return true;
+  }
+
+  if (!previous || !next || previous.length !== next.length) {
+    return false;
+  }
+
+  return previous.every((value, index) => value === next[index]);
+}
+
 function StorefrontRouteCardComponent({
   storefront,
   variant = 'feature',
@@ -42,17 +54,23 @@ function StorefrontRouteCardComponent({
 }: StorefrontRouteCardProps) {
   const compact = variant === 'list';
   const hasPromotion = hasStorefrontPromotion(storefront);
-  const { openNow, isLoading: isOperationalStatusPending } = useStorefrontOperationalStatus(storefront);
-  const { previewTone, previewStatusLabel, previewStatusTone } = getStorefrontRouteCardState({
+  const { openNow, isLoading: isOperationalStatusPending } =
+    useStorefrontOperationalStatus(storefront);
+  const { cardVisualLane, previewStatusLabel, previewStatusTone } = getStorefrontRouteCardState({
     isSaved,
     isVisited,
     hasPromotion,
+    premiumCardVariant: storefront.premiumCardVariant,
     openNow,
     isOperationalStatusPending,
   });
+  const accessibilityLabel = `${storefront.displayName}, ${storefront.city}, ${storefront.state}. ${previewStatusLabel}. ${hasPromotion ? 'Live deal available.' : 'No live deal highlighted.'}`;
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint="Opens the storefront detail screen."
       onPress={onPress}
       onPressIn={onPressIn}
       style={({ pressed }) => [
@@ -73,7 +91,7 @@ function StorefrontRouteCardComponent({
         onSecondaryActionPress={onSecondaryActionPress}
         onSecondaryActionPressIn={onSecondaryActionPressIn}
         showPromotionText={showPromotionText}
-        previewTone={previewTone}
+        cardVisualLane={cardVisualLane}
         previewStatusLabel={previewStatusLabel}
         previewStatusTone={previewStatusTone}
       />
@@ -83,7 +101,7 @@ function StorefrontRouteCardComponent({
 
 function areStorefrontCardsEqual(
   previous: Readonly<StorefrontRouteCardProps>,
-  next: Readonly<StorefrontRouteCardProps>
+  next: Readonly<StorefrontRouteCardProps>,
 ) {
   return (
     previous.variant === next.variant &&
@@ -94,11 +112,28 @@ function areStorefrontCardsEqual(
     previous.showPromotionText === next.showPromotionText &&
     previous.storefront.id === next.storefront.id &&
     previous.storefront.displayName === next.storefront.displayName &&
+    previous.storefront.addressLine1 === next.storefront.addressLine1 &&
+    previous.storefront.city === next.storefront.city &&
+    previous.storefront.state === next.storefront.state &&
+    previous.storefront.zip === next.storefront.zip &&
     previous.storefront.rating === next.storefront.rating &&
+    previous.storefront.reviewCount === next.storefront.reviewCount &&
     previous.storefront.distanceMiles === next.storefront.distanceMiles &&
     previous.storefront.openNow === next.storefront.openNow &&
     previous.storefront.isVerified === next.storefront.isVerified &&
     previous.storefront.promotionText === next.storefront.promotionText &&
+    areStringArraysEqual(previous.storefront.promotionBadges, next.storefront.promotionBadges) &&
+    previous.storefront.promotionExpiresAt === next.storefront.promotionExpiresAt &&
+    previous.storefront.activePromotionId === next.storefront.activePromotionId &&
+    previous.storefront.activePromotionCount === next.storefront.activePromotionCount &&
+    previous.storefront.verifiedOwnerBadgeLabel === next.storefront.verifiedOwnerBadgeLabel &&
+    areStringArraysEqual(
+      previous.storefront.ownerFeaturedBadges,
+      next.storefront.ownerFeaturedBadges,
+    ) &&
+    previous.storefront.ownerCardSummary === next.storefront.ownerCardSummary &&
+    previous.storefront.premiumCardVariant === next.storefront.premiumCardVariant &&
+    previous.storefront.thumbnailUrl === next.storefront.thumbnailUrl &&
     previous.onPress === next.onPress &&
     previous.onPressIn === next.onPressIn &&
     previous.onPrimaryActionPress === next.onPrimaryActionPress &&
@@ -108,4 +143,7 @@ function areStorefrontCardsEqual(
   );
 }
 
-export const StorefrontRouteCard = React.memo(StorefrontRouteCardComponent, areStorefrontCardsEqual);
+export const StorefrontRouteCard = React.memo(
+  StorefrontRouteCardComponent,
+  areStorefrontCardsEqual,
+);

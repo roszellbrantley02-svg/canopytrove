@@ -1,19 +1,21 @@
 import React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { AppUiIcon } from '../icons/AppUiIcon';
 import {
   useStorefrontProfileController,
   useStorefrontQueryController,
 } from '../context/StorefrontController';
 import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
 import { useBrowseSummaries } from '../hooks/useStorefrontSummaryData';
-import { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { submitOwnerDispensaryClaim } from '../services/ownerPortalService';
+import { OwnerPortalHeroPanel } from './ownerPortal/OwnerPortalHeroPanel';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 import { ownerPortalPreviewSearchResults } from './ownerPortal/ownerPortalPreviewData';
 
@@ -40,7 +42,7 @@ export function OwnerPortalClaimListingScreen() {
     },
     'distance',
     8,
-    0
+    0,
   );
 
   const results = preview
@@ -82,7 +84,7 @@ export function OwnerPortalClaimListingScreen() {
         displayName,
       });
       setStatusText(
-        'Claim submitted. Your owner workspace is now linked to this listing for verification review.'
+        'Claim submitted. Your owner workspace is now linked to this listing for verification review.',
       );
       navigation.replace('OwnerPortalHome');
     } catch (error) {
@@ -97,67 +99,36 @@ export function OwnerPortalClaimListingScreen() {
       eyebrow="Owner Portal"
       title="Claim dispensary listing."
       subtitle={
-          preview
-            ? 'Demo mode lets you inspect claim search and result cards with sample listings before touching live owner data.'
-            : 'Search the Canopy Trove directory and claim the storefront your team manages.'
-        }
-      headerPill={preview ? 'Demo' : 'Onboarding'}
+        preview
+          ? 'Preview mode shows safe claim search results.'
+          : 'Search the Canopy Trove directory and claim the storefront your team manages.'
+      }
+      headerPill={preview ? 'Preview' : 'Onboarding'}
     >
       <MotionInView delay={70}>
-        <View style={styles.portalHeroCard}>
-          <View style={styles.portalHeroGlow} />
-          <Text style={styles.portalHeroKicker}>Owner onboarding</Text>
-          <Text style={styles.portalHeroTitle}>
-            Match the owner account to the right storefront with a calmer claim step.
-          </Text>
-          <Text style={styles.portalHeroBody}>
-            Search uses the same storefront records the customer app already serves. This step is
-            where the owner workspace connects to the real listing.
-          </Text>
-          <View style={styles.summaryStrip}>
-            <View style={styles.summaryTile}>
-              <Text style={styles.summaryTileValue}>{submittedQuery.trim() ? results.length : 0}</Text>
-              <Text style={styles.summaryTileLabel}>Matches</Text>
-              <Text style={styles.summaryTileBody}>
-                Search results currently visible for the submitted query.
-              </Text>
-            </View>
-            <View style={styles.summaryTile}>
-              <Text style={styles.summaryTileValue}>{activeLocationLabel}</Text>
-              <Text style={styles.summaryTileLabel}>Search area</Text>
-              <Text style={styles.summaryTileBody}>
-                  Results are shown against the active Canopy Trove location context.
-              </Text>
-            </View>
-          </View>
-          <View style={styles.onboardingStepRow}>
-            {ONBOARDING_STEPS.map((step, index) => (
-              <View
-                key={step}
-                style={[
-                  styles.onboardingStepChip,
-                  index === 2 && styles.onboardingStepChipActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.onboardingStepChipText,
-                    index === 2 && styles.onboardingStepChipTextActive,
-                  ]}
-                >
-                  {step}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
+        <OwnerPortalHeroPanel
+          kicker="Owner onboarding"
+          title="Match the owner account to the right storefront."
+          body="Search connects owner workspace to the real listing record."
+          metrics={[
+            {
+              value: submittedQuery.trim() ? results.length : 0,
+              label: 'Matches',
+              body: '',
+            },
+            {
+              value: activeLocationLabel,
+              label: 'Search area',
+              body: '',
+            },
+          ]}
+          steps={ONBOARDING_STEPS}
+          activeStepIndex={2}
+        />
       </MotionInView>
 
       <MotionInView delay={120}>
-        <SectionCard
-          title="Search listings"
-          body="Use storefront name, address, city, or ZIP. The search runs against the same storefront records the app already serves."
-        >
+        <SectionCard title="Search listings" body="">
           <View style={styles.sectionStack}>
             <View style={styles.plannerPanel}>
               <View style={styles.fieldGroup}>
@@ -191,17 +162,10 @@ export function OwnerPortalClaimListingScreen() {
       </MotionInView>
 
       <MotionInView delay={180}>
-        <SectionCard
-          title="Search results"
-          body={
-            submittedQuery.trim()
-              ? `Showing matches near ${activeLocationLabel}.`
-              : 'Search first, then choose the dispensary that matches your business.'
-          }
-        >
+        <SectionCard title="Search results" body="">
           {!submittedQuery.trim() ? (
             <View style={styles.emptyStateCard}>
-              <Text style={styles.emptyStateTitle}>No search submitted yet</Text>
+              <Text style={styles.emptyStateTitle}>Search the directory first</Text>
               <Text style={styles.emptyStateBody}>
                 Start with a storefront name, address, city, or ZIP. The matching claim cards will
                 appear here once a search is submitted.
@@ -236,16 +200,17 @@ export function OwnerPortalClaimListingScreen() {
                         {storefront.city}, {storefront.state} {storefront.zip}
                       </Text>
                     </View>
-                    <Ionicons name="storefront-outline" size={20} color="#F5C86A" />
+                    <AppUiIcon name="storefront-outline" size={20} color="#F5C86A" />
                   </View>
                   <Pressable
-                    disabled={!preview && Boolean(isSubmittingClaimId)}
+                    disabled={!preview && isSubmittingClaimId === storefront.id}
                     onPress={() => {
+                      if (isSubmittingClaimId) return;
                       void handleClaim(storefront.id, storefront.displayName);
                     }}
                     style={[
                       styles.secondaryButton,
-                      !preview && Boolean(isSubmittingClaimId) && styles.buttonDisabled,
+                      !preview && isSubmittingClaimId === storefront.id && styles.buttonDisabled,
                     ]}
                   >
                     <Text style={styles.secondaryButtonText}>

@@ -1,4 +1,4 @@
-import { AnalyticsEventBatchRequest } from '../../../src/types/analytics';
+import { ANALYTICS_EVENT_TYPES, AnalyticsEventBatchRequest } from '../../../src/types/analytics';
 import {
   MAX_ANALYTICS_EVENTS,
   MAX_ANALYTICS_METADATA_KEYS,
@@ -60,45 +60,16 @@ function parseAnalyticsMetadata(value: unknown, field: string) {
 }
 
 function parseAnalyticsEventType(value: unknown, field: string) {
-  return parseEnumValue(value, field, [
-    'app_open',
-    'session_start',
-    'session_end',
-    'screen_view',
-    'signup_started',
-    'signup_completed',
-    'signin',
-    'password_reset_requested',
-    'location_prompt_shown',
-    'location_granted',
-    'location_denied',
-    'location_changed',
-    'search_submitted',
-    'search_cleared',
-    'browse_sort_changed',
-    'hot_deals_toggled',
-    'storefront_impression',
-    'storefront_opened',
-    'go_now_tapped',
-    'website_tapped',
-    'phone_tapped',
-    'menu_tapped',
-    'deal_impression',
-    'deal_opened',
-    'deal_saved',
-    'deal_redeem_started',
-    'deal_redeemed',
-    'review_prompt_shown',
-    'review_prompt_dismissed',
-    'review_started',
-    'review_submitted',
-  ] as const);
+  return parseEnumValue(value, field, ANALYTICS_EVENT_TYPES);
 }
 
 function parseAnalyticsEvent(value: unknown, field: string) {
   const body = asObject(value, field);
 
   return {
+    eventId: parseOptionalTrimmedString(body.eventId, `${field}.eventId`, {
+      maxLength: MAX_ID_LENGTH,
+    }),
     eventType: parseAnalyticsEventType(body.eventType, `${field}.eventType`),
     installId: parseTrimmedString(body.installId, `${field}.installId`, {
       maxLength: MAX_ID_LENGTH,

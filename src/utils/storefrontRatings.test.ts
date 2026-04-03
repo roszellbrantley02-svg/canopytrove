@@ -7,13 +7,13 @@ describe('getStorefrontRatingDisplay', () => {
       getStorefrontRatingDisplay({
         publishedRating: 4.8,
         publishedReviewCount: 3,
-      })
+      }),
     ).toEqual({
       isReady: false,
       average: null,
       badgeLabel: 'Rating Pending',
       countLabel: `3 / ${MIN_PUBLIC_RATING_COUNT} ratings`,
-      helperLabel: 'Ratings waiting for you to rate them.',
+      helperLabel: 'Needs more ratings before a score is shown.',
     });
   });
 
@@ -22,7 +22,7 @@ describe('getStorefrontRatingDisplay', () => {
       getStorefrontRatingDisplay({
         publishedRating: 4.6,
         publishedReviewCount: 12,
-      })
+      }),
     ).toEqual({
       isReady: true,
       average: 4.6,
@@ -47,7 +47,7 @@ describe('getStorefrontRatingDisplay', () => {
           tags: [],
           helpfulCount: 0,
         })),
-      })
+      }),
     ).toEqual({
       isReady: true,
       average: 5,

@@ -3,35 +3,40 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Account Deletion Help | Canopy Trove</title>
+    <title>Account Deletion Help | Canopy Trove&#8482;</title>
     <meta
       name="description"
       content="Canopy Trove account deletion help covering the in-app flow, recent sign-in requirements, and support follow-up."
     />
-    <link rel="icon" href="/media/canopy-arc.svg" />
+    <link rel="icon" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="canonical" href="https://canopytrove.com/account-deletion" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="page-shell">
       <header class="topbar">
-        <div class="container topbar-inner">
-          <a class="brand" href="/">
-            <span class="brand-mark"></span>
-            <span class="brand-copy">
-              <span class="brand-title">Canopy Trove</span>
-              <span class="brand-subtitle">Where legal cannabis feels chosen.</span>
-            </span>
-          </a>
-          <nav class="nav" aria-label="Canopy Trove public pages">
-            <a class="pill-link" href="/privacy">Privacy</a>
-            <a class="pill-link" href="/terms">Terms</a>
-            <a class="pill-link" href="/community-guidelines">Community Guidelines</a>
-            <a class="pill-link" href="/support">Support</a>
-            <a class="pill-link" href="/account-deletion">Account Deletion</a>
-          </nav>
-        </div>
-      </header>
+  <div class="container topbar-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-copy">
+        <span class="brand-title">Canopy Trove&#8482;</span>
+        <span class="brand-subtitle">Where legal cannabis feels chosen.</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Canopy Trove site navigation">
+      <a class="pill-link" href="/#experience">Experience</a>
+      <a class="pill-link" href="/#download">Download</a>
+      <a class="pill-link" href="/#shops">For Operators</a>
+      <a class="pill-link" href="/#pricing">Pricing</a>
+      <a class="pill-link" href="/support">Support</a>
+      <a class="button-primary nav-cta" href="/#download">Get Android Access</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Open navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
 
       <main>
         <section class="hero">
@@ -71,9 +76,12 @@
           <div class="container content-grid">
             <article class="document-card">
               <h2>Canopy Trove Account Deletion Help</h2>
-              <div class="document-meta">Updated: March 29, 2026</div>
+              <div class="document-meta">Updated: April 1, 2026</div>
               <p class="document-intro">
                 Canopy Trove supports in-app account deletion from the Profile area.
+              </p>
+              <p>
+                This deletion guide applies to the Canopy Trove service operated by Canopy Trove LLC.
               </p>
 
               <div class="content-stack">
@@ -90,8 +98,14 @@
                 <section class="section-card">
                   <h2>What Deletion Does</h2>
                   <p>
-                    Deleting an account removes local Canopy Trove data on the device and clears the
-                    linked backend profile path used by the app.
+                    Deleting an account removes local Canopy Trove data on the device and deletes
+                    the related Canopy Trove account record, reward state, favorites and alerts,
+                    route activity, community content, and linked owner verification or compliance
+                    records tied to that account.
+                  </p>
+                  <p>
+                    If a required cleanup step cannot finish, the profile removal is blocked until
+                    the remaining data can be cleared safely.
                   </p>
                 </section>
 
@@ -137,14 +151,64 @@
       </main>
 
       <footer class="footer">
-        <div class="container">
-          <div class="footer-card">
-            <p>Canopy Trove website, support, and policy pages</p>
-            <a class="button-secondary" href="/">Return to Canopy Trove</a>
-          </div>
-        </div>
-      </footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a class="brand footer-brand-link" href="/">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-copy">
+            <span class="brand-title">Canopy Trove&#8482;</span>
+            <span class="brand-subtitle">Where legal cannabis feels chosen.</span>
+          </span>
+        </a>
+        <p class="footer-descriptor">Licensed dispensary discovery for adults. Not a marketplace. Not ordering. Discovery that feels considered.</p>
+        <p class="footer-legal">Adults 21+ where lawful. Licensed dispensaries only.</p>
+        <p class="footer-copy">&#169; 2026 Canopy Trove LLC. All rights reserved.</p>
+      </div>
+
+      <nav class="footer-nav" aria-label="Product links">
+        <span class="footer-nav-label">Product</span>
+        <a href="/#experience">Experience</a>
+        <a href="/#download">Download</a>
+        <a href="/#shops">For Operators</a>
+        <a href="/#pricing">Pricing</a>
+        <a href="/#trust">Trust</a>
+        <a href="/#launch">Launch</a>
+      </nav>
+
+      <nav class="footer-nav" aria-label="Company links">
+        <span class="footer-nav-label">Company</span>
+        <a href="/about">About</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/community-guidelines">Community Guidelines</a>
+        <a href="/account-deletion">Account Deletion</a>
+      </nav>
+
+      <div class="footer-contact">
+        <span class="footer-nav-label">Contact</span>
+        <a href="/support">Support</a>
+        <a href="mailto:support@canopytrove.com">support@canopytrove.com</a>
+        <a class="button-primary footer-cta" href="/#download">Get Android Access</a>
+      </div>
     </div>
+  </div>
+</footer>
+    </div>
+  <script>
+  (function () {
+    var btn = document.querySelector('.nav-toggle');
+    var nav = document.querySelector('.nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function () {
+      var open = nav.classList.toggle('nav-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+    });
+  })();
+</script>
   </body>
 </html>
+
+
 

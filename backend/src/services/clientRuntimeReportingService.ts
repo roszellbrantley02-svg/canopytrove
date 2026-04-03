@@ -9,7 +9,12 @@ type ClientRuntimeErrorReport = {
   reportedAt?: string;
 };
 
-export function recordClientRuntimeError(report: ClientRuntimeErrorReport, ip: string | undefined) {
+import { recordRuntimeIncident } from './runtimeOpsService';
+
+export async function recordClientRuntimeError(
+  report: ClientRuntimeErrorReport,
+  ip: string | undefined
+) {
   console.error(
     JSON.stringify({
       type: 'client_runtime_error',
@@ -24,4 +29,18 @@ export function recordClientRuntimeError(report: ClientRuntimeErrorReport, ip: s
       stack: report.stack ?? null,
     })
   );
+
+  await recordRuntimeIncident({
+    kind: 'client',
+    severity: report.isFatal ? 'critical' : 'warning',
+    source: report.source ?? 'client-runtime',
+    message: report.message,
+    screen: report.screen ?? null,
+    platform: report.platform ?? null,
+    metadata: {
+      ip: ip ?? null,
+      name: report.name ?? 'Error',
+      reportedAt: report.reportedAt ?? new Date().toISOString(),
+    },
+  });
 }

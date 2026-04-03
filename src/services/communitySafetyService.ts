@@ -55,9 +55,9 @@ export async function initializeCommunitySafetyState() {
           ? Array.from(
               new Set(
                 parsed.blockedAuthorProfileIds.filter(
-                  (value): value is string => typeof value === 'string' && value.trim().length > 0
-                )
-              )
+                  (value): value is string => typeof value === 'string' && value.trim().length > 0,
+                ),
+              ),
             ).slice(0, 64)
           : [],
       });
@@ -95,7 +95,7 @@ export async function blockCommunityAuthor(profileId: string) {
   memoryState = cloneState({
     ...memoryState,
     blockedAuthorProfileIds: Array.from(
-      new Set([...memoryState.blockedAuthorProfileIds, normalizedProfileId])
+      new Set([...memoryState.blockedAuthorProfileIds, normalizedProfileId]),
     ).slice(0, 64),
   });
   await persistState();
@@ -107,7 +107,7 @@ export async function unblockCommunityAuthor(profileId: string) {
   memoryState = cloneState({
     ...memoryState,
     blockedAuthorProfileIds: memoryState.blockedAuthorProfileIds.filter(
-      (currentProfileId) => currentProfileId !== profileId
+      (currentProfileId) => currentProfileId !== profileId,
     ),
   });
   await persistState();

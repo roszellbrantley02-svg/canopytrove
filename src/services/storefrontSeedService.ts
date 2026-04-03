@@ -1,5 +1,9 @@
-import { Firestore, collection, doc, writeBatch } from 'firebase/firestore';
-import { StorefrontDetailDocument, StorefrontSummaryDocument } from '../types/firestoreDocuments';
+import type { Firestore } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import type {
+  StorefrontDetailDocument,
+  StorefrontSummaryDocument,
+} from '../types/firestoreDocuments';
 
 const MAX_BATCH_WRITES = 450;
 
@@ -23,10 +27,7 @@ function toSeedOperations(payload: SeedPayload) {
   ];
 }
 
-export async function seedStorefrontCollections(
-  db: Firestore,
-  payload: SeedPayload
-) {
+export async function seedStorefrontCollections(db: Firestore, payload: SeedPayload) {
   const operations = toSeedOperations(payload);
 
   for (let index = 0; index < operations.length; index += MAX_BATCH_WRITES) {
@@ -36,7 +37,7 @@ export async function seedStorefrontCollections(
     batchOperations.forEach((operation) => {
       batch.set(
         doc(collection(db, operation.collectionName), operation.storefrontId),
-        operation.documentData
+        operation.documentData,
       );
     });
 

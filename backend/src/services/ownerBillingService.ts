@@ -2,6 +2,11 @@ import crypto from 'node:crypto';
 import { Request } from 'express';
 import { getMissingOwnerBillingBackendEnvVars, serverConfig } from '../config';
 import { getBackendFirebaseAuth, getBackendFirebaseDb, hasBackendFirebaseConfig } from '../firebase';
+import {
+  getOwnerAuthorizationState,
+  isVerifiedOwnerStatus,
+} from './ownerPortalAuthorizationService';
+import { resolveOwnerLaunchTrialOffer } from './launchProgramService';
 
 type OwnerBillingCycle = 'monthly' | 'annual';
 type OwnerSubscriptionStatus =
@@ -14,11 +19,8 @@ type OwnerSubscriptionStatus =
 
 type OwnerProfileRecord = {
   uid: string;
-  dispensaryId: string | null;
   legalName?: string | null;
   companyName?: string | null;
-  businessVerificationStatus?: string | null;
-  identityVerificationStatus?: string | null;
   subscriptionStatus?: string | null;
 };
 
@@ -38,6 +40,9 @@ type OwnerSubscriptionRecord = {
   updatedAt: string;
   lastCheckoutSessionId?: string | null;
   lastCheckoutOpenedAt?: string | null;
+  launchTrialDays?: number | null;
+  launchTrialClaimedAt?: string | null;
+  launchProgramWindowEndsAt?: string | null;
 };
 
 type StripeCheckoutSession = {
@@ -190,45 +195,45 @@ async function getVerifiedOwnerContext(request: Request) {
     throw new OwnerBillingError('Invalid owner authentication token.', 401);
   }
 
-  const db = getOwnerBillingDb();
-  const ownerProfileSnapshot = await db
-    .collection(OWNER_PROFILES_COLLECTION)
-    .doc(decodedToken.uid)
-    .get();
-
-  if (!ownerProfileSnapshot.exists) {
+  const ownerState = await getOwnerAuthorizationState(decodedToken.uid);
+  if (!ownerState.ownerProfile) {
     throw new OwnerBillingError('Owner profile not found.', 404);
   }
 
-  const ownerProfile = ownerProfileSnapshot.data() as OwnerProfileRecord;
   return {
     ownerUid: decodedToken.uid,
     ownerEmail: decodedToken.email ?? null,
-    ownerProfile,
+    ownerProfile: ownerState.ownerProfile as OwnerProfileRecord,
+    storefrontId: ownerState.storefrontId,
+    businessVerificationStatus: ownerState.businessVerificationStatus,
+    identityVerificationStatus: ownerState.identityVerificationStatus,
   };
 }
 
 function isVerifiedStatus(status: string | null | undefined) {
-  const normalizedStatus = (status ?? '').trim().toLowerCase();
-  return normalizedStatus === 'verified' || normalizedStatus === 'approved';
+  return isVerifiedOwnerStatus(status);
 }
 
-function assertOwnerBillingEligibility(ownerProfile: OwnerProfileRecord) {
-  if (!ownerProfile.dispensaryId) {
+function assertOwnerBillingEligibility(input: {
+  storefrontId: string | null;
+  businessVerificationStatus: string | null | undefined;
+  identityVerificationStatus: string | null | undefined;
+}) {
+  if (!input.storefrontId) {
     throw new OwnerBillingError(
       'Claim your storefront before opening owner billing.',
       409
     );
   }
 
-  if (!isVerifiedStatus(ownerProfile.businessVerificationStatus)) {
+  if (!isVerifiedStatus(input.businessVerificationStatus)) {
     throw new OwnerBillingError(
       'Business verification must be approved before billing can start.',
       409
     );
   }
 
-  if (!isVerifiedStatus(ownerProfile.identityVerificationStatus)) {
+  if (!isVerifiedStatus(input.identityVerificationStatus)) {
     throw new OwnerBillingError(
       'Identity verification must be approved before billing can start.',
       409
@@ -398,18 +403,15 @@ async function persistStripeSubscriptionUpdate(subscription: StripeSubscription)
   }
 
   const db = getOwnerBillingDb();
-  const ownerProfileSnapshot = await db.collection(OWNER_PROFILES_COLLECTION).doc(ownerUid).get();
-  const ownerProfile = ownerProfileSnapshot.exists
-    ? (ownerProfileSnapshot.data() as OwnerProfileRecord)
-    : null;
+  const ownerState = await getOwnerAuthorizationState(ownerUid);
   const existingSubscription = await getOwnerSubscription(ownerUid);
   const now = createNow();
   const subscriptionStatus = mapStripeSubscriptionStatus(subscription.status);
   const billingCycle = getStripeBillingCycle(subscription);
   const dispensaryId =
     subscription.metadata?.dispensaryId ||
-    ownerProfile?.dispensaryId ||
-    existingSubscription?.dispensaryId;
+    existingSubscription?.dispensaryId ||
+    ownerState.storefrontId;
 
   if (!dispensaryId) {
     throw new OwnerBillingError(
@@ -617,13 +619,31 @@ export async function createOwnerBillingCheckoutSession(
     stripeOwnerMonthlyPriceId,
     stripeOwnerSuccessUrl,
   } = getStripeBillingConfig();
-  const { ownerEmail, ownerProfile, ownerUid } = await getVerifiedOwnerContext(request);
+  const {
+    businessVerificationStatus,
+    identityVerificationStatus,
+    ownerEmail,
+    ownerProfile,
+    ownerUid,
+    storefrontId,
+  } = await getVerifiedOwnerContext(request);
 
-  assertOwnerBillingEligibility(ownerProfile);
+  assertOwnerBillingEligibility({
+    storefrontId,
+    businessVerificationStatus,
+    identityVerificationStatus,
+  });
 
   const currentSubscription = await getOwnerSubscription(ownerUid);
   const priceId =
     cycle === 'annual' ? stripeOwnerAnnualPriceId : stripeOwnerMonthlyPriceId;
+  const now = createNow();
+  const launchTrialOffer = await resolveOwnerLaunchTrialOffer({
+    ownerUid,
+    storefrontId: storefrontId ?? '',
+    currentSubscription,
+    now,
+  });
 
   const params = new URLSearchParams();
   params.set('mode', 'subscription');
@@ -635,12 +655,17 @@ export async function createOwnerBillingCheckoutSession(
   params.set('allow_promotion_codes', 'true');
   params.set('billing_address_collection', 'required');
   params.set('metadata[ownerUid]', ownerUid);
-  params.set('metadata[dispensaryId]', ownerProfile.dispensaryId ?? '');
+  params.set('metadata[dispensaryId]', storefrontId ?? '');
   params.set('subscription_data[metadata][ownerUid]', ownerUid);
-  params.set(
-    'subscription_data[metadata][dispensaryId]',
-    ownerProfile.dispensaryId ?? ''
-  );
+  params.set('subscription_data[metadata][dispensaryId]', storefrontId ?? '');
+  if (launchTrialOffer.trialDays > 0) {
+    params.set('subscription_data[trial_period_days]', String(launchTrialOffer.trialDays));
+    params.set('metadata[launchTrialDays]', String(launchTrialOffer.trialDays));
+    params.set(
+      'subscription_data[metadata][launchTrialDays]',
+      String(launchTrialOffer.trialDays)
+    );
+  }
 
   if (currentSubscription?.externalCustomerId) {
     params.set('customer', currentSubscription.externalCustomerId);
@@ -659,14 +684,13 @@ export async function createOwnerBillingCheckoutSession(
     throw new OwnerBillingError('Stripe checkout did not return a redirect URL.', 502);
   }
 
-  const now = createNow();
   await getOwnerBillingDb()
     .collection(SUBSCRIPTIONS_COLLECTION)
     .doc(ownerUid)
     .set(
       {
         ownerUid,
-        dispensaryId: ownerProfile.dispensaryId,
+        dispensaryId: storefrontId,
         provider: 'stripe',
         externalCustomerId:
           (typeof session.customer === 'string' ? session.customer : null) ??
@@ -686,6 +710,18 @@ export async function createOwnerBillingCheckoutSession(
         updatedAt: now,
         lastCheckoutSessionId: session.id,
         lastCheckoutOpenedAt: now,
+        launchTrialDays:
+          launchTrialOffer.trialDays ||
+          currentSubscription?.launchTrialDays ||
+          null,
+        launchTrialClaimedAt:
+          launchTrialOffer.claim?.claimedAt ??
+          currentSubscription?.launchTrialClaimedAt ??
+          null,
+        launchProgramWindowEndsAt:
+          launchTrialOffer.claim?.windowEndsAt ??
+          currentSubscription?.launchProgramWindowEndsAt ??
+          null,
       },
       { merge: true }
     );
@@ -696,6 +732,7 @@ export async function createOwnerBillingCheckoutSession(
     billingCycle: cycle,
     url: session.url,
     source: 'backend_stripe',
+    launchTrialDaysApplied: launchTrialOffer.trialDays,
   };
 }
 

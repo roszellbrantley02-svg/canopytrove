@@ -16,13 +16,42 @@ Track real product usage for Canopy Trove across:
 
 This analytics system is event-based and Firestore-backed.
 
+## Ownership And Lifecycle
+
+The runtime flow is intentionally split into small pieces so queueing and retries stay predictable:
+
+- client orchestration: [analyticsService.ts](../src/services/analyticsService.ts)
+- runtime config and limits: [analyticsConfig.ts](../src/services/analyticsConfig.ts)
+- event shaping: [analyticsEventBuilder.ts](../src/services/analyticsEventBuilder.ts)
+- persisted queue storage: [analyticsStorage.ts](../src/services/analyticsStorage.ts)
+- session start/end + app state transitions: [analyticsSessionLifecycle.ts](../src/services/analyticsSessionLifecycle.ts)
+- in-memory runtime state: [analyticsRuntimeState.ts](../src/services/analyticsRuntimeState.ts)
+- transport to the backend: [analyticsTransport.ts](../src/services/analyticsTransport.ts)
+
+The runtime lifecycle works like this:
+
+1. `initializeAnalytics()` creates or restores the install ID and rehydrates any persisted queue.
+2. A session starts on cold launch and emits lifecycle events through the same queue path as product events.
+3. Events are appended to the in-memory queue, persisted locally, and flushed either on a short timer or immediately once the batch-size limit is reached.
+4. Failed transport attempts do not drop data immediately. They apply a retry backoff and keep the queue persisted until the next flush attempt succeeds.
+5. App state transitions end and restart sessions through the dedicated session-lifecycle module instead of mixing that logic into every screen or event callsite.
+
+Current queueing rules:
+
+- queue cap: `MAX_QUEUE_SIZE`
+- batch cap: `MAX_BATCH_SIZE`
+- delayed flush timer: `FLUSH_DELAY_MS`
+- retry backoff: `RETRY_BACKOFF_MS`
+
+That split is the part that future maintainers need to understand first. If this pipeline changes, update the files above together rather than modifying only one stage and assuming the queue semantics still line up.
+
 ## Event Pipeline
 
 ### Client side
 
 The mobile app now emits analytics events through:
 
-- [analyticsService.ts](C:/Users/eleve/Documents/New%20project/canopy-trove-3/src/services/analyticsService.ts)
+- [analyticsService.ts](../src/services/analyticsService.ts)
 
 Current instrumentation points:
 
@@ -41,8 +70,8 @@ Current instrumentation points:
 
 The backend ingests event batches through:
 
-- [analyticsRoutes.ts](C:/Users/eleve/Documents/New%20project/canopy-trove-3/backend/src/routes/analyticsRoutes.ts)
-- [analyticsEventService.ts](C:/Users/eleve/Documents/New%20project/canopy-trove-3/backend/src/services/analyticsEventService.ts)
+- [analyticsRoutes.ts](../backend/src/routes/analyticsRoutes.ts)
+- [analyticsEventService.ts](../backend/src/services/analyticsEventService.ts)
 
 ## Raw Event Storage
 

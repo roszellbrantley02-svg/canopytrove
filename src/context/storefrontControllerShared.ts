@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import {
+import type {
   AppProfile,
   BrowseSortKey,
   Coordinates,
@@ -9,7 +9,7 @@ import {
   StorefrontGamificationState,
   StorefrontListQuery,
 } from '../types/storefront';
-import { CanopyTroveAuthSession } from '../types/identity';
+import type { CanopyTroveAuthSession } from '../types/identity';
 
 export type StorefrontQueryControllerValue = {
   availableAreas: MarketArea[];
@@ -75,14 +75,16 @@ export type StorefrontRewardsControllerValue = {
   trackFollowersUpdatedReward: (count: number) => GamificationRewardResult;
 };
 
-export const StorefrontQueryControllerContext =
-  createContext<StorefrontQueryControllerValue | null>(null);
-export const StorefrontRouteControllerContext =
-  createContext<StorefrontRouteControllerValue | null>(null);
-export const StorefrontProfileControllerContext =
-  createContext<StorefrontProfileControllerValue | null>(null);
-export const StorefrontRewardsControllerContext =
-  createContext<StorefrontRewardsControllerValue | null>(null);
+export type StorefrontControllerContextValue = {
+  query: StorefrontQueryControllerValue;
+  route: StorefrontRouteControllerValue;
+  profile: StorefrontProfileControllerValue;
+  rewards: StorefrontRewardsControllerValue;
+};
+
+export const StorefrontControllerContext = createContext<StorefrontControllerContextValue | null>(
+  null,
+);
 
 export function areStringArraysEqual(left: string[], right: string[]) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
@@ -90,7 +92,7 @@ export function areStringArraysEqual(left: string[], right: string[]) {
 
 export function areGamificationStatesEqual(
   current: StorefrontGamificationState,
-  next: StorefrontGamificationState
+  next: StorefrontGamificationState,
 ) {
   return JSON.stringify(current) === JSON.stringify(next);
 }

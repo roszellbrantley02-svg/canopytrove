@@ -1,8 +1,9 @@
-import {
+import type {
   StorefrontDetails,
   StorefrontReportSubmissionInput,
   StorefrontReviewHelpfulInput,
   StorefrontReviewSubmissionInput,
+  StorefrontReviewUpdateInput,
 } from '../types/storefront';
 import {
   getCachedStorefrontCommunityState,
@@ -18,16 +19,20 @@ import {
   cloneStorefrontCommunityState,
 } from './storefrontCommunityLocalShared';
 
-export { getCachedStorefrontCommunityState, loadStorefrontCommunityState, primeStoredStorefrontCommunityState };
+export {
+  getCachedStorefrontCommunityState,
+  loadStorefrontCommunityState,
+  primeStoredStorefrontCommunityState,
+};
 
 export async function mergeLocalStorefrontCommunityIntoDetail(
-  detail: StorefrontDetails
+  detail: StorefrontDetails,
 ): Promise<StorefrontDetails> {
   const communityState = await loadStorefrontCommunityState();
   const localReviews = communityState.appReviewsByStorefrontId[detail.storefrontId] ?? [];
 
   const mergedLocalReviews = localReviews.map((review) =>
-    mapStoredReviewToAppReview(review, communityState.helpfulReviewsById[review.id])
+    mapStoredReviewToAppReview(review, communityState.helpfulReviewsById[review.id]),
   );
 
   const mergedBaseReviews = detail.appReviews.map((review) => ({
@@ -49,6 +54,13 @@ export async function mergeLocalStorefrontCommunityIntoDetail(
 
 export async function addLocalStorefrontReview(input: StorefrontReviewSubmissionInput) {
   const state = cloneStorefrontCommunityState(await loadStorefrontCommunityState());
+  const currentReviews = state.appReviewsByStorefrontId[input.storefrontId] ?? [];
+  if (currentReviews.some((review) => review.profileId === input.profileId)) {
+    throw new Error(
+      'You already reviewed this storefront. Edit your existing review instead of posting a second one.',
+    );
+  }
+
   const nextReview = {
     id: createCommunityLocalId('local-review'),
     storefrontId: input.storefrontId,
@@ -57,13 +69,43 @@ export async function addLocalStorefrontReview(input: StorefrontReviewSubmission
     rating: normalizeCommunityRating(input.rating),
     text: input.text.trim(),
     gifUrl: input.gifUrl?.trim() || null,
+    photoUrls: [],
     tags: normalizeCommunityTags(input.tags),
-    photoCount: Math.max(0, Math.floor(input.photoCount ?? 0)),
+    photoCount: Math.max(0, Math.floor(input.photoCount ?? input.photoUploadIds?.length ?? 0)),
+    photoUploadIds: input.photoUploadIds ? [...input.photoUploadIds] : undefined,
     createdAt: new Date().toISOString(),
   };
 
-  const currentReviews = state.appReviewsByStorefrontId[input.storefrontId] ?? [];
   state.appReviewsByStorefrontId[input.storefrontId] = [nextReview, ...currentReviews];
+  await saveStorefrontCommunityState(state);
+  return nextReview.id;
+}
+
+export async function updateLocalStorefrontReview(input: StorefrontReviewUpdateInput) {
+  const state = cloneStorefrontCommunityState(await loadStorefrontCommunityState());
+  const currentReviews = state.appReviewsByStorefrontId[input.storefrontId] ?? [];
+  const reviewIndex = currentReviews.findIndex((review) => review.id === input.reviewId);
+  if (reviewIndex < 0) {
+    throw new Error('Review not found.');
+  }
+
+  const existingReview = currentReviews[reviewIndex];
+  if (existingReview.profileId !== input.profileId) {
+    throw new Error('Only the author can edit this review.');
+  }
+
+  const nextReview = {
+    ...existingReview,
+    authorName: input.authorName.trim() || existingReview.authorName,
+    rating: normalizeCommunityRating(input.rating),
+    text: input.text.trim(),
+    gifUrl: input.gifUrl?.trim() || null,
+    tags: normalizeCommunityTags(input.tags),
+  };
+
+  const nextReviews = currentReviews.slice();
+  nextReviews[reviewIndex] = nextReview;
+  state.appReviewsByStorefrontId[input.storefrontId] = nextReviews;
   await saveStorefrontCommunityState(state);
   return nextReview.id;
 }
@@ -77,6 +119,11 @@ export async function addLocalStorefrontReport(input: StorefrontReportSubmission
     authorName: input.authorName.trim() || 'Canopy Trove user',
     reason: input.reason.trim(),
     description: input.description.trim(),
+    reportTarget: input.reportTarget ?? 'storefront',
+    reportedReviewId: input.reportedReviewId?.trim() || undefined,
+    reportedReviewAuthorProfileId: input.reportedReviewAuthorProfileId?.trim() || null,
+    reportedReviewAuthorName: input.reportedReviewAuthorName?.trim() || null,
+    reportedReviewExcerpt: input.reportedReviewExcerpt?.trim() || null,
     createdAt: new Date().toISOString(),
   };
 
@@ -86,7 +133,7 @@ export async function addLocalStorefrontReport(input: StorefrontReportSubmission
 }
 
 export async function markLocalStorefrontReviewHelpful(
-  input: StorefrontReviewHelpfulInput & { reviewAuthorProfileId?: string | null }
+  input: StorefrontReviewHelpfulInput & { reviewAuthorProfileId?: string | null },
 ) {
   const state = cloneStorefrontCommunityState(await loadStorefrontCommunityState());
   const currentOverlay = state.helpfulReviewsById[input.reviewId] ?? {

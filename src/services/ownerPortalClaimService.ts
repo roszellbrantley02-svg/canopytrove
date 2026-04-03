@@ -1,20 +1,21 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { OwnerDispensaryClaimDocument } from '../types/ownerPortal';
-import { StorefrontSummary } from '../types/storefront';
+import type { OwnerDispensaryClaimDocument } from '../types/ownerPortal';
+import type { StorefrontSummary } from '../types/storefront';
 import {
   createNow,
   createOwnerDispensaryClaimId,
   DISPENSARY_CLAIMS_COLLECTION,
   getOwnerPortalDb,
-  OWNER_PROFILES_COLLECTION,
 } from './ownerPortalShared';
+import { ensureOwnerPortalSessionReady } from './ownerPortalSessionService';
 
 export async function getOwnerDispensaryClaim(ownerUid: string, dispensaryId: string) {
+  await ensureOwnerPortalSessionReady();
   const db = getOwnerPortalDb();
   const claimRef = doc(
     db,
     DISPENSARY_CLAIMS_COLLECTION,
-    createOwnerDispensaryClaimId(ownerUid, dispensaryId)
+    createOwnerDispensaryClaimId(ownerUid, dispensaryId),
   );
   const snapshot = await getDoc(claimRef);
   if (!snapshot.exists()) {
@@ -26,8 +27,9 @@ export async function getOwnerDispensaryClaim(ownerUid: string, dispensaryId: st
 
 export async function submitOwnerDispensaryClaim(
   ownerUid: string,
-  storefront: Pick<StorefrontSummary, 'id' | 'displayName'>
+  storefront: Pick<StorefrontSummary, 'id' | 'displayName'>,
 ) {
+  await ensureOwnerPortalSessionReady();
   const db = getOwnerPortalDb();
   const now = createNow();
   const claimDocument: OwnerDispensaryClaimDocument = {
@@ -42,22 +44,9 @@ export async function submitOwnerDispensaryClaim(
   const claimRef = doc(
     db,
     DISPENSARY_CLAIMS_COLLECTION,
-    createOwnerDispensaryClaimId(ownerUid, storefront.id)
+    createOwnerDispensaryClaimId(ownerUid, storefront.id),
   );
-  const ownerProfileRef = doc(db, OWNER_PROFILES_COLLECTION, ownerUid);
-
-  await Promise.all([
-    setDoc(claimRef, claimDocument, { merge: true }),
-    setDoc(
-      ownerProfileRef,
-      {
-        dispensaryId: storefront.id,
-        onboardingStep: 'business_verification',
-        updatedAt: now,
-      },
-      { merge: true }
-    ),
-  ]);
+  await setDoc(claimRef, claimDocument, { merge: true });
 
   return claimDocument;
 }

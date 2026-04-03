@@ -1,19 +1,29 @@
-import React, { PropsWithChildren } from 'react';
+import type { PropsWithChildren } from 'react';
+import React from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Animated, Easing, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  Animated,
+  Easing,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { brand } from '../config/brand';
 import { BrandMarkIcon } from '../icons/BrandMarkIcon';
+import { AppUiIcon } from '../icons/AppUiIcon';
 import { HapticPressable } from './HapticPressable';
 import { MotionInView } from './MotionInView';
-import { colors, motion, radii, spacing, typography } from '../theme/tokens';
+import { colors, fontFamilies, motion, radii, spacing, textStyles } from '../theme/tokens';
 
 type ScreenShellProps = PropsWithChildren<{
   eyebrow: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   headerPill?: string;
   onBrandIconPress?: () => void;
   onHeaderPillPress?: () => void;
@@ -36,8 +46,21 @@ export function ScreenShell({
 }: ScreenShellProps) {
   const scrollRef = React.useRef<ScrollView | null>(null);
   const shellProgress = React.useRef(new Animated.Value(0)).current;
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isAndroid = Platform.OS === 'android';
   const compactHeader = width < 412;
+  const compactHero = width < 390 || height < 780;
+  const contentContainerStyle = React.useMemo(
+    () => [
+      styles.content,
+      compactHero && styles.contentCompact,
+      {
+        paddingBottom: (compactHero ? 128 : 144) + insets.bottom,
+      },
+    ],
+    [compactHero, insets.bottom],
+  );
 
   useFocusEffect(
     React.useCallback(() => {
@@ -52,26 +75,24 @@ export function ScreenShell({
       return () => {
         clearTimeout(timeoutId);
       };
-    }, [resetScrollOnFocus])
+    }, [resetScrollOnFocus]),
   );
 
-  useFocusEffect(
-    React.useCallback(() => {
-      shellProgress.setValue(0);
-      const animation = Animated.timing(shellProgress, {
-        toValue: 1,
-        duration: motion.ambient,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      });
+  React.useEffect(() => {
+    shellProgress.setValue(0);
+    const animation = Animated.timing(shellProgress, {
+      toValue: 1,
+      duration: motion.ambient,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
 
-      animation.start();
+    animation.start();
 
-      return () => {
-        animation.stop();
-      };
-    }, [shellProgress])
-  );
+    return () => {
+      animation.stop();
+    };
+  }, [shellProgress]);
 
   return (
     <LinearGradient
@@ -98,6 +119,8 @@ export function ScreenShell({
           },
         ]}
       >
+        {isAndroid ? <View style={[styles.ambientHalo, styles.ambientHaloPrimary]} /> : null}
+        {isAndroid ? <View style={[styles.ambientHalo, styles.ambientHaloWarm]} /> : null}
         <View style={[styles.ambientOrb, styles.ambientOrbPrimary]} />
         <View style={[styles.ambientOrb, styles.ambientOrbWarm]} />
         <LinearGradient
@@ -110,31 +133,41 @@ export function ScreenShell({
       <SafeAreaView style={styles.safeArea}>
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={contentContainerStyle}
           showsVerticalScrollIndicator={false}
         >
           {showTopBar ? (
             <MotionInView delay={20} distance={10} duration={motion.quick}>
-              <View style={styles.topBar}>
+              <View style={[styles.topBar, compactHeader && styles.topBarCompact]}>
+                <View pointerEvents="none" style={styles.topBarTone} />
                 <View style={[styles.brandRow, compactHeader && styles.brandRowCompact]}>
                   {onBrandIconPress ? (
                     <HapticPressable
                       hapticType="selection"
                       onPress={onBrandIconPress}
-                      style={({ pressed }) => [styles.brandIcon, pressed && styles.brandIconPressed]}
+                      style={({ pressed }) => [
+                        styles.brandIcon,
+                        compactHeader && styles.brandIconCompact,
+                        pressed && styles.brandIconPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Canopy Trove home"
+                      accessibilityHint="Returns to the home screen."
                     >
-                      <BrandMarkIcon size={26} />
+                      <BrandMarkIcon size={compactHeader ? 22 : 26} />
                     </HapticPressable>
                   ) : (
-                    <View style={styles.brandIcon}>
-                      <BrandMarkIcon size={26} />
+                    <View style={[styles.brandIcon, compactHeader && styles.brandIconCompact]}>
+                      <BrandMarkIcon size={compactHeader ? 22 : 26} />
                     </View>
                   )}
                   <View style={styles.brandTextWrap}>
                     <Text style={[styles.brandTitle, compactHeader && styles.brandTitleCompact]}>
-                      {brand.productName}
+                      {brand.productDisplayName}
                     </Text>
-                    <Text style={styles.brandSubtitle}>{brand.productTagline}</Text>
+                    <Text numberOfLines={1} ellipsizeMode="tail" style={styles.brandSubtitle}>
+                      {brand.productTagline}
+                    </Text>
                   </View>
                 </View>
 
@@ -147,14 +180,17 @@ export function ScreenShell({
                       compactHeader && styles.headerPillCompact,
                       pressed && styles.headerPillPressed,
                     ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Change location"
+                    accessibilityHint={`Current location is ${headerPill}. Press to change.`}
                   >
-                    <Ionicons name="location-outline" size={16} color={colors.goldSoft} />
+                    <AppUiIcon name="location-outline" size={16} color={colors.goldSoft} />
                     <Text style={styles.headerPillText}>{headerPill}</Text>
-                    <Ionicons name="chevron-down" size={12} color={colors.textSoft} />
+                    <AppUiIcon name="chevron-down" size={12} color={colors.textSoft} />
                   </HapticPressable>
                 ) : (
                   <View style={[styles.headerPill, compactHeader && styles.headerPillCompact]}>
-                    <Ionicons name="location-outline" size={16} color={colors.goldSoft} />
+                    <AppUiIcon name="location-outline" size={16} color={colors.goldSoft} />
                     <Text style={styles.headerPillText}>{headerPill}</Text>
                   </View>
                 )}
@@ -163,19 +199,28 @@ export function ScreenShell({
           ) : null}
 
           {showHero ? (
-            <MotionInView delay={motion.sectionStagger} distance={motion.revealDistance} duration={motion.standard}>
+            <MotionInView
+              delay={motion.sectionStagger}
+              distance={motion.revealDistance}
+              duration={motion.standard}
+            >
               <LinearGradient
                 colors={['rgba(18, 31, 39, 0.96)', 'rgba(10, 18, 24, 0.84)']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.hero}
+                style={[styles.hero, compactHero && styles.heroCompact]}
               >
+                <View pointerEvents="none" style={styles.heroTone} />
                 <View style={styles.heroAccentRow}>
                   <Text style={styles.eyebrow}>{eyebrow}</Text>
                   <View style={styles.heroAccentLine} />
                 </View>
-                <Text style={styles.title}>{title}</Text>
-                <Text style={styles.subtitle}>{subtitle}</Text>
+                <Text style={[styles.title, compactHero && styles.titleCompact]}>{title}</Text>
+                {subtitle ? (
+                  <Text style={[styles.subtitle, compactHero && styles.subtitleCompact]}>
+                    {subtitle}
+                  </Text>
+                ) : null}
               </LinearGradient>
             </MotionInView>
           ) : null}
@@ -197,6 +242,27 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderRadius: 999,
   },
+  ambientHalo: {
+    position: 'absolute',
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  ambientHaloPrimary: {
+    top: -100,
+    right: -58,
+    width: 284,
+    height: 284,
+    backgroundColor: 'rgba(0, 245, 140, 0.06)',
+    borderColor: 'rgba(0, 245, 140, 0.10)',
+  },
+  ambientHaloWarm: {
+    top: 124,
+    left: -86,
+    width: 212,
+    height: 212,
+    backgroundColor: 'rgba(245, 200, 106, 0.06)',
+    borderColor: 'rgba(245, 200, 106, 0.10)',
+  },
   ambientOrbPrimary: {
     top: -80,
     right: -40,
@@ -207,6 +273,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.24,
     shadowRadius: 48,
     shadowOffset: { width: 0, height: 16 },
+    elevation: 18,
   },
   ambientOrbWarm: {
     top: 140,
@@ -218,6 +285,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 40,
     shadowOffset: { width: 0, height: 12 },
+    elevation: 14,
   },
   ambientBeam: {
     position: 'absolute',
@@ -233,26 +301,45 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.xl,
-    paddingBottom: 120,
+    paddingBottom: 144,
     gap: spacing.lg,
+  },
+  contentCompact: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: 128,
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
+    position: 'relative',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
-    backgroundColor: 'rgba(9, 15, 20, 0.74)',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'rgba(9, 15, 20, 0.68)',
     shadowColor: colors.shadow,
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
-    paddingTop: spacing.sm,
+    elevation: 7,
+    overflow: 'hidden',
+  },
+  topBarCompact: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  topBarTone: {
+    position: 'absolute',
+    top: -54,
+    right: -12,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(245, 200, 106, 0.08)',
   },
   brandRow: {
     flexDirection: 'row',
@@ -265,19 +352,24 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   brandIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: 'rgba(10, 18, 24, 0.98)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0, 245, 140, 0.22)',
+    width: 48,
+    height: 48,
+    borderRadius: 17,
+    backgroundColor: 'rgba(10, 18, 24, 0.94)',
+    borderWidth: 1.25,
+    borderColor: 'rgba(0, 245, 140, 0.18)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.primary,
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 9 },
-    elevation: 10,
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  brandIconCompact: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
   },
   brandTextWrap: {
     gap: 4,
@@ -289,47 +381,44 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   brandTitle: {
+    ...textStyles.section,
     color: colors.text,
-    fontSize: 24,
-    fontWeight: '900',
-    lineHeight: 25,
+    fontFamily: fontFamilies.displayMedium,
   },
   brandTitleCompact: {
-    fontSize: 21,
-    lineHeight: 23,
+    fontSize: 17,
+    lineHeight: 21,
   },
   brandSubtitle: {
-    color: colors.goldSoft,
-    fontSize: typography.caption,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    ...textStyles.caption,
+    color: colors.textSoft,
+    fontSize: 12,
     flexShrink: 1,
   },
   headerPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: 'rgba(18, 29, 37, 0.9)',
+    backgroundColor: 'rgba(14, 23, 30, 0.82)',
     borderWidth: 1,
-    borderColor: 'rgba(245, 200, 106, 0.18)',
+    borderColor: 'rgba(245, 200, 106, 0.14)',
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: 7,
     shadowColor: colors.shadow,
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    elevation: 5,
   },
   headerPillCompact: {
     alignSelf: 'flex-start',
+    paddingVertical: 6,
   },
   headerPillText: {
+    ...textStyles.caption,
     color: colors.goldSoft,
-    fontSize: typography.caption,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    fontSize: 12,
   },
   headerPillPressed: {
     opacity: 0.86,
@@ -337,22 +426,38 @@ const styles = StyleSheet.create({
   },
   hero: {
     gap: spacing.sm,
+    position: 'relative',
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
     borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.07)',
     shadowColor: colors.shadow,
     shadowOpacity: 0.28,
     shadowRadius: 22,
     shadowOffset: { width: 0, height: 12 },
     elevation: 10,
+    overflow: 'hidden',
+  },
+  heroCompact: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
   heroAccentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  heroTone: {
+    position: 'absolute',
+    top: -56,
+    right: -26,
+    width: 184,
+    height: 184,
+    borderRadius: 92,
+    backgroundColor: 'rgba(245, 200, 106, 0.10)',
   },
   heroAccentLine: {
     flex: 1,
@@ -360,22 +465,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(245, 200, 106, 0.22)',
   },
   eyebrow: {
+    ...textStyles.labelCaps,
     color: colors.gold,
-    fontSize: typography.caption,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    letterSpacing: 0.95,
   },
   title: {
+    ...textStyles.display,
     color: colors.text,
     fontSize: 30,
-    fontWeight: '900',
     lineHeight: 36,
   },
+  titleCompact: {
+    fontSize: 25,
+    lineHeight: 30,
+  },
   subtitle: {
+    ...textStyles.body,
     color: colors.textMuted,
-    fontSize: typography.body,
-    lineHeight: 24,
-    maxWidth: 580,
+    lineHeight: 23,
+    maxWidth: 560,
+  },
+  subtitleCompact: {
+    lineHeight: 22,
   },
 });

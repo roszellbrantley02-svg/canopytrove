@@ -1,17 +1,14 @@
 export {
   ProfileHeroCard,
-  ProfileDetailsSection,
+  ProfileAccountSection,
   ProfileStatsSection,
 } from './ProfileIdentitySections';
 export {
-  TrophyCaseSection,
-  BadgeGallerySection,
-  NextUnlocksSection,
-  PointsPlaybookSection,
+  ProfileRewardsSection,
 } from './ProfileBadgeSections';
 export {
   StorefrontCollectionSection,
-  AccountAccessSection,
+  ProfileEmailUpdatesSection,
   ProfileSafetySection,
   AccountEnvironmentSection,
 } from './ProfileDataSections';

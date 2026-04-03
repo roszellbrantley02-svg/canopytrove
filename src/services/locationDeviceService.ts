@@ -1,15 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { brand } from '../config/brand';
-import { Coordinates } from '../types/storefront';
-import {
-  createCoordinatesCacheKey,
-  DeviceLocationResult,
-  formatResolvedLabel,
-} from './locationServiceShared';
+import type { Coordinates } from '../types/storefront';
+import type { DeviceLocationResult } from './locationServiceShared';
+import { createCoordinatesCacheKey, formatResolvedLabel } from './locationServiceShared';
 
 const DEVICE_LOCATION_CACHE_KEY = `${brand.storageNamespace}:device-location`;
 const DEVICE_LOCATION_TTL_MS = 15 * 60 * 1000;
+const DEVICE_LOCATION_LABEL_CACHE_LIMIT = 24;
 
 const deviceLocationLabelCache = new Map<string, string>();
 let memoryCachedDeviceLocation: Coordinates | null = null;
@@ -108,7 +106,7 @@ async function cacheDeviceLocation(coordinates: Coordinates) {
       JSON.stringify({
         coordinates,
         cachedAt: deviceLocationCachedAt,
-      })
+      }),
     );
   } catch {
     // Device-location caching should not block app flow.
@@ -148,7 +146,7 @@ export async function primeStoredDeviceLocation() {
 
 export async function resolveDeviceLocationLabel(
   coordinates: Coordinates,
-  fallbackLabel?: string | null
+  fallbackLabel?: string | null,
 ) {
   const cacheKey = createCoordinatesCacheKey(coordinates);
   const cached = deviceLocationLabelCache.get(cacheKey);
@@ -164,7 +162,18 @@ export async function resolveDeviceLocationLabel(
       longitude: coordinates.longitude,
     });
     const label = formatResolvedLabel(nextFallbackLabel, reverseMatches[0] ?? null);
+    if (deviceLocationLabelCache.has(cacheKey)) {
+      deviceLocationLabelCache.delete(cacheKey);
+    }
     deviceLocationLabelCache.set(cacheKey, label);
+    while (deviceLocationLabelCache.size > DEVICE_LOCATION_LABEL_CACHE_LIMIT) {
+      const oldestCacheKey = deviceLocationLabelCache.keys().next().value;
+      if (!oldestCacheKey) {
+        break;
+      }
+
+      deviceLocationLabelCache.delete(oldestCacheKey);
+    }
     return label;
   } catch {
     return nextFallbackLabel;

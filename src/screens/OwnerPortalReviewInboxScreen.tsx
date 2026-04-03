@@ -1,52 +1,53 @@
 import React from 'react';
-import { RouteProp, useRoute } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import type { RouteProp } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { AppUiIcon } from '../icons/AppUiIcon';
 import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
-import { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { OwnerPortalAnalyticsCard } from './ownerPortal/OwnerPortalAnalyticsCard';
+import {
+  clampProgress,
+  formatCount,
+  formatPercent,
+  getRelativeProgress,
+} from './ownerPortal/ownerPortalMetricUtils';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 import { useOwnerPortalWorkspace } from './ownerPortal/useOwnerPortalWorkspace';
 
 type OwnerPortalReviewInboxRoute = RouteProp<RootStackParamList, 'OwnerPortalReviewInbox'>;
+const ignoreAsyncError = () => undefined;
 
-function formatCount(value: number) {
-  return Math.round(value).toLocaleString();
-}
-
-function formatPercent(value: number) {
-  if (!Number.isFinite(value) || value <= 0) {
-    return '0%';
+function getReviewRuntimeMessage(reviewRepliesEnabled: boolean, safeModeEnabled: boolean) {
+  if (!reviewRepliesEnabled) {
+    return 'Review replies are temporarily paused while the system stabilizes.';
   }
 
-  const rounded = Math.round(value * 10) / 10;
-  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}%`;
-}
-
-function clampProgress(value: number) {
-  if (!Number.isFinite(value)) {
-    return 0;
+  if (safeModeEnabled) {
+    return 'Protected mode is active. Monitoring is elevated, but the inbox is still visible.';
   }
 
-  return Math.max(0, Math.min(1, value));
-}
-
-function getRelativeProgress(value: number, max: number) {
-  if (!Number.isFinite(value) || !Number.isFinite(max) || max <= 0) {
-    return 0;
-  }
-
-  return clampProgress(value / max);
+  return null;
 }
 
 export function OwnerPortalReviewInboxScreen() {
   const route = useRoute<OwnerPortalReviewInboxRoute>();
   const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
-  const { workspace, isLoading, isSaving, errorText, enableAlerts, replyToReview } =
-    useOwnerPortalWorkspace(preview);
+  const {
+    workspace,
+    runtimeStatus,
+    isLoading,
+    isSaving,
+    isAiLoading,
+    errorText,
+    aiErrorText,
+    enableAlerts,
+    replyToReview,
+    draftReviewReplyWithAi,
+  } = useOwnerPortalWorkspace(preview);
   const [replyDrafts, setReplyDrafts] = React.useState<Record<string, string>>({});
 
   const reviews = workspace?.recentReviews ?? [];
@@ -55,13 +56,18 @@ export function OwnerPortalReviewInboxScreen() {
   const lowRatingCount = reviews.filter((review) => review.isLowRating).length;
   const pendingReplyCount = reviews.filter((review) => !review.ownerReply?.text).length;
   const reportPressureMax = Math.max(reports.length, 1);
+  const reviewRepliesEnabled = runtimeStatus?.policy.reviewRepliesEnabled !== false;
+  const runtimeMessage = getReviewRuntimeMessage(
+    reviewRepliesEnabled,
+    runtimeStatus?.policy.safeModeEnabled === true,
+  );
 
   return (
     <ScreenShell
       eyebrow="Owner Portal"
       title="Review management."
       subtitle="Reply fast, watch low-rating patterns, and keep reports from going stale."
-      headerPill={preview ? 'Demo' : 'Reviews'}
+      headerPill={preview ? 'Preview' : 'Reviews'}
     >
       <MotionInView delay={70}>
         <View style={styles.portalHeroCard}>
@@ -71,8 +77,8 @@ export function OwnerPortalReviewInboxScreen() {
             Keep reputation management fast, calm, and clearly prioritized.
           </Text>
           <Text style={styles.portalHeroBody}>
-            The inbox now reads like a premium operator console while keeping the same alert,
-            reply, and moderation behavior underneath.
+            The inbox now reads like a premium operator console while keeping review, report, and
+            runtime incident alerts attached to the same owner device.
           </Text>
           <View style={styles.portalHeroMetricRow}>
             <View style={styles.portalHeroMetricCard}>
@@ -98,8 +104,21 @@ export function OwnerPortalReviewInboxScreen() {
           title="Inbox health"
           body="This is the live owner signal board for reviews, reports, and fast-notification status."
         >
+          {runtimeMessage ? (
+            <View
+              style={[
+                styles.statusPanel,
+                runtimeStatus?.policy.safeModeEnabled
+                  ? styles.statusPanelWarm
+                  : styles.statusPanelSuccess,
+              ]}
+            >
+              <Text style={styles.helperText}>{runtimeMessage}</Text>
+            </View>
+          ) : null}
           {isLoading ? <Text style={styles.helperText}>Loading inbox...</Text> : null}
           {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
+          {aiErrorText ? <Text style={styles.errorText}>{aiErrorText}</Text> : null}
           {metrics ? (
             <View style={styles.sectionStack}>
               <View style={styles.summaryStrip}>
@@ -118,7 +137,9 @@ export function OwnerPortalReviewInboxScreen() {
                   </Text>
                 </View>
                 <View style={styles.summaryTile}>
-                  <Text style={styles.summaryTileValue}>{formatCount(metrics.openReportCount)}</Text>
+                  <Text style={styles.summaryTileValue}>
+                    {formatCount(metrics.openReportCount)}
+                  </Text>
                   <Text style={styles.summaryTileLabel}>Open Reports</Text>
                   <Text style={styles.summaryTileBody}>
                     Moderation items that still need owner attention.
@@ -130,7 +151,7 @@ export function OwnerPortalReviewInboxScreen() {
                   </Text>
                   <Text style={styles.summaryTileLabel}>Fast Alerts</Text>
                   <Text style={styles.summaryTileBody}>
-                    Notification readiness for new reviews and reports.
+                    Notification readiness for reviews, reports, and runtime incidents.
                   </Text>
                 </View>
               </View>
@@ -139,16 +160,17 @@ export function OwnerPortalReviewInboxScreen() {
                 <View style={styles.analyticsSectionHeader}>
                   <Text style={styles.analyticsSectionEyebrow}>Inbox analytics</Text>
                   <Text style={styles.analyticsSectionTitle}>
-                    Reputation health reads faster when response quality and moderation pressure are separated clearly.
+                    Reputation health reads faster when response quality and moderation pressure are
+                    separated clearly.
                   </Text>
                   <Text style={styles.analyticsSectionBody}>
-                    This view keeps the same owner inbox logic, but makes scan paths calmer and
-                    more premium for paid workspace usage.
+                    This view keeps the same owner inbox logic, but makes scan paths calmer and more
+                    premium for paid workspace usage.
                   </Text>
                 </View>
                 <View style={styles.metricGrid}>
                   <OwnerPortalAnalyticsCard
-                      body="Average customer sentiment across recent Canopy Trove reviews."
+                    body="Average customer sentiment across recent Canopy Trove reviews."
                     eyebrow="Reputation"
                     icon="star-outline"
                     progress={clampProgress((metrics.averageRating ?? 0) / 5)}
@@ -190,7 +212,7 @@ export function OwnerPortalReviewInboxScreen() {
                     value={formatCount(metrics.openReportCount)}
                   />
                   <OwnerPortalAnalyticsCard
-                    body="Push notifications that keep the owner aware of new reputation issues quickly."
+                    body="Push notifications that keep the owner aware of new reputation issues and runtime incidents quickly."
                     eyebrow="Notification readiness"
                     icon="notifications-outline"
                     progress={workspace?.ownerAlertStatus.pushEnabled ? 1 : 0.18}
@@ -222,7 +244,7 @@ export function OwnerPortalReviewInboxScreen() {
       <MotionInView delay={180}>
         <SectionCard
           title="Inbox alerts"
-          body="Turn on owner push alerts so new reviews and reports reach the phone quickly."
+          body="Turn on owner push alerts so reviews, reports, and runtime incidents reach the phone quickly."
         >
           <View
             style={[
@@ -234,13 +256,13 @@ export function OwnerPortalReviewInboxScreen() {
           >
             <Text style={styles.helperText}>
               {workspace?.ownerAlertStatus.pushEnabled
-                ? `Owner alerts are live${workspace.ownerAlertStatus.updatedAt ? ` as of ${new Date(workspace.ownerAlertStatus.updatedAt).toLocaleString()}.` : '.'}`
+                ? `Owner and incident alerts are live${workspace.ownerAlertStatus.updatedAt ? ` as of ${new Date(workspace.ownerAlertStatus.updatedAt).toLocaleString()}.` : '.'}`
                 : 'Owner alerts are currently off for this device.'}
             </Text>
             <Pressable
               disabled={preview || isSaving}
               onPress={() => {
-                void enableAlerts();
+                void enableAlerts().catch(ignoreAsyncError);
               }}
               style={[styles.primaryButton, (preview || isSaving) && styles.buttonDisabled]}
             >
@@ -277,7 +299,7 @@ export function OwnerPortalReviewInboxScreen() {
                       <Text style={styles.actionTileTitle}>{flag.title}</Text>
                       <Text style={styles.actionTileBody}>{flag.body}</Text>
                     </View>
-                    <Ionicons
+                    <AppUiIcon
                       name={
                         flag.tone === 'warning' ? 'warning-outline' : 'checkmark-circle-outline'
                       }
@@ -293,10 +315,10 @@ export function OwnerPortalReviewInboxScreen() {
       ) : null}
 
       <MotionInView delay={300}>
-          <SectionCard
-            title="Recent reviews"
-            body="Responding fast helps the listing look active and trustworthy."
-          >
+        <SectionCard
+          title="Recent reviews"
+          body="Responding fast helps the listing look active and trustworthy."
+        >
           <View style={styles.cardStack}>
             {reviews.length ? (
               reviews.map((review) => (
@@ -314,7 +336,7 @@ export function OwnerPortalReviewInboxScreen() {
                       </Text>
                       <Text style={styles.actionTileBody}>{review.relativeTime}</Text>
                     </View>
-                    <Ionicons
+                    <AppUiIcon
                       name={review.isLowRating ? 'alert-circle-outline' : 'chatbubble-outline'}
                       size={20}
                       color={review.isLowRating ? '#FFB4A8' : '#9CC5B4'}
@@ -353,26 +375,70 @@ export function OwnerPortalReviewInboxScreen() {
                         multiline={true}
                         style={[styles.inputPremium, styles.textAreaPremium]}
                       />
+                      <View style={styles.inlineActionRow}>
+                        <Pressable
+                          disabled={preview || isAiLoading}
+                          onPress={() => {
+                            void draftReviewReplyWithAi(review.id, {
+                              tone: review.isLowRating ? 'make-it-right' : 'warm',
+                            })
+                              .then((draft) => {
+                                setReplyDrafts((current) => ({
+                                  ...current,
+                                  [review.id]: draft.text,
+                                }));
+                              })
+                              .catch(ignoreAsyncError);
+                          }}
+                          style={[
+                            styles.secondaryButton,
+                            styles.inlineButton,
+                            (preview || isAiLoading) && styles.buttonDisabled,
+                          ]}
+                        >
+                          <Text style={styles.secondaryButtonText}>
+                            {preview
+                              ? 'Preview Only'
+                              : isAiLoading
+                                ? 'Drafting...'
+                                : 'Draft With AI'}
+                          </Text>
+                        </Pressable>
+                      </View>
                       <Pressable
-                        disabled={preview || isSaving || !(replyDrafts[review.id] ?? '').trim()}
+                        disabled={
+                          preview ||
+                          isSaving ||
+                          !reviewRepliesEnabled ||
+                          !(replyDrafts[review.id] ?? '').trim()
+                        }
                         onPress={() => {
-                          void replyToReview(review.id, (replyDrafts[review.id] ?? '').trim()).then(
-                            () => {
+                          void replyToReview(review.id, (replyDrafts[review.id] ?? '').trim())
+                            .then(() => {
                               setReplyDrafts((current) => ({
                                 ...current,
                                 [review.id]: '',
                               }));
-                            }
-                          );
+                            })
+                            .catch(ignoreAsyncError);
                         }}
                         style={[
                           styles.primaryButton,
-                          (preview || isSaving || !(replyDrafts[review.id] ?? '').trim()) &&
+                          (preview ||
+                            isSaving ||
+                            !reviewRepliesEnabled ||
+                            !(replyDrafts[review.id] ?? '').trim()) &&
                             styles.buttonDisabled,
                         ]}
                       >
                         <Text style={styles.primaryButtonText}>
-                          {preview ? 'Preview Only' : isSaving ? 'Saving...' : 'Send Reply'}
+                          {preview
+                            ? 'Preview Only'
+                            : !reviewRepliesEnabled
+                              ? 'Replies Paused'
+                              : isSaving
+                                ? 'Saving...'
+                                : 'Send Reply'}
                         </Text>
                       </Pressable>
                     </View>
@@ -415,7 +481,7 @@ export function OwnerPortalReviewInboxScreen() {
                         {report.authorName} | {new Date(report.createdAt).toLocaleString()}
                       </Text>
                     </View>
-                    <Ionicons
+                    <AppUiIcon
                       name={
                         report.moderationStatus === 'open'
                           ? 'shield-outline'

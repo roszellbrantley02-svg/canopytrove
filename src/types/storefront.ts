@@ -2,6 +2,7 @@ export type {
   Coordinates,
   AppProfile,
   AppReview,
+  StorefrontActivePromotion,
   StorefrontSummary,
   StorefrontDetails,
   BrowseSortKey,
@@ -29,7 +30,10 @@ export type {
 } from './storefrontGamificationTypes';
 export type {
   StorefrontReviewSubmissionInput,
+  StorefrontReviewUpdateInput,
   StorefrontReviewSubmissionResponse,
+  StorefrontReportTarget,
+  StorefrontReviewReportContext,
   StorefrontReportSubmissionInput,
   StorefrontReportSubmissionResponse,
   StorefrontReviewHelpfulInput,

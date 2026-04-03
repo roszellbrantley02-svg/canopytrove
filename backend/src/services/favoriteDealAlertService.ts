@@ -1,5 +1,4 @@
-import { CollectionReference } from 'firebase-admin/firestore';
-import { getBackendFirebaseDb } from '../firebase';
+import { getOptionalFirestoreCollection } from '../firestoreCollections';
 import { backendStorefrontSourceStatus } from '../sources';
 import { getStorefrontSummariesByIds } from '../storefrontService';
 import { sendExpoPushMessages } from './expoPushService';
@@ -33,12 +32,7 @@ function createEmptyRecord(profileId: string): FavoriteDealAlertRecord {
 }
 
 function getFavoriteDealAlertCollection() {
-  const db = getBackendFirebaseDb();
-  if (!db || backendStorefrontSourceStatus.activeMode !== 'firestore') {
-    return null;
-  }
-
-  return db.collection(FAVORITE_DEAL_ALERTS_COLLECTION) as CollectionReference<FavoriteDealAlertRecord>;
+  return getOptionalFirestoreCollection<FavoriteDealAlertRecord>(FAVORITE_DEAL_ALERTS_COLLECTION);
 }
 
 function normalizeFavoriteDealAlertRecord(record: FavoriteDealAlertRecord): FavoriteDealAlertRecord {
@@ -125,10 +119,35 @@ export async function syncFavoriteDealAlerts(options: {
     )
   ).slice(0, 64);
 
-  const [previousRecord, savedSummaries] = await Promise.all([
+  const [previousRecordResult, savedSummariesResult] = await Promise.allSettled([
     getFavoriteDealAlertRecord(options.profileId),
     dedupedSavedStorefrontIds.length ? getStorefrontSummariesByIds(dedupedSavedStorefrontIds) : [],
   ]);
+  const storage =
+    backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory';
+  const previousRecord =
+    previousRecordResult.status === 'fulfilled'
+      ? previousRecordResult.value
+      : createEmptyRecord(options.profileId);
+  if (previousRecordResult.status === 'rejected') {
+    console.warn(
+      `[favoriteDealAlertService] failed to load previous alert state for ${options.profileId}:`,
+      previousRecordResult.reason
+    );
+  }
+  if (savedSummariesResult.status !== 'fulfilled') {
+    console.warn(
+      `[favoriteDealAlertService] failed to load saved storefront summaries for ${options.profileId}:`,
+      savedSummariesResult.reason
+    );
+    return {
+      notifications: [],
+      deliveryMode: 'none' as const,
+      storage,
+      state: previousRecord,
+    };
+  }
+  const savedSummaries = savedSummariesResult.value;
 
   const nextFingerprints: Record<string, string> = {};
   const notifications: FavoriteDealAlertNotification[] = [];
@@ -201,15 +220,14 @@ export async function syncFavoriteDealAlerts(options: {
   return {
     notifications,
     deliveryMode,
-    storage:
-      backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+    storage,
     state: finalRecord,
   };
 }
 
 export async function dispatchFavoriteDealAlertsForAllProfiles() {
   const profiles = await listProfiles();
-  const results = await Promise.all(
+  const settledResults = await Promise.allSettled(
     profiles.map(async (profile) => {
       const routeState = await getRouteState(profile.id);
       const result = await syncFavoriteDealAlerts({
@@ -228,9 +246,20 @@ export async function dispatchFavoriteDealAlertsForAllProfiles() {
       };
     })
   );
+  const results = settledResults.flatMap((result, index) => {
+    if (result.status === 'fulfilled') {
+      return [result.value];
+    }
+
+    console.warn(
+      `[favoriteDealAlertService] failed to dispatch alerts for profile ${profiles[index]?.id ?? 'unknown'}:`,
+      result.reason
+    );
+    return [];
+  });
 
   return {
-    processedProfiles: results.length,
+    processedProfiles: profiles.length,
     notifiedProfiles: results.filter((result) => result.notifiedCount > 0).length,
     totalNotifications: results.reduce((sum, result) => sum + result.notifiedCount, 0),
     results,
@@ -239,7 +268,7 @@ export async function dispatchFavoriteDealAlertsForAllProfiles() {
 
 export async function dispatchFavoriteDealAlertsForStorefront(storefrontId: string) {
   const profiles = await listProfiles();
-  const matchingProfiles = await Promise.all(
+  const settledMatchingProfiles = await Promise.allSettled(
     profiles.map(async (profile) => {
       const routeState = await getRouteState(profile.id);
       if (!routeState.savedStorefrontIds.includes(storefrontId)) {
@@ -264,14 +293,23 @@ export async function dispatchFavoriteDealAlertsForStorefront(storefrontId: stri
       };
     })
   );
+  const matchingProfiles = settledMatchingProfiles.flatMap((result, index) => {
+    if (result.status === 'fulfilled') {
+      return result.value ? [result.value] : [];
+    }
 
-  const results = matchingProfiles.filter((value): value is NonNullable<typeof value> => Boolean(value));
+    console.warn(
+      `[favoriteDealAlertService] failed to dispatch storefront alerts for profile ${profiles[index]?.id ?? 'unknown'}:`,
+      result.reason
+    );
+    return [];
+  });
 
   return {
     storefrontId,
-    processedProfiles: results.length,
-    notifiedProfiles: results.filter((result) => result.notifiedCount > 0).length,
-    totalNotifications: results.reduce((sum, result) => sum + result.notifiedCount, 0),
-    results,
+    processedProfiles: matchingProfiles.length,
+    notifiedProfiles: matchingProfiles.filter((result) => result.notifiedCount > 0).length,
+    totalNotifications: matchingProfiles.reduce((sum, result) => sum + result.notifiedCount, 0),
+    results: matchingProfiles,
   };
 }

@@ -1,5 +1,8 @@
-import { Firestore } from 'firebase/firestore';
-import { mockStorefrontDetailDocuments, mockStorefrontSummaryDocuments } from '../data/mockFirestoreSeed';
+import type { Firestore } from 'firebase/firestore';
+import {
+  mockStorefrontDetailDocuments,
+  mockStorefrontSummaryDocuments,
+} from '../data/mockFirestoreSeed';
 import { seedStorefrontCollections } from './storefrontSeedService';
 
 export function getMockFirestoreSeedCounts() {

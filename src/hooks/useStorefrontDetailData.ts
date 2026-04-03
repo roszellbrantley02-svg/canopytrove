@@ -1,4 +1,5 @@
 import { startTransition, useEffect, useRef, useState } from 'react';
+import { useStorefrontProfileController } from '../context/StorefrontController';
 import { storefrontRepository } from '../repositories/storefrontRepository';
 import { storefrontSourceMode } from '../config/storefrontSourceConfig';
 import {
@@ -7,15 +8,58 @@ import {
   saveStorefrontDetailSnapshot,
   subscribeToStorefrontDetailSnapshot,
 } from '../services/storefrontSummarySnapshotService';
-import { StorefrontDetails, StorefrontSummary } from '../types/storefront';
+import type { StorefrontDetails, StorefrontSummary } from '../types/storefront';
 import { reportRuntimeError } from '../services/runtimeReportingService';
-import {
-  applyStorefrontOperationalEnrichment,
-  needsStorefrontOperationalEnrichment,
-} from '../services/storefrontOperationalDataService';
 import { createFallbackDetails } from '../screens/storefrontDetail/storefrontDetailHelpers';
+import { hasPublishedStorefrontHours } from '../utils/storefrontHours';
 
-export function useStorefrontDetails(storefrontId: string | null, storefront?: StorefrontSummary | null) {
+const FOLLOW_UP_REFRESH_DELAYS_MS = [1_250, 2_500];
+
+function createStorefrontOperationalDependencyKey(storefront?: StorefrontSummary | null) {
+  if (!storefront) {
+    return null;
+  }
+
+  return [
+    storefront.id,
+    storefront.placeId ?? '',
+    storefront.displayName,
+    storefront.addressLine1,
+    storefront.city,
+    storefront.state,
+    storefront.zip,
+    storefront.coordinates.latitude,
+    storefront.coordinates.longitude,
+  ].join('|');
+}
+
+function normalizeDetailString(value: string | null | undefined) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function needsStorefrontOperationalFollowUp(detail: StorefrontDetails | null) {
+  if (!detail) {
+    return true;
+  }
+
+  return (
+    !normalizeDetailString(detail.website) ||
+    !normalizeDetailString(detail.phone) ||
+    !hasPublishedStorefrontHours(detail.hours) ||
+    typeof detail.openNow !== 'boolean'
+  );
+}
+
+export function useStorefrontDetails(
+  storefrontId: string | null,
+  storefront?: StorefrontSummary | null,
+) {
+  const { authSession } = useStorefrontProfileController();
   const [data, setData] = useState<StorefrontDetails | null>(() => {
     if (!storefrontId) {
       return null;
@@ -30,13 +74,24 @@ export function useStorefrontDetails(storefrontId: string | null, storefront?: S
     storefrontId
       ? !Boolean(
           storefrontRepository.getCachedStorefrontDetails(storefrontId) ??
-            (storefrontSourceMode !== 'api' ? getCachedStorefrontDetailSnapshot(storefrontId) : null)
+          (storefrontSourceMode !== 'api' ? getCachedStorefrontDetailSnapshot(storefrontId) : null),
         )
-      : false
+      : false,
   );
   const [isOperationalDataPending, setIsOperationalDataPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const followUpRefreshKeyRef = useRef<string | null>(null);
+  const followUpTimeoutHandlesRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const storefrontOperationalDependencyKey = createStorefrontOperationalDependencyKey(storefront);
+  const shouldRunOperationalFollowUp =
+    storefrontSourceMode === 'api' && Boolean(storefrontOperationalDependencyKey);
+
+  const clearFollowUpTimeoutHandles = () => {
+    followUpTimeoutHandlesRef.current.forEach((handle) => {
+      clearTimeout(handle);
+    });
+    followUpTimeoutHandlesRef.current = [];
+  };
 
   useEffect(() => {
     if (!storefrontId || storefrontSourceMode === 'api') {
@@ -77,6 +132,7 @@ export function useStorefrontDetails(storefrontId: string | null, storefront?: S
 
       try {
         followUpRefreshKeyRef.current = null;
+        clearFollowUpTimeoutHandles();
 
         if (!cached && storefrontSourceMode !== 'api') {
           const snapshot = await loadStorefrontDetailSnapshot(storefrontId);
@@ -105,8 +161,8 @@ export function useStorefrontDetails(storefrontId: string | null, storefront?: S
         }
 
         if (
-          storefront &&
-          needsStorefrontOperationalEnrichment(liveData) &&
+          shouldRunOperationalFollowUp &&
+          needsStorefrontOperationalFollowUp(liveData) &&
           followUpRefreshKeyRef.current !== storefrontId
         ) {
           const nextStorefrontId = storefrontId;
@@ -117,25 +173,42 @@ export function useStorefrontDetails(storefrontId: string | null, storefront?: S
             let latestDetail = liveData ?? createFallbackDetails(nextStorefrontId);
 
             try {
-              const enrichedDetail = await applyStorefrontOperationalEnrichment(
-                liveData ?? createFallbackDetails(nextStorefrontId),
-                storefront
-              );
-              if (!alive || nextStorefrontId !== storefrontId) {
-                return;
-              }
+              for (const delayMs of FOLLOW_UP_REFRESH_DELAYS_MS) {
+                await new Promise<void>((resolve) => {
+                  const timeoutHandle = setTimeout(() => {
+                    followUpTimeoutHandlesRef.current = followUpTimeoutHandlesRef.current.filter(
+                      (candidate) => candidate !== timeoutHandle,
+                    );
+                    resolve();
+                  }, delayMs);
+                  followUpTimeoutHandlesRef.current.push(timeoutHandle);
+                });
+                if (!alive || nextStorefrontId !== storefrontId) {
+                  return;
+                }
 
-              latestDetail = enrichedDetail;
-              storefrontRepository.primeStorefrontDetails(nextStorefrontId, enrichedDetail);
-              if (storefrontSourceMode !== 'api') {
-                void saveStorefrontDetailSnapshot(nextStorefrontId, enrichedDetail);
-              }
+                const refreshedDetail =
+                  await storefrontRepository.getStorefrontDetails(nextStorefrontId);
+                if (!alive || nextStorefrontId !== storefrontId) {
+                  return;
+                }
 
-              startTransition(() => {
-                setData(enrichedDetail);
-              });
+                latestDetail = refreshedDetail ?? latestDetail;
+                storefrontRepository.primeStorefrontDetails(nextStorefrontId, latestDetail);
+                if (storefrontSourceMode !== 'api') {
+                  void saveStorefrontDetailSnapshot(nextStorefrontId, latestDetail);
+                }
+
+                startTransition(() => {
+                  setData(latestDetail);
+                });
+
+                if (!needsStorefrontOperationalFollowUp(latestDetail)) {
+                  break;
+                }
+              }
             } catch {
-              // Operational enrichment failures should not replace the main detail payload.
+              // Follow-up refresh failures should not replace the main detail payload.
             } finally {
               if (!alive || nextStorefrontId !== storefrontId) {
                 return;
@@ -166,8 +239,15 @@ export function useStorefrontDetails(storefrontId: string | null, storefront?: S
 
     return () => {
       alive = false;
+      clearFollowUpTimeoutHandles();
     };
-  }, [storefrontId, storefront]);
+  }, [
+    authSession.status,
+    authSession.uid,
+    shouldRunOperationalFollowUp,
+    storefrontId,
+    storefrontOperationalDependencyKey,
+  ]);
 
   return { data, isLoading, isOperationalDataPending, error };
 }

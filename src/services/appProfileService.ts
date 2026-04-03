@@ -5,7 +5,7 @@ import {
   getStorefrontBackendProfile,
   saveStorefrontBackendProfile,
 } from './storefrontBackendService';
-import { AppProfile } from '../types/storefront';
+import type { AppProfile } from '../types/storefront';
 
 const APP_PROFILE_KEY = `${brand.storageNamespace}:app-profile`;
 

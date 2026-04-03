@@ -1,17 +1,20 @@
 import React from 'react';
+import { View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { CompositeNavigationProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   useStorefrontProfileController,
   useStorefrontQueryController,
   useStorefrontRewardsController,
   useStorefrontRouteController,
 } from '../context/StorefrontController';
+import { ErrorRecoveryCard } from '../components/ErrorRecoveryCard';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
-import { useNearbySummaries, useNearbyWarmSnapshot } from '../hooks/useStorefrontData';
+import { useNearbySummaries, useNearbyWarmSnapshot } from '../hooks/useStorefrontSummaryData';
+import { spacing } from '../theme/tokens';
 import {
   classifyLocationInput,
   trackAnalyticsEvent,
@@ -20,7 +23,7 @@ import {
 } from '../services/analyticsService';
 import { storefrontRepository } from '../repositories/storefrontRepository';
 import { openStorefrontRoute } from '../services/navigationService';
-import { RootStackParamList, RootTabParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList, RootTabParamList } from '../navigation/RootNavigator';
 import {
   NearbyEmptyState,
   NearbyInfoBanner,
@@ -50,7 +53,7 @@ export function NearbyScreen() {
     locationError,
     applyLocationQuery,
     setLocationQuery,
-    useDeviceLocation,
+    useDeviceLocation: requestDeviceLocation,
   } = useStorefrontQueryController();
   const { authSession, profileId } = useStorefrontProfileController();
   const { isSavedStorefront } = useStorefrontRouteController();
@@ -70,13 +73,13 @@ export function NearbyScreen() {
             locationLabel: activeLocationLabel,
           }
         : null,
-    [activeLocation, activeLocationLabel, hasNearbyOrigin]
+    [activeLocation, activeLocationLabel, hasNearbyOrigin],
   );
 
-  const { data, isLoading } = useNearbySummaries(nearbyQuery);
+  const { data, error, isLoading } = useNearbySummaries(nearbyQuery);
   const visibleData = React.useMemo(
     () => (data.length ? data : warmNearbyData.slice(0, 3)),
-    [data, warmNearbyData]
+    [data, warmNearbyData],
   );
   const isShowingWarmSnapshot =
     visibleData.length > 0 &&
@@ -89,7 +92,7 @@ export function NearbyScreen() {
 
     trackStorefrontImpressions(
       visibleData.map((storefront) => storefront.id),
-      'Nearby'
+      'Nearby',
     );
     trackStorefrontPromotionImpressions(visibleData, 'Nearby');
   }, [visibleData]);
@@ -111,7 +114,7 @@ export function NearbyScreen() {
   }, []);
 
   const handleUseDeviceLocation = React.useCallback(() => {
-    void useDeviceLocation().then((didRefresh) => {
+    void requestDeviceLocation().then((didRefresh) => {
       trackAnalyticsEvent(didRefresh ? 'location_granted' : 'location_denied', {
         source: 'nearby',
         locationMode: 'device',
@@ -126,7 +129,7 @@ export function NearbyScreen() {
         setIsLocationPanelOpen(false);
       }
     });
-  }, [useDeviceLocation]);
+  }, [requestDeviceLocation]);
 
   const handleApplyLocationQuery = React.useCallback(() => {
     void applyLocationQuery().then((didApply) => {
@@ -144,14 +147,57 @@ export function NearbyScreen() {
   const handleToggleLocationPanel = React.useCallback(() => {
     setIsLocationPanelOpen((current) => !current);
   }, []);
+
+  const handleRetryError = React.useCallback(() => {
+    // Retry by re-requesting device location
+    void requestDeviceLocation();
+  }, [requestDeviceLocation]);
+
+  const handleGoNow = React.useCallback(
+    (store: (typeof visibleData)[number]) => {
+      trackAnalyticsEvent(
+        'go_now_tapped',
+        {
+          sourceScreen: 'Nearby',
+        },
+        {
+          screen: 'Nearby',
+          storefrontId: store.id,
+          dealId: store.activePromotionId ?? undefined,
+        },
+      );
+      if (store.activePromotionId) {
+        trackAnalyticsEvent(
+          'deal_redeem_started',
+          {
+            sourceScreen: 'Nearby',
+          },
+          {
+            screen: 'Nearby',
+            storefrontId: store.id,
+            dealId: store.activePromotionId,
+          },
+        );
+      }
+      void openStorefrontRoute(store, 'verified', {
+        profileId,
+        accountId: authSession.status === 'authenticated' ? authSession.uid : null,
+        isAuthenticated: authSession.status === 'authenticated',
+        sourceScreen: 'Nearby',
+        storefront: store,
+      });
+    },
+    [authSession.status, authSession.uid, profileId],
+  );
+
   return (
     <ScreenShell
       eyebrow="Nearby"
-      title="Closest dispensaries."
+      title="Closest verified storefronts."
       subtitle={
         hasNearbyOrigin
-          ? `Showing the three closest shops near ${activeLocationLabel}.`
-          : 'Use your location or enter a ZIP code or address to see the three closest shops.'
+          ? `Showing the closest verified storefronts near ${activeLocationLabel}.`
+          : 'Use your location or enter a ZIP code or address to view the closest verified storefronts.'
       }
       headerPill={currentLocationLabel}
       onBrandIconPress={handleUseDeviceLocation}
@@ -185,51 +231,30 @@ export function NearbyScreen() {
           isSavedStorefront={isSavedStorefront}
           visitedStorefrontIds={visitedStorefrontIds}
           onPrepareStorefront={prepareStorefrontDetail}
-          onOpenStorefront={(store) => navigation.navigate('StorefrontDetail', { storefront: store })}
-          onGoNow={(store) => {
-            trackAnalyticsEvent(
-              'go_now_tapped',
-              {
-                sourceScreen: 'Nearby',
-              },
-              {
-                screen: 'Nearby',
-                storefrontId: store.id,
-                dealId: store.activePromotionId ?? undefined,
-              }
-            );
-            if (store.activePromotionId) {
-              trackAnalyticsEvent(
-                'deal_redeem_started',
-                {
-                  sourceScreen: 'Nearby',
-                },
-                {
-                  screen: 'Nearby',
-                  storefrontId: store.id,
-                  dealId: store.activePromotionId,
-                }
-              );
-            }
-            void openStorefrontRoute(store, 'verified', {
-              profileId,
-              accountId: authSession.status === 'authenticated' ? authSession.uid : null,
-              isAuthenticated: authSession.status === 'authenticated',
-              sourceScreen: 'Nearby',
-              storefront: store,
-            });
-          }}
+          onOpenStorefront={(store) =>
+            navigation.navigate('StorefrontDetail', { storefront: store })
+          }
+          onGoNow={handleGoNow}
           delayBase={40}
         />
+      ) : error && hasNearbyOrigin && !isLoading ? (
+        <View style={{ padding: spacing.xl, paddingTop: spacing.xxl }}>
+          <ErrorRecoveryCard
+            title="Unable to load nearby storefronts"
+            message={error}
+            onRetry={handleRetryError}
+            retryLabel="Try Again"
+          />
+        </View>
       ) : (!hasNearbyOrigin && isResolvingLocation) || (hasNearbyOrigin && isLoading) ? (
         <NearbySkeletonList count={3} delayBase={40} />
       ) : !hasNearbyOrigin ? (
         <MotionInView delay={80}>
           <NearbyEmptyState
-            title="Location access is required."
-            body="Nearby is built around the three closest shops to your current location or a ZIP code or address you enter."
+            title="Set a nearby search area."
+            body="Nearby is built around the closest storefronts to your current location or to a ZIP code or address you enter."
             errorText={locationError}
-            primaryLabel="Use My Location"
+            primaryLabel="Use Device Location"
             secondaryLabel="Enter Location"
             onPrimary={handleUseDeviceLocation}
             onSecondary={handleToggleLocationPanel}
@@ -237,11 +262,12 @@ export function NearbyScreen() {
         </MotionInView>
       ) : data.length === 0 ? (
         <MotionInView delay={80}>
-            <NearbyEmptyState
-              title="No nearby dispensaries found."
-              body="Canopy Trove could not find any verified dispensaries close to this location yet."
-              primaryLabel="Refresh Location"
-              secondaryLabel="Change Location"
+          <NearbyEmptyState
+            title="No nearby storefronts found."
+            body="Canopy Trove could not find any verified storefronts close to this location yet."
+            errorText={error}
+            primaryLabel={error ? 'Try Again' : 'Refresh Location'}
+            secondaryLabel="Change Location"
             onPrimary={handleUseDeviceLocation}
             onSecondary={handleToggleLocationPanel}
           />
@@ -252,40 +278,10 @@ export function NearbyScreen() {
           isSavedStorefront={isSavedStorefront}
           visitedStorefrontIds={visitedStorefrontIds}
           onPrepareStorefront={prepareStorefrontDetail}
-          onOpenStorefront={(store) => navigation.navigate('StorefrontDetail', { storefront: store })}
-          onGoNow={(store) => {
-            trackAnalyticsEvent(
-              'go_now_tapped',
-              {
-                sourceScreen: 'Nearby',
-              },
-              {
-                screen: 'Nearby',
-                storefrontId: store.id,
-                dealId: store.activePromotionId ?? undefined,
-              }
-            );
-            if (store.activePromotionId) {
-              trackAnalyticsEvent(
-                'deal_redeem_started',
-                {
-                  sourceScreen: 'Nearby',
-                },
-                {
-                  screen: 'Nearby',
-                  storefrontId: store.id,
-                  dealId: store.activePromotionId,
-                }
-              );
-            }
-            void openStorefrontRoute(store, 'verified', {
-              profileId,
-              accountId: authSession.status === 'authenticated' ? authSession.uid : null,
-              isAuthenticated: authSession.status === 'authenticated',
-              sourceScreen: 'Nearby',
-              storefront: store,
-            });
-          }}
+          onOpenStorefront={(store) =>
+            navigation.navigate('StorefrontDetail', { storefront: store })
+          }
+          onGoNow={handleGoNow}
           delayBase={40}
         />
       )}

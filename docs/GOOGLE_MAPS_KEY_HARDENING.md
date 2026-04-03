@@ -1,69 +1,60 @@
 # Google Maps Key Hardening
 
-Updated: March 28, 2026
+Updated: March 31, 2026
 
 ## Current State
 
-The app currently uses `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` in:
+Canopy Trove no longer ships a bundled Google Places REST key in the mobile app.
 
-- `src/services/storefrontOperationalDataService.ts`
-- `eas.json` for the `preview` build profile
+The app now relies on:
 
-That key is used for the storefront-detail fallback that fetches:
+- backend storefront detail responses
+- backend Google Places enrichment in `backend/src/services/googlePlacesService.ts`
+- outbound map deep links only on device
 
-- website
-- phone
-- hours
-- `openNow`
+The mobile build config no longer includes `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` in `eas.json`, and the client-side Places fallback has been retired from the active app path.
 
-The backend separately uses `GOOGLE_MAPS_API_KEY` in:
+## What Changed
 
-- `backend/src/services/googlePlacesService.ts`
+- Direct client-side Places enrichment was removed from:
+  - `src/hooks/useStorefrontDetailData.ts`
+  - `src/hooks/useStorefrontOperationalStatus.ts`
+- The old client-only operational fallback service is no longer part of the live app path.
+- Storefront detail screens now recheck the backend briefly while server-side enrichment finishes instead of calling Google from the device.
 
-Right now those two env vars are using the same key value in local development. That is acceptable as a recovery step, but it is not the long-term secure setup.
+## Security Outcome
 
-## Recommended Target Setup
+This is the safest code-level improvement available in the current architecture because:
 
-Use two separate keys:
+- Google traffic is now backend-owned
+- quota abuse risk from a public mobile key is removed
+- Google request policy stays centralized on the server
+- app builds no longer need a public Places web-service key
 
-1. A backend-only key for `backend/src/services/googlePlacesService.ts`
-2. A mobile client key for `src/services/storefrontOperationalDataService.ts`
+## Remaining Platform Tasks
 
-## Important Constraint
+- [ ] Keep only `GOOGLE_MAPS_API_KEY` on the backend and make sure it is restricted to the exact Google APIs the server uses.
+- [ ] Rotate any older client key that was previously shipped in Expo build config.
+- [ ] Monitor Google Cloud quota and error metrics after the rotation.
 
-The current mobile fallback is a direct client-side Places web-service call, not the native Places SDK for Android.
-
-That means normal backend-style key handling does not apply cleanly, and a plain Android restriction is only safe if the app request path is set up correctly for direct mobile web-service calls. Google's guidance for this case is:
-
-- use a separate key for the client app
-- restrict the key
-- prefer native SDKs or a secure proxy/backend when possible
-- for direct mobile web-service calls on Android, use the `X-Android-Package` and `X-Android-Cert` headers
-
-## Checklist
-
-- [ ] Create a new Google Maps Platform key just for the mobile app.
-- [ ] Do not reuse the backend key for the mobile app.
-- [ ] Restrict the mobile key to only the API surface the app uses for the fallback.
-- [ ] Review Metrics Explorer for the key before and after restrictions.
-- [ ] If staying with direct mobile web-service calls, verify the Android request path is compatible with restricted-key requirements.
-- [ ] If not, move the storefront operational fallback behind the backend or migrate it to a supported native SDK path.
-- [ ] After the new client key is deployed and verified, rotate the older shared key out of the mobile app.
-
-## Project Values To Use During Restriction
+## Project Values
 
 - Android package name: `com.rezell.canopytrove`
-- Client env var: `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`
 - Backend env var: `GOOGLE_MAPS_API_KEY`
 
 ## Official References
 
 - [Google Maps Platform security guidance](https://developers.google.com/maps/api-security-best-practices)
 - [Set up the Places API (New)](https://developers.google.com/maps/documentation/places/web-service/get-api-key)
-- [Use App Check to secure your API key](https://developers.google.com/maps/documentation/places/android-sdk/app-check)
+- [Places Web Service FAQ](https://developers.google.com/maps/documentation/places/web-service/faq)
 
 ## Practical Recommendation
 
-For the current preview recovery phase, keep the client fallback because it repairs the broken storefront detail experience and no longer depends on the dead LAN API URL.
+Do not reintroduce a generic mobile Google Places REST fallback.
 
-For the hardening phase, the cleanest long-term option is to treat the current client-side Places fallback as temporary and move that enrichment behind the backend again once you have a stable hosted API target.
+If Canopy Trove needs richer map or place behavior later, use one of these:
+
+1. keep the backend as the only Google caller
+2. move to a supported native SDK path with platform-native protection
+
+For the current launch posture, backend-only enrichment is the right security boundary.

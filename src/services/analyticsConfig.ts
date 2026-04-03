@@ -1,6 +1,6 @@
 import { brand } from '../config/brand';
 import { storefrontApiBaseUrl } from '../config/storefrontSourceConfig';
-import { AnalyticsProfileKind } from '../types/analytics';
+import type { AnalyticsProfileKind } from '../types/analytics';
 
 export const INSTALL_ID_KEY = `${brand.storageNamespace}:analytics-install-id`;
 export const QUEUE_KEY = `${brand.storageNamespace}:analytics-queue`;

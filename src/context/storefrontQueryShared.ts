@@ -1,5 +1,5 @@
 import { getCachedMarketAreas } from '../services/marketAreaService';
-import { Coordinates, MarketArea } from '../types/storefront';
+import type { Coordinates, MarketArea } from '../types/storefront';
 
 export function getDefaultMarketArea(availableAreas: MarketArea[]) {
   return availableAreas[0] ?? getCachedMarketAreas()[0];
@@ -26,9 +26,9 @@ export function getActiveStorefrontLocationState({
       : 'fallback';
   const activeLocationLabel =
     activeLocationMode === 'search'
-      ? searchLocationLabel ?? selectedArea.label
+      ? (searchLocationLabel ?? selectedArea.label)
       : activeLocationMode === 'device'
-        ? deviceLocationLabel ?? `Near ${selectedArea.label}`
+        ? (deviceLocationLabel ?? `Near ${selectedArea.label}`)
         : selectedArea.label;
 
   return {

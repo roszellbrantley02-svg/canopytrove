@@ -16,6 +16,15 @@ import {
 } from './validationCore';
 import { RequestValidationError } from './errors';
 
+function normalizeStorefrontAreaId(areaId: string | undefined) {
+  const normalized = areaId?.trim().toLowerCase();
+  if (!normalized || normalized === 'all' || normalized === 'nearby') {
+    return undefined;
+  }
+
+  return areaId;
+}
+
 export function parseProfileIdParam(value: unknown) {
   return parseId(value, 'profileId');
 }
@@ -29,9 +38,11 @@ export function parseReviewIdParam(value: unknown) {
 }
 
 export function parseStorefrontSummariesQuery(query: PlainObject) {
-  const areaId = parseOptionalTrimmedString(query.areaId, 'areaId', {
-    maxLength: 64,
-  });
+  const areaId = normalizeStorefrontAreaId(
+    parseOptionalTrimmedString(query.areaId, 'areaId', {
+      maxLength: 64,
+    })
+  );
   const searchQuery = parseOptionalTrimmedString(query.searchQuery, 'searchQuery', {
     maxLength: MAX_SEARCH_QUERY_LENGTH,
   });

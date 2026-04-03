@@ -1,9 +1,9 @@
 import React from 'react';
-import { Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Pressable, Text, View } from 'react-native';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { SectionCard } from '../../components/SectionCard';
-import { colors } from '../../theme/tokens';
+import type { StorefrontActivePromotion } from '../../types/storefront';
+import { formatStorefrontPromotionExpiry } from '../../utils/storefrontPromotions';
 import { styles } from './storefrontDetailStyles';
 
 function splitHoursLine(line: string) {
@@ -27,17 +27,17 @@ export function DetailOfficialRecordCard({ error }: { error: string | null }) {
       title="Official storefront record"
       body={
         error
-          ? 'Canopy Trove could not load a live detail refresh right now. The official storefront listing is still available.'
-          : 'This storefront is confirmed on the official OCM list, but richer public storefront details have not been connected yet.'
+          ? 'Canopy Trove could not refresh the live detail state right now. The official storefront listing is still available.'
+          : 'Canopy Trove shows the official storefront record first, then layers richer public detail when it is available.'
       }
     >
       <CustomerStateCard
-        title="Official record is still intact"
-        body="Even without richer supplemental data, the official storefront listing stays visible and can still be used as the customer-facing baseline."
+        title="Official record remains visible"
+        body="The official listing stays visible as the baseline."
         tone="warm"
         iconName="shield-checkmark-outline"
         eyebrow="Fallback state"
-        note="Canopy Trove will keep showing the verified official record instead of dropping the storefront detail surface entirely."
+        note="The verified record stays visible even without live data."
       />
     </SectionCard>
   );
@@ -47,15 +47,15 @@ export function DetailLiveUpdateUnavailableCard() {
   return (
     <SectionCard
       title="Live update unavailable"
-      body="Showing the storefront details currently available on-device. A live refresh did not complete."
+      body="Showing the storefront details currently available on-device while live refresh catches up."
     >
       <CustomerStateCard
         title="Using the last available detail state"
-        body="Hours, website, and community data are being shown from the best currently available local detail payload until the next successful refresh."
+        body="Showing cached hours, website, and review data until refresh."
         tone="info"
         iconName="cloud-offline-outline"
         eyebrow="Unavailable right now"
-        note="The detail screen stays usable while live refresh catches up."
+        note="Detail screen stays usable while refresh catches up."
       />
     </SectionCard>
   );
@@ -69,11 +69,16 @@ export function DetailStoreSummarySection({
   displayAmenities: string[];
 }) {
   return (
-    <SectionCard title="Storefront summary" body={editorialSummary || undefined}>
+    <SectionCard
+      title="Storefront summary"
+      body={editorialSummary || 'Official summary and amenities for this storefront.'}
+    >
       <View style={styles.amenityWrap}>
         {displayAmenities.map((amenity) => (
           <View key={amenity} style={styles.amenityChip}>
-            <Text style={styles.amenityText}>{amenity}</Text>
+            <Text numberOfLines={1} style={styles.amenityText}>
+              {amenity}
+            </Text>
           </View>
         ))}
       </View>
@@ -83,7 +88,7 @@ export function DetailStoreSummarySection({
 
 export function DetailHoursSection({ hours }: { hours: string[] }) {
   return (
-    <SectionCard title="Hours" body="Public business hours from the detail payload.">
+    <SectionCard title="Hours" body="Official business hours from the detail payload.">
       <View style={styles.listBlock}>
         {hours.map((line) => {
           const { day, value } = splitHoursLine(line);
@@ -91,12 +96,161 @@ export function DetailHoursSection({ hours }: { hours: string[] }) {
 
           return (
             <View key={line} style={styles.hoursCard}>
-              <Text style={styles.hoursDay}>{day}</Text>
-              <Text style={[styles.hoursValue, isClosed && styles.hoursValueMuted]}>{value}</Text>
+              <Text numberOfLines={1} style={styles.hoursDay}>
+                {day}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={[styles.hoursValue, isClosed && styles.hoursValueMuted]}
+              >
+                {value}
+              </Text>
             </View>
           );
         })}
       </View>
+    </SectionCard>
+  );
+}
+
+function getPromotionToneLabel(cardTone: StorefrontActivePromotion['cardTone']) {
+  switch (cardTone) {
+    case 'hot_deal':
+      return 'Hot deal';
+    case 'owner_featured':
+      return 'Owner featured';
+    default:
+      return 'Live deal';
+  }
+}
+
+function DetailLockedMemberActions({
+  onOpenMemberSignIn,
+  onOpenMemberSignUp,
+}: {
+  onOpenMemberSignIn: () => void;
+  onOpenMemberSignUp: () => void;
+}) {
+  return (
+    <View style={styles.ctaRow}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Sign in to unlock member-only storefront content"
+        accessibilityHint="Opens the sign in screen."
+        onPress={onOpenMemberSignIn}
+        style={styles.primaryButton}
+      >
+        <Text style={styles.primaryButtonText}>Sign In</Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Create an account to unlock member-only storefront content"
+        accessibilityHint="Opens the account creation screen."
+        onPress={onOpenMemberSignUp}
+        style={styles.secondaryButton}
+      >
+        <Text style={styles.secondaryButtonText}>Create Account</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+export function DetailLiveDealsSection({
+  promotions,
+}: {
+  promotions: StorefrontActivePromotion[];
+}) {
+  const body =
+    promotions.length === 1
+      ? 'This owner-posted promotion is live on the storefront right now.'
+      : `${promotions.length} owner-posted promotions are live on this storefront right now.`;
+
+  return (
+    <SectionCard title="Live deals" body={body}>
+      <View style={styles.liveDealsList}>
+        {promotions.map((promotion) => {
+          const expiryLabel = formatStorefrontPromotionExpiry(promotion.endsAt);
+          const toneLabel = getPromotionToneLabel(promotion.cardTone);
+
+          return (
+            <View key={promotion.id} style={styles.liveDealCard}>
+              <View style={styles.liveDealHeader}>
+                <View style={styles.liveDealTitleWrap}>
+                  <Text numberOfLines={2} style={styles.liveDealTitle}>
+                    {promotion.title}
+                  </Text>
+                  <Text numberOfLines={3} style={styles.liveDealDescription}>
+                    {promotion.description}
+                  </Text>
+                </View>
+                <View style={styles.liveDealMetaColumn}>
+                  <View style={styles.liveDealToneChip}>
+                    <Text numberOfLines={1} style={styles.liveDealToneChipText}>
+                      {toneLabel}
+                    </Text>
+                  </View>
+                  {expiryLabel ? (
+                    <View style={styles.liveDealExpiryChip}>
+                      <Text numberOfLines={1} style={styles.liveDealExpiryChipText}>
+                        {expiryLabel}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+
+              {promotion.badges.length ? (
+                <View style={styles.liveDealBadgeWrap}>
+                  {promotion.badges.slice(0, 5).map((badge) => (
+                    <View key={`${promotion.id}-${badge}`} style={styles.liveDealBadge}>
+                      <Text numberOfLines={1} style={styles.liveDealBadgeText}>
+                        {badge}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
+    </SectionCard>
+  );
+}
+
+export function DetailLockedLiveDealsSection({
+  liveDealCount,
+  onOpenMemberSignIn,
+  onOpenMemberSignUp,
+}: {
+  liveDealCount: number;
+  onOpenMemberSignIn: () => void;
+  onOpenMemberSignUp: () => void;
+}) {
+  const body =
+    liveDealCount === 1
+      ? 'This storefront has a live owner-posted promotion, but the offer details are reserved for members.'
+      : `This storefront has ${liveDealCount} live owner-posted promotions, but the offer details are reserved for members.`;
+
+  return (
+    <SectionCard title="Live deals" body={body}>
+      <CustomerStateCard
+        title={
+          liveDealCount === 1
+            ? 'One live deal is waiting.'
+            : `${liveDealCount} live deals are waiting.`
+        }
+        body="Sign in to see deal details, timing, and stacked promotions."
+        tone="warm"
+        iconName="lock-closed-outline"
+        eyebrow="Members only"
+        note="Guests can browse. Deal details unlock with a member account."
+      >
+        <DetailLockedMemberActions
+          onOpenMemberSignIn={onOpenMemberSignIn}
+          onOpenMemberSignUp={onOpenMemberSignUp}
+        />
+      </CustomerStateCard>
     </SectionCard>
   );
 }

@@ -1,5 +1,10 @@
 import { serverConfig } from '../config';
 import { getBackendFirebaseDb, hasBackendFirebaseConfig } from '../firebase';
+import {
+  listReviewPhotoModerationQueue,
+  reviewReviewPhotoUpload,
+} from './reviewPhotoModerationService';
+import { appendPhotoIdToStorefrontAppReview } from './storefrontCommunityService';
 
 type ReviewDecision = 'approved' | 'rejected' | 'needs_resubmission';
 type VerificationDecision = 'verified' | 'rejected' | 'needs_resubmission';
@@ -87,7 +92,7 @@ export async function getAdminReviewQueue(limitInput?: unknown) {
   const db = getAdminReviewDb();
   const limit = parsePositiveLimit(limitInput);
 
-  const [claims, businessVerifications, identityVerifications, storefrontReports] =
+  const [claims, businessVerifications, identityVerifications, storefrontReports, reviewPhotos] =
     await Promise.all([
       db
         .collection(DISPENSARY_CLAIMS_COLLECTION)
@@ -109,6 +114,7 @@ export async function getAdminReviewQueue(limitInput?: unknown) {
         .where('moderationStatus', '==', 'open')
         .limit(limit)
         .get(),
+      listReviewPhotoModerationQueue(limit),
     ]);
 
   return {
@@ -128,7 +134,13 @@ export async function getAdminReviewQueue(limitInput?: unknown) {
       id: documentSnapshot.id,
       ...documentSnapshot.data(),
     })),
+    reviewPhotos,
   };
+}
+
+export async function getAdminReviewPhotoQueue(limitInput?: unknown) {
+  const limit = parsePositiveLimit(limitInput);
+  return listReviewPhotoModerationQueue(limit);
 }
 
 export async function reviewOwnerClaim(claimId: string, body: { status: ReviewDecision; reviewNotes: string | null }) {
@@ -140,8 +152,8 @@ export async function reviewOwnerClaim(claimId: string, body: { status: ReviewDe
     throw new Error('Owner claim not found.');
   }
 
-  const claim = claimSnapshot.data() as { ownerUid: string };
-  await Promise.all([
+  const claim = claimSnapshot.data() as { ownerUid: string; dispensaryId: string };
+  const updates: Array<Promise<unknown>> = [
     claimRef.set(
       {
         claimStatus: body.status,
@@ -155,13 +167,29 @@ export async function reviewOwnerClaim(claimId: string, body: { status: ReviewDe
       .doc(claim.ownerUid)
       .set(
         {
+          dispensaryId: body.status === 'approved' ? claim.dispensaryId : null,
           onboardingStep:
             body.status === 'approved' ? 'business_verification' : 'claim_listing',
           updatedAt: now,
         },
         { merge: true }
       ),
-  ]);
+  ];
+
+  if (body.status === 'approved') {
+    updates.push(
+      db.collection('dispensaries').doc(claim.dispensaryId).set(
+        {
+          ownerUid: claim.ownerUid,
+          claimStatus: 'approved',
+          ownerClaimReviewedAt: now,
+        },
+        { merge: true }
+      )
+    );
+  }
+
+  await Promise.all(updates);
 
   return {
     ok: true,
@@ -261,4 +289,24 @@ export async function reviewStorefrontReport(reportId: string, body: { status: R
     reportId,
     moderationStatus,
   };
+}
+
+export async function reviewStorefrontPhoto(photoId: string, body: { status: ReviewDecision; reviewNotes: string | null }) {
+  const moderationDecision =
+    body.status === 'approved'
+      ? 'approved'
+      : body.status === 'rejected'
+        ? 'rejected'
+        : 'needs_manual_review';
+
+  const result = await reviewReviewPhotoUpload(photoId, {
+    decision: moderationDecision,
+    reviewNotes: body.reviewNotes,
+  });
+
+  if (result.moderationStatus === 'approved' && result.session.reviewId) {
+    await appendPhotoIdToStorefrontAppReview(result.session.reviewId, result.photoId);
+  }
+
+  return result;
 }

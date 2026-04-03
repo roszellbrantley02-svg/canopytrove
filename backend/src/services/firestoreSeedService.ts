@@ -25,21 +25,35 @@ async function seedCollections() {
   const expectedDetailIds = new Set(Object.keys(mockStorefrontDetailDocuments));
 
   const [existingSummarySnapshots, existingDetailSnapshots] = await Promise.all([
-    db.collection('storefront_summaries').listDocuments(),
-    db.collection('storefront_details').listDocuments(),
+    db.collection('storefront_summaries').get(),
+    db.collection('storefront_details').get(),
   ]);
 
   const staleOperations = [
-    ...existingSummarySnapshots
-      .map((docRef) => docRef.id)
-      .filter((storefrontId) => !expectedSummaryIds.has(storefrontId))
+    ...existingSummarySnapshots.docs
+      .filter((documentSnapshot) => {
+        const storefrontId = documentSnapshot.id;
+        if (expectedSummaryIds.has(storefrontId)) {
+          return false;
+        }
+
+        return documentSnapshot.data()?.ingestSource !== 'registry';
+      })
+      .map((documentSnapshot) => documentSnapshot.id)
       .map((storefrontId) => ({
         collectionName: 'storefront_summaries' as const,
         storefrontId,
       })),
-    ...existingDetailSnapshots
-      .map((docRef) => docRef.id)
-      .filter((storefrontId) => !expectedDetailIds.has(storefrontId))
+    ...existingDetailSnapshots.docs
+      .filter((documentSnapshot) => {
+        const storefrontId = documentSnapshot.id;
+        if (expectedDetailIds.has(storefrontId)) {
+          return false;
+        }
+
+        return documentSnapshot.data()?.ingestSource !== 'registry';
+      })
+      .map((documentSnapshot) => documentSnapshot.id)
       .map((storefrontId) => ({
         collectionName: 'storefront_details' as const,
         storefrontId,

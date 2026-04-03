@@ -1,17 +1,18 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { BrandMarkIcon } from '../../icons/BrandMarkIcon';
+import { LocationPinIcon } from '../../icons/AppIcons';
+import type { AppUiIconName } from '../../icons/AppUiIcon';
+import { AppUiIcon } from '../../icons/AppUiIcon';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { SectionCard } from '../../components/SectionCard';
 import { colors } from '../../theme/tokens';
-import { StorefrontSummary } from '../../types/storefront';
-import { StorefrontRatingDisplay } from '../../utils/storefrontRatings';
+import type { StorefrontSummary } from '../../types/storefront';
+import type { StorefrontRatingDisplay } from '../../utils/storefrontRatings';
 import { styles } from './storefrontDetailStyles';
 
 type OperationalRow = {
   id: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon: AppUiIconName;
   label: string;
   value: string;
   status: 'available' | 'checking' | 'unavailable';
@@ -31,14 +32,22 @@ export function DetailTopBar({
 }) {
   return (
     <View style={styles.topBar}>
-      <Pressable onPress={onBack} style={styles.headerBadge}>
-        <Ionicons name="arrow-back" size={16} color={colors.text} />
-        <Text style={styles.headerBadgeText}>Detail</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Go back to storefront results"
+        accessibilityHint="Returns to the previous screen."
+        onPress={onBack}
+        style={styles.headerBadge}
+      >
+        <AppUiIcon name="arrow-back" size={16} color={colors.text} />
+        <Text style={styles.headerBadgeText}>Storefront record</Text>
       </Pressable>
       {verifiedOwnerBadgeLabel ? (
         <View style={styles.headerBadge}>
-          <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
-          <Text style={styles.headerBadgeText}>{verifiedOwnerBadgeLabel}</Text>
+          <AppUiIcon name="shield-checkmark" size={14} color={colors.primary} />
+          <Text numberOfLines={1} style={styles.headerBadgeText}>
+            {verifiedOwnerBadgeLabel}
+          </Text>
         </View>
       ) : null}
     </View>
@@ -51,13 +60,13 @@ export function DetailHero({ storefront, ratingDisplay }: DetailHeroProps) {
       id: 'rating',
       label: 'Rating',
       value: ratingDisplay.badgeLabel,
-      body: ratingDisplay.helperLabel ?? 'Canopy Trove community score for this storefront.',
+      body: ratingDisplay.helperLabel ?? 'Customer score shown in Canopy Trove.',
     },
     {
       id: 'reviews',
       label: 'Reviews',
       value: ratingDisplay.countLabel,
-      body: 'Customer review volume currently visible in the app.',
+      body: 'Visible customer review volume in Canopy Trove.',
     },
     {
       id: 'distance',
@@ -69,9 +78,9 @@ export function DetailHero({ storefront, ratingDisplay }: DetailHeroProps) {
       ? [
           {
             id: 'saved',
-            label: 'Saved',
+            label: 'Following',
             value: `${storefront.favoriteFollowerCount}`,
-            body: 'Canopy Trove members following this storefront for future visits.',
+            body: 'Customers following this storefront for future visits.',
           },
         ]
       : []),
@@ -79,69 +88,84 @@ export function DetailHero({ storefront, ratingDisplay }: DetailHeroProps) {
 
   return (
     <View style={styles.hero}>
-      <Text style={styles.heroKicker}>Storefront detail</Text>
-      <Text style={styles.title}>{storefront.displayName}</Text>
-      <Text style={styles.address}>
+      <View pointerEvents="none" style={styles.heroTone} />
+      <Text style={styles.heroKicker}>Storefront record</Text>
+      <Text numberOfLines={2} style={styles.title}>
+        {storefront.displayName}
+      </Text>
+      <Text numberOfLines={1} style={styles.address}>
         {storefront.addressLine1}, {storefront.city}, {storefront.state} {storefront.zip}
       </Text>
 
       <View style={styles.heroSummaryStrip}>
         {summaryItems.map((item) => (
           <View key={item.id} style={styles.heroSummaryTile}>
-            <Text style={styles.heroSummaryValue}>{item.value}</Text>
-            <Text style={styles.heroSummaryLabel}>{item.label}</Text>
-            <Text style={styles.heroSummaryBody}>{item.body}</Text>
+            <Text numberOfLines={1} style={styles.heroSummaryValue}>
+              {item.value}
+            </Text>
+            <Text numberOfLines={1} style={styles.heroSummaryLabel}>
+              {item.label}
+            </Text>
+            <Text numberOfLines={2} style={styles.heroSummaryBody}>
+              {item.body}
+            </Text>
           </View>
         ))}
       </View>
 
       <View style={styles.metaRow}>
         <View style={styles.metaChip}>
-          <Ionicons
+          <AppUiIcon
             name={ratingDisplay.isReady ? 'star' : 'star-outline'}
             size={12}
             color={ratingDisplay.isReady ? colors.gold : colors.textSoft}
           />
-          <Text style={styles.metaText}>{ratingDisplay.badgeLabel}</Text>
+          <Text numberOfLines={1} style={styles.metaText}>
+            {ratingDisplay.badgeLabel}
+          </Text>
         </View>
         <View style={styles.metaChip}>
-          <Ionicons name="people-outline" size={12} color={colors.cyan} />
-          <Text style={styles.metaText}>{ratingDisplay.countLabel}</Text>
+          <AppUiIcon name="people-outline" size={12} color={colors.cyan} />
+          <Text numberOfLines={1} style={styles.metaText}>
+            {ratingDisplay.countLabel}
+          </Text>
         </View>
         <View style={styles.metaChip}>
-          <BrandMarkIcon size={14} />
-          <Text style={styles.metaText}>{storefront.distanceMiles.toFixed(1)} mi away</Text>
+          <LocationPinIcon size={14} color={colors.goldSoft} />
+          <Text numberOfLines={1} style={styles.metaText}>
+            {storefront.distanceMiles.toFixed(1)} mi away
+          </Text>
         </View>
       </View>
 
       {ratingDisplay.helperLabel ? (
-        <Text style={styles.ratingHelperText}>{ratingDisplay.helperLabel}</Text>
+        <Text numberOfLines={1} style={styles.ratingHelperText}>
+          {ratingDisplay.helperLabel}
+        </Text>
       ) : null}
 
       {storefront.ownerFeaturedBadges?.length ? (
         <View style={styles.ownerBadgeRow}>
           {storefront.ownerFeaturedBadges.slice(0, 4).map((badge) => (
             <View key={badge} style={styles.ownerBadge}>
-              <Text style={styles.ownerBadgeText}>{badge}</Text>
+              <Text numberOfLines={1} style={styles.ownerBadgeText}>
+                {badge}
+              </Text>
             </View>
           ))}
         </View>
       ) : null}
 
       {storefront.ownerCardSummary ? (
-        <Text style={styles.ownerSummaryText}>{storefront.ownerCardSummary}</Text>
+        <Text numberOfLines={3} style={styles.ownerSummaryText}>
+          {storefront.ownerCardSummary}
+        </Text>
       ) : null}
     </View>
   );
 }
 
-export function DetailOperationalSection({
-  body,
-  rows,
-}: {
-  body: string;
-  rows: OperationalRow[];
-}) {
+export function DetailOperationalSection({ body, rows }: { body: string; rows: OperationalRow[] }) {
   return (
     <SectionCard title="Operational details" body={body}>
       <View style={styles.operationalList}>
@@ -155,7 +179,7 @@ export function DetailOperationalSection({
                   row.status === 'checking' && styles.operationalIconWrapChecking,
                 ]}
               >
-                <Ionicons
+                <AppUiIcon
                   name={row.icon}
                   size={15}
                   color={
@@ -168,8 +192,11 @@ export function DetailOperationalSection({
                 />
               </View>
               <View style={styles.operationalCopy}>
-                <Text style={styles.operationalLabel}>{row.label}</Text>
+                <Text numberOfLines={1} style={styles.operationalLabel}>
+                  {row.label}
+                </Text>
                 <Text
+                  numberOfLines={1}
                   style={[
                     styles.operationalValue,
                     row.status !== 'available' && styles.operationalValueMuted,
@@ -236,25 +263,49 @@ export function DetailPrimaryActions({
 
   return (
     <View style={styles.ctaRow}>
-      <Pressable onPress={onGoNow} style={styles.primaryButton}>
-        <Ionicons name="navigate" size={16} color={colors.background} />
-        <Text style={styles.primaryButtonText}>Go Now</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open directions"
+        accessibilityHint="Starts navigation to this storefront."
+        onPress={onGoNow}
+        style={styles.primaryButton}
+      >
+        <AppUiIcon name="navigate" size={16} color={colors.backgroundDeep} />
+        <Text style={styles.primaryButtonText}>Directions</Text>
       </Pressable>
       {hasMenu ? (
-        <Pressable onPress={onOpenMenu} style={styles.primaryButton}>
-          <Ionicons name="restaurant-outline" size={16} color={colors.background} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open storefront menu"
+          accessibilityHint="Opens the menu link for this storefront."
+          onPress={onOpenMenu}
+          style={styles.primaryButton}
+        >
+          <AppUiIcon name="restaurant-outline" size={16} color={colors.backgroundDeep} />
           <Text style={styles.primaryButtonText}>Menu</Text>
         </Pressable>
       ) : null}
       {hasWebsite ? (
-        <Pressable onPress={onOpenWebsite} style={styles.primaryButton}>
-          <Ionicons name="globe-outline" size={16} color={colors.background} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open storefront website"
+          accessibilityHint="Opens the website link for this storefront."
+          onPress={onOpenWebsite}
+          style={styles.primaryButton}
+        >
+          <AppUiIcon name="globe-outline" size={16} color={colors.backgroundDeep} />
           <Text style={styles.primaryButtonText}>Website</Text>
         </Pressable>
       ) : null}
       {hasPhone ? (
-        <Pressable onPress={onCall} style={styles.secondaryButton}>
-          <Ionicons name="call-outline" size={16} color={colors.text} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Call storefront"
+          accessibilityHint="Starts a phone call to this storefront."
+          onPress={onCall}
+          style={styles.secondaryButton}
+        >
+          <AppUiIcon name="call-outline" size={16} color={colors.text} />
           <Text style={styles.secondaryButtonText}>Call</Text>
         </Pressable>
       ) : null}
@@ -267,19 +318,33 @@ export function DetailSecondaryActions({
   isSaved,
   onToggleSaved,
   onWriteReview,
-  onReport,
+  writeReviewLabel,
+  onSuggestEdit,
+  onReportClosed,
 }: {
   storefront: StorefrontSummary;
   isSaved: boolean;
   onToggleSaved: (storefrontId: string) => void;
   onWriteReview: () => void;
-  onReport: () => void;
+  writeReviewLabel: string;
+  onSuggestEdit: () => void;
+  onReportClosed: () => void;
 }) {
   return (
     <>
       <View style={styles.secondaryCtaRow}>
-        <Pressable onPress={() => onToggleSaved(storefront.id)} style={styles.tertiaryButton}>
-          <Ionicons
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            isSaved
+              ? `Remove ${storefront.displayName} from saved storefronts`
+              : `Save ${storefront.displayName}`
+          }
+          accessibilityHint="Toggles this storefront in your saved list."
+          onPress={() => onToggleSaved(storefront.id)}
+          style={styles.tertiaryButton}
+        >
+          <AppUiIcon
             name={isSaved ? 'bookmark' : 'bookmark-outline'}
             size={16}
             color={isSaved ? colors.primary : colors.text}
@@ -289,14 +354,39 @@ export function DetailSecondaryActions({
       </View>
 
       <View style={styles.secondaryCtaRow}>
-        <Pressable onPress={onWriteReview} style={styles.tertiaryButton}>
-          <Ionicons name="create-outline" size={16} color={colors.text} />
-          <Text style={styles.tertiaryButtonText}>Write Review</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${writeReviewLabel} for ${storefront.displayName}`}
+          accessibilityHint="Opens the review composer for this storefront."
+          onPress={onWriteReview}
+          style={styles.tertiaryButton}
+        >
+          <AppUiIcon name="create-outline" size={16} color={colors.text} />
+          <Text style={styles.tertiaryButtonText}>{writeReviewLabel}</Text>
         </Pressable>
 
-        <Pressable onPress={onReport} style={styles.tertiaryButton}>
-          <Ionicons name="flag-outline" size={16} color={colors.text} />
-          <Text style={styles.tertiaryButtonText}>Report</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Suggest an edit for ${storefront.displayName}`}
+          accessibilityHint="Opens the storefront correction flow."
+          onPress={onSuggestEdit}
+          style={styles.tertiaryButton}
+        >
+          <AppUiIcon name="create-outline" size={16} color={colors.text} />
+          <Text style={styles.tertiaryButtonText}>Suggest Edit</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.secondaryCtaRow}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Report ${storefront.displayName} as closed`}
+          accessibilityHint="Opens the storefront closure report flow."
+          onPress={onReportClosed}
+          style={styles.tertiaryButton}
+        >
+          <AppUiIcon name="flag-outline" size={16} color={colors.text} />
+          <Text style={styles.tertiaryButtonText}>Report Closed</Text>
         </Pressable>
       </View>
     </>
@@ -307,7 +397,7 @@ export function DetailLoadingCard() {
   return (
     <SectionCard
       title="Loading storefront information"
-      body="Fetching current hours, contact details, and Canopy Trove reviews for this shop."
+      body="Fetching current hours, contact details, and Canopy Trove customer reviews for this shop."
     >
       <CustomerStateCard
         title="Updating live storefront details"

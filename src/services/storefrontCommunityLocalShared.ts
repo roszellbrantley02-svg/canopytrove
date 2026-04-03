@@ -1,4 +1,4 @@
-import { AppReview } from '../types/storefront';
+import type { AppReview } from '../types/storefront';
 
 export type StoredLocalAppReviewRecord = {
   id: string;
@@ -8,8 +8,10 @@ export type StoredLocalAppReviewRecord = {
   rating: number;
   text: string;
   gifUrl?: string | null;
+  photoUrls?: string[];
   tags: string[];
   photoCount: number;
+  photoUploadIds?: string[];
   createdAt: string;
 };
 
@@ -20,6 +22,11 @@ export type StoredLocalReportRecord = {
   authorName: string;
   reason: string;
   description: string;
+  reportTarget?: 'storefront' | 'review';
+  reportedReviewId?: string;
+  reportedReviewAuthorProfileId?: string | null;
+  reportedReviewAuthorName?: string | null;
+  reportedReviewExcerpt?: string | null;
   createdAt: string;
 };
 
@@ -40,7 +47,7 @@ export const EMPTY_STOREFRONT_COMMUNITY_STATE: StoredStorefrontCommunityState = 
 };
 
 export function cloneStorefrontCommunityState(
-  state: StoredStorefrontCommunityState
+  state: StoredStorefrontCommunityState,
 ): StoredStorefrontCommunityState {
   return {
     appReviewsByStorefrontId: Object.fromEntries(
@@ -49,21 +56,23 @@ export function cloneStorefrontCommunityState(
         reviews.map((review) => ({
           ...review,
           gifUrl: review.gifUrl ?? null,
+          photoUrls: [...(review.photoUrls ?? [])],
           tags: [...review.tags],
+          photoUploadIds: review.photoUploadIds ? [...review.photoUploadIds] : undefined,
         })),
-      ])
+      ]),
     ),
     reportsByStorefrontId: Object.fromEntries(
       Object.entries(state.reportsByStorefrontId).map(([storefrontId, reports]) => [
         storefrontId,
         reports.map((report) => ({ ...report })),
-      ])
+      ]),
     ),
     helpfulReviewsById: Object.fromEntries(
       Object.entries(state.helpfulReviewsById).map(([reviewId, overlay]) => [
         reviewId,
         { helpfulVoterIds: [...overlay.helpfulVoterIds] },
-      ])
+      ]),
     ),
   };
 }
@@ -78,8 +87,8 @@ export function normalizeCommunityTags(tags: string[]) {
       tags
         .map((tag) => tag.trim())
         .filter(Boolean)
-        .slice(0, 6)
-    )
+        .slice(0, 6),
+    ),
   );
 }
 
@@ -117,7 +126,7 @@ export function toCommunityRelativeTime(createdAt: string) {
 
 export function mapStoredReviewToAppReview(
   review: StoredLocalAppReviewRecord,
-  helpfulVotes: StoredHelpfulReviewOverlay | undefined
+  helpfulVotes: StoredHelpfulReviewOverlay | undefined,
 ): AppReview {
   return {
     id: review.id,
@@ -127,6 +136,7 @@ export function mapStoredReviewToAppReview(
     relativeTime: toCommunityRelativeTime(review.createdAt),
     text: review.text,
     gifUrl: review.gifUrl ?? null,
+    photoUrls: [...(review.photoUrls ?? [])],
     tags: [...review.tags],
     helpfulCount: helpfulVotes?.helpfulVoterIds.length ?? 0,
   };

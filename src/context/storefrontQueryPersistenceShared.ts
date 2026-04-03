@@ -48,19 +48,19 @@ export function buildStoredPreferencesPayload({
       normalizeGamificationState(
         storedPreferences.profileId ?? profileId,
         undefined,
-        profileCreatedAt
+        profileCreatedAt,
       ),
   };
 }
 
 export function createStorefrontQueryPreferencesPayload(
-  payload: StorefrontQueryPersistencePayload
+  payload: StorefrontQueryPersistencePayload,
 ) {
   return JSON.stringify(payload);
 }
 
 export async function persistStorefrontQueryPreferences(
-  payload: StorefrontQueryPersistencePayload
+  payload: StorefrontQueryPersistencePayload,
 ) {
   await saveStorefrontPreferences(payload);
 }

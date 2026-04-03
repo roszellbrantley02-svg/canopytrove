@@ -1,8 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { AppIconProps } from '../icons/AppIcons';
-import { LayeredAppIcon } from '../icons/LayeredAppIcon';
-import { colors, radii, spacing, typography } from '../theme/tokens';
+import { colors, radii, spacing, textStyles } from '../theme/tokens';
 
 type AppIconStatCardProps = {
   label: string;
@@ -21,8 +20,9 @@ export function AppIconStatCard({
 
   return (
     <View style={[styles.card, { borderColor }]}>
+      <View pointerEvents="none" style={[styles.ambientGlow, { backgroundColor: `${tone}12` }]} />
       <View style={[styles.iconWrap, { backgroundColor: `${tone}16`, borderColor }]}>
-        <LayeredAppIcon icon={Icon} size={22} />
+        <Icon size={24} color={tone} />
       </View>
       <View style={styles.copy}>
         <Text style={styles.value}>{value}</Text>
@@ -49,14 +49,24 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
     elevation: 7,
+    overflow: 'hidden',
+  },
+  ambientGlow: {
+    position: 'absolute',
+    top: -36,
+    right: -16,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
   },
   iconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
     shadowColor: colors.shadow,
     shadowOpacity: 0.16,
     shadowRadius: 10,
@@ -67,15 +77,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   value: {
+    ...textStyles.title,
     color: colors.text,
-    fontSize: typography.title,
-    fontWeight: '900',
+    lineHeight: 30,
   },
   label: {
-    color: colors.accent,
-    fontSize: typography.caption,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    ...textStyles.labelCaps,
+    color: colors.textSoft,
+    lineHeight: 18,
   },
 });

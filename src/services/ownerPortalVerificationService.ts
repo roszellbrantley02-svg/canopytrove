@@ -1,13 +1,14 @@
 import { doc, setDoc } from 'firebase/firestore';
 import { getFirebaseDb } from '../config/firebase';
-import {
+import type {
   OwnerPortalBusinessVerificationDocument,
   OwnerPortalIdentityIdType,
   OwnerPortalIdentityVerificationDocument,
   OwnerPortalUploadedFile,
 } from '../types/ownerPortal';
-import { StorefrontSummary } from '../types/storefront';
+import type { StorefrontSummary } from '../types/storefront';
 import { uploadOwnerPrivateFile } from './ownerPortalStorageService';
+import { ensureOwnerPortalSessionReady } from './ownerPortalSessionService';
 
 const OWNER_PROFILES_COLLECTION = 'ownerProfiles';
 const BUSINESS_VERIFICATIONS_COLLECTION = 'businessVerifications';
@@ -27,7 +28,10 @@ function createNow() {
 }
 
 function normalizeText(value: string) {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ');
 }
 
 function calculateBusinessMatchScore(
@@ -40,7 +44,7 @@ function calculateBusinessMatchScore(
     storefrontName: string;
     licenseNumber: string;
     address: string;
-  }
+  },
 ) {
   let score = 0;
 
@@ -77,19 +81,20 @@ export async function submitBusinessVerification(input: {
   licenseFile: OwnerPortalUploadedFile;
   businessDocFile: OwnerPortalUploadedFile;
 }) {
+  await ensureOwnerPortalSessionReady();
   const db = getOwnerVerificationDb();
   const submittedAt = createNow();
   const uploadedLicenseFilePath = await uploadOwnerPrivateFile(
     input.ownerUid,
     'business',
     'license',
-    input.licenseFile
+    input.licenseFile,
   );
   const uploadedBusinessDocPath = await uploadOwnerPrivateFile(
     input.ownerUid,
     'business',
     'registration',
-    input.businessDocFile
+    input.businessDocFile,
   );
 
   const verificationDocument: OwnerPortalBusinessVerificationDocument = {
@@ -119,11 +124,10 @@ export async function submitBusinessVerification(input: {
     setDoc(
       doc(db, OWNER_PROFILES_COLLECTION, input.ownerUid),
       {
-        businessVerificationStatus: 'pending',
         onboardingStep: 'identity_verification',
         updatedAt: submittedAt,
       },
-      { merge: true }
+      { merge: true },
     ),
   ]);
 
@@ -138,6 +142,7 @@ export async function submitIdentityVerification(input: {
   backFile: OwnerPortalUploadedFile | null;
   selfieFile: OwnerPortalUploadedFile;
 }) {
+  await ensureOwnerPortalSessionReady();
   const db = getOwnerVerificationDb();
   const submittedAt = createNow();
   const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
@@ -145,7 +150,7 @@ export async function submitIdentityVerification(input: {
     input.ownerUid,
     'identity',
     'id-front',
-    input.frontFile
+    input.frontFile,
   );
   const idDocumentBackPath = input.backFile
     ? await uploadOwnerPrivateFile(input.ownerUid, 'identity', 'id-back', input.backFile)
@@ -154,7 +159,7 @@ export async function submitIdentityVerification(input: {
     input.ownerUid,
     'identity',
     'selfie',
-    input.selfieFile
+    input.selfieFile,
   );
 
   const verificationDocument: OwnerPortalIdentityVerificationDocument = {
@@ -178,11 +183,10 @@ export async function submitIdentityVerification(input: {
     setDoc(
       doc(db, OWNER_PROFILES_COLLECTION, input.ownerUid),
       {
-        identityVerificationStatus: 'pending',
         onboardingStep: 'subscription',
         updatedAt: submittedAt,
       },
-      { merge: true }
+      { merge: true },
     ),
   ]);
 

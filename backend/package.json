@@ -5,20 +5,23 @@
   "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "start": "node dist/server.js",
+    "start": "node dist/backend/src/server.js",
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "release:check": "tsx ./scripts/check-release-readiness.ts",
+    "migrate:legacy-storefront-media": "tsx ./scripts/migrate-legacy-storefront-media.ts",
     "test": "tsx --test src/**/*.test.ts",
     "favorite-deals:dispatch": "tsx src/scripts/dispatchFavoriteDealAlerts.ts",
     "smoke": "node ./scripts/smoke-api.mjs",
     "benchmark": "node ./scripts/benchmark-storefront-api.mjs"
   },
   "dependencies": {
+    "@sentry/node": "^10.46.0",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
     "express": "^5.1.0",
-    "firebase-admin": "^13.7.0"
+    "firebase-admin": "^13.7.0",
+    "svix": "^1.89.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

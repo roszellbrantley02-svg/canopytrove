@@ -1,6 +1,7 @@
-import { AppState, AppStateStatus } from 'react-native';
-import { AnalyticsEventInput } from '../types/analytics';
-import { AnalyticsIdentity } from './analyticsConfig';
+import type { AppStateStatus } from 'react-native';
+import { AppState } from 'react-native';
+import type { AnalyticsEventInput } from '../types/analytics';
+import type { AnalyticsIdentity } from './analyticsConfig';
 
 export type AnalyticsRuntimeState = {
   analyticsInitialized: boolean;

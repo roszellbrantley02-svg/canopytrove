@@ -1,8 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  GamificationRewardResult,
-  StorefrontGamificationState,
-} from '../types/storefront';
+import type React from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { GamificationRewardResult, StorefrontGamificationState } from '../types/storefront';
 import {
   applyFollowersUpdatedReward,
   applyFriendInvitedReward,
@@ -15,16 +13,15 @@ import {
   normalizeGamificationState,
 } from '../services/canopyTroveGamificationService';
 import { useStorefrontRewardEventSync } from './useStorefrontRewardEventSync';
-import {
-  areGamificationStatesEqual,
-  StorefrontRewardsControllerValue,
-} from './storefrontControllerShared';
+import type { StorefrontRewardsControllerValue } from './storefrontControllerShared';
+import { areGamificationStatesEqual } from './storefrontControllerShared';
 import { normalizeRewardResult, shouldSurfaceRewardResult } from './storefrontRewardsShared';
 
 type UseStorefrontRewardsModelArgs = {
   profileId: string;
   profileCreatedAt?: string | null;
   initialState: StorefrontGamificationState;
+  onGamificationStateMutation?: () => void;
 };
 
 export type StorefrontRewardsModel = StorefrontRewardsControllerValue & {
@@ -36,10 +33,10 @@ export function useStorefrontRewardsModel({
   profileId,
   profileCreatedAt,
   initialState,
+  onGamificationStateMutation,
 }: UseStorefrontRewardsModelArgs): StorefrontRewardsModel {
-  const [gamificationState, setGamificationState] = useState<StorefrontGamificationState>(
-    initialState
-  );
+  const [gamificationState, setGamificationState] =
+    useState<StorefrontGamificationState>(initialState);
   const [lastRewardResult, setLastRewardResult] = useState<GamificationRewardResult | null>(null);
   const gamificationStateRef = useRef(gamificationState);
   const badgeDefinitions = useMemo(() => getBadgeDefinitions(), []);
@@ -53,7 +50,7 @@ export function useStorefrontRewardsModel({
       const nextState = normalizeGamificationState(
         profileId,
         current,
-        profileCreatedAt ?? current.joinedDate
+        profileCreatedAt ?? current.joinedDate,
       );
 
       return areGamificationStatesEqual(current, nextState) ? current : nextState;
@@ -65,23 +62,22 @@ export function useStorefrontRewardsModel({
       const normalizedRewardResult = normalizeRewardResult(
         profileId,
         rewardResult,
-        profileCreatedAt
+        profileCreatedAt,
       );
       const nextState = normalizedRewardResult.updatedState;
 
+      onGamificationStateMutation?.();
       gamificationStateRef.current = nextState;
       setGamificationState((current) =>
-        areGamificationStatesEqual(current, nextState) ? current : nextState
+        areGamificationStatesEqual(current, nextState) ? current : nextState,
       );
       setLastRewardResult(
-        shouldSurfaceRewardResult(normalizedRewardResult)
-          ? normalizedRewardResult
-          : null
+        shouldSurfaceRewardResult(normalizedRewardResult) ? normalizedRewardResult : null,
       );
 
       return normalizedRewardResult;
     },
-    [profileCreatedAt, profileId]
+    [onGamificationStateMutation, profileCreatedAt, profileId],
   );
 
   const clearLastRewardResult = useCallback(() => {
@@ -90,6 +86,7 @@ export function useStorefrontRewardsModel({
 
   const syncGamificationEvent = useStorefrontRewardEventSync({
     gamificationStateRef,
+    onGamificationStateMutation,
     profileCreatedAt,
     profileId,
     setGamificationState,
@@ -99,7 +96,7 @@ export function useStorefrontRewardsModel({
   const trackReviewSubmittedReward = useCallback(
     (payload: { rating: number; textLength: number; photoCount?: number }) => {
       const rewardResult = applyRewardResult(
-        applyReviewSubmittedReward(gamificationStateRef.current, payload)
+        applyReviewSubmittedReward(gamificationStateRef.current, payload),
       );
 
       syncGamificationEvent({
@@ -109,13 +106,11 @@ export function useStorefrontRewardsModel({
 
       return rewardResult;
     },
-    [applyRewardResult, syncGamificationEvent]
+    [applyRewardResult, syncGamificationEvent],
   );
 
   const trackPhotoUploadedReward = useCallback(() => {
-    const rewardResult = applyRewardResult(
-      applyPhotoUploadedReward(gamificationStateRef.current)
-    );
+    const rewardResult = applyRewardResult(applyPhotoUploadedReward(gamificationStateRef.current));
 
     syncGamificationEvent({
       activityType: 'photo_uploaded',
@@ -127,7 +122,7 @@ export function useStorefrontRewardsModel({
   const trackHelpfulVoteReceivedReward = useCallback(
     (count = 1) => {
       const rewardResult = applyRewardResult(
-        applyHelpfulVoteReceivedReward(gamificationStateRef.current, { count })
+        applyHelpfulVoteReceivedReward(gamificationStateRef.current, { count }),
       );
 
       syncGamificationEvent({
@@ -137,12 +132,12 @@ export function useStorefrontRewardsModel({
 
       return rewardResult;
     },
-    [applyRewardResult, syncGamificationEvent]
+    [applyRewardResult, syncGamificationEvent],
   );
 
   const trackReportSubmittedReward = useCallback(() => {
     const rewardResult = applyRewardResult(
-      applyReportSubmittedReward(gamificationStateRef.current)
+      applyReportSubmittedReward(gamificationStateRef.current),
     );
 
     syncGamificationEvent({
@@ -155,7 +150,7 @@ export function useStorefrontRewardsModel({
   const trackFriendInvitedReward = useCallback(
     (count = 1) => {
       const rewardResult = applyRewardResult(
-        applyFriendInvitedReward(gamificationStateRef.current, { count })
+        applyFriendInvitedReward(gamificationStateRef.current, { count }),
       );
 
       syncGamificationEvent({
@@ -165,13 +160,13 @@ export function useStorefrontRewardsModel({
 
       return rewardResult;
     },
-    [applyRewardResult, syncGamificationEvent]
+    [applyRewardResult, syncGamificationEvent],
   );
 
   const trackFollowersUpdatedReward = useCallback(
     (count: number) => {
       const rewardResult = applyRewardResult(
-        applyFollowersUpdatedReward(gamificationStateRef.current, { count })
+        applyFollowersUpdatedReward(gamificationStateRef.current, { count }),
       );
 
       syncGamificationEvent({
@@ -181,7 +176,7 @@ export function useStorefrontRewardsModel({
 
       return rewardResult;
     },
-    [applyRewardResult, syncGamificationEvent]
+    [applyRewardResult, syncGamificationEvent],
   );
 
   return useMemo(
@@ -213,6 +208,6 @@ export function useStorefrontRewardsModel({
       trackPhotoUploadedReward,
       trackReportSubmittedReward,
       trackReviewSubmittedReward,
-    ]
+    ],
   );
 }

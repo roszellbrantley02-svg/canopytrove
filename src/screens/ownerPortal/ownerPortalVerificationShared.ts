@@ -1,5 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
-import { OwnerPortalUploadedFile } from '../../types/ownerPortal';
+import type { OwnerPortalUploadedFile } from '../../types/ownerPortal';
 
 export function formatStorefrontAddress(storefrontSummary?: {
   addressLine1: string;

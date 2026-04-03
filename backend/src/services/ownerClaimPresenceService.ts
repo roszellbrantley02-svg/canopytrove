@@ -42,7 +42,7 @@ export async function hasStorefrontOwnerClaim(storefrontId: string) {
     const snapshot = await claimsRef.where('dispensaryId', '==', storefrontId).limit(5).get();
     const hasClaim = snapshot.docs.some((document) => {
       const claimStatus = document.data().claimStatus?.trim().toLowerCase();
-      return claimStatus !== 'rejected';
+      return claimStatus === 'approved';
     });
 
     claimPresenceCache.set(storefrontId, {

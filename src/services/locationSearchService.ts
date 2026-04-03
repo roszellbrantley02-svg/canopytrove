@@ -1,12 +1,12 @@
 import * as Location from 'expo-location';
 import { storefrontApiBaseUrl, storefrontSourceMode } from '../config/storefrontSourceConfig';
 import { resolveStorefrontBackendLocation } from './storefrontBackendService';
-import { MarketArea } from '../types/storefront';
+import type { MarketArea } from '../types/storefront';
+import type { SearchLocationResult } from './locationServiceShared';
 import {
   findAreaByQuery,
   formatResolvedLabel,
   scoreResolvedAddress,
-  SearchLocationResult,
 } from './locationServiceShared';
 
 const locationSearchCache = new Map<string, SearchLocationResult>();
@@ -14,7 +14,7 @@ const locationSearchInFlight = new Map<string, Promise<SearchLocationResult>>();
 
 export async function resolveSearchLocation(
   query: string,
-  areas: MarketArea[]
+  areas: MarketArea[],
 ): Promise<SearchLocationResult> {
   const cacheKey = query.trim().toLowerCase();
   const cached = locationSearchCache.get(cacheKey);

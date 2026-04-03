@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -20,6 +20,7 @@
     "../src/domain/canopyTroveGamification.ts",
     "../src/types/firestoreDocuments.ts",
     "../src/types/ownerPortal.ts",
+    "../src/types/runtimeOps.ts",
     "../src/types/storefront.ts",
     "../src/types/storefrontRecord.ts",
     "../src/utils/ownerPromotionPlacement.ts"

@@ -28,13 +28,7 @@ export function AppBootLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function AppBootHeader({
-  pulse,
-  sweep,
-}: {
-  pulse: Animated.Value;
-  sweep: Animated.Value;
-}) {
+export function AppBootHeader({ pulse, sweep }: { pulse: Animated.Value; sweep: Animated.Value }) {
   return (
     <MotionInView delay={0} distance={12}>
       <View style={styles.header}>
@@ -64,7 +58,7 @@ export function AppBootHeader({
         </View>
         <View style={styles.brandLockup}>
           <View style={styles.kickerRow}>
-            <Text style={styles.eyebrow}>{brand.productName}</Text>
+            <Text style={styles.eyebrow}>{brand.productDisplayName}</Text>
             <View style={styles.liveBadge}>
               <View style={styles.liveDot} />
               <Text style={styles.liveBadgeText}>Secure startup</Text>
@@ -107,7 +101,8 @@ export function AppBootHeader({
         <View style={styles.bootNoteCard}>
           <Text style={styles.bootNoteTitle}>Preparing your customer entry state</Text>
           <Text style={styles.bootNoteBody}>
-            Canopy Trove is restoring storefront surfaces and member context before the app opens.
+            {brand.productDisplayName} is restoring storefront surfaces and member context before
+            the app opens.
           </Text>
         </View>
       </View>
@@ -144,7 +139,8 @@ export function AppBootHero({ pulse }: { pulse: Animated.Value }) {
         </Animated.View>
         <Text style={styles.heroTitle}>Loading the surfaces you left behind.</Text>
         <Text style={styles.heroBody}>
-          Favorites, recent storefronts, and profile progress are being staged for a smoother return.
+          Favorites, recent storefronts, and profile progress are being staged for a smoother
+          return.
         </Text>
         <ShimmerBlock style={styles.heroLineShort} borderRadius={radii.pill} shimmerWidth={110} />
         <ShimmerBlock style={styles.heroLineLong} borderRadius={radii.pill} shimmerWidth={160} />
@@ -166,8 +162,16 @@ export function AppBootCardStack() {
           <View style={styles.card}>
             <ShimmerBlock style={styles.cardMap} borderRadius={0} shimmerWidth={220} />
             <View style={styles.cardBody}>
-              <ShimmerBlock style={styles.cardLineStrong} borderRadius={radii.pill} shimmerWidth={120} />
-              <ShimmerBlock style={styles.cardLineSoft} borderRadius={radii.pill} shimmerWidth={148} />
+              <ShimmerBlock
+                style={styles.cardLineStrong}
+                borderRadius={radii.pill}
+                shimmerWidth={120}
+              />
+              <ShimmerBlock
+                style={styles.cardLineSoft}
+                borderRadius={radii.pill}
+                shimmerWidth={148}
+              />
               <View style={styles.cardChipRow}>
                 <ShimmerBlock style={styles.cardChip} borderRadius={radii.pill} shimmerWidth={72} />
                 <ShimmerBlock style={styles.cardChip} borderRadius={radii.pill} shimmerWidth={72} />

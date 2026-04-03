@@ -3,7 +3,7 @@ import {
   getStorefrontBackendProfileState,
   saveStorefrontBackendProfileState,
 } from './storefrontBackendService';
-import { StorefrontProfileState } from '../types/storefront';
+import type { StorefrontProfileState } from '../types/storefront';
 
 export async function loadRemoteStorefrontProfileState(profileId: string) {
   if (storefrontSourceMode !== 'api') {

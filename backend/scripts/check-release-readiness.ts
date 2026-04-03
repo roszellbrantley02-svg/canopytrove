@@ -82,15 +82,17 @@ loadBackendEnv();
 
 void (async () => {
   const [
-    { getMissingOwnerBillingBackendEnvVars, serverConfig },
+    { getMissingOwnerBillingBackendEnvVars, hasConfiguredOwnerPortalClaimSync, serverConfig },
     { hasBackendFirebaseConfig },
     { getAdminReviewReadiness },
     { backendStorefrontSourceStatus },
+    { getStorefrontReadinessStatus },
   ] = await Promise.all([
     import('../src/config'),
     import('../src/firebase'),
     import('../src/services/adminReviewService'),
     import('../src/sources'),
+    import('../src/services/healthMonitorService'),
   ]);
 
   const checks: Check[] = [];
@@ -115,6 +117,23 @@ void (async () => {
       ? 'Firestore source is active.'
       : `Backend would currently serve ${backendStorefrontSourceStatus.activeMode} data. ${backendStorefrontSourceStatus.fallbackReason ?? 'Check backend Firebase config.'}`
   );
+
+  const storefrontReadiness = await getStorefrontReadinessStatus({
+    probeGooglePlaces: false,
+    timeoutMs: 7_000,
+  });
+  for (const readinessCheck of storefrontReadiness.checks) {
+    if (readinessCheck.name === 'Storefront source mode') {
+      continue;
+    }
+
+    pushCheck(
+      readinessCheck.name,
+      readinessCheck.ok,
+      readinessCheck.detail,
+      readinessCheck.severity
+    );
+  }
 
   pushCheck(
     'Restricted CORS origin',
@@ -142,11 +161,138 @@ void (async () => {
   );
 
   pushCheck(
+    'Owner AI live provider',
+    Boolean(serverConfig.openAiApiKey),
+    serverConfig.openAiApiKey
+      ? `OPENAI_API_KEY is configured and owner AI will use ${serverConfig.openAiModel}.`
+      : 'Set OPENAI_API_KEY if the owner AI assistant should use live model generation instead of fallback copy.',
+    'recommended'
+  );
+
+  const sentryDsn = readValue('SENTRY_DSN');
+  pushCheck(
+    'Backend crash monitoring DSN',
+    Boolean(sentryDsn),
+    sentryDsn
+      ? 'SENTRY_DSN is configured.'
+      : 'Set SENTRY_DSN to enable hosted backend crash monitoring.',
+    'recommended'
+  );
+
+  const emailDeliveryProvider = readValue('EMAIL_DELIVERY_PROVIDER');
+  const resendApiKey = readValue('RESEND_API_KEY');
+  const resendWebhookSecret = readValue('RESEND_WEBHOOK_SECRET');
+  const emailFromAddress = readValue('EMAIL_FROM_ADDRESS');
+  const welcomeEmailsEnabled = readValue('WELCOME_EMAILS_ENABLED') !== 'false';
+  pushCheck(
+    'Welcome email delivery',
+    !welcomeEmailsEnabled ||
+      (emailDeliveryProvider === 'resend' && Boolean(resendApiKey) && Boolean(emailFromAddress)),
+    !welcomeEmailsEnabled
+      ? 'Welcome emails are disabled.'
+      : emailDeliveryProvider === 'resend' && resendApiKey && emailFromAddress
+        ? 'Welcome email delivery is configured through Resend.'
+        : 'Set EMAIL_DELIVERY_PROVIDER=resend plus RESEND_API_KEY and EMAIL_FROM_ADDRESS to send automatic welcome emails.',
+    'recommended'
+  );
+  pushCheck(
+    'Welcome email delivery webhooks',
+    !welcomeEmailsEnabled ||
+      emailDeliveryProvider !== 'resend' ||
+      Boolean(resendWebhookSecret),
+    !welcomeEmailsEnabled
+      ? 'Welcome emails are disabled.'
+      : emailDeliveryProvider !== 'resend'
+        ? 'Resend email delivery is not enabled, so webhook tracking is not required.'
+        : resendWebhookSecret
+          ? 'RESEND_WEBHOOK_SECRET is configured for signed delivery-event tracking.'
+          : 'Set RESEND_WEBHOOK_SECRET and register /email/webhooks/resend in Resend to track delivered, bounced, complained, and suppressed events.',
+    'recommended'
+  );
+
+  const opsHealthcheckApiUrl = readValue('OPS_HEALTHCHECK_API_URL');
+  const opsHealthcheckApiRawUrl = readValue('OPS_HEALTHCHECK_API_RAW_URL');
+  const opsHealthcheckSiteUrl = readValue('OPS_HEALTHCHECK_SITE_URL');
+  const opsAlertWebhookUrl = readValue('OPS_ALERT_WEBHOOK_URL');
+  const hasOpsMonitoringTargets = Boolean(opsHealthcheckApiUrl || opsHealthcheckSiteUrl);
+
+  pushCheck(
+    'Runtime health monitor targets',
+    hasOpsMonitoringTargets,
+    hasOpsMonitoringTargets
+      ? 'At least one runtime health monitor target is configured.'
+      : 'Set OPS_HEALTHCHECK_API_URL and/or OPS_HEALTHCHECK_SITE_URL to enable scheduled uptime sweeps.',
+    'recommended'
+  );
+
+  if (opsHealthcheckApiUrl) {
+    pushCheck(
+      'OPS_HEALTHCHECK_API_URL public URL',
+      isPublicHttpUrl(opsHealthcheckApiUrl),
+      isPublicHttpUrl(opsHealthcheckApiUrl)
+        ? 'OPS_HEALTHCHECK_API_URL is public.'
+        : 'OPS_HEALTHCHECK_API_URL must be a public non-local http(s) URL.',
+      'recommended'
+    );
+  }
+
+  pushCheck(
+    'OPS_HEALTHCHECK_API_RAW_URL companion target',
+    !opsHealthcheckApiUrl || Boolean(opsHealthcheckApiRawUrl),
+    !opsHealthcheckApiUrl || opsHealthcheckApiRawUrl
+      ? 'OPS_HEALTHCHECK_API_RAW_URL is configured or the custom API monitor is not enabled.'
+      : 'Set OPS_HEALTHCHECK_API_RAW_URL to the raw Cloud Run health URL so monitor alerts can distinguish domain-path failures from full API outages.',
+    'recommended'
+  );
+
+  if (opsHealthcheckApiRawUrl) {
+    pushCheck(
+      'OPS_HEALTHCHECK_API_RAW_URL public URL',
+      isPublicHttpUrl(opsHealthcheckApiRawUrl),
+      isPublicHttpUrl(opsHealthcheckApiRawUrl)
+        ? 'OPS_HEALTHCHECK_API_RAW_URL is public.'
+        : 'OPS_HEALTHCHECK_API_RAW_URL must be a public non-local http(s) URL.',
+      'recommended'
+    );
+  }
+
+  if (opsHealthcheckSiteUrl) {
+    pushCheck(
+      'OPS_HEALTHCHECK_SITE_URL public URL',
+      isPublicHttpUrl(opsHealthcheckSiteUrl),
+      isPublicHttpUrl(opsHealthcheckSiteUrl)
+        ? 'OPS_HEALTHCHECK_SITE_URL is public.'
+        : 'OPS_HEALTHCHECK_SITE_URL must be a public non-local http(s) URL.',
+      'recommended'
+    );
+  }
+
+  pushCheck(
+    'Ops alert webhook',
+    !hasOpsMonitoringTargets || Boolean(opsAlertWebhookUrl),
+    !hasOpsMonitoringTargets || opsAlertWebhookUrl
+      ? 'Ops alert webhook is configured or runtime sweeps are not enabled yet.'
+      : 'Set OPS_ALERT_WEBHOOK_URL so runtime health failures alert you while you are away.',
+    'recommended'
+  );
+
+  pushCheck(
     'Expo push access token',
     Boolean(serverConfig.expoAccessToken),
     serverConfig.expoAccessToken
       ? 'EXPO_ACCESS_TOKEN is configured.'
       : 'Set EXPO_ACCESS_TOKEN so hosted favorite-deal push dispatch can run.'
+  );
+
+  pushCheck(
+    'Owner portal claim sync config',
+    !serverConfig.ownerPortalPrelaunchEnabled || hasConfiguredOwnerPortalClaimSync(),
+    !serverConfig.ownerPortalPrelaunchEnabled
+      ? 'Owner portal prelaunch is disabled, so claim sync allowlist gating is not required.'
+      : hasConfiguredOwnerPortalClaimSync()
+        ? 'Owner portal claim sync allowlist is configured.'
+        : 'Set OWNER_PORTAL_ALLOWLIST on the backend so approved owner accounts can receive owner auth claims.',
+    serverConfig.ownerPortalPrelaunchEnabled ? 'required' : 'recommended'
   );
 
   const adminReadiness = getAdminReviewReadiness();

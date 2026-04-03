@@ -1,5 +1,5 @@
 import { storefrontApiBaseUrl } from '../config/storefrontSourceConfig';
-import { Coordinates, MarketArea } from '../types/storefront';
+import type { Coordinates, MarketArea } from '../types/storefront';
 import { getCanopyTroveAuthCacheKey, getCanopyTroveAuthIdToken } from './canopyTroveAuthService';
 
 export type StorefrontBackendHealth = {
@@ -40,6 +40,7 @@ type CacheEntry<T> = {
 const backendGetCache = new Map<string, CacheEntry<unknown>>();
 const backendGetInFlight = new Map<string, Promise<unknown>>();
 const BACKEND_REQUEST_TIMEOUT_MS = 6_000;
+const BACKEND_GET_CACHE_LIMIT = 96;
 
 export const backendCacheTtls = {
   health: 10_000,
@@ -62,17 +63,39 @@ function createBackendUrl(pathname: string) {
 function getFreshCachedValue<T>(cacheKey: string) {
   const cached = backendGetCache.get(cacheKey) as CacheEntry<T> | undefined;
   if (!cached || cached.expiresAt <= Date.now()) {
+    if (cached) {
+      backendGetCache.delete(cacheKey);
+    }
     return null;
   }
 
   return cached.value;
 }
 
+function pruneBackendGetCache(now = Date.now()) {
+  backendGetCache.forEach((entry, cacheKey) => {
+    if (entry.expiresAt <= now) {
+      backendGetCache.delete(cacheKey);
+    }
+  });
+
+  while (backendGetCache.size > BACKEND_GET_CACHE_LIMIT) {
+    const oldestCacheKey = backendGetCache.keys().next().value;
+    if (!oldestCacheKey) {
+      break;
+    }
+
+    backendGetCache.delete(oldestCacheKey);
+  }
+}
+
 function setCachedValue<T>(cacheKey: string, value: T, ttlMs: number) {
+  backendGetCache.delete(cacheKey);
   backendGetCache.set(cacheKey, {
     value,
     expiresAt: Date.now() + ttlMs,
   });
+  pruneBackendGetCache();
 }
 
 export function clearCachedValue(cacheKeyPrefix: string) {
@@ -105,15 +128,36 @@ export function createLeaderboardRankCacheKey(profileId: string) {
   return `leaderboard-rank:${profileId}`;
 }
 
+async function getBackendErrorMessage(response: Response) {
+  try {
+    const payload = (await response.json()) as {
+      error?: unknown;
+      requestId?: unknown;
+    };
+    const errorText =
+      typeof payload.error === 'string' && payload.error.trim()
+        ? payload.error.trim()
+        : `Backend request failed with ${response.status}`;
+    const requestId =
+      typeof payload.requestId === 'string' && payload.requestId.trim()
+        ? payload.requestId.trim()
+        : null;
+    return requestId ? `${errorText} (request ${requestId})` : errorText;
+  } catch {
+    return `Backend request failed with ${response.status}`;
+  }
+}
+
 export async function requestJson<T>(
   pathname: string,
   init?: RequestInit,
-  options?: { cacheKey?: string; ttlMs?: number }
+  options?: { cacheKey?: string; ttlMs?: number },
 ): Promise<T> {
   const cacheKey = !init?.method || init.method === 'GET' ? options?.cacheKey : undefined;
   const ttlMs = options?.ttlMs ?? 0;
 
   if (cacheKey && ttlMs > 0) {
+    pruneBackendGetCache();
     const cached = getFreshCachedValue<T>(cacheKey);
     if (cached) {
       return cached;
@@ -139,7 +183,7 @@ export async function requestJson<T>(
         signal: controller.signal,
       });
       if (!response.ok) {
-        throw new Error(`Backend request failed with ${response.status}`);
+        throw new Error(await getBackendErrorMessage(response));
       }
 
       const payload = (await response.json()) as T;

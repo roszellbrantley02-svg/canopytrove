@@ -1,15 +1,11 @@
-import {
+import type {
   GamificationActivityType,
   GamificationBadgeDefinition,
   GamificationRewardResult,
   StorefrontGamificationState,
 } from '../../types/storefront';
 import { CANOPYTROVE_BADGES, CANOPYTROVE_POINTS } from './definitions';
-import {
-  getLevelFromPoints,
-  getPointsForLevel,
-  normalizeGamificationState,
-} from './state';
+import { getLevelFromPoints, getPointsForLevel, normalizeGamificationState } from './state';
 
 type ActivityStreakState = Pick<
   StorefrontGamificationState,
@@ -38,7 +34,7 @@ function calculateDaysSince(dateValue: string | null, occurredAt: string) {
 
 function applyActivityStreak(
   state: StorefrontGamificationState,
-  occurredAt: string
+  occurredAt: string,
 ): ActivityStreakState {
   const daysSinceActive = calculateDaysSince(state.lastActiveDate, occurredAt);
 
@@ -66,10 +62,7 @@ function applyActivityStreak(
   };
 }
 
-function addPoints(
-  state: StorefrontGamificationState,
-  points: number
-) {
+function addPoints(state: StorefrontGamificationState, points: number) {
   const totalPoints = state.totalPoints + points;
   const level = getLevelFromPoints(totalPoints);
 
@@ -81,7 +74,16 @@ function addPoints(
   };
 }
 
-function getEarnedBadgeMetric(state: StorefrontGamificationState, badge: GamificationBadgeDefinition) {
+function getMembershipDurationDays(state: StorefrontGamificationState, occurredAt: string) {
+  const membershipDays = calculateDaysSince(state.joinedDate, occurredAt);
+  return Number.isFinite(membershipDays) ? Math.max(0, membershipDays) : 0;
+}
+
+function getEarnedBadgeMetric(
+  state: StorefrontGamificationState,
+  badge: GamificationBadgeDefinition,
+  occurredAt: string,
+) {
   switch (badge.id) {
     case 'five_star_reviewer':
       return state.fiveStarReviews;
@@ -99,7 +101,7 @@ function getEarnedBadgeMetric(state: StorefrontGamificationState, badge: Gamific
       return state.currentStreak;
     case 'member_30':
     case 'member_365':
-      return Math.max(0, Math.floor((Date.now() - new Date(state.joinedDate).getTime()) / 86400000));
+      return getMembershipDurationDays(state, occurredAt);
     case 'ambassador':
       return state.friendsInvited;
     case 'followed_10':
@@ -116,7 +118,7 @@ function getEarnedBadgeMetric(state: StorefrontGamificationState, badge: Gamific
   }
 }
 
-function collectNewBadges(state: StorefrontGamificationState) {
+function collectNewBadges(state: StorefrontGamificationState, occurredAt: string) {
   return CANOPYTROVE_BADGES.filter((badge) => {
     if (state.badges.includes(badge.id)) {
       return false;
@@ -126,14 +128,11 @@ function collectNewBadges(state: StorefrontGamificationState) {
       return badge.id === 'early_adopter';
     }
 
-    return getEarnedBadgeMetric(state, badge) >= badge.requirement;
+    return getEarnedBadgeMetric(state, badge, occurredAt) >= badge.requirement;
   });
 }
 
-function awardBadges(
-  state: StorefrontGamificationState,
-  badges: GamificationBadgeDefinition[]
-) {
+function awardBadges(state: StorefrontGamificationState, badges: GamificationBadgeDefinition[]) {
   if (!badges.length) {
     return state;
   }
@@ -144,7 +143,7 @@ function awardBadges(
       ...state,
       badges: state.badges.concat(badges.map((badge) => badge.id)),
     },
-    badgePoints
+    badgePoints,
   );
 }
 
@@ -153,7 +152,7 @@ export function finalizeReward(
   activityType: GamificationActivityType,
   occurredAt: string,
   pointsEarned: number,
-  updates: Partial<StorefrontGamificationState>
+  updates: Partial<StorefrontGamificationState>,
 ): GamificationRewardResult {
   const levelBefore = state.level;
 
@@ -164,11 +163,11 @@ export function finalizeReward(
       ...applyActivityStreak(state, occurredAt),
       ...updates,
     },
-    state.joinedDate
+    state.joinedDate,
   );
 
   nextState = addPoints(nextState, pointsEarned);
-  const badgesEarned = collectNewBadges(nextState);
+  const badgesEarned = collectNewBadges(nextState, occurredAt);
   nextState = awardBadges(nextState, badgesEarned);
 
   return {

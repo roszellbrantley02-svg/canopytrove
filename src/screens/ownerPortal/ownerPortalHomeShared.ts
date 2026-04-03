@@ -1,4 +1,4 @@
-import { OwnerOnboardingStep } from '../../types/ownerPortal';
+import type { OwnerOnboardingStep } from '../../types/ownerPortal';
 
 export type OwnerPortalNextStepRouteName =
   | 'OwnerPortalBusinessDetails'
@@ -26,7 +26,7 @@ export function getNextStepContent(step: OwnerOnboardingStep): OwnerPortalNextSt
     case 'claim_listing':
       return {
         title: 'Claim listing',
-          body: 'Match your owner account to the correct Canopy Trove listing before verification.',
+        body: 'Match your owner account to the correct Canopy Trove listing before verification.',
         actionLabel: 'Claim Dispensary Listing',
         routeName: 'OwnerPortalClaimListing',
       };

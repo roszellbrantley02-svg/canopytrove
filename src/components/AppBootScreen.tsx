@@ -1,10 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
-import {
-  AppBootHeader,
-  AppBootHero,
-  AppBootLayout,
-} from './appBoot/AppBootSections';
+import { AppBootHeader, AppBootHero, AppBootLayout } from './appBoot/AppBootSections';
 
 export function AppBootScreen() {
   const pulse = useRef(new Animated.Value(0)).current;
@@ -25,7 +21,7 @@ export function AppBootScreen() {
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
 
     const sweepAnimation = Animated.loop(
@@ -34,7 +30,7 @@ export function AppBootScreen() {
         duration: 1800,
         easing: Easing.inOut(Easing.cubic),
         useNativeDriver: true,
-      })
+      }),
     );
 
     pulseAnimation.start();

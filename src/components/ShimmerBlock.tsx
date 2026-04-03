@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radii } from '../theme/tokens';
 
@@ -7,12 +8,14 @@ type ShimmerBlockProps = {
   style?: StyleProp<ViewStyle>;
   shimmerWidth?: number;
   borderRadius?: number;
+  testID?: string;
 };
 
 export function ShimmerBlock({
   style,
   shimmerWidth = 132,
   borderRadius = radii.md,
+  testID,
 }: ShimmerBlockProps) {
   const progress = useRef(new Animated.Value(0)).current;
 
@@ -23,7 +26,7 @@ export function ShimmerBlock({
         duration: 1400,
         easing: Easing.inOut(Easing.ease),
         useNativeDriver: true,
-      })
+      }),
     );
 
     animation.start();
@@ -35,7 +38,7 @@ export function ShimmerBlock({
   }, [progress]);
 
   return (
-    <View style={[styles.base, { borderRadius }, style]}>
+    <View testID={testID} style={[styles.base, { borderRadius }, style]}>
       <Animated.View
         style={[
           styles.shimmerWrap,

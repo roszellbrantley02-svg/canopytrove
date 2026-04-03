@@ -1,4 +1,9 @@
-import { BrowseSortKey, Coordinates, StorefrontDetails, StorefrontSummary } from '../types/storefront';
+import type {
+  BrowseSortKey,
+  Coordinates,
+  StorefrontDetails,
+  StorefrontSummary,
+} from '../types/storefront';
 import type { OwnerPromotionPlacementSurface } from '../types/ownerPortal';
 
 export type StorefrontSourceSummaryQuery = {

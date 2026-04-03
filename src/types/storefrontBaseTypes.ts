@@ -1,7 +1,4 @@
-import type {
-  OwnerPromotionPlacementScope,
-  OwnerPromotionPlacementSurface,
-} from './ownerPortal';
+import type { OwnerPromotionPlacementScope, OwnerPromotionPlacementSurface } from './ownerPortal';
 
 export type Coordinates = {
   latitude: number;
@@ -32,10 +29,23 @@ export type AppReview = {
   relativeTime: string;
   text: string;
   gifUrl?: string | null;
+  photoUrls?: string[];
   tags: string[];
   helpfulCount: number;
   ownerReply?: OwnerReviewReply | null;
 };
+
+export type StorefrontActivePromotion = {
+  id: string;
+  title: string;
+  description: string;
+  badges: string[];
+  startsAt: string;
+  endsAt: string;
+  cardTone: 'standard' | 'owner_featured' | 'hot_deal';
+};
+
+export type StorefrontStateCode = string;
 
 export type StorefrontSummary = {
   id: string;
@@ -45,20 +55,21 @@ export type StorefrontSummary = {
   legalName: string;
   addressLine1: string;
   city: string;
-  state: 'NY';
+  state: StorefrontStateCode;
   zip: string;
   coordinates: Coordinates;
   distanceMiles: number;
   travelMinutes: number;
   rating: number;
   reviewCount: number;
-  openNow: boolean;
+  openNow: boolean | null;
   isVerified: boolean;
   mapPreviewLabel: string;
   promotionText?: string | null;
   promotionBadges?: string[];
   promotionExpiresAt?: string | null;
   activePromotionId?: string | null;
+  activePromotionCount?: number | null;
   favoriteFollowerCount?: number | null;
   menuUrl?: string | null;
   verifiedOwnerBadgeLabel?: string | null;
@@ -82,6 +93,8 @@ export type StorefrontDetails = {
   verifiedOwnerBadgeLabel?: string | null;
   favoriteFollowerCount?: number | null;
   ownerFeaturedBadges?: string[];
+  activePromotions?: StorefrontActivePromotion[];
+  photoCount?: number;
   appReviewCount: number;
   appReviews: AppReview[];
   photoUrls: string[];
@@ -108,7 +121,7 @@ export type MarketArea = {
 };
 
 export type StorefrontListQuery = {
-  areaId: string;
+  areaId?: string;
   searchQuery: string;
   origin: Coordinates;
   locationLabel: string;

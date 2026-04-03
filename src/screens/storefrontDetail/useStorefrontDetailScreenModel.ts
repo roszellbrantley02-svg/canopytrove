@@ -1,7 +1,7 @@
 import React from 'react';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../navigation/RootNavigator';
-import { useStorefrontDetails } from '../../hooks/useStorefrontData';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/RootNavigator';
+import { useStorefrontDetails } from '../../hooks/useStorefrontDetailData';
 import {
   blockCommunityAuthor,
   getCommunitySafetyState,
@@ -12,24 +12,29 @@ import {
   useStorefrontRewardsController,
   useStorefrontRouteController,
 } from '../../context/StorefrontController';
-import { AppReview, StorefrontSummary } from '../../types/storefront';
+import type { AppReview, StorefrontSummary } from '../../types/storefront';
 import { useStorefrontDetailActions } from './useStorefrontDetailActions';
 import { useStorefrontDetailDerivedState } from './useStorefrontDetailDerivedState';
 
 export function useStorefrontDetailScreenModel(
   storefront: StorefrontSummary,
-  navigation: NativeStackNavigationProp<RootStackParamList>
+  navigation: NativeStackNavigationProp<RootStackParamList>,
 ) {
   const { isSavedStorefront, toggleSavedStorefront } = useStorefrontRouteController();
-  const { profileId, authSession } = useStorefrontProfileController();
+  const { appProfile, profileId, authSession } = useStorefrontProfileController();
   const {
     gamificationState: { visitedStorefrontIds },
   } = useStorefrontRewardsController();
-  const { data: details, isLoading, isOperationalDataPending, error } = useStorefrontDetails(
-    storefront.id,
-    storefront
-  );
+  const {
+    data: details,
+    isLoading,
+    isOperationalDataPending,
+    error,
+  } = useStorefrontDetails(storefront.id, storefront);
   const [blockedAuthorProfileIds, setBlockedAuthorProfileIds] = React.useState<string[]>([]);
+  const [reviewModerationStatusText, setReviewModerationStatusText] = React.useState<string | null>(
+    null,
+  );
   const isSaved = isSavedStorefront(storefront.id);
   const isVisited = visitedStorefrontIds.includes(storefront.id);
   const derivedState = useStorefrontDetailDerivedState({
@@ -39,21 +44,30 @@ export function useStorefrontDetailScreenModel(
     isVisited,
     isOperationalDataPending,
   });
+  const myReview = React.useMemo(
+    () =>
+      derivedState.detailData.appReviews.find(
+        (review: AppReview) => review.authorProfileId === profileId,
+      ) ?? null,
+    [derivedState.detailData.appReviews, profileId],
+  );
   const actions = useStorefrontDetailActions({
     detailData: derivedState.detailData,
     navigation,
+    appProfile,
     profileId,
     authSession,
     storefront,
+    myReview,
+    onReviewModerationStatusChange: setReviewModerationStatusText,
   });
   const visibleAppReviews = React.useMemo(
     () =>
       derivedState.detailData.appReviews.filter(
         (review: AppReview) =>
-          !review.authorProfileId ||
-          !blockedAuthorProfileIds.includes(review.authorProfileId)
+          !review.authorProfileId || !blockedAuthorProfileIds.includes(review.authorProfileId),
       ),
-    [blockedAuthorProfileIds, derivedState.detailData.appReviews]
+    [blockedAuthorProfileIds, derivedState.detailData.appReviews],
   );
   const hiddenReviewCount = derivedState.detailData.appReviews.length - visibleAppReviews.length;
 
@@ -77,9 +91,11 @@ export function useStorefrontDetailScreenModel(
       appReviews: visibleAppReviews,
     },
     error,
+    authSession,
     hasAnySupplementalDetail: derivedState.hasAnySupplementalDetail,
     hasAppReviews: visibleAppReviews.length > 0,
     hasHours: derivedState.hasHours,
+    hasLockedPhotos: derivedState.hasLockedPhotos,
     hasMenu: derivedState.hasMenu,
     hasOperationalInfo: derivedState.hasOperationalInfo,
     hasPhone: derivedState.hasPhone,
@@ -93,11 +109,15 @@ export function useStorefrontDetailScreenModel(
     operationalCardBody: derivedState.operationalCardBody,
     operationalRows: derivedState.operationalRows,
     pendingHelpfulReviewId: actions.pendingHelpfulReviewId,
+    pendingReviewReportId: actions.pendingReviewReportId,
     previewStatusLabel: derivedState.previewStatusLabel,
     previewStatusTone: derivedState.previewStatusTone,
     previewTone: derivedState.previewTone,
     ratingDisplay: derivedState.ratingDisplay,
+    lockedPhotoCount: derivedState.lockedPhotoCount,
+    visiblePhotoCount: derivedState.visiblePhotoCount,
     profileId,
+    reviewModerationStatusText,
     hiddenReviewCount,
     displayAmenities: derivedState.displayAmenities,
     editorialSummary: derivedState.editorialSummary,
@@ -109,7 +129,11 @@ export function useStorefrontDetailScreenModel(
     openMenu: actions.openMenu,
     callStore: actions.callStore,
     writeReview: actions.writeReview,
+    writeReviewLabel: myReview ? 'Edit Review' : 'Write Review',
+    suggestStorefrontEdit: actions.suggestStorefrontEdit,
+    reportStorefrontClosed: actions.reportStorefrontClosed,
     reportStorefront: actions.reportStorefront,
+    reportReview: actions.reportReview,
     markReviewHelpful: actions.markReviewHelpful,
     blockReviewAuthor: (reviewAuthorProfileId: string | null) => {
       if (!reviewAuthorProfileId) {
@@ -118,6 +142,9 @@ export function useStorefrontDetailScreenModel(
 
       void blockCommunityAuthor(reviewAuthorProfileId).then((state) => {
         setBlockedAuthorProfileIds(state.blockedAuthorProfileIds);
+        setReviewModerationStatusText(
+          'Review author blocked. Their reviews are now hidden on this device and can be managed in Privacy and safety.',
+        );
       });
     },
   };

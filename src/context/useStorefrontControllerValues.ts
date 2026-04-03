@@ -1,11 +1,12 @@
 import React from 'react';
-import {
+import type {
+  StorefrontControllerContextValue,
   StorefrontProfileControllerValue,
   StorefrontQueryControllerValue,
   StorefrontRewardsControllerValue,
   StorefrontRouteControllerValue,
 } from './storefrontControllerShared';
-import { StorefrontRewardsModel } from './useStorefrontRewardsModel';
+import type { StorefrontRewardsModel } from './useStorefrontRewardsModel';
 
 type UseStorefrontControllerValuesArgs = {
   appProfile: StorefrontProfileControllerValue['appProfile'];
@@ -40,10 +41,7 @@ export function useStorefrontControllerValues({
   routeState,
   queryModel,
 }: UseStorefrontControllerValuesArgs) {
-  const queryValue = React.useMemo<StorefrontQueryControllerValue>(
-    () => queryModel,
-    [queryModel]
-  );
+  const queryValue = React.useMemo<StorefrontQueryControllerValue>(() => queryModel, [queryModel]);
 
   const routeValue = React.useMemo<StorefrontRouteControllerValue>(
     () => ({
@@ -51,11 +49,7 @@ export function useStorefrontControllerValues({
       isSavedStorefront: routeState.isSavedStorefront,
       toggleSavedStorefront: routeState.toggleSavedStorefront,
     }),
-    [
-      routeState.isSavedStorefront,
-      routeState.savedStorefrontIds,
-      routeState.toggleSavedStorefront,
-    ]
+    [routeState.isSavedStorefront, routeState.savedStorefrontIds, routeState.toggleSavedStorefront],
   );
 
   const profileValue = React.useMemo<StorefrontProfileControllerValue>(
@@ -80,7 +74,7 @@ export function useStorefrontControllerValues({
       signOutSession,
       startGuestSession,
       updateDisplayName,
-    ]
+    ],
   );
 
   const rewardsValue = React.useMemo<StorefrontRewardsControllerValue>(
@@ -98,13 +92,20 @@ export function useStorefrontControllerValues({
       trackFriendInvitedReward: rewardsModel.trackFriendInvitedReward,
       trackFollowersUpdatedReward: rewardsModel.trackFollowersUpdatedReward,
     }),
-    [rewardsModel]
+    [rewardsModel],
+  );
+
+  const controllerValue = React.useMemo<StorefrontControllerContextValue>(
+    () => ({
+      profile: profileValue,
+      query: queryValue,
+      rewards: rewardsValue,
+      route: routeValue,
+    }),
+    [profileValue, queryValue, rewardsValue, routeValue],
   );
 
   return {
-    profileValue,
-    queryValue,
-    rewardsValue,
-    routeValue,
+    controllerValue,
   };
 }

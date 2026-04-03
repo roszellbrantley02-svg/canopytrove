@@ -1,7 +1,8 @@
-import { CollectionReference } from 'firebase-admin/firestore';
-import { getBackendFirebaseDb } from '../firebase';
+import { getOptionalFirestoreCollection } from '../firestoreCollections';
 import { backendStorefrontSourceStatus } from '../sources';
 import { sendExpoPushMessages } from './expoPushService';
+import { syncOwnerRuntimeAlertSubscription } from './opsAlertSubscriptionService';
+import { getCanonicalOwnerUidForStorefront } from './ownerPortalAuthorizationService';
 
 type OwnerPortalAlertRecord = {
   ownerUid: string;
@@ -45,23 +46,11 @@ function normalizeOwnerPortalAlertRecord(
 }
 
 function getOwnerPortalAlertCollection() {
-  const db = getBackendFirebaseDb();
-  if (!db || backendStorefrontSourceStatus.activeMode !== 'firestore') {
-    return null;
-  }
-
-  return db.collection(
-    OWNER_PORTAL_ALERTS_COLLECTION
-  ) as CollectionReference<OwnerPortalAlertRecord>;
+  return getOptionalFirestoreCollection<OwnerPortalAlertRecord>(OWNER_PORTAL_ALERTS_COLLECTION);
 }
 
 function getOwnerProfileCollection() {
-  const db = getBackendFirebaseDb();
-  if (!db || backendStorefrontSourceStatus.activeMode !== 'firestore') {
-    return null;
-  }
-
-  return db.collection(OWNER_PROFILES_COLLECTION) as CollectionReference<OwnerProfileRecord>;
+  return getOptionalFirestoreCollection<OwnerProfileRecord>(OWNER_PROFILES_COLLECTION);
 }
 
 async function getOwnerPortalAlertRecord(ownerUid: string) {
@@ -78,6 +67,11 @@ async function getOwnerPortalAlertRecord(ownerUid: string) {
   return ownerPortalAlertStore.get(ownerUid) ?? createEmptyOwnerAlertRecord(ownerUid);
 }
 
+export async function getOwnerPortalAlertPushToken(ownerUid: string) {
+  const record = await getOwnerPortalAlertRecord(ownerUid);
+  return record.devicePushToken;
+}
+
 async function saveOwnerPortalAlertRecord(record: OwnerPortalAlertRecord) {
   const normalized = normalizeOwnerPortalAlertRecord(record);
   const collectionRef = getOwnerPortalAlertCollection();
@@ -91,12 +85,14 @@ async function saveOwnerPortalAlertRecord(record: OwnerPortalAlertRecord) {
 }
 
 async function listOwnerUidsForStorefront(storefrontId: string) {
+  const canonicalOwnerUid = await getCanonicalOwnerUidForStorefront(storefrontId);
+  if (canonicalOwnerUid) {
+    return [canonicalOwnerUid];
+  }
+
   const collectionRef = getOwnerProfileCollection();
   if (collectionRef) {
-    const snapshot = await collectionRef.where('dispensaryId', '==', storefrontId).get();
-    return snapshot.docs
-      .map((documentSnapshot) => documentSnapshot.id)
-      .filter((ownerUid) => ownerUid.trim());
+    return [];
   }
 
   return Array.from(ownerProfileStore.values())
@@ -113,6 +109,10 @@ export async function syncOwnerPortalAlerts(options: {
     ownerUid: options.ownerUid,
     devicePushToken: options.devicePushToken ?? previousRecord.devicePushToken,
     updatedAt: new Date().toISOString(),
+  });
+  await syncOwnerRuntimeAlertSubscription({
+    ownerUid: options.ownerUid,
+    devicePushToken: nextRecord.devicePushToken,
   });
 
   return {
@@ -184,6 +184,51 @@ export async function notifyOwnersOfStorefrontActivity(options: {
       }
     })
   );
+
+  return {
+    notifiedOwnerCount: tickets.filter((ticket) => ticket.status === 'ok').length,
+    storage:
+      backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+  };
+}
+
+export async function notifyOwnerPortalUser(options: {
+  ownerUid: string;
+  title: string;
+  body: string;
+  data: Record<string, string>;
+}) {
+  const record = await getOwnerPortalAlertRecord(options.ownerUid);
+  if (!record.devicePushToken) {
+    return {
+      notifiedOwnerCount: 0,
+      storage:
+        backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+    };
+  }
+
+  const tickets = await sendExpoPushMessages([
+    {
+      to: record.devicePushToken,
+      title: options.title,
+      body: options.body,
+      sound: 'default',
+      priority: 'high',
+      channelId: 'owner-portal-alerts',
+      data: {
+        kind: 'owner_portal_alert',
+        ...options.data,
+      },
+    },
+  ]);
+
+  const firstTicket = tickets[0];
+  if (firstTicket?.status === 'error' && firstTicket.details?.error === 'DeviceNotRegistered') {
+    await saveOwnerPortalAlertRecord({
+      ...record,
+      devicePushToken: null,
+    });
+  }
 
   return {
     notifiedOwnerCount: tickets.filter((ticket) => ticket.status === 'ok').length,

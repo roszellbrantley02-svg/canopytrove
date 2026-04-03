@@ -1,4 +1,4 @@
-import { AppReview } from '../types/storefront';
+import type { AppReview } from '../types/storefront';
 
 export const MIN_PUBLIC_RATING_COUNT = 10;
 
@@ -65,7 +65,7 @@ export function getStorefrontRatingDisplay({
   const normalizedPublishedCount = normalizeReviewCount(publishedReviewCount);
   const normalizedCommunityCount = Math.max(
     normalizeReviewCount(appReviewCount),
-    appReviews.length
+    appReviews.length,
   );
   const publishedAverage = normalizePublishedRating(publishedRating);
   const communityAverage = calculateAverageRatingFromReviews(appReviews);
@@ -97,6 +97,6 @@ export function getStorefrontRatingDisplay({
     average: null,
     badgeLabel: 'Rating Pending',
     countLabel: `${Math.min(waitingCount, normalizedThreshold)} / ${normalizedThreshold} ratings`,
-    helperLabel: 'Ratings waiting for you to rate them.',
+    helperLabel: 'Needs more ratings before a score is shown.',
   };
 }

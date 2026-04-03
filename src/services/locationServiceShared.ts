@@ -1,5 +1,5 @@
-import * as Location from 'expo-location';
-import { Coordinates, MarketArea } from '../types/storefront';
+import type * as Location from 'expo-location';
+import type { Coordinates, MarketArea } from '../types/storefront';
 
 export type DeviceLocationResult = {
   coordinates: Coordinates | null;
@@ -65,7 +65,7 @@ export function isNewYorkAddress(address?: Location.LocationGeocodedAddress | nu
 
 export function formatResolvedLabel(
   fallbackQuery: string,
-  address?: Location.LocationGeocodedAddress | null
+  address?: Location.LocationGeocodedAddress | null,
 ) {
   if (!address) {
     return fallbackQuery.trim();
@@ -90,7 +90,10 @@ export function formatResolvedLabel(
   return city || postalCode || fallbackQuery.trim();
 }
 
-export function scoreResolvedAddress(query: string, address?: Location.LocationGeocodedAddress | null) {
+export function scoreResolvedAddress(
+  query: string,
+  address?: Location.LocationGeocodedAddress | null,
+) {
   if (!address) {
     return -1;
   }
@@ -109,7 +112,11 @@ export function scoreResolvedAddress(query: string, address?: Location.LocationG
     score += 4;
   }
 
-  if (!isZipQuery(query) && city && (city.includes(normalizedQuery) || normalizedQuery.includes(city))) {
+  if (
+    !isZipQuery(query) &&
+    city &&
+    (city.includes(normalizedQuery) || normalizedQuery.includes(city))
+  ) {
     score += 4;
   }
 
@@ -134,7 +141,9 @@ export function findAreaByQuery(areas: MarketArea[], query: string): MarketArea 
   return (
     areas.find((area) => {
       const values = [area.label, area.subtitle].map((entry) => normalizeQuery(entry));
-      return values.some((entry) => entry.includes(normalizedQuery) || normalizedQuery.includes(entry));
+      return values.some(
+        (entry) => entry.includes(normalizedQuery) || normalizedQuery.includes(entry),
+      );
     }) ?? null
   );
 }

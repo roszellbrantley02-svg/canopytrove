@@ -1,5 +1,6 @@
 import { ErrorRequestHandler } from 'express';
 import { getProfileAccessErrorStatus } from '../services/profileAccessService';
+import { recordRuntimeIncident } from '../services/runtimeOpsService';
 
 type ValidationErrorDetails = Record<string, unknown> | undefined;
 
@@ -70,6 +71,19 @@ export const backendErrorHandler: ErrorRequestHandler = (error, request, respons
       method: request.method,
       path: request.originalUrl,
       error: error instanceof Error ? error.message : error,
+    });
+
+    void recordRuntimeIncident({
+      kind: 'server',
+      severity: 'critical',
+      source: 'backend-error-handler',
+      message: error instanceof Error ? error.message : 'Unknown backend failure',
+      path: request.originalUrl,
+      requestId: requestIdValue,
+      metadata: {
+        method: request.method,
+        status,
+      },
     });
   }
 

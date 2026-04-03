@@ -1,0 +1,9 @@
+{
+  "files.autoSave": "off",
+  "editor.formatOnSave": false,
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false,
+  "editor.codeActionsOnSave": {},
+  "eslint.format.enable": false,
+  "eslint.run": "onType"
+}

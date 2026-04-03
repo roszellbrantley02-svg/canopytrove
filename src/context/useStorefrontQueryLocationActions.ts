@@ -1,10 +1,15 @@
 import React from 'react';
-import { findNearestArea, getBestAvailableDeviceLocation, resolveSearchLocation } from '../services/locationService';
-import { Coordinates, MarketArea } from '../types/storefront';
+import {
+  findNearestArea,
+  getBestAvailableDeviceLocation,
+  resolveSearchLocation,
+} from '../services/locationService';
+import type { Coordinates, MarketArea } from '../types/storefront';
 
 type UseStorefrontQueryLocationActionsArgs = {
   availableAreas: MarketArea[];
   locationQuery: string;
+  markQueryInputTouched: () => void;
   setSelectedAreaIdState: React.Dispatch<React.SetStateAction<string>>;
   setSearchLocation: React.Dispatch<React.SetStateAction<Coordinates | null>>;
   setSearchLocationLabel: React.Dispatch<React.SetStateAction<string | null>>;
@@ -18,6 +23,7 @@ type UseStorefrontQueryLocationActionsArgs = {
 export function useStorefrontQueryLocationActions({
   availableAreas,
   locationQuery,
+  markQueryInputTouched,
   setSelectedAreaIdState,
   setSearchLocation,
   setSearchLocationLabel,
@@ -28,6 +34,7 @@ export function useStorefrontQueryLocationActions({
   setDeviceLocationLabel,
 }: UseStorefrontQueryLocationActionsArgs) {
   const useDeviceLocation = React.useCallback(async () => {
+    markQueryInputTouched();
     setIsResolvingLocation(true);
     setLocationError(null);
 
@@ -54,6 +61,7 @@ export function useStorefrontQueryLocationActions({
     }
   }, [
     availableAreas,
+    markQueryInputTouched,
     setDeviceLocation,
     setDeviceLocationLabel,
     setIsResolvingLocation,
@@ -71,6 +79,7 @@ export function useStorefrontQueryLocationActions({
         return false;
       }
 
+      markQueryInputTouched();
       setIsResolvingLocation(true);
       setLocationError(null);
 
@@ -93,13 +102,14 @@ export function useStorefrontQueryLocationActions({
     },
     [
       availableAreas,
+      markQueryInputTouched,
       setIsResolvingLocation,
       setLocationError,
       setLocationQuery,
       setSearchLocation,
       setSearchLocationLabel,
       setSelectedAreaIdState,
-    ]
+    ],
   );
 
   const applyLocationQuery = React.useCallback(() => {

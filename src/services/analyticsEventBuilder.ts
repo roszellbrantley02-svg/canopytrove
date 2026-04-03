@@ -1,9 +1,10 @@
-import {
+import type {
   AnalyticsEventInput,
   AnalyticsEventType,
   AnalyticsMetadata,
 } from '../types/analytics';
-import { AnalyticsIdentity } from './analyticsConfig';
+import type { AnalyticsIdentity } from './analyticsConfig';
+import { createAnalyticsId } from './analyticsConfig';
 
 export function buildAnalyticsEvent(
   eventType: AnalyticsEventType,
@@ -16,13 +17,14 @@ export function buildAnalyticsEvent(
     screen?: string;
     storefrontId?: string;
     dealId?: string;
-  }
+  },
 ) {
   if (!installId || !currentSessionId) {
     return null;
   }
 
   return {
+    eventId: createAnalyticsId('event'),
     eventType,
     installId,
     sessionId: currentSessionId,

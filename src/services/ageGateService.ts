@@ -1,3 +1,5 @@
+// ageGateService is consumed from the app entry flow in App.tsx.
+// Keep the persistence layer isolated here so the UI flow stays simple.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { brand } from '../config/brand';
 

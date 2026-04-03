@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { StorefrontSummary } from '../types/storefront';
+import type { StorefrontSummary } from '../types/storefront';
 import {
   matchesPriorityPlacement,
   sortSummariesByPriorityPlacement,
 } from './ownerPromotionPlacement';
 
-function createSummary(
-  id: string,
-  options: Partial<StorefrontSummary> = {}
-): StorefrontSummary {
+function createSummary(id: string, options: Partial<StorefrontSummary> = {}): StorefrontSummary {
   return {
     id,
     licenseId: `license-${id}`,
@@ -53,9 +50,9 @@ describe('ownerPromotionPlacement', () => {
       promotionPlacementScope: 'storefront_area',
     });
 
-    expect(
-      matchesPriorityPlacement(summary, { surface: 'browse', areaId: 'finger-lakes' })
-    ).toBe(true);
+    expect(matchesPriorityPlacement(summary, { surface: 'browse', areaId: 'finger-lakes' })).toBe(
+      true,
+    );
     expect(matchesPriorityPlacement(summary, { surface: 'browse', areaId: 'all' })).toBe(false);
   });
 
@@ -80,7 +77,7 @@ describe('ownerPromotionPlacement', () => {
       sortSummariesByPriorityPlacement([regular, boosted, secondaryBoosted], {
         surface: 'hot_deals',
         areaId: 'all',
-      }).map((item) => item.id)
+      }).map((item) => item.id),
     ).toEqual(['boosted', 'boosted-2', 'regular']);
   });
 });

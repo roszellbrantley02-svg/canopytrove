@@ -28,7 +28,11 @@ Canopy Trove currently supports:
 - local blocking of review authors
 - manual review workflows for storefront reports
 - manual owner-claim and verification review queues
+- strict member review-photo moderation with private pending uploads and approved-only public display
+- photo pipeline details live in `docs/REVIEW_PHOTO_MODERATION.md`
 
 ## Enforcement
 
 Canopy Trove may hide, remove, reject, or escalate content that violates these guidelines. Owner verification and storefront reports are intended to move through a manual review path with documented status changes.
+
+Member review photos are treated as moderated uploads. Pending images stay private until they are approved, and unsafe or noncompliant images can be rejected or quarantined before publication.

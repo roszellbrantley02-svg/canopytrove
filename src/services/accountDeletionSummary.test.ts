@@ -8,8 +8,7 @@ describe('buildCanopyTroveAccountDeletionSummary', () => {
       authDeletionResult: {
         ok: false,
         reason: 'requires-recent-login',
-        message:
-          'Sign in again, then retry account deletion to finish removing the login itself.',
+        message: 'Sign in again, then retry account deletion to finish removing the login itself.',
       },
     });
 

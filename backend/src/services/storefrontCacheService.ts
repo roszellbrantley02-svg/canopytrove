@@ -22,50 +22,95 @@ type CacheEntry<T> = {
   value: T;
 };
 
+type InFlightEntry<T> = {
+  startedAt: number;
+  promise: Promise<T>;
+};
+
 const SUMMARY_TTL_MS = 30_000;
 const DETAIL_TTL_MS = 60_000;
 const LOCATION_TTL_MS = 300_000;
+const SUMMARY_PAGE_CACHE_LIMIT = 64;
+const SUMMARIES_BY_IDS_CACHE_LIMIT = 96;
+const DETAIL_CACHE_LIMIT = 256;
+const LOCATION_CACHE_LIMIT = 64;
+const IN_FLIGHT_MAX_AGE_MS = 10_000;
 
 const summaryPageCache = new Map<string, CacheEntry<StorefrontSummariesApiResponse>>();
-const summaryPageInFlight = new Map<string, Promise<StorefrontSummariesApiResponse>>();
+const summaryPageInFlight = new Map<string, InFlightEntry<StorefrontSummariesApiResponse>>();
 const summariesByIdsCache = new Map<string, CacheEntry<StorefrontSummaryApiDocument[]>>();
-const summariesByIdsInFlight = new Map<string, Promise<StorefrontSummaryApiDocument[]>>();
+const summariesByIdsInFlight = new Map<string, InFlightEntry<StorefrontSummaryApiDocument[]>>();
 const detailCache = new Map<string, CacheEntry<StorefrontDetailApiDocument | null>>();
-const detailInFlight = new Map<string, Promise<StorefrontDetailApiDocument | null>>();
+const detailInFlight = new Map<string, InFlightEntry<StorefrontDetailApiDocument | null>>();
 const locationCache = new Map<string, CacheEntry<LocationResolutionApiResponse>>();
-const locationInFlight = new Map<string, Promise<LocationResolutionApiResponse>>();
+const locationInFlight = new Map<string, InFlightEntry<LocationResolutionApiResponse>>();
 
 function isFresh<T>(entry?: CacheEntry<T>) {
   return Boolean(entry && entry.expiresAt > Date.now());
 }
 
-function setCache<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T, ttlMs: number) {
+function pruneCache<T>(cache: Map<string, CacheEntry<T>>, maxSize: number, now = Date.now()) {
+  cache.forEach((entry, key) => {
+    if (entry.expiresAt <= now) {
+      cache.delete(key);
+    }
+  });
+
+  while (cache.size > maxSize) {
+    const oldestKey = cache.keys().next().value;
+    if (!oldestKey) {
+      break;
+    }
+
+    cache.delete(oldestKey);
+  }
+}
+
+function setCache<T>(
+  cache: Map<string, CacheEntry<T>>,
+  key: string,
+  value: T,
+  ttlMs: number,
+  maxSize: number
+) {
+  cache.delete(key);
   cache.set(key, {
     value,
     expiresAt: Date.now() + ttlMs,
   });
+  pruneCache(cache, maxSize);
 }
 
 async function resolveCached<T>(
   key: string,
   cache: Map<string, CacheEntry<T>>,
-  inFlight: Map<string, Promise<T>>,
+  inFlight: Map<string, InFlightEntry<T>>,
   ttlMs: number,
+  maxSize: number,
   loader: () => Promise<T>
 ) {
+  pruneCache(cache, maxSize);
   const cached = cache.get(key);
   if (isFresh(cached)) {
     return cached!.value;
   }
 
+  if (cached) {
+    cache.delete(key);
+  }
+
   const pending = inFlight.get(key);
   if (pending) {
-    return pending;
+    if (Date.now() - pending.startedAt <= IN_FLIGHT_MAX_AGE_MS) {
+      return pending.promise;
+    }
+
+    inFlight.delete(key);
   }
 
   const next = loader()
     .then((value) => {
-      setCache(cache, key, value, ttlMs);
+      setCache(cache, key, value, ttlMs, maxSize);
       inFlight.delete(key);
       return value;
     })
@@ -74,7 +119,10 @@ async function resolveCached<T>(
       throw error;
     });
 
-  inFlight.set(key, next);
+  inFlight.set(key, {
+    startedAt: Date.now(),
+    promise: next,
+  });
   return next;
 }
 
@@ -123,6 +171,7 @@ export function getCachedStorefrontSummaryPage(
     summaryPageCache,
     summaryPageInFlight,
     SUMMARY_TTL_MS,
+    SUMMARY_PAGE_CACHE_LIMIT,
     loader
   );
 }
@@ -136,6 +185,7 @@ export function getCachedStorefrontSummariesByIds(
     summariesByIdsCache,
     summariesByIdsInFlight,
     SUMMARY_TTL_MS,
+    SUMMARIES_BY_IDS_CACHE_LIMIT,
     loader
   );
 }
@@ -145,7 +195,7 @@ export function getCachedStorefrontDetail(
   loader: () => Promise<StorefrontDetailApiDocument | null>,
   ttlMs = DETAIL_TTL_MS
 ) {
-  return resolveCached(storefrontId, detailCache, detailInFlight, ttlMs, loader);
+  return resolveCached(storefrontId, detailCache, detailInFlight, ttlMs, DETAIL_CACHE_LIMIT, loader);
 }
 
 export function invalidateCachedStorefrontDetail(storefrontId: string) {
@@ -162,6 +212,7 @@ export function getCachedLocationResolution(
     locationCache,
     locationInFlight,
     LOCATION_TTL_MS,
+    LOCATION_CACHE_LIMIT,
     loader
   );
 }

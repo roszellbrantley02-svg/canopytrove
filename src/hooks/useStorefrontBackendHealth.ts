@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { storefrontApiBaseUrl, storefrontSourceMode } from '../config/storefrontSourceConfig';
-import {
-  StorefrontBackendHealth,
-  getStorefrontBackendHealth,
-} from '../services/storefrontBackendService';
+import type { StorefrontBackendHealth } from '../services/storefrontBackendService';
+import { getStorefrontBackendHealth } from '../services/storefrontBackendService';
 
 type BackendHealthState = {
   status: 'idle' | 'checking' | 'healthy' | 'unreachable';

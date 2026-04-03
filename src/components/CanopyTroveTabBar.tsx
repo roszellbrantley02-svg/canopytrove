@@ -1,11 +1,11 @@
 import React from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppTabIcon } from '../icons/AppTabIcons';
 import { HapticPressable } from './HapticPressable';
-import { colors, motion, radii, spacing } from '../theme/tokens';
+import { colors, fontFamilies, motion, radii, spacing, textStyles } from '../theme/tokens';
 import type { RootTabParamList } from '../navigation/RootNavigator';
 
 const TAB_LABELS: Record<keyof RootTabParamList, string> = {
@@ -80,13 +80,13 @@ function TabBarItem({
               {
                 translateY: focusProgress.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [0, -motion.tabLift],
+                  outputRange: [0, -2],
                 }),
               },
               {
                 scale: focusProgress.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [1, 1.018],
+                  outputRange: [1, 1.01],
                 }),
               },
             ],
@@ -134,11 +134,7 @@ function TabBarItem({
               },
             ]}
           />
-          <AppTabIcon
-            name={iconName}
-            size={focused ? 29 : 25}
-            focused={focused}
-          />
+          <AppTabIcon name={iconName} size={focused ? 27 : 23} focused={focused} />
         </Animated.View>
         <Animated.Text
           style={[
@@ -183,11 +179,7 @@ function TabBarItem({
   );
 }
 
-export function CanopyTroveTabBar({
-  state,
-  descriptors,
-  navigation,
-}: BottomTabBarProps) {
+export function CanopyTroveTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const bottomOffset = Math.max(insets.bottom + spacing.xs, spacing.lg);
   const barProgress = React.useRef(new Animated.Value(0)).current;
@@ -302,16 +294,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.xs,
     paddingHorizontal: spacing.sm,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm + 2,
-    borderRadius: 28,
+    paddingTop: spacing.xs + 2,
+    paddingBottom: spacing.xs + 2,
+    borderRadius: 26,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     shadowColor: colors.shadow,
     shadowOpacity: 0.38,
-    shadowRadius: 26,
+    shadowRadius: 22,
     shadowOffset: { width: 0, height: 14 },
-    elevation: 18,
+    elevation: 16,
     overflow: 'hidden',
   },
   barHighlight: {
@@ -324,11 +316,11 @@ const styles = StyleSheet.create({
   },
   item: {
     flex: 1,
-    minHeight: 68,
-    borderRadius: 22,
+    minHeight: 60,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.xs + 1,
     paddingVertical: 0,
   },
   itemPressed: {
@@ -336,14 +328,17 @@ const styles = StyleSheet.create({
   },
   itemChrome: {
     alignSelf: 'stretch',
-    minHeight: 60,
-    borderRadius: 22,
+    minHeight: 56,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 4,
     borderWidth: 1,
     borderColor: 'transparent',
     overflow: 'hidden',
+    position: 'relative',
+    paddingTop: spacing.xs + 1,
+    paddingBottom: spacing.sm + 2,
   },
   itemChromeFocused: {
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
@@ -360,9 +355,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 245, 140, 0.04)',
   },
   iconPlate: {
-    width: 50,
-    height: 50,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderColor: 'rgba(143, 255, 209, 0.10)',
     backgroundColor: 'rgba(11, 19, 25, 0.92)',
@@ -370,8 +365,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowColor: colors.shadow,
     shadowOpacity: 0.24,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
   },
   iconPlateFocused: {
     backgroundColor: 'rgba(9, 17, 22, 1)',
@@ -387,16 +382,17 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    borderRadius: 16,
+    borderRadius: 15,
     backgroundColor: 'transparent',
   },
   iconShadowFocused: {
     backgroundColor: 'rgba(245, 200, 106, 0.05)',
   },
   label: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.2,
+    ...textStyles.caption,
+    fontFamily: fontFamilies.bodyBold,
+    fontSize: 10,
+    letterSpacing: 0.15,
   },
   labelFocused: {
     color: colors.text,
@@ -405,8 +401,10 @@ const styles = StyleSheet.create({
     color: 'rgba(169, 185, 180, 0.64)',
   },
   focusPip: {
-    width: 18,
-    height: 3,
+    position: 'absolute',
+    bottom: spacing.xs + 1,
+    width: 16,
+    height: 2,
     borderRadius: radii.pill,
     backgroundColor: colors.gold,
     shadowColor: colors.gold,

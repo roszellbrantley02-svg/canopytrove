@@ -1,13 +1,14 @@
 import React from 'react';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { AppUiIcon } from '../icons/AppUiIcon';
 import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
-import { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { OwnerPortalStageList } from './ownerPortal/OwnerPortalStageList';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 import { useOwnerPortalBusinessVerificationModel } from './ownerPortal/useOwnerPortalBusinessVerificationModel';
@@ -18,65 +19,61 @@ import {
 
 type BusinessVerificationRoute = RouteProp<RootStackParamList, 'OwnerPortalBusinessVerification'>;
 
-const ONBOARDING_STEPS = ['Account', 'Business Details', 'Claim Listing', 'Business Verification', 'Identity'];
+const ONBOARDING_STEPS = [
+  'Account',
+  'Business Details',
+  'Claim Listing',
+  'Business Verification',
+  'Identity',
+];
 
 function OwnerPortalBusinessVerificationPreview() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [legalBusinessName, setLegalBusinessName] = React.useState(
-    ownerPortalPreviewProfile.companyName
+    ownerPortalPreviewProfile.companyName,
   );
   const [storefrontName, setStorefrontName] = React.useState(
-    ownerPortalPreviewStorefront.displayName
+    ownerPortalPreviewStorefront.displayName,
   );
   const [licenseNumber, setLicenseNumber] = React.useState(ownerPortalPreviewStorefront.licenseId);
   const [licenseType, setLicenseType] = React.useState('Adult-use retail dispensary');
   const [stateValue, setStateValue] = React.useState<string>(ownerPortalPreviewStorefront.state);
   const [address, setAddress] = React.useState(
-    `${ownerPortalPreviewStorefront.addressLine1}, ${ownerPortalPreviewStorefront.city}, ${ownerPortalPreviewStorefront.state} ${ownerPortalPreviewStorefront.zip}`
+    `${ownerPortalPreviewStorefront.addressLine1}, ${ownerPortalPreviewStorefront.city}, ${ownerPortalPreviewStorefront.state} ${ownerPortalPreviewStorefront.zip}`,
   );
 
   return (
     <ScreenShell
       eyebrow="Owner Portal"
       title="Business verification."
-      subtitle="Review the business proof step with sample data and sample files before using the live upload flow."
-      headerPill="Demo"
+      subtitle="Review the business proof step with preview files."
+      headerPill="Preview"
     >
       <MotionInView delay={70}>
         <View style={styles.portalHeroCard}>
           <View style={styles.portalHeroGlow} />
           <Text style={styles.portalHeroKicker}>Verification</Text>
-          <Text style={styles.portalHeroTitle}>
-            Inspect the business-proof step with clearer premium verification framing.
-          </Text>
+          <Text style={styles.portalHeroTitle}>Inspect the business-proof step.</Text>
           <Text style={styles.portalHeroBody}>
-            The business-verification screen is where claim details and uploaded documents start to
-            read like a formal owner review package.
+            Claim details and documents combine for owner review.
           </Text>
           <View style={styles.summaryStrip}>
             <View style={styles.summaryTile}>
               <Text style={styles.summaryTileValue}>Preview</Text>
               <Text style={styles.summaryTileLabel}>Mode</Text>
-              <Text style={styles.summaryTileBody}>
-                Demo mode never uploads private business records.
-              </Text>
+              <Text style={styles.summaryTileBody}></Text>
             </View>
             <View style={styles.summaryTile}>
               <Text style={styles.summaryTileValue}>2 files</Text>
               <Text style={styles.summaryTileLabel}>Document slots</Text>
-              <Text style={styles.summaryTileBody}>
-                License and business-registration proof are shown for layout review only.
-              </Text>
+              <Text style={styles.summaryTileBody}></Text>
             </View>
           </View>
           <View style={styles.onboardingStepRow}>
             {ONBOARDING_STEPS.map((step, index) => (
               <View
                 key={step}
-                style={[
-                  styles.onboardingStepChip,
-                  index === 3 && styles.onboardingStepChipActive,
-                ]}
+                style={[styles.onboardingStepChip, index === 3 && styles.onboardingStepChipActive]}
               >
                 <Text
                   style={[
@@ -93,26 +90,23 @@ function OwnerPortalBusinessVerificationPreview() {
       </MotionInView>
 
       <MotionInView delay={120}>
-        <SectionCard
-          title="Verification details"
-          body="Use this demo to inspect the form, guidance, and file slots without uploading private business records."
-        >
+        <SectionCard title="Verification details" body="">
           <View style={styles.sectionStack}>
             <OwnerPortalStageList
               items={[
                 {
                   label: 'Claimed storefront',
-                  body: 'This step assumes the owner account is already matched to the right listing.',
+                  body: 'Owner account matched to the listing.',
                   tone: 'complete',
                 },
                 {
                   label: 'Business package',
-                  body: 'License and registration proof are reviewed here before identity review begins.',
+                  body: 'License and registration proof reviewed.',
                   tone: 'current',
                 },
                 {
                   label: 'Next: identity review',
-                  body: 'Once the business package is ready, the next step is owner identity verification.',
+                  body: 'Identity verification is next.',
                   tone: 'pending',
                 },
               ]}
@@ -188,10 +182,10 @@ function OwnerPortalBusinessVerificationPreview() {
                     <Text style={styles.sectionEyebrow}>License document</Text>
                     <Text style={styles.splitHeaderTitle}>Preview-license.pdf</Text>
                     <Text style={styles.onboardingFileHint}>
-                      Primary business license proof shown only for layout review.
+                      Business license proof for layout review.
                     </Text>
                   </View>
-                  <Ionicons name="document-text-outline" size={20} color="#F5C86A" />
+                  <AppUiIcon name="document-text-outline" size={20} color="#F5C86A" />
                 </View>
               </View>
 
@@ -201,18 +195,17 @@ function OwnerPortalBusinessVerificationPreview() {
                     <Text style={styles.sectionEyebrow}>Business registration</Text>
                     <Text style={styles.splitHeaderTitle}>Preview-registration.pdf</Text>
                     <Text style={styles.onboardingFileHint}>
-                      Registration proof shown only for safe demo review.
+                      Registration proof for preview review.
                     </Text>
                   </View>
-                  <Ionicons name="document-attach-outline" size={20} color="#F5C86A" />
+                  <AppUiIcon name="document-attach-outline" size={20} color="#F5C86A" />
                 </View>
               </View>
 
               <View style={[styles.onboardingInfoCard, styles.onboardingInfoCardWarm]}>
-                <Text style={styles.splitHeaderTitle}>Preview-safe verification review</Text>
+                <Text style={styles.splitHeaderTitle}>Preview mode</Text>
                 <Text style={styles.splitHeaderBody}>
-                  Demo mode does not upload files. It only exposes the layout and guidance for the
-                  business-proof step.
+                  Files stay local in this preview workspace.
                 </Text>
               </View>
             </View>
@@ -234,13 +227,7 @@ function OwnerPortalBusinessVerificationPreview() {
   );
 }
 
-export function OwnerPortalBusinessVerificationScreen() {
-  const route = useRoute<BusinessVerificationRoute>();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
-  if (preview) {
-    return <OwnerPortalBusinessVerificationPreview />;
-  }
-
+function OwnerPortalBusinessVerificationLive() {
   const model = useOwnerPortalBusinessVerificationModel();
 
   return (
@@ -258,8 +245,7 @@ export function OwnerPortalBusinessVerificationScreen() {
             Turn the claim into a clear business review package.
           </Text>
           <Text style={styles.portalHeroBody}>
-            This step combines claimed storefront details with business proof so Canopy Trove can
-            confirm the owner relationship before identity review.
+            Combine storefront details with business proof for verification.
           </Text>
           <View style={styles.summaryStrip}>
             <View style={styles.summaryTile}>
@@ -267,28 +253,21 @@ export function OwnerPortalBusinessVerificationScreen() {
                 {model.claimedStorefront ? 'Linked' : 'Missing'}
               </Text>
               <Text style={styles.summaryTileLabel}>Claimed listing</Text>
-              <Text style={styles.summaryTileBody}>
-                A claimed storefront is required before business verification can be sent.
-              </Text>
+              <Text style={styles.summaryTileBody}></Text>
             </View>
             <View style={styles.summaryTile}>
               <Text style={styles.summaryTileValue}>
                 {model.licenseFile && model.businessDocFile ? 'Ready' : 'Pending'}
               </Text>
               <Text style={styles.summaryTileLabel}>Documents</Text>
-              <Text style={styles.summaryTileBody}>
-                Both business proof files must be chosen before submit becomes available.
-              </Text>
+              <Text style={styles.summaryTileBody}></Text>
             </View>
           </View>
           <View style={styles.onboardingStepRow}>
             {ONBOARDING_STEPS.map((step, index) => (
               <View
                 key={step}
-                style={[
-                  styles.onboardingStepChip,
-                  index === 3 && styles.onboardingStepChipActive,
-                ]}
+                style={[styles.onboardingStepChip, index === 3 && styles.onboardingStepChipActive]}
               >
                 <Text
                   style={[
@@ -305,28 +284,25 @@ export function OwnerPortalBusinessVerificationScreen() {
       </MotionInView>
 
       <MotionInView delay={120}>
-        <SectionCard
-          title="Verification details"
-          body="These documents stay private and are used only for manual business review."
-        >
+        <SectionCard title="Verification details" body="">
           <View style={styles.sectionStack}>
             <OwnerPortalStageList
               items={[
                 {
                   label: 'Claimed storefront',
                   body: model.claimedStorefront
-                    ? 'A storefront is linked and can be attached to this business package.'
-                    : 'Claim the correct storefront before business verification can be treated as live.',
+                    ? 'Storefront is linked.'
+                    : 'Claim a storefront first.',
                   tone: model.claimedStorefront ? 'complete' : 'attention',
                 },
                 {
                   label: 'Business package',
-                  body: 'This step gathers license and registration proof for manual business review.',
+                  body: 'Gather license and registration proof.',
                   tone: 'current',
                 },
                 {
                   label: 'Next: identity review',
-                  body: 'After the business package is submitted, identity verification is the next owner step.',
+                  body: 'Identity verification is next.',
                   tone: 'pending',
                 },
               ]}
@@ -343,8 +319,7 @@ export function OwnerPortalBusinessVerificationScreen() {
               <View style={styles.emptyStateCard}>
                 <Text style={styles.emptyStateTitle}>Claim a storefront first</Text>
                 <Text style={styles.emptyStateBody}>
-                  Business verification cannot begin until the owner workspace is linked to a
-                  claimed dispensary listing.
+                  Link the workspace to a claimed listing to continue.
                 </Text>
               </View>
             ) : (
@@ -421,11 +396,9 @@ export function OwnerPortalBusinessVerificationScreen() {
                         <Text style={styles.splitHeaderTitle}>
                           {model.licenseFile?.name ?? 'No file selected yet.'}
                         </Text>
-                        <Text style={styles.onboardingFileHint}>
-                          Upload the primary business license for manual owner review.
-                        </Text>
+                        <Text style={styles.onboardingFileHint}>Upload business license.</Text>
                       </View>
-                      <Ionicons name="document-text-outline" size={20} color="#F5C86A" />
+                      <AppUiIcon name="document-text-outline" size={20} color="#F5C86A" />
                     </View>
                     <Pressable onPress={model.chooseLicenseFile} style={styles.secondaryButton}>
                       <Text style={styles.secondaryButtonText}>Choose License File</Text>
@@ -439,16 +412,11 @@ export function OwnerPortalBusinessVerificationScreen() {
                         <Text style={styles.splitHeaderTitle}>
                           {model.businessDocFile?.name ?? 'No file selected yet.'}
                         </Text>
-                        <Text style={styles.onboardingFileHint}>
-                          Add registration proof to complete the business package.
-                        </Text>
+                        <Text style={styles.onboardingFileHint}>Upload registration proof.</Text>
                       </View>
-                      <Ionicons name="document-attach-outline" size={20} color="#F5C86A" />
+                      <AppUiIcon name="document-attach-outline" size={20} color="#F5C86A" />
                     </View>
-                    <Pressable
-                      onPress={model.chooseBusinessDocFile}
-                      style={styles.secondaryButton}
-                    >
+                    <Pressable onPress={model.chooseBusinessDocFile} style={styles.secondaryButton}>
                       <Text style={styles.secondaryButtonText}>Choose Business Document</Text>
                     </Pressable>
                   </View>
@@ -462,12 +430,8 @@ export function OwnerPortalBusinessVerificationScreen() {
               <View style={styles.splitHeaderRow}>
                 <View style={styles.splitHeaderCopy}>
                   <Text style={styles.sectionEyebrow}>Submit business review</Text>
-                  <Text style={styles.splitHeaderTitle}>Send the business verification package</Text>
-                  <Text style={styles.splitHeaderBody}>
-                    Canopy Trove uses these private documents only for manual owner verification.
-                  </Text>
                 </View>
-                <Ionicons name="shield-checkmark-outline" size={20} color="#F5C86A" />
+                <AppUiIcon name="shield-checkmark-outline" size={20} color="#F5C86A" />
               </View>
               <Pressable
                 disabled={model.isSubmitDisabled}
@@ -484,4 +448,15 @@ export function OwnerPortalBusinessVerificationScreen() {
       </MotionInView>
     </ScreenShell>
   );
+}
+
+export function OwnerPortalBusinessVerificationScreen() {
+  const route = useRoute<BusinessVerificationRoute>();
+  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+
+  if (preview) {
+    return <OwnerPortalBusinessVerificationPreview />;
+  }
+
+  return <OwnerPortalBusinessVerificationLive />;
 }

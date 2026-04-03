@@ -10,6 +10,7 @@ The admin review workflow is the backend moderation and approval layer for:
 - business verification
 - identity verification
 - storefront reports
+- member review-photo moderation
 
 ## Backend Protection
 
@@ -40,6 +41,7 @@ Returns:
 - `businessVerifications`
 - `identityVerifications`
 - `storefrontReports`
+- member review-photo moderation records, once the backend review route is wired
 
 ## Review Actions
 
@@ -67,6 +69,12 @@ Storefront report:
 POST /admin/reviews/storefront-reports/:reportId
 ```
 
+Member review photo moderation should follow the same review lifecycle:
+
+- `pending` upload records are created privately
+- admins review the pending upload and either approve, reject, or quarantine it
+- approved media is promoted to the public approved storage path
+
 Expected body:
 
 ```json
@@ -90,6 +98,12 @@ Storefront reports map to moderation fields:
 - `approved` -> `reviewed`
 - `rejected` -> `dismissed`
 - `needs_resubmission` -> `open`
+
+Member review-photo records should map to moderation fields as follows:
+
+- `approved` -> `approved`
+- `rejected` -> `rejected`
+- `needs_resubmission` -> `needs_manual_review`
 
 ## Operational Notes
 

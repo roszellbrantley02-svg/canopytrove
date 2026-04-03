@@ -1,8 +1,5 @@
-import { StorefrontGamificationState } from '../../types/storefront';
-import {
-  LEVEL_TITLES,
-  MAX_GAMIFICATION_LEVEL,
-} from './definitions';
+import type { StorefrontGamificationState } from '../../types/storefront';
+import { LEVEL_TITLES, MAX_GAMIFICATION_LEVEL } from './definitions';
 
 function getCurrentIsoDate() {
   return new Date().toISOString();
@@ -52,7 +49,7 @@ export function getLevelTitle(level: number): string {
 
 export function createDefaultGamificationState(
   profileId: string,
-  joinedDate?: string | null
+  joinedDate?: string | null,
 ): StorefrontGamificationState {
   const totalPoints = 0;
   const level = getLevelFromPoints(totalPoints);
@@ -88,7 +85,7 @@ export function createDefaultGamificationState(
 export function normalizeGamificationState(
   profileId: string,
   state?: Partial<StorefrontGamificationState> | null,
-  joinedDate?: string | null
+  joinedDate?: string | null,
 ): StorefrontGamificationState {
   const fallback = createDefaultGamificationState(profileId, joinedDate);
   const totalPoints = Number(state?.totalPoints ?? fallback.totalPoints);

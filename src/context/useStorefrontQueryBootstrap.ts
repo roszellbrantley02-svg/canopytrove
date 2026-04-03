@@ -114,7 +114,7 @@ export function useStorefrontQueryBootstrap({
       const nearestArea = findNearestArea(availableAreas, deviceLocation);
       const resolvedDeviceLocationLabel = await resolveDeviceLocationLabel(
         deviceLocation,
-        nearestArea.label
+        nearestArea.label,
       );
       if (!alive) {
         return;

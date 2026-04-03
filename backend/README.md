@@ -66,19 +66,17 @@ Env overrides:
 - `ADMIN_RATE_LIMIT_PER_TEN_MINUTES`
 - `REQUEST_LOGGING_ENABLED`
 - `CORS_ORIGIN`
-  - use `*` for local development only
-  - use a comma-separated allowlist for production origins
+  - use an explicit comma-separated allowlist only
+  - for local development, use localhost origins such as `http://localhost:3000,http://127.0.0.1:3000`
 
 Local env pattern:
 
 - `backend/.env`
-  - release-safe backend defaults
+  - non-secret local defaults only
 - `backend/.env.local`
-  - machine-specific local overrides such as:
-    - `CORS_ORIGIN=*`
-    - `ALLOW_DEV_SEED=true`
-    - `GOOGLE_APPLICATION_CREDENTIALS=C:/Users/<you>/.canopytrove/secrets/firebase/canopy-trove-firebase-adminsdk.json`
-    - local-only Stripe or Google Maps keys
+  - machine-specific local overrides without live production credentials whenever possible
+  - prefer shell env vars or hosted secret managers for real provider secrets
+  - use explicit localhost origins instead of wildcard CORS values
 
 ## Source modes
 
@@ -128,8 +126,8 @@ Credential options:
 
 Health output:
 
-- `GET /health` returns the backend source status so you can see whether it is using Firestore or mock
-- `authVerification` indicates whether Firebase Admin token verification is active
+- `GET /health` is a minimal public liveness endpoint
+- use the authenticated `/admin/runtime/*` routes for internal runtime, monitoring, and policy detail
 
 Seed endpoints:
 
@@ -151,3 +149,17 @@ Auth notes:
 - The backend source boundary is now in place.
 - The backend now uses Firebase Admin SDK instead of client-style Firebase config.
 - After that, the next step is pushing summary generation and verification into scheduled backend jobs instead of reading raw collections directly.
+
+## Cloud Run
+
+The repo now includes a root `Dockerfile` so the backend can be deployed to Cloud Run from the repo root.
+
+Quick path:
+
+1. `gcloud config set project canopy-trove`
+2. `gcloud run deploy canopytrove-api --source . --region us-east4 --allow-unauthenticated`
+3. Add backend env vars in Cloud Run `Variables & Secrets`
+
+See:
+
+- `docs/CLOUD_RUN_BACKEND_SETUP.md`

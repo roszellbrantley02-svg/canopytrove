@@ -1,6 +1,7 @@
 import { ref, uploadBytes } from 'firebase/storage';
 import { getFirebaseStorage } from '../config/firebase';
-import { OwnerPortalUploadedFile } from '../types/ownerPortal';
+import type { OwnerPortalUploadedFile } from '../types/ownerPortal';
+import { ensureOwnerPortalSessionReady } from './ownerPortalSessionService';
 
 function sanitizeFileSegment(value: string) {
   return value.replace(/[^a-zA-Z0-9._-]+/g, '-');
@@ -33,11 +34,18 @@ async function createBlobFromUri(uri: string) {
   return response.blob();
 }
 
+function createStorageUploadRecord(filePath: string, downloadUrl?: string | null) {
+  return {
+    filePath,
+    downloadUrl: downloadUrl ?? null,
+  };
+}
+
 export async function uploadOwnerPrivateFile(
   ownerUid: string,
   category: 'business' | 'identity',
   filePrefix: string,
-  file: OwnerPortalUploadedFile
+  file: OwnerPortalUploadedFile,
 ) {
   const storage = getFirebaseStorage();
   if (!storage) {
@@ -56,4 +64,30 @@ export async function uploadOwnerPrivateFile(
   });
 
   return filePath;
+}
+
+export async function uploadOwnerApprovedStorefrontMediaFile(input: {
+  ownerUid: string;
+  dispensaryId: string;
+  mediaType: 'storefront-card' | 'storefront-gallery';
+  file: OwnerPortalUploadedFile;
+}) {
+  await ensureOwnerPortalSessionReady();
+  const storage = getFirebaseStorage();
+  if (!storage) {
+    throw new Error('Firebase Storage is not configured.');
+  }
+
+  const timestamp = Date.now();
+  const extension = getFileExtension(input.file);
+  const fileName = `${sanitizeFileSegment(input.mediaType)}-${timestamp}${extension}`;
+  const filePath = `dispensary-media/${input.dispensaryId}/approved/owner/${input.ownerUid}/${input.mediaType}/${fileName}`;
+  const fileRef = ref(storage, filePath);
+  const blob = await createBlobFromUri(input.file.uri);
+
+  await uploadBytes(fileRef, blob, {
+    contentType: input.file.mimeType ?? undefined,
+  });
+
+  return createStorageUploadRecord(filePath, null);
 }

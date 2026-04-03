@@ -1,8 +1,26 @@
+import type React from 'react';
 import { useEffect, type Dispatch, type SetStateAction } from 'react';
 import { normalizeGamificationState } from '../services/canopyTroveGamificationService';
-import { loadStorefrontPreferences, type StoredStorefrontPreferences } from '../services/storefrontPreferencesService';
+import {
+  loadStorefrontPreferences,
+  type StoredStorefrontPreferences,
+} from '../services/storefrontPreferencesService';
 import type { BrowseSortKey, Coordinates, StorefrontGamificationState } from '../types/storefront';
+import { areGamificationStatesEqual, areStringArraysEqual } from './storefrontControllerShared';
 import { buildStoredPreferencesPayload } from './storefrontQueryPersistenceShared';
+
+type HydratableStorefrontQueryState = {
+  selectedAreaId: string;
+  searchQuery: string;
+  locationQuery: string;
+  browseSortKey: BrowseSortKey;
+  browseHotDealsOnly: boolean;
+  savedStorefrontIds: string[];
+  searchLocation: Coordinates | null;
+  searchLocationLabel: string | null;
+  deviceLocationLabel: string | null;
+  gamificationState: StorefrontGamificationState;
+};
 
 type UseStorefrontQueryHydrationArgs = {
   cachedPreferences: StoredStorefrontPreferences | null;
@@ -10,6 +28,8 @@ type UseStorefrontQueryHydrationArgs = {
   profileCreatedAt?: string | null;
   defaultAreaLabel: string;
   selectedAreaId: string;
+  latestHydratableStateRef: React.MutableRefObject<HydratableStorefrontQueryState>;
+  queryInputMutationCountRef: React.MutableRefObject<number>;
   setHasHydratedPreferences: Dispatch<SetStateAction<boolean>>;
   lastSavedPreferencesPayloadRef: React.MutableRefObject<string | null>;
   setSelectedAreaIdState: Dispatch<SetStateAction<string>>;
@@ -30,6 +50,8 @@ export function useStorefrontQueryHydration({
   profileCreatedAt,
   defaultAreaLabel,
   selectedAreaId,
+  latestHydratableStateRef,
+  queryInputMutationCountRef,
   setHasHydratedPreferences,
   lastSavedPreferencesPayloadRef,
   setSelectedAreaIdState,
@@ -51,6 +73,8 @@ export function useStorefrontQueryHydration({
     let alive = true;
 
     void (async () => {
+      const hydrationStartMutationCount = queryInputMutationCountRef.current;
+      const hydrationStartState = latestHydratableStateRef.current;
       const storedPreferences = await loadStorefrontPreferences();
       if (!alive) {
         return;
@@ -66,50 +90,64 @@ export function useStorefrontQueryHydration({
         });
         lastSavedPreferencesPayloadRef.current = JSON.stringify(payload);
 
-        if (storedPreferences.selectedAreaId) {
-          setSelectedAreaIdState(storedPreferences.selectedAreaId);
+        if (queryInputMutationCountRef.current === hydrationStartMutationCount) {
+          if (storedPreferences.selectedAreaId) {
+            setSelectedAreaIdState(storedPreferences.selectedAreaId);
+          }
+
+          if (typeof storedPreferences.searchQuery === 'string') {
+            setSearchQuery(storedPreferences.searchQuery);
+          }
+
+          if (typeof storedPreferences.locationQuery === 'string') {
+            setLocationQuery(storedPreferences.locationQuery);
+          }
+
+          if (storedPreferences.browseSortKey) {
+            setBrowseSortKey(storedPreferences.browseSortKey);
+          }
+
+          if (storedPreferences.browseHotDealsOnly !== undefined) {
+            setBrowseHotDealsOnly(storedPreferences.browseHotDealsOnly);
+          }
+
+          if (Object.prototype.hasOwnProperty.call(storedPreferences, 'searchLocation')) {
+            setSearchLocation(storedPreferences.searchLocation ?? null);
+          }
+
+          if (storedPreferences.searchLocationLabel !== undefined) {
+            setSearchLocationLabel(storedPreferences.searchLocationLabel);
+          }
+
+          if (storedPreferences.deviceLocationLabel !== undefined) {
+            setDeviceLocationLabel(storedPreferences.deviceLocationLabel ?? null);
+          }
         }
 
-        if (typeof storedPreferences.searchQuery === 'string') {
-          setSearchQuery(storedPreferences.searchQuery);
-        }
-
-        if (typeof storedPreferences.locationQuery === 'string') {
-          setLocationQuery(storedPreferences.locationQuery);
-        }
-
-        if (storedPreferences.browseSortKey) {
-          setBrowseSortKey(storedPreferences.browseSortKey);
-        }
-
-        if (storedPreferences.browseHotDealsOnly !== undefined) {
-          setBrowseHotDealsOnly(storedPreferences.browseHotDealsOnly);
-        }
-
-        if (Array.isArray(storedPreferences.savedStorefrontIds)) {
+        if (
+          Array.isArray(storedPreferences.savedStorefrontIds) &&
+          areStringArraysEqual(
+            latestHydratableStateRef.current.savedStorefrontIds,
+            hydrationStartState.savedStorefrontIds,
+          )
+        ) {
           setSavedStorefrontIds(storedPreferences.savedStorefrontIds);
         }
 
-        if (storedPreferences.gamificationState) {
+        if (
+          storedPreferences.gamificationState &&
+          areGamificationStatesEqual(
+            latestHydratableStateRef.current.gamificationState,
+            hydrationStartState.gamificationState,
+          )
+        ) {
           setGamificationState(
             normalizeGamificationState(
               storedPreferences.profileId ?? profileId,
               storedPreferences.gamificationState,
-              profileCreatedAt
-            )
+              profileCreatedAt,
+            ),
           );
-        }
-
-        if (storedPreferences.searchLocation) {
-          setSearchLocation(storedPreferences.searchLocation);
-        }
-
-        if (storedPreferences.searchLocationLabel !== undefined) {
-          setSearchLocationLabel(storedPreferences.searchLocationLabel);
-        }
-
-        if (storedPreferences.deviceLocationLabel !== undefined) {
-          setDeviceLocationLabel(storedPreferences.deviceLocationLabel ?? null);
         }
       }
 
@@ -123,8 +161,10 @@ export function useStorefrontQueryHydration({
     cachedPreferences,
     defaultAreaLabel,
     lastSavedPreferencesPayloadRef,
+    latestHydratableStateRef,
     profileCreatedAt,
     profileId,
+    queryInputMutationCountRef,
     selectedAreaId,
     setBrowseHotDealsOnly,
     setBrowseSortKey,

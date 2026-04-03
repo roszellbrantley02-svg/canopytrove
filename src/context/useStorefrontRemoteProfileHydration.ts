@@ -1,12 +1,19 @@
 import React from 'react';
-import { getCachedRecentStorefrontIds, saveRecentStorefrontIds } from '../services/recentStorefrontService';
+import {
+  getCachedRecentStorefrontIds,
+  getLastRecentStorefrontMutationAt,
+  saveRecentStorefrontIds,
+} from '../services/recentStorefrontService';
 import { loadRemoteStorefrontProfileState } from '../services/storefrontProfileStateService';
 import { areGamificationStatesEqual, areStringArraysEqual } from './storefrontControllerShared';
+import type { UseStorefrontRemoteProfileSyncArgs } from './storefrontRemoteProfileSyncShared';
 import {
+  areProfilesEquivalent,
   createFallbackRemoteProfile,
+  mergeOrderedStringIds,
+  mergeRemoteGamificationState,
   normalizeRemoteGamificationState,
   serializeRemoteProfileState,
-  UseStorefrontRemoteProfileSyncArgs,
 } from './storefrontRemoteProfileSyncShared';
 
 type UseStorefrontRemoteProfileHydrationArgs = Pick<
@@ -21,9 +28,15 @@ type UseStorefrontRemoteProfileHydrationArgs = Pick<
   | 'setRecentStorefrontIds'
   | 'setSavedStorefrontIds'
 > & {
+  latestAppProfileRef: React.MutableRefObject<UseStorefrontRemoteProfileSyncArgs['appProfile']>;
+  latestRecentStorefrontIdsRef: React.MutableRefObject<string[]>;
+  latestSavedStorefrontIdsRef: React.MutableRefObject<string[]>;
   shouldSyncRemoteProfileState: boolean;
   setHasHydratedRemoteProfileState: React.Dispatch<React.SetStateAction<boolean>>;
+  currentRemoteHydrationStartedAtRef?: React.MutableRefObject<number>;
   lastSavedRemoteStatePayloadRef: React.MutableRefObject<string | null>;
+  lastLocalGamificationMutationAtRef?: React.MutableRefObject<number>;
+  lastLocalRouteMutationAtRef?: React.MutableRefObject<number>;
   lastRemoteHydrationAtRef: React.MutableRefObject<number>;
   remoteHydrationInFlightRef: React.MutableRefObject<Promise<void> | null>;
 };
@@ -32,6 +45,9 @@ export function useStorefrontRemoteProfileHydration({
   appProfile,
   gamificationStateRef,
   hasHydratedPreferences,
+  latestAppProfileRef,
+  latestRecentStorefrontIdsRef,
+  latestSavedStorefrontIdsRef,
   profileId,
   setAppProfile,
   setGamificationState,
@@ -40,10 +56,23 @@ export function useStorefrontRemoteProfileHydration({
   setRecentStorefrontIds,
   setSavedStorefrontIds,
   shouldSyncRemoteProfileState,
+  currentRemoteHydrationStartedAtRef,
   lastSavedRemoteStatePayloadRef,
+  lastLocalGamificationMutationAtRef,
+  lastLocalRouteMutationAtRef,
   lastRemoteHydrationAtRef,
   remoteHydrationInFlightRef,
 }: UseStorefrontRemoteProfileHydrationArgs) {
+  const fallbackRemoteHydrationStartedAtRef = React.useRef(0);
+  const fallbackLocalGamificationMutationAtRef = React.useRef(0);
+  const fallbackLocalRouteMutationAtRef = React.useRef(0);
+  const resolvedRemoteHydrationStartedAtRef =
+    currentRemoteHydrationStartedAtRef ?? fallbackRemoteHydrationStartedAtRef;
+  const resolvedLocalGamificationMutationAtRef =
+    lastLocalGamificationMutationAtRef ?? fallbackLocalGamificationMutationAtRef;
+  const resolvedLocalRouteMutationAtRef =
+    lastLocalRouteMutationAtRef ?? fallbackLocalRouteMutationAtRef;
+
   const hydrateRemoteProfileState = React.useCallback(
     async (force = false) => {
       if (!hasHydratedPreferences || !shouldSyncRemoteProfileState) {
@@ -61,76 +90,120 @@ export function useStorefrontRemoteProfileHydration({
         return remoteHydrationInFlightRef.current;
       }
 
+      resolvedRemoteHydrationStartedAtRef.current = Date.now();
       const task = (async () => {
+        const hydrationStartProfile = latestAppProfileRef.current;
+        const hydrationStartSavedStorefrontIds = latestSavedStorefrontIdsRef.current;
+        const hydrationStartRecentStorefrontIds = latestRecentStorefrontIdsRef.current;
+        const hydrationStartGamificationState = gamificationStateRef.current;
+        const hydrationStartedAt = resolvedRemoteHydrationStartedAtRef.current;
         const remoteProfileState = await loadRemoteStorefrontProfileState(profileId);
+        const remoteProfile = remoteProfileState?.profile ?? null;
         const remoteRouteState = remoteProfileState?.routeState ?? null;
+        const remoteSavedStorefrontIds = remoteRouteState?.savedStorefrontIds ?? [];
+        const remoteRecentStorefrontIds = remoteRouteState?.recentStorefrontIds ?? [];
+        const currentProfile = latestAppProfileRef.current;
+        const currentSavedStorefrontIds = latestSavedStorefrontIdsRef.current;
+        const currentRecentStorefrontIds = latestRecentStorefrontIdsRef.current;
+        const currentGamificationState = gamificationStateRef.current;
+        const canApplyRemoteRouteState =
+          Math.max(resolvedLocalRouteMutationAtRef.current, getLastRecentStorefrontMutationAt()) <=
+          hydrationStartedAt;
+        const canApplyRemoteGamificationState =
+          resolvedLocalGamificationMutationAtRef.current <= hydrationStartedAt;
+        const shouldApplyRemoteProfile = areProfilesEquivalent(
+          currentProfile,
+          hydrationStartProfile,
+        );
+        const resolvedSavedStorefrontIds = canApplyRemoteRouteState
+          ? areStringArraysEqual(currentSavedStorefrontIds, hydrationStartSavedStorefrontIds)
+            ? remoteSavedStorefrontIds
+            : mergeOrderedStringIds(currentSavedStorefrontIds, remoteSavedStorefrontIds)
+          : currentSavedStorefrontIds;
+        const resolvedRecentStorefrontIds = canApplyRemoteRouteState
+          ? areStringArraysEqual(currentRecentStorefrontIds, hydrationStartRecentStorefrontIds)
+            ? remoteRecentStorefrontIds
+            : mergeOrderedStringIds(currentRecentStorefrontIds, remoteRecentStorefrontIds)
+          : currentRecentStorefrontIds;
 
-        if (remoteProfileState?.profile) {
-          setAppProfile((current) => {
-            if (
-              current?.id === remoteProfileState.profile?.id &&
-              current?.kind === remoteProfileState.profile?.kind &&
-              current?.accountId === remoteProfileState.profile?.accountId &&
-              current?.displayName === remoteProfileState.profile?.displayName &&
-              current?.createdAt === remoteProfileState.profile?.createdAt &&
-              current?.updatedAt === remoteProfileState.profile?.updatedAt
-            ) {
-              return current;
-            }
-
-            return remoteProfileState.profile;
-          });
-          if (remoteProfileState.profile.id !== profileId) {
-            setProfileId(remoteProfileState.profile.id);
+        if (remoteProfile && shouldApplyRemoteProfile) {
+          setAppProfile((current) =>
+            areProfilesEquivalent(current, remoteProfile) ? current : remoteProfile,
+          );
+          if (remoteProfile.id !== profileId) {
+            setProfileId(remoteProfile.id);
           }
         }
 
-        if (remoteRouteState) {
-          const nextSavedStorefrontIds = remoteRouteState.savedStorefrontIds ?? [];
-          const nextRecentStorefrontIds = remoteRouteState.recentStorefrontIds ?? [];
-
+        if (remoteRouteState && canApplyRemoteRouteState) {
           setSavedStorefrontIds((current) =>
-            areStringArraysEqual(current, nextSavedStorefrontIds) ? current : nextSavedStorefrontIds
+            areStringArraysEqual(current, resolvedSavedStorefrontIds)
+              ? current
+              : resolvedSavedStorefrontIds,
           );
           setRecentStorefrontIds((current) =>
-            areStringArraysEqual(current, nextRecentStorefrontIds)
+            areStringArraysEqual(current, resolvedRecentStorefrontIds)
               ? current
-              : nextRecentStorefrontIds
+              : resolvedRecentStorefrontIds,
           );
 
-          if (!areStringArraysEqual(getCachedRecentStorefrontIds(), nextRecentStorefrontIds)) {
-            void saveRecentStorefrontIds(nextRecentStorefrontIds);
+          if (!areStringArraysEqual(getCachedRecentStorefrontIds(), resolvedRecentStorefrontIds)) {
+            void saveRecentStorefrontIds(resolvedRecentStorefrontIds, {
+              trackMutation: false,
+            });
           }
         }
 
-        if (remoteProfileState?.gamificationState) {
-          const nextGamificationState = normalizeRemoteGamificationState({
-            profileId,
-            remoteGamificationState: remoteProfileState.gamificationState,
-            remoteCreatedAt: remoteProfileState.profile?.createdAt,
-            localCreatedAt: appProfile?.createdAt,
-          });
+        if (remoteProfileState?.gamificationState && canApplyRemoteGamificationState) {
+          const nextGamificationState = areGamificationStatesEqual(
+            currentGamificationState,
+            hydrationStartGamificationState,
+          )
+            ? normalizeRemoteGamificationState({
+                profileId,
+                remoteGamificationState: remoteProfileState.gamificationState,
+                remoteCreatedAt: remoteProfile?.createdAt,
+                localCreatedAt: appProfile?.createdAt,
+              })
+            : mergeRemoteGamificationState({
+                profileId,
+                remoteGamificationState: remoteProfileState.gamificationState,
+                localGamificationState: currentGamificationState,
+                remoteCreatedAt: remoteProfile?.createdAt,
+                localCreatedAt:
+                  currentProfile?.createdAt ??
+                  hydrationStartProfile?.createdAt ??
+                  appProfile?.createdAt,
+              });
+
           gamificationStateRef.current = nextGamificationState;
           setGamificationState((current) =>
             areGamificationStatesEqual(current, nextGamificationState)
               ? current
-              : nextGamificationState
+              : nextGamificationState,
           );
         }
 
         if (remoteProfileState) {
           lastSavedRemoteStatePayloadRef.current = serializeRemoteProfileState({
-            appProfile: remoteProfileState.profile ?? createFallbackRemoteProfile(profileId),
+            appProfile:
+              (shouldApplyRemoteProfile ? remoteProfile : currentProfile) ??
+              createFallbackRemoteProfile(profileId),
             profileId,
-            savedStorefrontIds: remoteRouteState?.savedStorefrontIds ?? [],
-            recentStorefrontIds: remoteRouteState?.recentStorefrontIds ?? [],
+            savedStorefrontIds: resolvedSavedStorefrontIds,
+            recentStorefrontIds: resolvedRecentStorefrontIds,
             gamificationState:
-              remoteProfileState.gamificationState ??
-              normalizeRemoteGamificationState({
-                profileId,
-                remoteGamificationState: undefined,
-                remoteCreatedAt: remoteProfileState.profile?.createdAt,
-              }),
+              remoteProfileState.gamificationState && canApplyRemoteGamificationState
+                ? gamificationStateRef.current
+                : normalizeRemoteGamificationState({
+                    profileId,
+                    remoteGamificationState: undefined,
+                    remoteCreatedAt: remoteProfile?.createdAt,
+                    localCreatedAt:
+                      currentProfile?.createdAt ??
+                      hydrationStartProfile?.createdAt ??
+                      appProfile?.createdAt,
+                  }),
           });
         }
 
@@ -148,10 +221,16 @@ export function useStorefrontRemoteProfileHydration({
     },
     [
       appProfile?.createdAt,
+      resolvedLocalGamificationMutationAtRef,
+      resolvedLocalRouteMutationAtRef,
+      resolvedRemoteHydrationStartedAtRef,
       gamificationStateRef,
       hasHydratedPreferences,
       lastRemoteHydrationAtRef,
       lastSavedRemoteStatePayloadRef,
+      latestAppProfileRef,
+      latestRecentStorefrontIdsRef,
+      latestSavedStorefrontIdsRef,
       profileId,
       remoteHydrationInFlightRef,
       setAppProfile,
@@ -161,14 +240,11 @@ export function useStorefrontRemoteProfileHydration({
       setRecentStorefrontIds,
       setSavedStorefrontIds,
       shouldSyncRemoteProfileState,
-    ]
+    ],
   );
 
   React.useEffect(() => {
-    if (
-      !shouldSyncRemoteProfileState ||
-      !hasHydratedPreferences
-    ) {
+    if (!shouldSyncRemoteProfileState || !hasHydratedPreferences) {
       return;
     }
 

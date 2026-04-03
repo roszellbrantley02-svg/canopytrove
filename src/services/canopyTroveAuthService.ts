@@ -1,17 +1,18 @@
+import type { User } from 'firebase/auth';
 import {
   createUserWithEmailAndPassword,
   deleteUser,
   getIdToken,
+  getIdTokenResult,
   onAuthStateChanged,
   sendPasswordResetEmail,
   signInAnonymously,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
-  User,
 } from 'firebase/auth';
 import { getFirebaseAuth, hasFirebaseConfig } from '../config/firebase';
-import { CanopyTroveAuthSession } from '../types/identity';
+import type { CanopyTroveAuthSession } from '../types/identity';
 
 export type CanopyTroveAuthDeletionResult = {
   ok: boolean;
@@ -78,7 +79,7 @@ export function getCanopyTroveAuthCacheKey() {
 }
 
 export function subscribeToCanopyTroveAuthSession(
-  listener: (session: CanopyTroveAuthSession) => void
+  listener: (session: CanopyTroveAuthSession) => void,
 ) {
   const auth = getFirebaseAuth();
   if (!auth) {
@@ -116,7 +117,9 @@ export async function signOutCanopyTroveSession() {
   return true;
 }
 
-export async function getCanopyTroveAuthIdToken() {
+export async function getCanopyTroveAuthIdToken(options?: {
+  failIfAuthenticatedSession?: boolean;
+}) {
   const auth = getFirebaseAuth();
   if (!auth?.currentUser || auth.currentUser.isAnonymous) {
     return null;
@@ -124,6 +127,27 @@ export async function getCanopyTroveAuthIdToken() {
 
   try {
     return await getIdToken(auth.currentUser);
+  } catch {
+    try {
+      return await getIdToken(auth.currentUser, true);
+    } catch {
+      if (options?.failIfAuthenticatedSession) {
+        throw new Error('Could not refresh the signed-in Canopy Trove session.');
+      }
+
+      return null;
+    }
+  }
+}
+
+export async function getCanopyTroveAuthIdTokenResult(options?: { forceRefresh?: boolean }) {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser || auth.currentUser.isAnonymous) {
+    return null;
+  }
+
+  try {
+    return await getIdTokenResult(auth.currentUser, options?.forceRefresh ?? false);
   } catch {
     return null;
   }
@@ -142,7 +166,7 @@ export async function signInCanopyTroveEmailPassword(email: string, password: st
 export async function signUpCanopyTroveEmailPassword(
   email: string,
   password: string,
-  displayName?: string | null
+  displayName?: string | null,
 ) {
   const auth = getFirebaseAuth();
   if (!auth) {
@@ -152,9 +176,14 @@ export async function signUpCanopyTroveEmailPassword(
   const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
   const normalizedDisplayName = displayName?.trim() || null;
   if (normalizedDisplayName) {
-    await updateProfile(credential.user, {
-      displayName: normalizedDisplayName,
-    });
+    try {
+      await updateProfile(credential.user, {
+        displayName: normalizedDisplayName,
+      });
+    } catch {
+      // Account was created but display name failed to set.
+      // Continue with sign-up — the name can be updated later.
+    }
   }
 
   return mapAuthUser(credential.user);

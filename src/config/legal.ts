@@ -11,9 +11,13 @@ export const legalConfig = {
   supportEmailUrl: `mailto:${supportEmail}`,
   privacyPolicyUrl: normalizeConfiguredValue(process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL),
   termsUrl: normalizeConfiguredValue(process.env.EXPO_PUBLIC_TERMS_URL),
-  communityGuidelinesUrl: normalizeConfiguredValue(process.env.EXPO_PUBLIC_COMMUNITY_GUIDELINES_URL),
+  communityGuidelinesUrl: normalizeConfiguredValue(
+    process.env.EXPO_PUBLIC_COMMUNITY_GUIDELINES_URL,
+  ),
   appWebsiteUrl: normalizeConfiguredValue(process.env.EXPO_PUBLIC_APP_WEBSITE_URL),
-  accountDeletionHelpUrl: normalizeConfiguredValue(process.env.EXPO_PUBLIC_ACCOUNT_DELETION_HELP_URL),
+  accountDeletionHelpUrl: normalizeConfiguredValue(
+    process.env.EXPO_PUBLIC_ACCOUNT_DELETION_HELP_URL,
+  ),
 } as const;
 
 export const legalDocumentLinks = [
@@ -43,7 +47,7 @@ export const legalDocumentLinks = [
 export const legalSupportLinks = [
   {
     key: 'website',
-    label: 'Canopy Trove website',
+    label: 'Canopy Trove™ website',
     url: legalConfig.appWebsiteUrl,
     envVar: 'EXPO_PUBLIC_APP_WEBSITE_URL',
   },
@@ -73,7 +77,7 @@ export const privacyPolicySections = [
   },
   {
     title: 'Reviews and reports',
-    body: 'Reviews, helpful votes, and storefront reports are stored so Canopy Trove can power community features, quality signals, and moderation workflows.',
+    body: 'Reviews, helpful votes, storefront reports, and related reaction media are stored so Canopy Trove can power community features, quality signals, and moderation workflows. If member photo uploads are enabled later, those uploads will follow the same moderation path.',
   },
   {
     title: 'Notifications',
@@ -83,16 +87,20 @@ export const privacyPolicySections = [
 
 export const communityGuidelines = [
   'Keep reviews truthful, firsthand, and specific to the storefront visit.',
+  'Only upload photos or media you created or otherwise have the right to share when those uploads are available.',
   'Do not post threats, harassment, hate speech, sexual content, or illegal instructions.',
   'Do not impersonate staff, owners, or other Canopy Trove members.',
   'Do not spam ratings, duplicate reviews, or flood the report system.',
   'Respect privacy. Do not share personal phone numbers, license images, or medical information.',
+  'Do not post copied ads, minors, faces without consent, or imagery showing cannabis consumption.',
 ] as const;
 
 export const moderationPolicyNotes = [
-  'Canopy Trove members can report storefront data issues and questionable reviews.',
-  'Blocked review authors are hidden on your device.',
-  'Owner verification and storefront reports are intended to move through a manual review workflow.',
+  'Canopy Trove members can report storefront listing issues and flag abusive reviews directly from the storefront detail screen.',
+  'Blocked review authors are hidden only on the current device and can be managed in Privacy and safety.',
+  'Owner verification, storefront reports, and reported reviews move through a manual review workflow.',
+  'Photo, copyright, trademark, and privacy complaints can be sent to support for manual review.',
+  `Support and moderation questions can be sent to ${supportEmail}.`,
 ] as const;
 
 export const locationDisclosureText =
@@ -100,4 +108,3 @@ export const locationDisclosureText =
 
 export const accountDeletionDisclosureText =
   'Deleting your account removes your Canopy Trove profile data from this device and clears the linked profile data path used by the app backend. If account-login removal requires a recent sign-in, Canopy Trove will tell you so.';
-

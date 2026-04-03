@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AnalyticsEventInput } from '../types/analytics';
+import type { AnalyticsEventInput } from '../types/analytics';
 import { INSTALL_ID_KEY, MAX_QUEUE_SIZE, QUEUE_KEY, createAnalyticsId } from './analyticsConfig';
 
 export async function loadPersistedAnalyticsQueue() {

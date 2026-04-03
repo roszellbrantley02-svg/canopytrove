@@ -45,7 +45,9 @@ async function migrateLegacyStorageNamespaceOnce() {
     }
 
     if (copyTargets.length > 0) {
-      const legacyEntries = await AsyncStorage.multiGet(copyTargets.map((entry) => entry.legacyKey));
+      const legacyEntries = await AsyncStorage.multiGet(
+        copyTargets.map((entry) => entry.legacyKey),
+      );
       const nextEntries: Array<[string, string]> = [];
 
       for (const [legacyKey, value] of legacyEntries) {

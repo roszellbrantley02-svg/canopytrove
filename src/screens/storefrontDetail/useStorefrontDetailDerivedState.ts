@@ -1,6 +1,9 @@
 import React from 'react';
-import { PreviewStatusTone, PreviewTone } from '../../components/mapGridPreview/mapGridPreviewTones';
-import { StorefrontSummary } from '../../types/storefront';
+import type {
+  PreviewStatusTone,
+  PreviewTone,
+} from '../../components/mapGridPreview/mapGridPreviewTones';
+import type { StorefrontDetails, StorefrontSummary } from '../../types/storefront';
 import {
   createFallbackDetails,
   getHoursSummary,
@@ -8,6 +11,7 @@ import {
   isPlaceholderEditorialSummary,
 } from './storefrontDetailHelpers';
 import { normalizeStorefrontHours } from '../../utils/storefrontHours';
+import { resolveStorefrontOpenNow } from '../../utils/storefrontOperationalStatus';
 import { getStorefrontRatingDisplay } from '../../utils/storefrontRatings';
 
 export function useStorefrontDetailDerivedState({
@@ -17,7 +21,7 @@ export function useStorefrontDetailDerivedState({
   isVisited,
   isOperationalDataPending,
 }: {
-  details: any;
+  details: StorefrontDetails | null;
   storefront: StorefrontSummary;
   isSaved: boolean;
   isVisited: boolean;
@@ -25,36 +29,44 @@ export function useStorefrontDetailDerivedState({
 }) {
   const detailData = React.useMemo(
     () => details ?? createFallbackDetails(storefront.id),
-    [details, storefront.id]
+    [details, storefront.id],
   );
   const normalizedHours = React.useMemo(
     () => normalizeStorefrontHours(detailData.hours),
-    [detailData.hours]
+    [detailData.hours],
   );
   const normalizedDetailData = React.useMemo(
     () => ({
       ...detailData,
       hours: normalizedHours,
     }),
-    [detailData, normalizedHours]
+    [detailData, normalizedHours],
   );
   const hasWebsite = Boolean(detailData.website);
   const hasMenu = Boolean(detailData.menuUrl);
   const hasPhone = Boolean(detailData.phone);
-  const editorialSummary =
-    isPlaceholderEditorialSummary(detailData.editorialSummary) ? null : detailData.editorialSummary;
+  const editorialSummary = isPlaceholderEditorialSummary(detailData.editorialSummary)
+    ? null
+    : detailData.editorialSummary;
   const displayAmenities = detailData.amenities.filter(
-    (amenity: string) => amenity.trim().toLowerCase() !== 'state licensed'
+    (amenity: string) => amenity.trim().toLowerCase() !== 'state licensed',
   );
   const hasStoreSummarySection = Boolean(editorialSummary?.trim() || displayAmenities.length);
   const hasHours = normalizedHours.length > 0;
   const hasAppReviews = detailData.appReviews.length > 0;
-  const hasPhotos = detailData.photoUrls.length > 0;
+  const hasLiveDeals = (detailData.activePromotions?.length ?? 0) > 0;
+  const visiblePhotoCount = detailData.photoUrls.length;
+  const totalPhotoCount = Math.max(visiblePhotoCount, detailData.photoCount ?? visiblePhotoCount);
+  const hasPhotos = visiblePhotoCount > 0;
+  const lockedPhotoCount = Math.max(0, totalPhotoCount - visiblePhotoCount);
+  const hasLockedPhotos = lockedPhotoCount > 0;
   const hasOperationalInfo = hasWebsite || hasMenu || hasPhone || hasHours;
   const hasAnySupplementalDetail =
     hasWebsite ||
     hasMenu ||
     hasPhone ||
+    hasLiveDeals ||
+    hasLockedPhotos ||
     hasStoreSummarySection ||
     hasHours ||
     hasAppReviews ||
@@ -67,12 +79,10 @@ export function useStorefrontDetailDerivedState({
       : isVisited
         ? 'visited'
         : 'neverVisited';
-  const resolvedOpenNow =
-    typeof detailData.openNow === 'boolean'
-      ? detailData.openNow
-      : storefront.placeId?.trim()
-        ? storefront.openNow
-        : null;
+  const resolvedOpenNow = resolveStorefrontOpenNow({
+    summaryOpenNow: storefront.openNow,
+    detailOpenNow: detailData.openNow,
+  });
   const previewStatusLabel =
     typeof resolvedOpenNow === 'boolean'
       ? resolvedOpenNow
@@ -89,17 +99,20 @@ export function useStorefrontDetailDerivedState({
       : isOperationalDataPending
         ? 'checking'
         : 'default';
-  const getOperationalStatus = (isAvailable: boolean) => {
-    if (isAvailable) {
-      return 'available' as const;
-    }
+  const getOperationalStatus = React.useCallback(
+    (isAvailable: boolean) => {
+      if (isAvailable) {
+        return 'available' as const;
+      }
 
-    if (isOperationalDataPending) {
-      return 'checking' as const;
-    }
+      if (isOperationalDataPending) {
+        return 'checking' as const;
+      }
 
-    return 'unavailable' as const;
-  };
+      return 'unavailable' as const;
+    },
+    [isOperationalDataPending],
+  );
   const operationalRows = React.useMemo(
     () => [
       {
@@ -129,7 +142,7 @@ export function useStorefrontDetailDerivedState({
         icon: 'call-outline' as const,
         label: 'Phone',
         value: hasPhone
-          ? detailData.phone ?? 'Not published'
+          ? (detailData.phone ?? 'Not published')
           : isOperationalDataPending
             ? 'Checking live source...'
             : 'Not published',
@@ -148,15 +161,16 @@ export function useStorefrontDetailDerivedState({
       },
     ],
     [
-      detailData.hours,
       detailData.phone,
       detailData.website,
+      getOperationalStatus,
       hasHours,
       hasMenu,
       hasPhone,
       hasWebsite,
       isOperationalDataPending,
-    ]
+      normalizedHours,
+    ],
   );
   const operationalCardBody = isOperationalDataPending
     ? 'Canopy Trove is checking live storefront sources for current hours and contact details.'
@@ -176,7 +190,7 @@ export function useStorefrontDetailDerivedState({
       normalizedDetailData.appReviews,
       storefront.rating,
       storefront.reviewCount,
-    ]
+    ],
   );
 
   return {
@@ -186,6 +200,8 @@ export function useStorefrontDetailDerivedState({
     hasAnySupplementalDetail,
     hasAppReviews,
     hasHours,
+    hasLiveDeals,
+    hasLockedPhotos,
     hasMenu,
     hasOperationalInfo,
     hasPhone,
@@ -198,5 +214,7 @@ export function useStorefrontDetailDerivedState({
     previewStatusTone,
     previewTone,
     ratingDisplay,
+    lockedPhotoCount,
+    visiblePhotoCount,
   };
 }

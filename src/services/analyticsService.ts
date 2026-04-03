@@ -1,11 +1,8 @@
 import { AppState } from 'react-native';
+import type { AnalyticsEventType, AnalyticsMetadata } from '../types/analytics';
+import type { StorefrontSummary } from '../types/storefront';
+import type { AnalyticsIdentity } from './analyticsConfig';
 import {
-  AnalyticsEventType,
-  AnalyticsMetadata,
-} from '../types/analytics';
-import { StorefrontSummary } from '../types/storefront';
-import {
-  AnalyticsIdentity,
   FLUSH_DELAY_MS,
   MAX_BATCH_SIZE,
   MAX_QUEUE_SIZE,
@@ -21,7 +18,11 @@ import {
   loadPersistedAnalyticsQueue,
   persistAnalyticsQueue,
 } from './analyticsStorage';
-import { handleAnalyticsAppStateChange, startAnalyticsSession, endAnalyticsSession } from './analyticsSessionLifecycle';
+import {
+  handleAnalyticsAppStateChange,
+  startAnalyticsSession,
+  endAnalyticsSession,
+} from './analyticsSessionLifecycle';
 import { analyticsRuntimeState as state } from './analyticsRuntimeState';
 import { postAnalyticsBatch } from './analyticsTransport';
 
@@ -46,7 +47,7 @@ function enqueueEvent(
     screen?: string;
     storefrontId?: string;
     dealId?: string;
-  }
+  },
 ) {
   const event = buildAnalyticsEvent(
     eventType,
@@ -55,7 +56,7 @@ function enqueueEvent(
     state.currentIdentity,
     state.currentScreen,
     metadata,
-    options
+    options,
   );
   if (!event) {
     return;
@@ -80,8 +81,8 @@ export async function flushAnalyticsEvents() {
   try {
     while (state.pendingEvents.length) {
       const batch = state.pendingEvents.slice(0, MAX_BATCH_SIZE);
-      const didPost = await postAnalyticsBatch(createAnalyticsUrl(), batch);
-      if (!didPost) {
+      const result = await postAnalyticsBatch(createAnalyticsUrl(), batch);
+      if (result.kind === 'retryable_failure') {
         state.flushBackoffUntil = Date.now() + RETRY_BACKOFF_MS;
         scheduleFlush(RETRY_BACKOFF_MS);
         break;
@@ -90,6 +91,10 @@ export async function flushAnalyticsEvents() {
       state.flushBackoffUntil = 0;
       state.pendingEvents = state.pendingEvents.slice(batch.length);
       await persistAnalyticsQueue(state.pendingEvents);
+
+      if (result.kind === 'terminal_failure') {
+        continue;
+      }
     }
   } finally {
     state.isFlushing = false;
@@ -113,16 +118,24 @@ export async function initializeAnalytics() {
     startAnalyticsSession(
       state,
       (eventType, metadata) => enqueueEvent(eventType, metadata),
-      'cold_start'
+      'cold_start',
     );
 
     if (!state.appStateSubscription) {
       state.appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
         handleAnalyticsAppStateChange(state, nextAppState, {
           startSession: (reason) =>
-            startAnalyticsSession(state, (eventType, metadata) => enqueueEvent(eventType, metadata), reason),
+            startAnalyticsSession(
+              state,
+              (eventType, metadata) => enqueueEvent(eventType, metadata),
+              reason,
+            ),
           endSession: (reason) =>
-            endAnalyticsSession(state, (eventType, metadata) => enqueueEvent(eventType, metadata), reason),
+            endAnalyticsSession(
+              state,
+              (eventType, metadata) => enqueueEvent(eventType, metadata),
+              reason,
+            ),
           flushAnalyticsEvents: () => {
             void flushAnalyticsEvents();
           },
@@ -142,7 +155,7 @@ export async function shutdownAnalytics() {
   endAnalyticsSession(
     state,
     (eventType, metadata) => enqueueEvent(eventType, metadata),
-    'inactive'
+    'inactive',
   );
   await flushAnalyticsEvents();
 }
@@ -158,7 +171,7 @@ export function trackAnalyticsEvent(
     screen?: string;
     storefrontId?: string;
     dealId?: string;
-  }
+  },
 ) {
   if (!state.analyticsInitialized) {
     void initializeAnalytics().then(() => {
@@ -199,14 +212,14 @@ export function trackStorefrontImpressions(storefrontIds: string[], screen: stri
       {
         screen,
         storefrontId,
-      }
+      },
     );
   });
 }
 
 export function trackStorefrontPromotionImpressions(
   storefronts: Pick<StorefrontSummary, 'activePromotionId' | 'id'>[],
-  screen: string
+  screen: string,
 ) {
   if (!state.currentSessionId) {
     return;
@@ -232,7 +245,7 @@ export function trackStorefrontPromotionImpressions(
         screen,
         storefrontId: storefront.id,
         dealId: storefront.activePromotionId,
-      }
+      },
     );
   });
 }

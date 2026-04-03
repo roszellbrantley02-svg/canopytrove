@@ -1,14 +1,15 @@
 import React from 'react';
-import { Animated, AppState, AppStateStatus, StyleSheet, Text, View } from 'react-native';
+import type { AppStateStatus } from 'react-native';
+import { Animated, AppState, StyleSheet, Text, View } from 'react-native';
 import type { NavigationContainerRef } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useStorefrontProfileController,
   useStorefrontRewardsController,
   useStorefrontRouteController,
 } from '../context/StorefrontController';
-import { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../navigation/RootNavigator';
+import { AppUiIcon } from '../icons/AppUiIcon';
 import { HapticPressable } from './HapticPressable';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import {
@@ -70,7 +71,7 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
     void syncPostVisitPromptForProfile(
       profileId,
       authSession.status === 'authenticated',
-      authSession.status === 'authenticated' ? authSession.uid : null
+      authSession.status === 'authenticated' ? authSession.uid : null,
     );
   }, [authSession.status, authSession.uid, profileId]);
 
@@ -138,7 +139,7 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
       {
         screen: 'PostVisitPrompt',
         storefrontId: pendingPrompt.storefront.id,
-      }
+      },
     );
   }, [hasBadges, pendingPrompt]);
 
@@ -148,7 +149,7 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
         | 'post_visit_prompt_dismissed'
         | 'post_visit_prompt_save_tapped'
         | 'post_visit_prompt_review_tapped'
-        | 'post_visit_prompt_badge_tapped'
+        | 'post_visit_prompt_badge_tapped',
     ) => {
       if (!pendingPrompt) {
         return Promise.resolve();
@@ -164,12 +165,12 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
         {
           screen: 'PostVisitPrompt',
           storefrontId: pendingPrompt.storefront.id,
-        }
+        },
       );
 
       return dismissPostVisitPrompt().then(() => undefined);
     },
-    [hasBadges, pendingPrompt]
+    [hasBadges, pendingPrompt],
   );
 
   const handleDismiss = React.useCallback(() => {
@@ -189,13 +190,14 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
   }, [dismissPrompt, isSaved, pendingPrompt, toggleSavedStorefront]);
 
   const handleLeaveReview = React.useCallback(() => {
-    if (!pendingPrompt) {
+    const currentPrompt = pendingPrompt;
+    if (!currentPrompt) {
       return;
     }
 
     void dismissPrompt('post_visit_prompt_review_tapped').then(() => {
       navigationRef.current?.navigate('WriteReview', {
-        storefront: pendingPrompt.storefront,
+        storefront: currentPrompt.storefront,
       });
     });
   }, [dismissPrompt, navigationRef, pendingPrompt]);
@@ -219,13 +221,16 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
   const title = 'Tell us how your visit was.';
 
   const body = isGuestFirstVisit
-    ? `You made it to ${pendingPrompt.storefront.displayName}. Save this shop, leave a review, and earn your first badge on Canopy Trove.`
+    ? `You made it to ${pendingPrompt.storefront.displayName}. Save this storefront or leave a review so the visit is captured clearly in your profile.`
     : hasBadges
-      ? `You made it to ${pendingPrompt.storefront.displayName}. Leave a review or check your badge progress.`
-      : `You made it to ${pendingPrompt.storefront.displayName}. Leave a review and unlock your first badge on Canopy Trove.`;
+      ? `You made it to ${pendingPrompt.storefront.displayName}. Leave a review or check your profile progress.`
+      : `You made it to ${pendingPrompt.storefront.displayName}. Leave a review or save the storefront for later.`;
 
   return (
-    <View pointerEvents="box-none" style={[styles.container, { paddingBottom: insets.bottom + 90 }]}>
+    <View
+      pointerEvents="box-none"
+      style={[styles.container, { paddingBottom: insets.bottom + 90 }]}
+    >
       <Animated.View
         style={[
           styles.card,
@@ -237,11 +242,11 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
       >
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>Arrival prompt</Text>
+            <Text style={styles.eyebrow}>Visit follow-up</Text>
             <Text style={styles.title}>{title}</Text>
           </View>
           <HapticPressable onPress={handleDismiss} style={styles.dismissButton}>
-            <Ionicons name="close" size={18} color={colors.textSoft} />
+            <AppUiIcon name="close" size={18} color={colors.textSoft} />
           </HapticPressable>
         </View>
         <Text style={styles.body}>{body}</Text>
@@ -251,21 +256,23 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
             onPress={handleSave}
             style={[styles.secondaryButton, isSaved && styles.buttonDisabled]}
           >
-            <Ionicons
+            <AppUiIcon
               name={isSaved ? 'bookmark' : 'bookmark-outline'}
               size={16}
               color={isSaved ? colors.primary : colors.text}
             />
-            <Text style={styles.secondaryButtonText}>{isSaved ? 'Saved' : 'Save Shop'}</Text>
+            <Text style={styles.secondaryButtonText}>{isSaved ? 'Saved' : 'Save Storefront'}</Text>
           </HapticPressable>
           <HapticPressable onPress={handleLeaveReview} style={styles.primaryButton}>
-            <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.background} />
+            <AppUiIcon name="chatbubble-ellipses-outline" size={16} color={colors.backgroundDeep} />
             <Text style={styles.primaryButtonText}>Leave Review</Text>
           </HapticPressable>
         </View>
         <HapticPressable onPress={handleOpenBadges} style={styles.tertiaryButton}>
-          <Ionicons name="trophy-outline" size={16} color={colors.text} />
-          <Text style={styles.tertiaryButtonText}>{hasBadges ? 'View Badges' : 'Earn First Badge'}</Text>
+          <AppUiIcon name="person-circle-outline" size={16} color={colors.textSoft} />
+          <Text style={styles.tertiaryButtonText}>
+            {hasBadges ? 'View Profile Progress' : 'Open Profile'}
+          </Text>
         </HapticPressable>
       </Animated.View>
     </View>
@@ -280,9 +287,9 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: radii.lg,
-    backgroundColor: colors.card,
-    borderWidth: 1.75,
-    borderColor: colors.borderStrong,
+    backgroundColor: colors.cardMuted,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
     padding: spacing.lg,
     gap: spacing.md,
     shadowColor: '#000000',
@@ -301,11 +308,11 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   eyebrow: {
-    color: colors.primary,
+    color: colors.textSoft,
     fontSize: typography.caption,
-    fontWeight: '900',
+    fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
   title: {
     color: colors.text,
@@ -333,7 +340,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 48,
     borderRadius: radii.md,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -341,7 +348,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   primaryButtonText: {
-    color: colors.background,
+    color: colors.backgroundDeep,
     fontSize: typography.body,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -351,9 +358,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 48,
     borderRadius: radii.md,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceGlass,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.borderSoft,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -372,10 +379,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     gap: spacing.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
   },
   tertiaryButtonText: {
-    color: colors.text,
+    color: colors.textSoft,
     fontSize: typography.body,
     fontWeight: '700',
   },

@@ -26,10 +26,6 @@ const DAILY_QUERY_METRICS_COLLECTION = 'analytics_daily_query_metrics';
 
 const memoryAnalyticsEvents: AnalyticsEventDocument[] = [];
 
-function createEventId() {
-  return crypto.randomUUID();
-}
-
 function createDateKey(occurredAt: string) {
   return occurredAt.slice(0, 10);
 }
@@ -64,7 +60,7 @@ function createEventDocument(
   return stripUndefinedProperties({
     ...event,
     metadata: normalizeMetadata(event.metadata),
-    eventId: createEventId(),
+    eventId: event.eventId?.trim() || crypto.randomUUID(),
     receivedAt: new Date().toISOString(),
     platform: batch.platform,
     appVersion: batch.appVersion ?? null,
@@ -253,6 +249,27 @@ function recordInMemory(event: AnalyticsEventDocument) {
   memoryAnalyticsEvents.push(event);
 }
 
+function dedupeIncomingDocuments(documents: AnalyticsEventDocument[]) {
+  const seenEventIds = new Set<string>();
+  const dedupedDocuments: AnalyticsEventDocument[] = [];
+  let duplicateCount = 0;
+
+  for (const document of documents) {
+    if (seenEventIds.has(document.eventId)) {
+      duplicateCount += 1;
+      continue;
+    }
+
+    seenEventIds.add(document.eventId);
+    dedupedDocuments.push(document);
+  }
+
+  return {
+    dedupedDocuments,
+    duplicateCount,
+  };
+}
+
 export function clearAnalyticsEventState() {
   memoryAnalyticsEvents.length = 0;
 }
@@ -265,20 +282,46 @@ export async function recordAnalyticsEvents(
   }
 ) {
   const db = getBackendFirebaseDb();
+  const incomingDocuments = batch.events.map((event) =>
+    createEventDocument(event, batch, requestContext)
+  );
+  const { dedupedDocuments, duplicateCount: inBatchDuplicateCount } =
+    dedupeIncomingDocuments(incomingDocuments);
+
   if (!db) {
-    batch.events.forEach((event) => {
-      recordInMemory(createEventDocument(event, batch, requestContext));
+    let duplicateCount = inBatchDuplicateCount;
+    let acceptedCount = 0;
+
+    dedupedDocuments.forEach((document) => {
+      if (memoryAnalyticsEvents.some((existingEvent) => existingEvent.eventId === document.eventId)) {
+        duplicateCount += 1;
+        return;
+      }
+
+      recordInMemory(document);
+      acceptedCount += 1;
     });
+
     return {
       ok: true,
-      accepted: batch.events.length,
+      accepted: acceptedCount,
+      duplicates: duplicateCount,
     };
   }
 
   const writeBatch = db.batch();
+  const rawEventRefs = dedupedDocuments.map((document) =>
+    db.collection(EVENTS_COLLECTION).doc(document.eventId)
+  );
+  const existingSnapshots = rawEventRefs.length ? await db.getAll(...rawEventRefs) : [];
+  const existingEventIds = new Set(
+    existingSnapshots.filter((snapshot) => snapshot.exists).map((snapshot) => snapshot.id)
+  );
+  const acceptedDocuments = dedupedDocuments.filter(
+    (document) => !existingEventIds.has(document.eventId)
+  );
 
-  batch.events.forEach((event) => {
-    const document = createEventDocument(event, batch, requestContext);
+  acceptedDocuments.forEach((document) => {
     const rawEventRef = db.collection(EVENTS_COLLECTION).doc(document.eventId);
     writeBatch.set(rawEventRef, document);
 
@@ -289,10 +332,13 @@ export async function recordAnalyticsEvents(
     applyDailySignupMetrics(writeBatch, document);
   });
 
-  await writeBatch.commit();
+  if (acceptedDocuments.length) {
+    await writeBatch.commit();
+  }
 
   return {
     ok: true,
-    accepted: batch.events.length,
+    accepted: acceptedDocuments.length,
+    duplicates: inBatchDuplicateCount + (dedupedDocuments.length - acceptedDocuments.length),
   };
 }

@@ -11,12 +11,12 @@ Updated: March 29, 2026
 - [x] Fixed EAS project linkage for the `canopytrove` slug.
 - [x] Fixed `expo doctor` blockers so preview builds could run again.
 - [x] Fixed the later `expo doctor` build failure caused by Expo SDK 55 expecting `react-native@0.83.4` and aligned the app back to that patch version.
-- [x] Restored storefront detail operational fallback so `website`, `hours`, and `openNow` can be recovered on-device when the local backend is unreachable.
+- [x] Restored storefront detail operational fallback so `website`, `hours`, and `openNow` can be recovered while the backend warms missing storefront details.
 - [x] Updated the storefront detail hero badge to show `Open Now` / `Closed` / `Checking` instead of saved-state labels.
 - [x] Updated storefront cards to show live `Open Now` / `Closed` status instead of saved-state labels.
 - [x] Added backend support for `openNow` on storefront detail responses.
 - [x] Normalized placeholder `Hours not published yet` seed values so the app no longer marks missing hours as live published hours.
-- [x] Locked the `preview` EAS profile to on-device storefront detail recovery instead of the dead LAN API path.
+- [x] Locked the `preview` EAS profile to the hosted API path instead of the dead LAN API path.
 - [x] Created `MOVE_OFF_COMPUTER_CANOPYTROVE_BASELINE.md` as the canonical exportable recovery baseline file.
 - [x] Repaired the review composer so submit state is explicit and the GIF picker still works without a live GIPHY API key.
 - [x] Added a storefront rating waiting-state with a `10`-rating threshold before public averages appear.
@@ -86,10 +86,10 @@ Updated: March 29, 2026
 
 ## Known Architecture Notes
 
-- The preview build currently bundles a public client-side Places key through `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`.
-- The app also still supports backend enrichment through `backend/src/storefrontService.ts`.
+- The mobile app no longer bundles a public Google Places key.
+- Storefront operational enrichment now stays behind `backend/src/storefrontService.ts` and `backend/src/services/googlePlacesService.ts`.
 - The local API URL in `.env` is still a LAN address, so preview builds should not depend on it for critical detail rendering.
-- The storefront hours, website, and open/closed behavior are now functionally repaired in-app; the remaining hardening work is about key security and long-term hosting architecture.
+- The storefront hours, website, and open/closed behavior are now functionally repaired through backend-owned enrichment; the remaining hardening work is about server key restriction and long-term hosting architecture.
 - Owner billing is now code-complete, but real Stripe env configuration and price ids still need to be supplied on the hosted backend or via hosted payment-link fallback env.
 - Priority placement is now driven by owner promotion metadata:
   - `placementSurfaces` controls which surfaces get the boost
@@ -108,10 +108,9 @@ Updated: March 29, 2026
 
 ## Next Hardening Tasks
 
-- [ ] Replace the shared Google Maps key with a separate client-only key.
-- [ ] Restrict that client key to only the Google Maps Platform API surface actually used by the app.
-- [ ] Decide whether to keep the direct client-side Places fallback or move it behind the backend again.
-- [ ] Rotate the older shared key after the replacement is deployed and verified.
+- [ ] Restrict the backend Google Maps key to only the Google Maps Platform API surface actually used by the server.
+- [ ] Rotate any older Google Places key that was previously shipped in mobile build config.
+- [ ] Verify Google Cloud quota and abuse monitoring after the key rotation.
 
 ## Release Blockers To Remember
 

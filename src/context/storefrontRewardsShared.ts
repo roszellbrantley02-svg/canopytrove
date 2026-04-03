@@ -1,15 +1,15 @@
-import { GamificationRewardResult } from '../types/storefront';
+import type { GamificationRewardResult } from '../types/storefront';
 import { normalizeGamificationState } from '../services/canopyTroveGamificationService';
 
 export function normalizeRewardResult(
   profileId: string,
   rewardResult: GamificationRewardResult,
-  profileCreatedAt?: string | null
+  profileCreatedAt?: string | null,
 ) {
   const nextState = normalizeGamificationState(
     profileId,
     rewardResult.updatedState,
-    profileCreatedAt ?? rewardResult.updatedState.joinedDate
+    profileCreatedAt ?? rewardResult.updatedState.joinedDate,
   );
 
   return {

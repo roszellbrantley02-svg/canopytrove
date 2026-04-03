@@ -1,4 +1,4 @@
-import { StorefrontDetails } from '../../types/storefront';
+import type { StorefrontDetails } from '../../types/storefront';
 import { normalizeStorefrontHours } from '../../utils/storefrontHours';
 
 export function createFallbackDetails(storefrontId: string): StorefrontDetails {
@@ -9,6 +9,7 @@ export function createFallbackDetails(storefrontId: string): StorefrontDetails {
     hours: [],
     openNow: null,
     hasOwnerClaim: false,
+    activePromotions: [],
     appReviewCount: 0,
     appReviews: [],
     photoUrls: [],

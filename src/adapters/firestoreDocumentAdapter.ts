@@ -1,6 +1,9 @@
-import { StorefrontDetails, StorefrontSummary } from '../types/storefront';
-import { StorefrontRecord } from '../types/storefrontRecord';
-import { StorefrontDetailDocument, StorefrontSummaryDocument } from '../types/firestoreDocuments';
+import type { StorefrontDetails, StorefrontSummary } from '../types/storefront';
+import type { StorefrontRecord } from '../types/storefrontRecord';
+import type {
+  StorefrontDetailDocument,
+  StorefrontSummaryDocument,
+} from '../types/firestoreDocuments';
 import { normalizeStorefrontHours } from '../utils/storefrontHours';
 import { getStorefrontPromotionBadges } from '../utils/storefrontPromotions';
 
@@ -24,8 +27,14 @@ function asBoolean(value: unknown, fallback = false): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
+function asNullableBoolean(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null;
+}
+
 function asStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
 }
 
 export function toStorefrontSummaryDocument(record: StorefrontRecord): StorefrontSummaryDocument {
@@ -52,6 +61,7 @@ export function toStorefrontSummaryDocument(record: StorefrontRecord): Storefron
     promotionBadges,
     promotionExpiresAt: record.promotionExpiresAt ?? null,
     activePromotionId: null,
+    activePromotionCount: null,
     favoriteFollowerCount: null,
     menuUrl: null,
     verifiedOwnerBadgeLabel: null,
@@ -96,7 +106,7 @@ export function toStorefrontDetailDocument(record: StorefrontRecord): Storefront
 
 export function fromStorefrontSummaryDocument(
   storefrontId: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ): StorefrontSummary {
   const promotionBadges = getStorefrontPromotionBadges({
     promotionBadges: asStringArray(data.promotionBadges),
@@ -110,7 +120,7 @@ export function fromStorefrontSummaryDocument(
     legalName: asString(data.legalName),
     addressLine1: asString(data.addressLine1),
     city: asString(data.city),
-    state: 'NY',
+    state: asString(data.state, 'NY'),
     zip: asString(data.zip),
     coordinates: {
       latitude: asNumber(data.latitude),
@@ -120,13 +130,17 @@ export function fromStorefrontSummaryDocument(
     travelMinutes: asNumber(data.travelMinutes),
     rating: asNumber(data.rating),
     reviewCount: asNumber(data.reviewCount),
-    openNow: asBoolean(data.openNow),
+    openNow: asNullableBoolean(data.openNow),
     isVerified: asBoolean(data.isVerified),
     mapPreviewLabel: asString(data.mapPreviewLabel),
     promotionText: asOptionalString(data.promotionText),
     promotionBadges,
     promotionExpiresAt: asOptionalString(data.promotionExpiresAt),
     activePromotionId: asOptionalString(data.activePromotionId),
+    activePromotionCount:
+      typeof data.activePromotionCount === 'number' && Number.isFinite(data.activePromotionCount)
+        ? data.activePromotionCount
+        : null,
     favoriteFollowerCount:
       typeof data.favoriteFollowerCount === 'number' && Number.isFinite(data.favoriteFollowerCount)
         ? data.favoriteFollowerCount
@@ -141,7 +155,7 @@ export function fromStorefrontSummaryDocument(
         : 'standard',
     promotionPlacementSurfaces: asStringArray(data.promotionPlacementSurfaces).filter(
       (value): value is 'nearby' | 'browse' | 'hot_deals' =>
-        value === 'nearby' || value === 'browse' || value === 'hot_deals'
+        value === 'nearby' || value === 'browse' || value === 'hot_deals',
     ),
     promotionPlacementScope:
       data.promotionPlacementScope === 'statewide' ||
@@ -155,7 +169,7 @@ export function fromStorefrontSummaryDocument(
 
 export function fromStorefrontDetailDocument(
   storefrontId: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ): StorefrontDetails {
   return {
     storefrontId,
@@ -174,15 +188,17 @@ export function fromStorefrontDetailDocument(
     appReviewCount: asNumber(data.appReviewCount),
     appReviews: Array.isArray(data.appReviews)
       ? data.appReviews.map((review, index) => {
-          const entry = typeof review === 'object' && review ? (review as Record<string, unknown>) : {};
+          const entry =
+            typeof review === 'object' && review ? (review as Record<string, unknown>) : {};
           return {
             id: asString(entry.id, `app-review-${index}`),
-      authorName: asString(entry.authorName, 'Canopy Trove user'),
+            authorName: asString(entry.authorName, 'Canopy Trove user'),
             authorProfileId: asOptionalString(entry.authorProfileId),
             rating: asNumber(entry.rating),
             relativeTime: asString(entry.relativeTime, 'Unknown'),
             text: asString(entry.text),
             gifUrl: asOptionalString(entry.gifUrl),
+            photoUrls: asStringArray(entry.photoUrls),
             tags: asStringArray(entry.tags),
             helpfulCount: asNumber(entry.helpfulCount),
             ownerReply:
@@ -190,11 +206,11 @@ export function fromStorefrontDetailDocument(
                 ? {
                     ownerUid: asString((entry.ownerReply as Record<string, unknown>).ownerUid),
                     ownerDisplayName: asOptionalString(
-                      (entry.ownerReply as Record<string, unknown>).ownerDisplayName
+                      (entry.ownerReply as Record<string, unknown>).ownerDisplayName,
                     ),
                     text: asString((entry.ownerReply as Record<string, unknown>).text),
                     respondedAt: asString(
-                      (entry.ownerReply as Record<string, unknown>).respondedAt
+                      (entry.ownerReply as Record<string, unknown>).respondedAt,
                     ),
                   }
                 : null,

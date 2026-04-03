@@ -5,6 +5,7 @@ const RECENT_STOREFRONTS_KEY = `${brand.storageNamespace}:recent-storefronts`;
 const MAX_RECENT_STOREFRONTS = 8;
 
 let memoryCachedRecentStorefrontIds: string[] | null = null;
+let lastRecentStorefrontMutationAt = 0;
 const recentStorefrontListeners = new Set<(storefrontIds: string[]) => void>();
 
 function notifyRecentStorefrontListeners(storefrontIds: string[]) {
@@ -15,6 +16,15 @@ function notifyRecentStorefrontListeners(storefrontIds: string[]) {
 
 export function getCachedRecentStorefrontIds() {
   return memoryCachedRecentStorefrontIds ?? [];
+}
+
+export function getLastRecentStorefrontMutationAt() {
+  return lastRecentStorefrontMutationAt;
+}
+
+export function clearRecentStorefrontState() {
+  memoryCachedRecentStorefrontIds = null;
+  lastRecentStorefrontMutationAt = 0;
 }
 
 export function subscribeToRecentStorefrontIds(listener: (storefrontIds: string[]) => void) {
@@ -28,6 +38,8 @@ export async function loadRecentStorefrontIds(): Promise<string[]> {
   try {
     const rawValue = await AsyncStorage.getItem(RECENT_STOREFRONTS_KEY);
     if (!rawValue) {
+      memoryCachedRecentStorefrontIds = [];
+      notifyRecentStorefrontListeners([]);
       return [];
     }
 
@@ -36,12 +48,20 @@ export async function loadRecentStorefrontIds(): Promise<string[]> {
     notifyRecentStorefrontListeners(ids);
     return ids;
   } catch {
+    memoryCachedRecentStorefrontIds = [];
+    notifyRecentStorefrontListeners([]);
     return [];
   }
 }
 
-export async function saveRecentStorefrontIds(storefrontIds: string[]): Promise<void> {
+export async function saveRecentStorefrontIds(
+  storefrontIds: string[],
+  options?: { trackMutation?: boolean },
+): Promise<void> {
   const normalizedIds = storefrontIds.slice(0, MAX_RECENT_STOREFRONTS);
+  if (options?.trackMutation !== false) {
+    lastRecentStorefrontMutationAt = Date.now();
+  }
   memoryCachedRecentStorefrontIds = normalizedIds;
   notifyRecentStorefrontListeners(normalizedIds);
 
@@ -56,7 +76,7 @@ export async function markStorefrontAsRecent(storefrontId: string): Promise<void
   const currentIds = memoryCachedRecentStorefrontIds ?? (await loadRecentStorefrontIds());
   const nextIds = [storefrontId, ...currentIds.filter((id) => id !== storefrontId)].slice(
     0,
-    MAX_RECENT_STOREFRONTS
+    MAX_RECENT_STOREFRONTS,
   );
 
   await saveRecentStorefrontIds(nextIds);

@@ -1,7 +1,8 @@
 import React from 'react';
-import { act, create, ReactTestRenderer } from 'react-test-renderer';
+import type { ReactTestRenderer } from 'react-test-renderer';
+import { act, create } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppProfile } from '../types/storefront';
+import type { AppProfile } from '../types/storefront';
 
 const appProfileMocks = vi.hoisted(() => ({
   createAppProfileId: vi.fn(),
@@ -11,13 +12,15 @@ const appProfileMocks = vi.hoisted(() => ({
 }));
 
 const authMocks = vi.hoisted(() => {
-  let listener: ((session: {
-    status: 'disabled' | 'checking' | 'signed-out' | 'anonymous' | 'authenticated';
-    uid: string | null;
-    isAnonymous: boolean;
-    displayName: string | null;
-    email: string | null;
-  }) => void) | null = null;
+  let listener:
+    | ((session: {
+        status: 'disabled' | 'checking' | 'signed-out' | 'anonymous' | 'authenticated';
+        uid: string | null;
+        isAnonymous: boolean;
+        displayName: string | null;
+        email: string | null;
+      }) => void)
+    | null = null;
 
   return {
     getInitialCanopyTroveAuthSession: vi.fn(),
@@ -139,7 +142,7 @@ describe('useStorefrontProfileModel', () => {
       expect.objectContaining({
         id: 'cached-profile',
         displayName: 'CanopyTrove User',
-      })
+      }),
     );
     expect(latestValue?.appProfile?.displayName).toBe('CanopyTrove User');
   });
@@ -169,7 +172,7 @@ describe('useStorefrontProfileModel', () => {
         kind: 'authenticated',
         accountId: 'user-123',
         displayName: 'Real User',
-      })
+      }),
     );
   });
 });

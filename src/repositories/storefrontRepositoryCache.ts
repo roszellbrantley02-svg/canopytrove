@@ -1,8 +1,19 @@
-import { BrowseSummaryResult, StorefrontDetails, StorefrontListQuery, StorefrontSummary } from '../types/storefront';
+import type {
+  BrowseSummaryResult,
+  StorefrontDetails,
+  StorefrontListQuery,
+  StorefrontSummary,
+} from '../types/storefront';
+import { getStorefrontMemberAccessCacheKey } from '../services/storefrontMemberDealAccessService';
 
-export const savedSummariesCache = new Map<string, StorefrontSummary[]>();
-export const nearbySummariesCache = new Map<string, StorefrontSummary[]>();
-export const browseSummariesCache = new Map<string, BrowseSummaryResult>();
+type SummaryCacheEntry<T> = {
+  expiresAt: number;
+  value: T;
+};
+
+export const savedSummariesCache = new Map<string, SummaryCacheEntry<StorefrontSummary[]>>();
+export const nearbySummariesCache = new Map<string, SummaryCacheEntry<StorefrontSummary[]>>();
+export const browseSummariesCache = new Map<string, SummaryCacheEntry<BrowseSummaryResult>>();
 export const storefrontDetailsCache = new Map<
   string,
   { expiresAt: number; value: StorefrontDetails | null }
@@ -15,16 +26,60 @@ export const storefrontDetailsInFlight = new Map<string, Promise<StorefrontDetai
 
 export const NEARBY_RADIUS_MILES = 35;
 export const BROWSE_RADIUS_MILES = 120;
+export const SUMMARY_TTL_MS = 30_000;
 export const DETAIL_TTL_MS = 60_000;
+const MAX_SUMMARY_CACHE_ENTRIES = 48;
+const MAX_DETAIL_CACHE_ENTRIES = 64;
+
+function createDetailKey(storefrontId: string) {
+  return `${storefrontId}::${getStorefrontMemberAccessCacheKey()}`;
+}
+
+function pruneMapToLimit<T>(cache: Map<string, T>, maxEntries: number) {
+  while (cache.size > maxEntries) {
+    const oldestKey = cache.keys().next().value;
+    if (!oldestKey) {
+      break;
+    }
+
+    cache.delete(oldestKey);
+  }
+}
+
+function pruneExpiredDetailEntries() {
+  const now = Date.now();
+  Array.from(storefrontDetailsCache.entries()).forEach(([cacheKey, cached]) => {
+    if (cached.expiresAt <= now) {
+      storefrontDetailsCache.delete(cacheKey);
+      storefrontDetailsInFlight.delete(cacheKey);
+    }
+  });
+}
+
+function getFreshSummaryValue<T>(cache: Map<string, SummaryCacheEntry<T>>, key: string) {
+  const entry = cache.get(key);
+  if (!entry) {
+    return null;
+  }
+
+  if (entry.expiresAt <= Date.now()) {
+    cache.delete(key);
+    return null;
+  }
+
+  return entry.value;
+}
 
 export async function resolveWithCache<T>(
   key: string,
-  cache: Map<string, T>,
+  cache: Map<string, SummaryCacheEntry<T>>,
   inFlight: Map<string, Promise<T>>,
-  loader: () => Promise<T>
+  loader: () => Promise<T>,
+  ttlMs = SUMMARY_TTL_MS,
 ) {
-  if (cache.has(key)) {
-    return cache.get(key)!;
+  const cached = getFreshSummaryValue(cache, key);
+  if (cached !== null) {
+    return cached;
   }
 
   const current = inFlight.get(key);
@@ -34,7 +89,11 @@ export async function resolveWithCache<T>(
 
   const pending = loader()
     .then((value) => {
-      cache.set(key, value);
+      cache.set(key, {
+        value,
+        expiresAt: Date.now() + ttlMs,
+      });
+      pruneMapToLimit(cache, MAX_SUMMARY_CACHE_ENTRIES);
       inFlight.delete(key);
       return value;
     })
@@ -47,29 +106,38 @@ export async function resolveWithCache<T>(
   return pending;
 }
 
-export function getFreshDetail(storefrontId: string) {
-  const cached = storefrontDetailsCache.get(storefrontId);
-  if (!cached || cached.expiresAt <= Date.now()) {
-    if (cached) {
-      storefrontDetailsCache.delete(storefrontId);
-    }
-    return null;
+function getFreshDetailEntry(storefrontId: string) {
+  pruneExpiredDetailEntries();
+  const detailKey = createDetailKey(storefrontId);
+  if (!storefrontDetailsCache.has(detailKey)) {
+    return {
+      hit: false,
+      value: null as StorefrontDetails | null,
+    };
   }
 
-  return cached.value;
+  return {
+    hit: true,
+    value: storefrontDetailsCache.get(detailKey)?.value ?? null,
+  };
+}
+
+export function getFreshDetail(storefrontId: string) {
+  return getFreshDetailEntry(storefrontId).value;
 }
 
 export async function resolveDetailWithCache(
   storefrontId: string,
   loader: () => Promise<StorefrontDetails | null>,
-  ttlMs: number | ((value: StorefrontDetails | null) => number) = DETAIL_TTL_MS
+  ttlMs: number | ((value: StorefrontDetails | null) => number) = DETAIL_TTL_MS,
 ) {
-  const cached = getFreshDetail(storefrontId);
-  if (cached) {
-    return cached;
+  const detailKey = createDetailKey(storefrontId);
+  const cached = getFreshDetailEntry(storefrontId);
+  if (cached.hit) {
+    return cached.value;
   }
 
-  const current = storefrontDetailsInFlight.get(storefrontId);
+  const current = storefrontDetailsInFlight.get(detailKey);
   if (current) {
     return current;
   }
@@ -77,37 +145,38 @@ export async function resolveDetailWithCache(
   const pending = loader()
     .then((value) => {
       const resolvedTtlMs = typeof ttlMs === 'function' ? ttlMs(value) : ttlMs;
-      storefrontDetailsCache.set(storefrontId, {
+      storefrontDetailsCache.set(detailKey, {
         value,
         expiresAt: Date.now() + resolvedTtlMs,
       });
-      storefrontDetailsInFlight.delete(storefrontId);
+      pruneMapToLimit(storefrontDetailsCache, MAX_DETAIL_CACHE_ENTRIES);
+      storefrontDetailsInFlight.delete(detailKey);
       return value;
     })
     .catch((error) => {
-      storefrontDetailsInFlight.delete(storefrontId);
+      storefrontDetailsInFlight.delete(detailKey);
       throw error;
     });
 
-  storefrontDetailsInFlight.set(storefrontId, pending);
+  storefrontDetailsInFlight.set(detailKey, pending);
   return pending;
 }
 
 export function createSavedKey(storefrontIds: string[]) {
-  return storefrontIds.join('|');
+  return `${storefrontIds.join('|')}::${getStorefrontMemberAccessCacheKey()}`;
 }
 
 export function createNearbyKey(query: StorefrontListQuery) {
-  return `${query.areaId}::${query.searchQuery.trim().toLowerCase()}::${query.origin.latitude.toFixed(3)}::${query.origin.longitude.toFixed(3)}`;
+  return `${query.areaId ?? 'all'}::${query.searchQuery.trim().toLowerCase()}::${query.origin.latitude.toFixed(3)}::${query.origin.longitude.toFixed(3)}::${getStorefrontMemberAccessCacheKey()}`;
 }
 
 export function createBrowseKey(
   query: StorefrontListQuery,
   sortKey: string,
   limit: number,
-  offset: number
+  offset: number,
 ) {
-  return `${query.areaId}::${sortKey}::${query.searchQuery.trim().toLowerCase()}::${query.hotDealsOnly ? 'deals' : 'all'}::${query.origin.latitude.toFixed(3)}::${query.origin.longitude.toFixed(3)}::${limit}::${offset}`;
+  return `${query.areaId ?? 'all'}::${sortKey}::${query.searchQuery.trim().toLowerCase()}::${query.hotDealsOnly ? 'deals' : 'all'}::${query.origin.latitude.toFixed(3)}::${query.origin.longitude.toFixed(3)}::${limit}::${offset}::${getStorefrontMemberAccessCacheKey()}`;
 }
 
 export function clearStorefrontRepositoryCacheEntries() {
@@ -121,21 +190,26 @@ export function clearStorefrontRepositoryCacheEntries() {
   storefrontDetailsInFlight.clear();
 }
 
-export function primeStorefrontDetailsCache(storefrontId: string, detail: StorefrontDetails | null) {
+export function primeStorefrontDetailsCache(
+  storefrontId: string,
+  detail: StorefrontDetails | null,
+) {
+  const detailKey = createDetailKey(storefrontId);
   if (!detail) {
-    storefrontDetailsCache.delete(storefrontId);
-    storefrontDetailsInFlight.delete(storefrontId);
+    storefrontDetailsCache.delete(detailKey);
+    storefrontDetailsInFlight.delete(detailKey);
     return;
   }
 
-  storefrontDetailsCache.set(storefrontId, {
+  storefrontDetailsCache.set(detailKey, {
     value: detail,
     expiresAt: Date.now() + DETAIL_TTL_MS,
   });
-  storefrontDetailsInFlight.delete(storefrontId);
+  storefrontDetailsInFlight.delete(detailKey);
 }
 
 export function invalidateStorefrontDetailsCache(storefrontId: string) {
-  storefrontDetailsCache.delete(storefrontId);
-  storefrontDetailsInFlight.delete(storefrontId);
+  const detailKey = createDetailKey(storefrontId);
+  storefrontDetailsCache.delete(detailKey);
+  storefrontDetailsInFlight.delete(detailKey);
 }

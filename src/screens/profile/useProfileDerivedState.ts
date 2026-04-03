@@ -1,7 +1,7 @@
 import React from 'react';
 import { getMockFirestoreSeedCounts } from '../../services/firestoreSeedService';
 import { storefrontSourceMode } from '../../config/storefrontSourceConfig';
-import {
+import type {
   AppProfile,
   GamificationBadgeDefinition,
   StorefrontGamificationState,
@@ -37,23 +37,28 @@ export function useProfileDerivedState({
 }: UseProfileDerivedStateArgs) {
   const displayName = getProfileDisplayName(appProfile, profileId);
   const profileInitials = getProfileInitials(displayName);
-  const earnedBadgeIds = React.useMemo(() => new Set(gamificationState.badges), [gamificationState.badges]);
+  const earnedBadgeIds = React.useMemo(
+    () => new Set(gamificationState.badges),
+    [gamificationState.badges],
+  );
   const earnedBadges = React.useMemo(
     () => badgeDefinitions.filter((badge) => earnedBadgeIds.has(badge.id)),
-    [badgeDefinitions, earnedBadgeIds]
+    [badgeDefinitions, earnedBadgeIds],
   );
   const featuredBadges = React.useMemo(
     () => [...earnedBadges].sort((a, b) => b.points - a.points).slice(0, 3),
-    [earnedBadges]
+    [earnedBadges],
   );
   const nextBadges = React.useMemo(
     () => buildBadgeProgressItems(badgeDefinitions, earnedBadgeIds, gamificationState).slice(0, 4),
-    [badgeDefinitions, earnedBadgeIds, gamificationState]
+    [badgeDefinitions, earnedBadgeIds, gamificationState],
   );
   const levelProgress = getLevelProgress(gamificationState);
   const fallbackSeedCounts = getMockFirestoreSeedCounts();
   const seedCounts =
-    storefrontSourceMode === 'api' && backendSeedStatus ? backendSeedStatus.counts : fallbackSeedCounts;
+    storefrontSourceMode === 'api' && backendSeedStatus
+      ? backendSeedStatus.counts
+      : fallbackSeedCounts;
 
   return {
     displayName,

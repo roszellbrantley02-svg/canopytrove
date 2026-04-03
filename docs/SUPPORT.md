@@ -8,6 +8,10 @@ Support email:
 
 - `support@canopytrove.com`
 
+Launch-week mailbox owner:
+
+- `danielletuper@canopytrove.com`
+
 ## What Support Can Help With
 
 Canopy Trove support can help with:
@@ -25,6 +29,15 @@ Email support with:
 - the email address tied to your Canopy Trove account, if applicable
 - the storefront name or page involved, if your issue is storefront-specific
 - screenshots or exact error text when you have them
+
+## Launch Verification
+
+Before launch, send a real test email to `support@canopytrove.com` and confirm all of the following:
+
+- the message is received in the mailbox monitored by `danielletuper@canopytrove.com`
+- the reply path works from the real support mailbox identity
+- the message is not landing in spam or quarantined by the mail provider
+- the response can be sent within your intended launch-week support window
 
 ## Account Deletion Help
 

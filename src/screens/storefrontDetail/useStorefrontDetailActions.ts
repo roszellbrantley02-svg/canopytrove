@@ -1,12 +1,13 @@
 import React from 'react';
-import { Linking } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import { submitStorefrontReviewHelpful } from '../../services/storefrontCommunityService';
 import { trackAnalyticsEvent } from '../../services/analyticsService';
 import { markStorefrontAsRecent } from '../../services/recentStorefrontService';
 import { openStorefrontRoute } from '../../services/navigationService';
-import { RootStackParamList } from '../../navigation/RootNavigator';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { StorefrontSummary } from '../../types/storefront';
+import { submitStorefrontReport } from '../../services/storefrontCommunityService';
+import type { RootStackParamList } from '../../navigation/RootNavigator';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { AppProfile, AppReview, StorefrontSummary } from '../../types/storefront';
 
 type UseStorefrontDetailActionsArgs = {
   detailData: {
@@ -15,22 +16,59 @@ type UseStorefrontDetailActionsArgs = {
     menuUrl?: string | null;
   };
   navigation: NativeStackNavigationProp<RootStackParamList>;
+  appProfile: AppProfile | null;
   profileId: string;
   authSession: {
     status: 'checking' | 'signed-out' | 'anonymous' | 'authenticated' | 'disabled';
     uid: string | null;
   };
   storefront: StorefrontSummary;
+  myReview: AppReview | null;
+  onReviewModerationStatusChange?: (value: string | null) => void;
 };
+
+function buildReviewModerationDescription(review: AppReview) {
+  const excerpt = review.text.trim().replace(/\s+/g, ' ').slice(0, 180);
+
+  return [
+    `Review ${review.id} was flagged from the storefront detail screen.`,
+    `Author: ${review.authorName}${review.authorProfileId ? ` (${review.authorProfileId})` : ''}.`,
+    `Rating: ${review.rating.toFixed(1)}.`,
+    excerpt ? `Excerpt: "${excerpt}".` : null,
+    'Reason: Possible harassment, spam, illegal claim, or other abusive content.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function getReportAuthorName(appProfile: AppProfile | null) {
+  if (appProfile?.displayName?.trim()) {
+    return appProfile.displayName.trim();
+  }
+
+  return appProfile?.kind === 'authenticated' ? 'Canopy Trove member' : 'Canopy Trove user';
+}
+
+function buildSuggestEditDescription(storefront: StorefrontSummary) {
+  return `Suggested edit for ${storefront.displayName}: `;
+}
+
+function buildReportClosedDescription(storefront: StorefrontSummary) {
+  return `${storefront.displayName} appears to be closed because `;
+}
 
 export function useStorefrontDetailActions({
   detailData,
   navigation,
+  appProfile,
   profileId,
   authSession,
   storefront,
+  myReview,
+  onReviewModerationStatusChange,
 }: UseStorefrontDetailActionsArgs) {
   const [pendingHelpfulReviewId, setPendingHelpfulReviewId] = React.useState<string | null>(null);
+  const [pendingReviewReportId, setPendingReviewReportId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     void markStorefrontAsRecent(storefront.id);
@@ -45,7 +83,7 @@ export function useStorefrontDetailActions({
       {
         screen: 'StorefrontDetail',
         storefrontId: storefront.id,
-      }
+      },
     );
     if (storefront.activePromotionId) {
       trackAnalyticsEvent(
@@ -57,7 +95,7 @@ export function useStorefrontDetailActions({
           screen: 'StorefrontDetail',
           storefrontId: storefront.id,
           dealId: storefront.activePromotionId,
-        }
+        },
       );
     }
     trackAnalyticsEvent(
@@ -68,9 +106,9 @@ export function useStorefrontDetailActions({
       {
         screen: 'StorefrontDetail',
         storefrontId: storefront.id,
-      }
+      },
     );
-  }, [storefront.id]);
+  }, [storefront.activePromotionId, storefront.id]);
 
   const openWebsite = React.useCallback(async () => {
     if (!detailData.website) {
@@ -86,7 +124,7 @@ export function useStorefrontDetailActions({
         screen: 'StorefrontDetail',
         storefrontId: storefront.id,
         dealId: storefront.activePromotionId ?? undefined,
-      }
+      },
     );
     await Linking.openURL(detailData.website);
   }, [detailData.website, storefront.activePromotionId, storefront.id]);
@@ -105,7 +143,7 @@ export function useStorefrontDetailActions({
         screen: 'StorefrontDetail',
         storefrontId: storefront.id,
         dealId: storefront.activePromotionId ?? undefined,
-      }
+      },
     );
     await Linking.openURL(`tel:${detailData.phone}`);
   }, [detailData.phone, storefront.activePromotionId, storefront.id]);
@@ -124,7 +162,7 @@ export function useStorefrontDetailActions({
         screen: 'StorefrontDetail',
         storefrontId: storefront.id,
         dealId: storefront.activePromotionId ?? undefined,
-      }
+      },
     );
     await Linking.openURL(detailData.menuUrl);
   }, [detailData.menuUrl, storefront.activePromotionId, storefront.id]);
@@ -139,7 +177,7 @@ export function useStorefrontDetailActions({
         screen: 'StorefrontDetail',
         storefrontId: storefront.id,
         dealId: storefront.activePromotionId ?? undefined,
-      }
+      },
     );
 
     if (storefront.activePromotionId) {
@@ -152,7 +190,7 @@ export function useStorefrontDetailActions({
           screen: 'StorefrontDetail',
           storefrontId: storefront.id,
           dealId: storefront.activePromotionId,
-        }
+        },
       );
     }
 
@@ -183,11 +221,86 @@ export function useStorefrontDetailActions({
         setPendingHelpfulReviewId((current) => (current === reviewId ? null : current));
       }
     },
-    [pendingHelpfulReviewId, profileId, storefront.id]
+    [pendingHelpfulReviewId, profileId, storefront.id],
+  );
+
+  const submitReviewReport = React.useCallback(
+    async (review: AppReview) => {
+      if (pendingReviewReportId === review.id || review.authorProfileId === profileId) {
+        return;
+      }
+
+      setPendingReviewReportId(review.id);
+      onReviewModerationStatusChange?.(null);
+
+      try {
+        await submitStorefrontReport({
+          storefrontId: storefront.id,
+          profileId,
+          authorName: getReportAuthorName(appProfile),
+          reason: 'Review content issue',
+          description: buildReviewModerationDescription(review),
+        });
+
+        trackAnalyticsEvent(
+          'report_submitted',
+          {
+            sourceScreen: 'StorefrontDetail',
+            reason: 'Review content issue',
+            target: 'review',
+          },
+          {
+            screen: 'StorefrontDetail',
+            storefrontId: storefront.id,
+          },
+        );
+
+        onReviewModerationStatusChange?.(
+          'Review reported. The moderation queue has the flagged review and supporting context now.',
+        );
+      } catch (error) {
+        onReviewModerationStatusChange?.(
+          error instanceof Error
+            ? error.message
+            : 'Could not report that review right now. Try again in a moment.',
+        );
+      } finally {
+        setPendingReviewReportId((current) => (current === review.id ? null : current));
+      }
+    },
+    [appProfile, onReviewModerationStatusChange, pendingReviewReportId, profileId, storefront.id],
+  );
+
+  const reportReview = React.useCallback(
+    (review: AppReview) => {
+      if (review.authorProfileId === profileId) {
+        return;
+      }
+
+      Alert.alert(
+        'Report this review?',
+        'Use reports for harassment, spam, illegal claims, or other abusive content. Block only hides the author on this device.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Report Review',
+            style: 'destructive',
+            onPress: () => {
+              void submitReviewReport(review);
+            },
+          },
+        ],
+      );
+    },
+    [profileId, submitReviewReport],
   );
 
   return {
     pendingHelpfulReviewId,
+    pendingReviewReportId,
     callStore: () => {
       void callStore();
     },
@@ -198,13 +311,39 @@ export function useStorefrontDetailActions({
     markReviewHelpful: (reviewId: string, reviewAuthorProfileId: string | null) => {
       void markReviewHelpful(reviewId, reviewAuthorProfileId);
     },
+    reportReview,
     openWebsite: () => {
       void openWebsite();
     },
     openMenu: () => {
       void openMenu();
     },
-    reportStorefront: () => navigation.navigate('ReportStorefront', { storefront }),
-    writeReview: () => navigation.navigate('WriteReview', { storefront }),
+    suggestStorefrontEdit: () => {
+      navigation.navigate('ReportStorefront', {
+        storefront,
+        entryMode: 'suggest_edit',
+        initialReason: 'Listing issue',
+        initialDescription: buildSuggestEditDescription(storefront),
+      });
+    },
+    reportStorefrontClosed: () => {
+      navigation.navigate('ReportStorefront', {
+        storefront,
+        entryMode: 'report_closed',
+        initialReason: 'Store closed',
+        initialDescription: buildReportClosedDescription(storefront),
+      });
+    },
+    reportStorefront: () => {
+      navigation.navigate('ReportStorefront', {
+        storefront,
+        entryMode: 'general_report',
+      });
+    },
+    writeReview: () =>
+      navigation.navigate('WriteReview', {
+        storefront,
+        existingReview: myReview ?? undefined,
+      }),
   };
 }

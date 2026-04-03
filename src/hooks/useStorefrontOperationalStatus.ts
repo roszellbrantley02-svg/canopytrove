@@ -1,68 +1,12 @@
 import React from 'react';
-import { StorefrontSummary } from '../types/storefront';
-import {
-  getStorefrontOperationalEnrichment,
-  hasStorefrontOperationalConfig,
-} from '../services/storefrontOperationalDataService';
-
-function getInitialOpenNow(storefront: StorefrontSummary) {
-  return storefront.placeId?.trim() ? storefront.openNow : null;
-}
+import type { StorefrontSummary } from '../types/storefront';
 
 export function useStorefrontOperationalStatus(storefront: StorefrontSummary) {
-  const [openNow, setOpenNow] = React.useState<boolean | null>(() => getInitialOpenNow(storefront));
-  const [isLoading, setIsLoading] = React.useState(() =>
-    hasStorefrontOperationalConfig() && !storefront.placeId?.trim()
+  return React.useMemo(
+    () => ({
+      openNow: typeof storefront.openNow === 'boolean' ? storefront.openNow : null,
+      isLoading: false,
+    }),
+    [storefront.openNow],
   );
-
-  React.useEffect(() => {
-    let alive = true;
-    const hasConfig = hasStorefrontOperationalConfig();
-    const initialOpenNow = getInitialOpenNow(storefront);
-
-    setOpenNow(initialOpenNow);
-    setIsLoading(hasConfig && initialOpenNow === null);
-
-    if (!hasConfig) {
-      return () => {
-        alive = false;
-      };
-    }
-
-    void (async () => {
-      try {
-        const enrichment = await getStorefrontOperationalEnrichment(storefront);
-        if (!alive) {
-          return;
-        }
-
-        if (typeof enrichment?.openNow === 'boolean') {
-          setOpenNow(enrichment.openNow);
-        }
-      } finally {
-        if (alive) {
-          setIsLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [
-    storefront.id,
-    storefront.placeId,
-    storefront.openNow,
-    storefront.displayName,
-    storefront.addressLine1,
-    storefront.city,
-    storefront.zip,
-    storefront.coordinates.latitude,
-    storefront.coordinates.longitude,
-  ]);
-
-  return {
-    openNow,
-    isLoading,
-  };
 }

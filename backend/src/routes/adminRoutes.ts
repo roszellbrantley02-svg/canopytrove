@@ -1,54 +1,46 @@
 import { Router } from 'express';
 import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
+import { ensureAdminApiKeyConfigured, ensureAdminApiKeyMatch } from '../http/adminAccess';
 import {
   getBackendSeedCounts,
   seedBackendFirestoreCollections,
 } from '../services/firestoreSeedService';
 import { dispatchFavoriteDealAlertsForAllProfiles } from '../services/favoriteDealAlertService';
-import { clearStorefrontBackendCache } from '../services/storefrontCacheService';
+import {
+  clearStorefrontBackendCache,
+  invalidateCachedStorefrontDetail,
+} from '../services/storefrontCacheService';
 import { clearBackendStorefrontSourceCaches, warmBackendStorefrontSource } from '../sources';
+import { adminDiscoveryRoutes } from './adminDiscoveryRoutes';
 import {
   getAdminReviewReadiness,
   getAdminReviewQueue,
+  getAdminReviewPhotoQueue,
   parseAdminReviewBody,
   reviewBusinessVerification,
   reviewIdentityVerification,
   reviewOwnerClaim,
+  reviewStorefrontPhoto,
   reviewStorefrontReport,
 } from '../services/adminReviewService';
+import {
+  exportMemberEmailSubscriptionsCsv,
+  listMemberEmailSubscriptions,
+} from '../services/memberEmailSubscriptionService';
+import { listResendWebhookEvents } from '../services/resendWebhookService';
 
 export const adminRoutes = Router();
 adminRoutes.use(
+  '/admin',
   createRateLimitMiddleware({
     name: 'admin',
     windowMs: 10 * 60_000,
     max: serverConfig.adminRateLimitPerTenMinutes,
   })
 );
-
-adminRoutes.use('/admin/reviews', (request, response, next) => {
-  const readiness = getAdminReviewReadiness();
-  const expectedApiKey = process.env.ADMIN_API_KEY?.trim() || serverConfig.adminApiKey;
-  if (!expectedApiKey) {
-    response.status(503).json({
-      ok: false,
-      error: `Admin review is not fully configured. Missing: ${readiness.missingRequirements.join(', ')}.`,
-    });
-    return;
-  }
-
-  const providedApiKey = request.header('x-admin-api-key')?.trim();
-  if (providedApiKey !== expectedApiKey) {
-    response.status(401).json({
-      ok: false,
-      error: 'Invalid admin API key.',
-    });
-    return;
-  }
-
-  next();
-});
+adminRoutes.use('/admin', ensureAdminApiKeyConfigured);
+adminRoutes.use('/admin', ensureAdminApiKeyMatch);
 
 adminRoutes.use('/admin/reviews', (_request, response, next) => {
   const readiness = getAdminReviewReadiness();
@@ -118,6 +110,53 @@ adminRoutes.post('/admin/dispatch-favorite-deal-alerts', async (_request, respon
   }
 });
 
+adminRoutes.get('/admin/email-subscriptions', async (request, response) => {
+  try {
+    const includeUnsubscribed = request.query.includeUnsubscribed === 'true';
+    const result = await listMemberEmailSubscriptions({
+      includeUnsubscribed,
+    });
+    if (request.query.format === 'csv') {
+      response.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      response.setHeader(
+        'Content-Disposition',
+        'attachment; filename="canopytrove-email-subscriptions.csv"'
+      );
+      response.send(exportMemberEmailSubscriptionsCsv(result.items));
+      return;
+    }
+
+    response.json({
+      ok: true,
+      ...result,
+    });
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown email subscription export failure',
+    });
+  }
+});
+
+adminRoutes.get('/admin/email-delivery-events', async (request, response) => {
+  try {
+    const rawLimit =
+      typeof request.query.limit === 'string' ? Number.parseInt(request.query.limit, 10) : NaN;
+    const limit = Number.isFinite(rawLimit) ? rawLimit : undefined;
+    response.json({
+      ok: true,
+      ...(await listResendWebhookEvents({ limit })),
+    });
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown email delivery event listing failure',
+    });
+  }
+});
+
+adminRoutes.use('/admin/discovery', adminDiscoveryRoutes);
+
 adminRoutes.get('/admin/reviews/queue', async (request, response) => {
   try {
     response.json(await getAdminReviewQueue(request.query.limit));
@@ -125,6 +164,20 @@ adminRoutes.get('/admin/reviews/queue', async (request, response) => {
     response.status(500).json({
       ok: false,
       error: error instanceof Error ? error.message : 'Unknown admin review failure',
+    });
+  }
+});
+
+adminRoutes.get('/admin/reviews/photo-moderation/queue', async (request, response) => {
+  try {
+    response.json({
+      ok: true,
+      reviewPhotos: await getAdminReviewPhotoQueue(request.query.limit),
+    });
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown review-photo moderation failure',
     });
   }
 });
@@ -186,6 +239,22 @@ adminRoutes.post('/admin/reviews/storefront-reports/:reportId', async (request, 
     response.status(400).json({
       ok: false,
       error: error instanceof Error ? error.message : 'Unknown storefront report review failure',
+    });
+  }
+});
+
+adminRoutes.post('/admin/reviews/photo-moderation/:photoId', async (request, response) => {
+  try {
+    const result = await reviewStorefrontPhoto(
+      request.params.photoId,
+      parseAdminReviewBody(request.body)
+    );
+    invalidateCachedStorefrontDetail(result.session.storefrontId);
+    response.json(result);
+  } catch (error) {
+    response.status(400).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown review-photo moderation failure',
     });
   }
 });

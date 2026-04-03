@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { MarketArea } from '../types/storefront';
+import type { MarketArea } from '../types/storefront';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 
 type MarketSelectorProps = {
@@ -17,6 +17,10 @@ function MarketSelectorComponent({ areas, selectedAreaId, onSelect }: MarketSele
           key={area.id}
           onPress={() => onSelect(area.id)}
           style={[styles.chip, area.id === selectedAreaId && styles.chipActive]}
+          accessibilityRole="radio"
+          accessibilityLabel={area.label}
+          accessibilityHint="Selects this market area for browsing."
+          accessibilityState={{ selected: area.id === selectedAreaId }}
         >
           <Text style={[styles.chipText, area.id === selectedAreaId && styles.chipTextActive]}>
             {area.label}

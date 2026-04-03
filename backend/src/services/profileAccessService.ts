@@ -26,7 +26,54 @@ function getBearerToken(request: Request) {
   return token;
 }
 
-async function getVerifiedRequestAccountId(request: Request) {
+function getTestRequestAccountId(request: Request, allowTestHeader: boolean) {
+  if (!allowTestHeader || process.env.NODE_ENV !== 'test') {
+    return null;
+  }
+
+  const accountId = request.header('x-canopy-test-account-id')?.trim();
+  return accountId || null;
+}
+
+function getTestBearerAccountId(request: Request) {
+  if (process.env.NODE_ENV !== 'test') {
+    return undefined;
+  }
+
+  const token = getBearerToken(request);
+  if (!token) {
+    return undefined;
+  }
+
+  if (token.startsWith('test-authenticated:')) {
+    const accountId = token.slice('test-authenticated:'.length).trim();
+    return accountId || null;
+  }
+
+  if (token.startsWith('test-invalid')) {
+    return null;
+  }
+
+  return undefined;
+}
+
+export async function resolveVerifiedRequestAccountId(
+  request: Request,
+  options?: {
+    allowTestHeader?: boolean;
+    invalidTokenBehavior?: 'throw' | 'ignore';
+  }
+) {
+  const testAccountId = getTestRequestAccountId(request, options?.allowTestHeader ?? false);
+  if (testAccountId) {
+    return testAccountId;
+  }
+
+  const testBearerAccountId = getTestBearerAccountId(request);
+  if (testBearerAccountId !== undefined) {
+    return testBearerAccountId;
+  }
+
   const token = getBearerToken(request);
   if (!token) {
     return null;
@@ -41,6 +88,10 @@ async function getVerifiedRequestAccountId(request: Request) {
     const decodedToken = await auth.verifyIdToken(token);
     return decodedToken.uid;
   } catch {
+    if (options?.invalidTokenBehavior === 'ignore') {
+      return null;
+    }
+
     throw new ProfileAccessError('Invalid authentication token.', 401);
   }
 }
@@ -61,7 +112,7 @@ function ensureAnonymousAccessAllowed(profile: AppProfileApiDocument, accountId:
 }
 
 export async function ensureProfileReadAccess(request: Request, profileId: string) {
-  const accountId = await getVerifiedRequestAccountId(request);
+  const accountId = await resolveVerifiedRequestAccountId(request);
   const profile = await getProfile(profileId);
 
   ensureAnonymousAccessAllowed(profile, accountId);
@@ -77,7 +128,7 @@ export async function ensureProfileReadAccess(request: Request, profileId: strin
 }
 
 export async function ensureProfileWriteAccess(request: Request, profileId: string) {
-  const accountId = await getVerifiedRequestAccountId(request);
+  const accountId = await resolveVerifiedRequestAccountId(request);
   const currentProfile = await getProfile(profileId);
 
   ensureAnonymousAccessAllowed(currentProfile, accountId);

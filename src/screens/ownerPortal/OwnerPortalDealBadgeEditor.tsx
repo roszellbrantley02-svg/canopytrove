@@ -6,7 +6,7 @@ import {
   getStorefrontPromotionOverride,
   saveStorefrontPromotionOverride,
 } from '../../services/storefrontPromotionOverrideService';
-import { StorefrontSummary } from '../../types/storefront';
+import type { StorefrontSummary } from '../../types/storefront';
 import {
   formatStorefrontPromotionExpiry,
   getStorefrontPromotionBadges,
@@ -16,7 +16,7 @@ import {
 } from '../../utils/storefrontPromotions';
 import { ownerPortalStyles as styles } from './ownerPortalStyles';
 
-const QUICK_BADGES = ['10% Off', '20% Off', 'Hot Deal', 'Fresh Drop', 'Bundle Deal'];
+const QUICK_BADGES = ['10% Off', '20% Off', 'Today Only', 'Fresh Drop', 'Bundle Deal'];
 const DURATION_OPTIONS = [
   { label: '2h', hours: 2 },
   { label: '6h', hours: 6 },
@@ -30,11 +30,21 @@ type OwnerPortalDealBadgeEditorProps = {
 };
 
 export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeEditorProps) {
-  const [badges, setBadges] = React.useState<string[]>(() => getStorefrontPromotionBadges(storefront));
+  const initialBadges = React.useMemo(
+    () =>
+      getStorefrontPromotionBadges({
+        promotionBadges: storefront.promotionBadges,
+        promotionText: storefront.promotionText,
+      }),
+    [storefront.promotionBadges, storefront.promotionText],
+  );
+  const [badges, setBadges] = React.useState<string[]>(() => initialBadges);
   const [badgeDraft, setBadgeDraft] = React.useState('');
   const [durationHours, setDurationHours] = React.useState<number>(24);
   const [customDurationInput, setCustomDurationInput] = React.useState('');
-  const [expiresAt, setExpiresAt] = React.useState<string | null>(storefront.promotionExpiresAt ?? null);
+  const [expiresAt, setExpiresAt] = React.useState<string | null>(
+    storefront.promotionExpiresAt ?? null,
+  );
   const [statusText, setStatusText] = React.useState<string | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
 
@@ -48,7 +58,7 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
       }
 
       if (!override) {
-        setBadges(getStorefrontPromotionBadges(storefront));
+        setBadges(initialBadges);
         setExpiresAt(storefront.promotionExpiresAt ?? null);
         return;
       }
@@ -60,9 +70,12 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
     return () => {
       alive = false;
     };
-  }, [storefront.id, storefront.promotionBadges, storefront.promotionExpiresAt, storefront.promotionText]);
+  }, [initialBadges, storefront.id, storefront.promotionExpiresAt]);
 
-  const normalizedBadges = React.useMemo(() => normalizeStorefrontPromotionBadges(badges), [badges]);
+  const normalizedBadges = React.useMemo(
+    () => normalizeStorefrontPromotionBadges(badges),
+    [badges],
+  );
   const previewStorefront = React.useMemo<StorefrontSummary>(
     () => ({
       ...storefront,
@@ -70,7 +83,7 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
       promotionText: getStorefrontPromotionTextFromBadges(normalizedBadges),
       promotionExpiresAt: expiresAt,
     }),
-    [expiresAt, normalizedBadges, storefront]
+    [expiresAt, normalizedBadges, storefront],
   );
 
   const canAddBadge =
@@ -79,14 +92,11 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
   const hasCustomDuration =
     Number.isFinite(customDurationHours) && customDurationHours >= 1 && customDurationHours <= 720;
 
-  const handleAddBadge = React.useCallback(
-    (nextBadge: string) => {
-      setBadges((current) => normalizeStorefrontPromotionBadges([...current, nextBadge]));
-      setBadgeDraft('');
-      setStatusText(null);
-    },
-    []
-  );
+  const handleAddBadge = React.useCallback((nextBadge: string) => {
+    setBadges((current) => normalizeStorefrontPromotionBadges([...current, nextBadge]));
+    setBadgeDraft('');
+    setStatusText(null);
+  }, []);
 
   const handleRemoveBadge = React.useCallback((badge: string) => {
     setBadges((current) => current.filter((entry) => entry !== badge));
@@ -106,8 +116,8 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
       setExpiresAt(override?.expiresAt ?? null);
       setStatusText(
         override
-          ? 'Live deal badges saved. Nearby, Browse, and Hot Deals will refresh with this storefront update.'
-          : 'All live deal badges were cleared from this storefront.'
+          ? 'Live hot-deal badges saved. Nearby, Browse, and the Hot Deals lane will refresh with this storefront update.'
+          : 'All live deal badges were cleared from this storefront.',
       );
     } catch (error) {
       setStatusText(error instanceof Error ? error.message : 'Unable to save live deal badges.');
@@ -144,7 +154,9 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
       />
 
       <Text style={styles.helperText}>
-        Add up to {MAX_STOREFRONT_PROMOTION_BADGES} short badges. Any active badge turns the card into a hot deal and applies the red treatment automatically.
+        Add up to {MAX_STOREFRONT_PROMOTION_BADGES} short badges. Any active badge stack turns the
+        card into the hot-deal lane automatically. Use the planner above when you want the separate
+        owner-highlight treatment instead.
       </Text>
 
       <View style={styles.inlineActionRow}>
@@ -159,7 +171,11 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
         <Pressable
           disabled={!canAddBadge}
           onPress={() => handleAddBadge(badgeDraft)}
-          style={[styles.secondaryButton, styles.inlineButton, !canAddBadge && styles.buttonDisabled]}
+          style={[
+            styles.secondaryButton,
+            styles.inlineButton,
+            !canAddBadge && styles.buttonDisabled,
+          ]}
         >
           <Text style={styles.secondaryButtonText}>Add Badge</Text>
         </Pressable>
@@ -174,7 +190,8 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
             style={[
               styles.choiceChip,
               normalizedBadges.includes(badge) && styles.choiceChipSelected,
-              normalizedBadges.length >= MAX_STOREFRONT_PROMOTION_BADGES && !normalizedBadges.includes(badge)
+              normalizedBadges.length >= MAX_STOREFRONT_PROMOTION_BADGES &&
+              !normalizedBadges.includes(badge)
                 ? styles.buttonDisabled
                 : null,
             ]}
@@ -205,7 +222,9 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
             </Pressable>
           ))
         ) : (
-          <Text style={styles.helperText}>No live badges yet. Add one to turn the card into a hot deal.</Text>
+          <Text style={styles.helperText}>
+            No live badges yet. Add one to turn the card into a hot deal.
+          </Text>
         )}
       </View>
 
@@ -220,9 +239,7 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
                 onPress={() => setDurationHours(option.hours)}
                 style={[styles.choiceChip, selected && styles.choiceChipSelected]}
               >
-                <Text
-                  style={[styles.choiceChipText, selected && styles.choiceChipTextSelected]}
-                >
+                <Text style={[styles.choiceChipText, selected && styles.choiceChipTextSelected]}>
                   {option.label}
                 </Text>
               </Pressable>
@@ -245,7 +262,11 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
               setDurationHours(customDurationHours);
               setStatusText(null);
             }}
-            style={[styles.secondaryButton, styles.inlineButton, !hasCustomDuration && styles.buttonDisabled]}
+            style={[
+              styles.secondaryButton,
+              styles.inlineButton,
+              !hasCustomDuration && styles.buttonDisabled,
+            ]}
           >
             <Text style={styles.secondaryButtonText}>Use Custom</Text>
           </Pressable>
@@ -253,7 +274,9 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
         <Text style={styles.helperText}>Custom duration accepts 1 to 720 hours.</Text>
       </View>
 
-      {expiresAt ? <Text style={styles.successText}>{formatStorefrontPromotionExpiry(expiresAt)}</Text> : null}
+      {expiresAt ? (
+        <Text style={styles.successText}>{formatStorefrontPromotionExpiry(expiresAt)}</Text>
+      ) : null}
       {statusText ? <Text style={styles.helperText}>{statusText}</Text> : null}
 
       <View style={styles.inlineActionRow}>
@@ -262,9 +285,13 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
           onPress={() => {
             void handleSave();
           }}
-          style={[styles.primaryButton, styles.inlineButtonPrimary, isSaving && styles.buttonDisabled]}
+          style={[
+            styles.primaryButton,
+            styles.inlineButtonPrimary,
+            isSaving && styles.buttonDisabled,
+          ]}
         >
-          <Text style={styles.primaryButtonText}>{isSaving ? 'Saving...' : 'Save Live Deal'}</Text>
+          <Text style={styles.primaryButtonText}>{isSaving ? 'Saving...' : 'Save Hot Deal'}</Text>
         </Pressable>
         <Pressable
           disabled={isSaving || normalizedBadges.length === 0}
@@ -277,7 +304,7 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
             (isSaving || normalizedBadges.length === 0) && styles.buttonDisabled,
           ]}
         >
-          <Text style={styles.secondaryButtonText}>Clear Deal</Text>
+          <Text style={styles.secondaryButtonText}>Clear Hot Deal</Text>
         </Pressable>
       </View>
     </View>

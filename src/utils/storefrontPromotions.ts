@@ -1,13 +1,12 @@
-import { StorefrontSummary } from '../types/storefront';
+import type { StorefrontSummary } from '../types/storefront';
 
 export const MAX_STOREFRONT_PROMOTION_BADGES = 5;
 const MAX_STOREFRONT_PROMOTION_BADGE_LENGTH = 24;
+const PROMOTION_BULLET = '\u2022';
+const PROMOTION_SEPARATOR_PATTERN = new RegExp(`[|${PROMOTION_BULLET}]`, 'g');
 
 function normalizePromotionBadge(value: string) {
-  return value
-    .trim()
-    .replace(/\s+/g, ' ')
-    .slice(0, MAX_STOREFRONT_PROMOTION_BADGE_LENGTH);
+  return value.trim().replace(/\s+/g, ' ').slice(0, MAX_STOREFRONT_PROMOTION_BADGE_LENGTH);
 }
 
 export function normalizeStorefrontPromotionBadges(values: Array<string | null | undefined>) {
@@ -37,7 +36,7 @@ export function normalizeStorefrontPromotionBadges(values: Array<string | null |
 }
 
 export function getStorefrontPromotionBadges(
-  summary: Pick<StorefrontSummary, 'promotionBadges' | 'promotionText'>
+  summary: Pick<StorefrontSummary, 'promotionBadges' | 'promotionText'>,
 ) {
   if (summary.promotionBadges?.length) {
     return normalizeStorefrontPromotionBadges(summary.promotionBadges);
@@ -46,9 +45,9 @@ export function getStorefrontPromotionBadges(
   if (summary.promotionText?.trim()) {
     return normalizeStorefrontPromotionBadges(
       summary.promotionText
-        .split(/[|•]/g)
+        .split(PROMOTION_SEPARATOR_PATTERN)
         .map((value) => value.trim())
-        .filter(Boolean)
+        .filter(Boolean),
     );
   }
 
@@ -57,13 +56,15 @@ export function getStorefrontPromotionBadges(
 
 export function getStorefrontPromotionTextFromBadges(badges: string[]) {
   const normalized = normalizeStorefrontPromotionBadges(badges);
-  return normalized.length ? normalized.join(' • ') : null;
+  return normalized.length ? normalized.join(` ${PROMOTION_BULLET} `) : null;
 }
 
 export function hasStorefrontPromotion(
-  summary: Pick<StorefrontSummary, 'promotionBadges' | 'promotionText'>
+  summary: Pick<StorefrontSummary, 'promotionBadges' | 'promotionText' | 'activePromotionCount'>,
 ) {
-  return getStorefrontPromotionBadges(summary).length > 0;
+  return (
+    getStorefrontPromotionBadges(summary).length > 0 || (summary.activePromotionCount ?? 0) > 0
+  );
 }
 
 export function formatStorefrontPromotionExpiry(expiresAt: string | null | undefined) {

@@ -1,10 +1,7 @@
-import {
-  NavigationState,
-  PartialState,
-} from '@react-navigation/native';
+import type { NavigationState, PartialState } from '@react-navigation/native';
 
 export function getActiveRouteName(
-  state: NavigationState | PartialState<NavigationState> | undefined
+  state: NavigationState | PartialState<NavigationState> | undefined,
 ): string | null {
   if (!state?.routes?.length) {
     return null;

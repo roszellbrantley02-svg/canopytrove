@@ -1,4 +1,4 @@
-import {
+import type {
   AppProfile,
   GamificationEventRequest,
   GamificationRewardResult,
@@ -9,6 +9,7 @@ import {
   StorefrontReviewHelpfulResponse,
   StorefrontReviewSubmissionInput,
   StorefrontReviewSubmissionResponse,
+  StorefrontReviewUpdateInput,
 } from '../types/storefront';
 import {
   clearCachedValue,
@@ -17,6 +18,26 @@ import {
   createProfileStateCacheKey,
   requestJson,
 } from './storefrontBackendHttp';
+
+function requestStorefrontBackendJson<T>(
+  pathname: string,
+  init?: Omit<RequestInit, 'body'> & { body?: unknown },
+) {
+  const body =
+    init && Object.prototype.hasOwnProperty.call(init, 'body')
+      ? JSON.stringify(init.body)
+      : undefined;
+  const headers = new Headers(init?.headers);
+  if (body !== undefined) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  return requestJson<T>(pathname, {
+    ...init,
+    headers: body === undefined ? init?.headers : headers,
+    body,
+  });
+}
 
 function clearProfileLinkedCache(profileId: string) {
   clearCachedValue(createProfileCacheKey(profileId));
@@ -28,7 +49,7 @@ function clearProfileLinkedCache(profileId: string) {
 export function seedStorefrontBackendFirestore() {
   clearCachedValue('seed-status');
   clearCachedValue('health');
-  return requestJson<{
+  return requestStorefrontBackendJson<{
     ok: boolean;
     summaryCount: number;
     detailCount: number;
@@ -39,33 +60,27 @@ export function seedStorefrontBackendFirestore() {
 
 export function postStorefrontBackendGamificationEvent(
   profileId: string,
-  event: GamificationEventRequest
+  event: GamificationEventRequest,
 ) {
   clearProfileLinkedCache(profileId);
 
-  return requestJson<GamificationRewardResult>(
+  return requestStorefrontBackendJson<GamificationRewardResult>(
     `/gamification/${encodeURIComponent(profileId)}/events`,
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(event),
-    }
+      body: event,
+    },
   );
 }
 
 export function submitStorefrontBackendReview(input: StorefrontReviewSubmissionInput) {
   clearProfileLinkedCache(input.profileId);
 
-  return requestJson<StorefrontReviewSubmissionResponse>(
+  return requestStorefrontBackendJson<StorefrontReviewSubmissionResponse>(
     `/storefront-details/${encodeURIComponent(input.storefrontId)}/reviews`,
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+      body: {
         profileId: input.profileId,
         authorName: input.authorName,
         rating: input.rating,
@@ -73,78 +88,93 @@ export function submitStorefrontBackendReview(input: StorefrontReviewSubmissionI
         tags: input.tags,
         gifUrl: input.gifUrl ?? null,
         photoCount: input.photoCount ?? 0,
-      }),
-    }
+        photoUploadIds: input.photoUploadIds ?? [],
+      },
+    },
+  );
+}
+
+export function updateStorefrontBackendReview(input: StorefrontReviewUpdateInput) {
+  clearProfileLinkedCache(input.profileId);
+
+  return requestStorefrontBackendJson<StorefrontReviewSubmissionResponse>(
+    `/storefront-details/${encodeURIComponent(input.storefrontId)}/reviews/${encodeURIComponent(input.reviewId)}`,
+    {
+      method: 'PUT',
+      body: {
+        profileId: input.profileId,
+        authorName: input.authorName,
+        rating: input.rating,
+        text: input.text,
+        tags: input.tags,
+        gifUrl: input.gifUrl ?? null,
+        photoCount: input.photoCount ?? 0,
+        photoUploadIds: input.photoUploadIds ?? [],
+      },
+    },
   );
 }
 
 export function submitStorefrontBackendReport(input: StorefrontReportSubmissionInput) {
   clearProfileLinkedCache(input.profileId);
 
-  return requestJson<StorefrontReportSubmissionResponse>(
+  return requestStorefrontBackendJson<StorefrontReportSubmissionResponse>(
     `/storefront-details/${encodeURIComponent(input.storefrontId)}/reports`,
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+      body: {
         profileId: input.profileId,
         authorName: input.authorName,
         reason: input.reason,
         description: input.description,
-      }),
-    }
+        reportTarget: input.reportTarget ?? 'storefront',
+        reportedReviewId: input.reportedReviewId ?? undefined,
+        reportedReviewAuthorProfileId: input.reportedReviewAuthorProfileId ?? undefined,
+        reportedReviewAuthorName: input.reportedReviewAuthorName ?? undefined,
+        reportedReviewExcerpt: input.reportedReviewExcerpt ?? undefined,
+      },
+    },
   );
 }
 
 export function submitStorefrontBackendReviewHelpful(input: StorefrontReviewHelpfulInput) {
   clearCachedValue('leaderboard:');
 
-  return requestJson<StorefrontReviewHelpfulResponse>(
+  return requestStorefrontBackendJson<StorefrontReviewHelpfulResponse>(
     `/storefront-details/${encodeURIComponent(input.storefrontId)}/reviews/${encodeURIComponent(
-      input.reviewId
+      input.reviewId,
     )}/helpful`,
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+      body: {
         profileId: input.profileId,
-      }),
-    }
+      },
+    },
   );
 }
 
 export function saveStorefrontBackendProfileState(profileState: StorefrontProfileState) {
   clearProfileLinkedCache(profileState.profile.id);
-  return requestJson<StorefrontProfileState>(
+  return requestStorefrontBackendJson<StorefrontProfileState>(
     `/profile-state/${encodeURIComponent(profileState.profile.id)}`,
     {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(profileState),
-    }
+      body: profileState,
+    },
   );
 }
 
 export function saveStorefrontBackendProfile(profile: AppProfile) {
   clearProfileLinkedCache(profile.id);
-  return requestJson<AppProfile>(`/profiles/${encodeURIComponent(profile.id)}`, {
+  return requestStorefrontBackendJson<AppProfile>(`/profiles/${encodeURIComponent(profile.id)}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(profile),
+    body: profile,
   });
 }
 
 export function deleteStorefrontBackendProfile(profileId: string) {
   clearProfileLinkedCache(profileId);
-  return requestJson<{
+  return requestStorefrontBackendJson<{
     ok: boolean;
     profileId: string;
   }>(`/profiles/${encodeURIComponent(profileId)}`, {
@@ -160,7 +190,7 @@ export function syncStorefrontBackendFavoriteDealAlerts(input: {
 }) {
   clearProfileLinkedCache(input.profileId);
 
-  return requestJson<{
+  return requestStorefrontBackendJson<{
     notifications: Array<{
       storefrontId: string;
       storefrontName: string;
@@ -176,13 +206,10 @@ export function syncStorefrontBackendFavoriteDealAlerts(input: {
     };
   }>(`/profiles/${encodeURIComponent(input.profileId)}/favorite-deal-alerts/sync`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+    body: {
       savedStorefrontIds: input.savedStorefrontIds,
       allowNotifications: input.allowNotifications,
       devicePushToken: input.devicePushToken ?? undefined,
-    }),
+    },
   });
 }

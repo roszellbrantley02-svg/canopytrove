@@ -1,6 +1,7 @@
 import React from 'react';
+import { View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   useStorefrontProfileController,
   useStorefrontQueryController,
@@ -8,10 +9,12 @@ import {
   useStorefrontRouteController,
 } from '../context/StorefrontController';
 import { BrowseFiltersBar } from '../components/BrowseFiltersBar';
+import { ErrorRecoveryCard } from '../components/ErrorRecoveryCard';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
-import { useBrowseSummaries } from '../hooks/useStorefrontData';
-import { RootStackParamList } from '../navigation/RootNavigator';
+import { useBrowseSummaries } from '../hooks/useStorefrontSummaryData';
+import { spacing } from '../theme/tokens';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { storefrontRepository } from '../repositories/storefrontRepository';
 import {
   classifyLocationInput,
@@ -20,7 +23,7 @@ import {
   trackStorefrontImpressions,
 } from '../services/analyticsService';
 import { openStorefrontRoute } from '../services/navigationService';
-import { StorefrontSummary } from '../types/storefront';
+import type { StorefrontSummary } from '../types/storefront';
 import {
   BrowseContextBar,
   BrowseEmptyState,
@@ -28,7 +31,7 @@ import {
   BrowseStoreList,
 } from './browse/BrowseSections';
 
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 8;
 
 export function BrowseScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -56,17 +59,19 @@ export function BrowseScreen() {
   const {
     gamificationState: { visitedStorefrontIds },
   } = useStorefrontRewardsController();
+  const isMemberAuthenticated = authSession.status === 'authenticated';
+  const effectiveBrowseHotDealsOnly = isMemberAuthenticated ? browseHotDealsOnly : false;
 
   const query = React.useMemo(
     () => ({
       ...storefrontQuery,
-      areaId: 'all',
-      searchQuery: '',
+      areaId: undefined,
+      hotDealsOnly: effectiveBrowseHotDealsOnly,
     }),
-    [storefrontQuery]
+    [effectiveBrowseHotDealsOnly, storefrontQuery],
   );
 
-  const { data, isLoading } = useBrowseSummaries(query, browseSortKey, PAGE_SIZE, offset);
+  const { data, error, isLoading } = useBrowseSummaries(query, browseSortKey, PAGE_SIZE, offset);
 
   const handleApplyLocationQuery = React.useCallback(() => {
     void applyLocationQuery().then((didApply) => {
@@ -79,29 +84,49 @@ export function BrowseScreen() {
   }, [applyLocationQuery, locationQuery]);
 
   const handleToggleHotDeals = React.useCallback(() => {
-    const nextValue = !browseHotDealsOnly;
+    if (!isMemberAuthenticated) {
+      navigation.navigate('HotDeals');
+      return;
+    }
+
+    const nextValue = !effectiveBrowseHotDealsOnly;
     setBrowseHotDealsOnly(nextValue);
     trackAnalyticsEvent('hot_deals_toggled', {
       source: 'browse',
       enabled: nextValue,
     });
-  }, [browseHotDealsOnly, setBrowseHotDealsOnly]);
+  }, [effectiveBrowseHotDealsOnly, isMemberAuthenticated, navigation, setBrowseHotDealsOnly]);
 
   const handleClearHotDeals = React.useCallback(() => {
     setBrowseHotDealsOnly(false);
   }, [setBrowseHotDealsOnly]);
 
+  const handleClearSearch = React.useCallback(() => {
+    setSearchQuery('');
+  }, [setSearchQuery]);
+
+  const handleRetryError = React.useCallback(() => {
+    // The error will be cleared on the next data fetch when dependencies change
+    // or user can manually trigger a refresh by changing filters
+    setOffset(0);
+  }, []);
+
   React.useEffect(() => {
-    if (!searchQuery) {
+    if (isMemberAuthenticated || !browseHotDealsOnly) {
       return;
     }
 
-    setSearchQuery('');
-  }, [searchQuery, setSearchQuery]);
+    setBrowseHotDealsOnly(false);
+  }, [browseHotDealsOnly, isMemberAuthenticated, setBrowseHotDealsOnly]);
 
   React.useEffect(() => {
+    React.startTransition(() => {
+      setItems([]);
+    });
     setOffset(0);
-  }, [activeLocationLabel, browseHotDealsOnly, browseSortKey]);
+    lastPrefetchedPageKeyRef.current = '';
+    prefetchedDetailIdsRef.current = new Set();
+  }, [activeLocationLabel, browseSortKey, effectiveBrowseHotDealsOnly, searchQuery]);
 
   React.useEffect(() => {
     if (isLoading) {
@@ -128,7 +153,7 @@ export function BrowseScreen() {
 
     trackStorefrontImpressions(
       items.map((storefront) => storefront.id),
-      'Browse'
+      'Browse',
     );
     trackStorefrontPromotionImpressions(items, 'Browse');
   }, [items]);
@@ -154,7 +179,7 @@ export function BrowseScreen() {
       return;
     }
 
-    const nextPageKey = `${query.areaId}:${query.searchQuery}:${query.origin.latitude.toFixed(3)}:${query.origin.longitude.toFixed(3)}:${browseSortKey}:${offset + PAGE_SIZE}`;
+    const nextPageKey = `${query.areaId ?? 'all'}:${query.searchQuery}:${query.origin.latitude.toFixed(3)}:${query.origin.longitude.toFixed(3)}:${browseSortKey}:${offset + PAGE_SIZE}`;
     if (nextPageKey === lastPrefetchedPageKeyRef.current) {
       return;
     }
@@ -164,27 +189,15 @@ export function BrowseScreen() {
       query,
       browseSortKey,
       PAGE_SIZE,
-      offset + PAGE_SIZE
+      offset + PAGE_SIZE,
     );
   }, [browseSortKey, data.hasMore, isLoading, offset, query]);
-
-  const browseContextText = React.useMemo(() => {
-    const scopeLabel = browseHotDealsOnly ? 'Hot deals only' : 'All verified storefronts';
-    const sortLabel =
-      browseSortKey === 'distance'
-        ? 'distance'
-        : browseSortKey === 'rating'
-          ? 'rating'
-          : 'review volume';
-
-    return `${scopeLabel} | Sorted by ${sortLabel} near ${activeLocationLabel}`;
-  }, [activeLocationLabel, browseHotDealsOnly, browseSortKey]);
 
   return (
     <ScreenShell
       eyebrow="Discovery"
-      title="Browse verified New York dispensaries."
-      subtitle="Set a location, then sort by distance, rating, reviews, or hot deals."
+      title="Browse verified storefronts."
+      subtitle="Set a location, then refine the verified storefront view by distance, rating, reviews, or live offers."
       showTopBar={false}
       showHero={false}
       resetScrollOnFocus={true}
@@ -194,6 +207,9 @@ export function BrowseScreen() {
           locationQuery={locationQuery}
           onLocationQueryChange={setLocationQuery}
           onApplyLocationQuery={handleApplyLocationQuery}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          onClearSearch={handleClearSearch}
           isResolvingLocation={isResolvingLocation}
           locationError={locationError}
           sortKey={browseSortKey}
@@ -204,29 +220,40 @@ export function BrowseScreen() {
               sortKey: nextSortKey,
             });
           }}
-          hotDealsOnly={browseHotDealsOnly}
+          hotDealsOnly={effectiveBrowseHotDealsOnly}
           onToggleHotDeals={handleToggleHotDeals}
         />
       </MotionInView>
 
       <MotionInView delay={160}>
-        <BrowseContextBar text={browseContextText} />
+        <BrowseContextBar
+          locationLabel={activeLocationLabel}
+          searchQuery={searchQuery}
+          sortKey={browseSortKey}
+        />
       </MotionInView>
 
-      {isLoading && items.length === 0 ? (
+      {error && items.length === 0 ? (
+        <View style={{ padding: spacing.xl, paddingTop: spacing.xxl }}>
+          <ErrorRecoveryCard
+            title="Unable to load storefronts"
+            message={error}
+            onRetry={handleRetryError}
+            retryLabel="Refresh"
+          />
+        </View>
+      ) : isLoading && items.length === 0 ? (
         <BrowseSkeletonList count={PAGE_SIZE} delayBase={180} />
       ) : items.length === 0 ? (
         <MotionInView delay={180}>
           <BrowseEmptyState
-            title={browseHotDealsOnly ? 'No hot deals right now.' : 'No storefronts found.'}
-            body={
-              browseHotDealsOnly
-                ? 'No dispensaries in this result set are showing a live deal right now.'
-                : 'Try another location.'
-            }
-            showClearSearch={false}
-            showClearHotDeals={browseHotDealsOnly}
-            onClearSearch={() => undefined}
+            searchQuery={searchQuery}
+            hotDealsOnly={effectiveBrowseHotDealsOnly}
+            locationLabel={activeLocationLabel}
+            errorText={error}
+            showClearSearch={Boolean(searchQuery.trim())}
+            showClearHotDeals={effectiveBrowseHotDealsOnly}
+            onClearSearch={handleClearSearch}
             onClearHotDeals={handleClearHotDeals}
           />
         </MotionInView>
@@ -247,7 +274,7 @@ export function BrowseScreen() {
                 screen: 'Browse',
                 storefrontId: item.id,
                 dealId: item.activePromotionId ?? undefined,
-              }
+              },
             );
             if (item.activePromotionId) {
               trackAnalyticsEvent(
@@ -259,7 +286,7 @@ export function BrowseScreen() {
                   screen: 'Browse',
                   storefrontId: item.id,
                   dealId: item.activePromotionId,
-                }
+                },
               );
             }
             void openStorefrontRoute(item, 'verified', {

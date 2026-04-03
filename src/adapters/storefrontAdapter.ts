@@ -1,5 +1,5 @@
-import { StorefrontDetails, StorefrontSummary } from '../types/storefront';
-import { StorefrontRecord } from '../types/storefrontRecord';
+import type { StorefrontDetails, StorefrontSummary } from '../types/storefront';
+import type { StorefrontRecord } from '../types/storefrontRecord';
 import { normalizeStorefrontHours } from '../utils/storefrontHours';
 import { getStorefrontPromotionBadges } from '../utils/storefrontPromotions';
 
@@ -27,6 +27,7 @@ export function toStorefrontSummary(record: StorefrontRecord): StorefrontSummary
     promotionBadges,
     promotionExpiresAt: record.promotionExpiresAt ?? null,
     activePromotionId: null,
+    activePromotionCount: null,
     favoriteFollowerCount: null,
     menuUrl: null,
     verifiedOwnerBadgeLabel: null,
@@ -54,6 +55,7 @@ export function toStorefrontDetails(record: StorefrontRecord): StorefrontDetails
     verifiedOwnerBadgeLabel: null,
     favoriteFollowerCount: null,
     ownerFeaturedBadges: [],
+    photoCount: record.photoUrls.length,
     appReviewCount: record.appReviewCount,
     appReviews: record.appReviews,
     photoUrls: record.photoUrls,

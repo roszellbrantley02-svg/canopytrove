@@ -1,11 +1,11 @@
 import React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
-import { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import { sendCanopyTrovePasswordReset } from '../services/canopyTroveAuthService';
 import { customerEntryStyles as styles } from './customerEntry/customerEntryStyles';
@@ -51,20 +51,25 @@ export function CanopyTroveForgotPasswordScreen() {
         <View style={styles.heroCard}>
           <View style={styles.heroGlow} />
           <Text style={styles.heroKicker}>Account recovery</Text>
-          <Text style={styles.heroTitle}>Get back into your member account.</Text>
+          <Text style={styles.heroTitle}>Recover your member sign-in.</Text>
           <Text style={styles.heroBody}>
-            Use the email tied to your Canopy Trove member profile and we will send the password reset link there.
+            Use the email tied to your Canopy Trove member profile and we will send the reset link
+            there.
           </Text>
           <View style={styles.summaryStrip}>
             <View style={styles.summaryTile}>
               <Text style={styles.summaryTileValue}>Send</Text>
               <Text style={styles.summaryTileLabel}>Recovery email</Text>
-              <Text style={styles.summaryTileBody}>Start the reset flow from the inbox tied to your member profile.</Text>
+              <Text style={styles.summaryTileBody}>
+                Start the reset flow from the inbox tied to your member profile.
+              </Text>
             </View>
             <View style={styles.summaryTile}>
               <Text style={styles.summaryTileValue}>Return</Text>
               <Text style={styles.summaryTileLabel}>Sign-in flow</Text>
-              <Text style={styles.summaryTileBody}>Use the new password to continue back into the app.</Text>
+              <Text style={styles.summaryTileBody}>
+                Use the new password to continue back into your member account.
+              </Text>
             </View>
           </View>
           <View style={styles.trustRow}>
@@ -78,7 +83,10 @@ export function CanopyTroveForgotPasswordScreen() {
         </View>
       </MotionInView>
       <MotionInView delay={140}>
-        <SectionCard title="Forgot password" body="Use this only for the consumer member account flow. Owner access resets inside the owner portal.">
+        <SectionCard
+          title="Forgot password"
+          body="Use this only for the consumer member account flow. Owner access resets inside the owner portal."
+        >
           <View style={styles.sectionStack}>
             <View style={styles.plannerPanel}>
               <View style={styles.form}>
@@ -92,26 +100,35 @@ export function CanopyTroveForgotPasswordScreen() {
                     keyboardType="email-address"
                     placeholderTextColor="#738680"
                     style={styles.inputPremium}
+                    accessibilityLabel="Email"
+                    accessibilityHint="Enter the email address associated with your member account."
                   />
-                  <Text style={styles.fieldHint}>We will send the reset email to the address tied to your member sign-in.</Text>
+                  <Text style={styles.fieldHint}>
+                    We will send the reset email to the address tied to your member sign-in.
+                  </Text>
                 </View>
                 {errorText ? (
                   <View style={[styles.helperCard, styles.helperCardDanger]}>
-                    <Text style={[styles.helperTitle, styles.helperTitleDanger]}>Reset email failed</Text>
+                    <Text style={[styles.helperTitle, styles.helperTitleDanger]}>
+                      Reset email failed
+                    </Text>
                     <Text style={styles.helperBody}>{errorText}</Text>
                   </View>
                 ) : null}
                 {successText ? (
                   <View style={[styles.helperCard, styles.helperCardSuccess]}>
-                    <Text style={[styles.helperTitle, styles.helperTitleSuccess]}>Reset email sent</Text>
+                    <Text style={[styles.helperTitle, styles.helperTitleSuccess]}>
+                      Reset email sent
+                    </Text>
                     <Text style={styles.helperBody}>{successText}</Text>
                   </View>
                 ) : null}
                 {!errorText && !successText ? (
                   <View style={[styles.helperCard, styles.helperCardWarm]}>
-                    <Text style={styles.helperTitle}>Need to get back in fast?</Text>
+                    <Text style={styles.helperTitle}>Check the same inbox</Text>
                     <Text style={styles.helperBody}>
-                      If the address exists for a member account, the reset email should arrive there shortly.
+                      If the address exists for a member account, the reset email should arrive
+                      there shortly.
                     </Text>
                   </View>
                 ) : null}
@@ -123,7 +140,13 @@ export function CanopyTroveForgotPasswordScreen() {
                 onPress={() => {
                   void handleSubmit();
                 }}
-                style={[styles.primaryButton, (isSubmitting || !canSubmit) && styles.buttonDisabled]}
+                style={[
+                  styles.primaryButton,
+                  (isSubmitting || !canSubmit) && styles.buttonDisabled,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Send reset email"
+                accessibilityHint="Sends a password reset email to your member account email address."
               >
                 <Text style={styles.primaryButtonText}>
                   {isSubmitting ? 'Sending...' : 'Send Reset Email'}
@@ -132,8 +155,11 @@ export function CanopyTroveForgotPasswordScreen() {
               <Pressable
                 onPress={() => navigation.navigate('CanopyTroveSignIn')}
                 style={styles.secondaryButton}
+                accessibilityRole="button"
+                accessibilityLabel="Back to sign in"
+                accessibilityHint="Returns to the sign in screen."
               >
-                <Text style={styles.secondaryButtonText}>Back To Sign In</Text>
+                <Text style={styles.secondaryButtonText}>Back to Sign In</Text>
               </Pressable>
             </View>
           </View>

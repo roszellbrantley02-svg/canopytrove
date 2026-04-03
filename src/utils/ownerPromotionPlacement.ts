@@ -1,8 +1,8 @@
-import {
+import type {
   OwnerPromotionPlacementScope,
   OwnerPromotionPlacementSurface,
 } from '../types/ownerPortal';
-import { StorefrontSummary } from '../types/storefront';
+import type { StorefrontSummary } from '../types/storefront';
 
 export const OWNER_PROMOTION_PLACEMENT_SURFACES: OwnerPromotionPlacementSurface[] = [
   'nearby',
@@ -26,21 +26,21 @@ type PriorityPlacementSummary = Pick<
 >;
 
 export function normalizeOwnerPromotionPlacementSurfaces(
-  values: string[] | null | undefined
+  values: string[] | null | undefined,
 ): OwnerPromotionPlacementSurface[] {
   const allowed = new Set<OwnerPromotionPlacementSurface>(OWNER_PROMOTION_PLACEMENT_SURFACES);
   return Array.from(
     new Set(
       (values ?? []).filter(
         (value): value is OwnerPromotionPlacementSurface =>
-          typeof value === 'string' && allowed.has(value as OwnerPromotionPlacementSurface)
-      )
-    )
+          typeof value === 'string' && allowed.has(value as OwnerPromotionPlacementSurface),
+      ),
+    ),
   ).slice(0, OWNER_PROMOTION_PLACEMENT_SURFACES.length);
 }
 
 function normalizePlacementScope(
-  value: OwnerPromotionPlacementScope | null | undefined
+  value: OwnerPromotionPlacementScope | null | undefined,
 ): OwnerPromotionPlacementScope {
   return value === 'statewide' ? 'statewide' : 'storefront_area';
 }
@@ -59,14 +59,14 @@ export function matchesPriorityPlacement(
   options: {
     surface: OwnerPromotionPlacementSurface;
     areaId?: string | null;
-  }
+  },
 ) {
   if (!summary.activePromotionId) {
     return false;
   }
 
   const placementSurfaces = normalizeOwnerPromotionPlacementSurfaces(
-    summary.promotionPlacementSurfaces
+    summary.promotionPlacementSurfaces,
   );
   if (!placementSurfaces.includes(options.surface)) {
     return false;
@@ -90,7 +90,7 @@ export function getPriorityPlacementRank(
   options: {
     surface: OwnerPromotionPlacementSurface;
     areaId?: string | null;
-  }
+  },
 ) {
   if (!matchesPriorityPlacement(summary, options)) {
     return 0;
@@ -111,7 +111,7 @@ export function sortSummariesByPriorityPlacement<T extends PriorityPlacementSumm
   options: {
     surface: OwnerPromotionPlacementSurface;
     areaId?: string | null;
-  }
+  },
 ) {
   return items
     .map((item, index) => ({

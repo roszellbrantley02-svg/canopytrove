@@ -1,8 +1,13 @@
+import type { Server } from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parse } from 'dotenv';
 
 const initialEnvKeys = new Set(Object.keys(process.env));
+
+function shouldLoadBackendEnvFiles() {
+  return !process.env.K_SERVICE && !process.env.CLOUD_RUN_JOB;
+}
 
 function loadBackendEnv(options?: { includeLocalOverride?: boolean }) {
   const backendRoot = path.resolve(__dirname, '..');
@@ -26,20 +31,150 @@ function loadBackendEnv(options?: { includeLocalOverride?: boolean }) {
   }
 }
 
-loadBackendEnv({ includeLocalOverride: true });
+if (shouldLoadBackendEnvFiles()) {
+  loadBackendEnv({ includeLocalOverride: true });
+}
+
+function stopBackgroundSchedulers(options: {
+  stopOwnerLicenseComplianceScheduler: () => void;
+  stopOwnerPromotionScheduler: () => void;
+  stopRuntimeHealthMonitorScheduler: () => void;
+  stopStorefrontDiscoveryScheduler: () => void;
+}) {
+  options.stopRuntimeHealthMonitorScheduler();
+  options.stopOwnerLicenseComplianceScheduler();
+  options.stopOwnerPromotionScheduler();
+  options.stopStorefrontDiscoveryScheduler();
+}
+
+function registerShutdownHandlers(server: Server, cleanup: () => void) {
+  let shuttingDown = false;
+
+  const shutdown = () => {
+    if (shuttingDown) {
+      return;
+    }
+
+    shuttingDown = true;
+    cleanup();
+    server.close(() => {
+      // Let Cloud Run and local process supervisors terminate naturally.
+    });
+  };
+
+  process.once('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
+  server.once('close', cleanup);
+}
 
 void (async () => {
-  const [{ createApp }, { serverConfig }, { warmBackendStorefrontSource }] = await Promise.all([
-    import('./app'),
-    import('./config'),
-    import('./sources'),
-  ]);
+  const {
+    captureBackendException,
+    initializeBackendMonitoring,
+    installBackendProcessMonitoring,
+  } = await import('./observability/sentry');
+  const { startOwnerLicenseComplianceScheduler } = await import(
+    './services/ownerPortalLicenseComplianceService'
+  );
+  const { stopOwnerLicenseComplianceScheduler } = await import(
+    './services/ownerPortalLicenseComplianceService'
+  );
+  const { startOwnerPromotionScheduler } = await import(
+    './services/ownerPortalPromotionSchedulerService'
+  );
+  const { stopOwnerPromotionScheduler } = await import(
+    './services/ownerPortalPromotionSchedulerService'
+  );
+  const {
+    startRuntimeHealthMonitorScheduler,
+    stopRuntimeHealthMonitorScheduler,
+  } = await import('./services/healthMonitorService');
+  const { startStorefrontDiscoveryScheduler } = await import(
+    './services/storefrontDiscoveryOrchestrationService'
+  );
+  const { stopStorefrontDiscoveryScheduler } = await import(
+    './services/storefrontDiscoveryOrchestrationService'
+  );
+  const { serverConfig } = await import('./config');
 
-  const app = createApp();
+  initializeBackendMonitoring();
+  installBackendProcessMonitoring();
+  const stopSchedulers = () =>
+    stopBackgroundSchedulers({
+      stopOwnerLicenseComplianceScheduler,
+      stopOwnerPromotionScheduler,
+      stopRuntimeHealthMonitorScheduler,
+      stopStorefrontDiscoveryScheduler,
+    });
 
-  await warmBackendStorefrontSource();
+  try {
+    const [{ createApp }, { warmBackendStorefrontSource }] = await Promise.all([
+      import('./app'),
+      import('./sources'),
+    ]);
 
-  app.listen(serverConfig.port, () => {
+    const app = createApp();
+
+    await warmBackendStorefrontSource();
+
+    const server = await new Promise<Server>((resolve, reject) => {
+      const nextServer = app.listen(serverConfig.port, () => {
+        resolve(nextServer);
+      });
+
+      nextServer.once('error', reject);
+    });
+
     console.log(`CanopyTrove backend listening on http://localhost:${serverConfig.port}`);
-  });
+
+    // Start schedulers with graceful degradation - one failing doesn't block others
+    try {
+      startRuntimeHealthMonitorScheduler();
+    } catch (error) {
+      console.warn('Failed to start runtime health monitor scheduler', error);
+    }
+
+    if (serverConfig.ownerLicenseComplianceSchedulerEnabled) {
+      try {
+        startOwnerLicenseComplianceScheduler(serverConfig.ownerLicenseComplianceIntervalHours);
+      } catch (error) {
+        console.warn('Failed to start owner license compliance scheduler', error);
+      }
+    }
+
+    if (serverConfig.ownerPromotionSchedulerEnabled) {
+      try {
+        startOwnerPromotionScheduler(serverConfig.ownerPromotionSweepIntervalMinutes);
+      } catch (error) {
+        console.warn('Failed to start owner promotion scheduler', error);
+      }
+    }
+
+    try {
+      void startStorefrontDiscoveryScheduler();
+    } catch (error) {
+      console.warn('Failed to start storefront discovery scheduler', error);
+    }
+
+    server.once('error', (error) => {
+      captureBackendException(error, {
+        source: 'server-listen',
+        extras: {
+          port: serverConfig.port,
+        },
+      });
+      stopSchedulers();
+    });
+    registerShutdownHandlers(server, stopSchedulers);
+  } catch (error) {
+    stopSchedulers();
+    captureBackendException(error, {
+      source: 'server-startup',
+    });
+    console.error('CanopyTrove backend failed to start', error);
+    // Give async reporters (Sentry flush) a brief window, then exit definitively so
+    // Cloud Run sees a non-zero exit code and restarts the container.
+    process.exitCode = 1;
+    setTimeout(() => process.exit(1), 2_000).unref();
+  }
 })();

@@ -1,7 +1,4 @@
-import {
-  GamificationRewardResult,
-  StorefrontGamificationState,
-} from '../../types/storefront';
+import type { GamificationRewardResult, StorefrontGamificationState } from '../../types/storefront';
 import { CANOPYTROVE_BADGES, CANOPYTROVE_POINTS } from './definitions';
 import {
   finalizeReward,
@@ -49,7 +46,7 @@ type FollowersUpdatedPayload = {
 
 export function applyRouteStartedReward(
   state: StorefrontGamificationState,
-  payload: RouteStartedPayload
+  payload: RouteStartedPayload,
 ): GamificationRewardResult {
   const occurredAt = payload.occurredAt ?? getCurrentIsoDate();
   const alreadyVisited = state.visitedStorefrontIds.includes(payload.storefrontId);
@@ -66,7 +63,7 @@ export function applyRouteStartedReward(
 
 export function applyReviewSubmittedReward(
   state: StorefrontGamificationState,
-  payload: ReviewSubmittedPayload
+  payload: ReviewSubmittedPayload,
 ): GamificationRewardResult {
   const occurredAt = payload.occurredAt ?? getCurrentIsoDate();
   const photoCount = Math.max(0, payload.photoCount ?? 0);
@@ -83,13 +80,13 @@ export function applyReviewSubmittedReward(
       fiveStarReviews: state.fiveStarReviews + (payload.rating === 5 ? 1 : 0),
       oneStarReviews: state.oneStarReviews + (payload.rating === 1 ? 1 : 0),
       lastReviewDate: occurredAt,
-    }
+    },
   );
 }
 
 export function applyPhotoUploadedReward(
   state: StorefrontGamificationState,
-  payload: PhotoUploadedPayload = {}
+  payload: PhotoUploadedPayload = {},
 ): GamificationRewardResult {
   const occurredAt = payload.occurredAt ?? getCurrentIsoDate();
 
@@ -100,25 +97,19 @@ export function applyPhotoUploadedReward(
 
 export function applyHelpfulVoteReceivedReward(
   state: StorefrontGamificationState,
-  payload: HelpfulVoteReceivedPayload = {}
+  payload: HelpfulVoteReceivedPayload = {},
 ): GamificationRewardResult {
   const occurredAt = payload.occurredAt ?? getCurrentIsoDate();
   const count = Math.max(1, payload.count ?? 1);
 
-  return finalizeReward(
-    state,
-    'helpful_vote_received',
-    occurredAt,
-    getHelpfulVotePoints(count),
-    {
-      totalHelpfulVotes: state.totalHelpfulVotes + count,
-    }
-  );
+  return finalizeReward(state, 'helpful_vote_received', occurredAt, getHelpfulVotePoints(count), {
+    totalHelpfulVotes: state.totalHelpfulVotes + count,
+  });
 }
 
 export function applyReportSubmittedReward(
   state: StorefrontGamificationState,
-  payload: ReportSubmittedPayload = {}
+  payload: ReportSubmittedPayload = {},
 ): GamificationRewardResult {
   const occurredAt = payload.occurredAt ?? getCurrentIsoDate();
 
@@ -129,13 +120,13 @@ export function applyReportSubmittedReward(
     CANOPYTROVE_POINTS.report_submitted,
     {
       reportsSubmitted: state.reportsSubmitted + 1,
-    }
+    },
   );
 }
 
 export function applyFriendInvitedReward(
   state: StorefrontGamificationState,
-  payload: FriendInvitedPayload = {}
+  payload: FriendInvitedPayload = {},
 ): GamificationRewardResult {
   const occurredAt = payload.occurredAt ?? getCurrentIsoDate();
   const count = Math.max(1, payload.count ?? 1);
@@ -147,7 +138,7 @@ export function applyFriendInvitedReward(
 
 export function applyFollowersUpdatedReward(
   state: StorefrontGamificationState,
-  payload: FollowersUpdatedPayload
+  payload: FollowersUpdatedPayload,
 ): GamificationRewardResult {
   const occurredAt = payload.occurredAt ?? getCurrentIsoDate();
   const count = Math.max(0, payload.count);
@@ -160,7 +151,7 @@ export function applyFollowersUpdatedReward(
     getFollowerPoints(gainedFollowers),
     {
       followersCount: count,
-    }
+    },
   );
 }
 

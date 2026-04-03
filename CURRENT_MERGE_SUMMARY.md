@@ -495,4 +495,3 @@ After any major feature, recovery step, release step, or infrastructure change:
 - update this file
 - update `MOVE_OFF_COMPUTER_CANOPYTROVE_BASELINE.md` if the canonical path/process changed
 - update `docs/RECOVERY_CHECKLIST.md` if the project state changed
-

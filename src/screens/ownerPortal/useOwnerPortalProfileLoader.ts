@@ -1,6 +1,6 @@
 import React from 'react';
 import { getOwnerProfile } from '../../services/ownerPortalService';
-import { OwnerProfileDocument } from '../../types/ownerPortal';
+import type { OwnerProfileDocument } from '../../types/ownerPortal';
 
 export function useOwnerPortalProfileLoader(ownerUid: string | null) {
   const [ownerProfile, setOwnerProfile] = React.useState<OwnerProfileDocument | null>(null);

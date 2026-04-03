@@ -1,8 +1,8 @@
-import {
+import type {
   GamificationRewardResult,
   StorefrontGamificationState,
 } from './storefrontGamificationTypes';
-import { AppProfile, StorefrontDetails } from './storefrontBaseTypes';
+import type { AppProfile, StorefrontDetails } from './storefrontBaseTypes';
 
 export type StorefrontReviewSubmissionInput = {
   storefrontId: string;
@@ -13,11 +13,34 @@ export type StorefrontReviewSubmissionInput = {
   tags: string[];
   gifUrl?: string | null;
   photoCount?: number;
+  photoUploadIds?: string[];
+};
+
+export type StorefrontReviewUpdateInput = StorefrontReviewSubmissionInput & {
+  reviewId: string;
+};
+
+export type StorefrontReviewPhotoModerationSummary = {
+  submittedCount: number;
+  approvedCount: number;
+  pendingCount: number;
+  rejectedCount: number;
+  message: string | null;
 };
 
 export type StorefrontReviewSubmissionResponse = {
   detail: StorefrontDetails;
   rewardResult: GamificationRewardResult | null;
+  photoModeration: StorefrontReviewPhotoModerationSummary | null;
+};
+
+export type StorefrontReportTarget = 'storefront' | 'review';
+
+export type StorefrontReviewReportContext = {
+  reviewId: string;
+  authorProfileId?: string | null;
+  authorName: string;
+  excerpt: string;
 };
 
 export type StorefrontReportSubmissionInput = {
@@ -26,6 +49,11 @@ export type StorefrontReportSubmissionInput = {
   authorName: string;
   reason: string;
   description: string;
+  reportTarget?: StorefrontReportTarget;
+  reportedReviewId?: string;
+  reportedReviewAuthorProfileId?: string | null;
+  reportedReviewAuthorName?: string | null;
+  reportedReviewExcerpt?: string | null;
 };
 
 export type StorefrontReportSubmissionResponse = {

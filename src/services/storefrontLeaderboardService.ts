@@ -1,7 +1,5 @@
 import { storefrontSourceMode } from '../config/storefrontSourceConfig';
-import {
-  GamificationLeaderboardResponse,
-} from '../types/storefront';
+import type { GamificationLeaderboardResponse } from '../types/storefront';
 import {
   getStorefrontBackendLeaderboard,
   getStorefrontBackendLeaderboardRank,

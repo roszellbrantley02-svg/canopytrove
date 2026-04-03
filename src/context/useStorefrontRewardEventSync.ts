@@ -1,7 +1,7 @@
 import React from 'react';
 import { storefrontSourceMode } from '../config/storefrontSourceConfig';
 import { syncStorefrontGamificationEvent } from '../services/storefrontGamificationSyncService';
-import {
+import type {
   GamificationEventRequest,
   GamificationRewardResult,
   StorefrontGamificationState,
@@ -11,6 +11,7 @@ import { areGamificationStatesEqual } from './storefrontControllerShared';
 
 type UseStorefrontRewardEventSyncArgs = {
   gamificationStateRef: React.MutableRefObject<StorefrontGamificationState>;
+  onGamificationStateMutation?: () => void;
   profileCreatedAt?: string | null;
   profileId: string;
   setGamificationState: React.Dispatch<React.SetStateAction<StorefrontGamificationState>>;
@@ -19,6 +20,7 @@ type UseStorefrontRewardEventSyncArgs = {
 
 export function useStorefrontRewardEventSync({
   gamificationStateRef,
+  onGamificationStateMutation,
   profileCreatedAt,
   profileId,
   setGamificationState,
@@ -43,14 +45,15 @@ export function useStorefrontRewardEventSync({
           const normalizedRemoteReward = normalizeRewardResult(
             profileId,
             remoteRewardResult,
-            profileCreatedAt
+            profileCreatedAt,
           );
 
+          onGamificationStateMutation?.();
           gamificationStateRef.current = normalizedRemoteReward.updatedState;
           setGamificationState((current) =>
             areGamificationStatesEqual(current, normalizedRemoteReward.updatedState)
               ? current
-              : normalizedRemoteReward.updatedState
+              : normalizedRemoteReward.updatedState,
           );
 
           if (shouldSurfaceRewardResult(normalizedRemoteReward)) {
@@ -60,10 +63,11 @@ export function useStorefrontRewardEventSync({
     },
     [
       gamificationStateRef,
+      onGamificationStateMutation,
       profileCreatedAt,
       profileId,
       setGamificationState,
       setLastRewardResult,
-    ]
+    ],
   );
 }

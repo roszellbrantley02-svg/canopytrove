@@ -1,22 +1,26 @@
 import React from 'react';
+import { View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   useStorefrontProfileController,
   useStorefrontQueryController,
   useStorefrontRewardsController,
   useStorefrontRouteController,
 } from '../context/StorefrontController';
+import { ErrorRecoveryCard } from '../components/ErrorRecoveryCard';
 import { ScreenShell } from '../components/ScreenShell';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import { useBrowseSummaries } from '../hooks/useStorefrontData';
-import { RootStackParamList } from '../navigation/RootNavigator';
+import { useBrowseSummaries } from '../hooks/useStorefrontSummaryData';
+import { spacing } from '../theme/tokens';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { openStorefrontRoute } from '../services/navigationService';
-import { BrowseSortKey, StorefrontSummary } from '../types/storefront';
+import type { BrowseSortKey, StorefrontSummary } from '../types/storefront';
 import {
   HotDealsEmptyState,
   HotDealsFilters,
   HotDealsList,
+  HotDealsMemberGate,
   HotDealsSkeletonList,
 } from './hotDeals/HotDealsSections';
 
@@ -37,13 +41,14 @@ export function HotDealsScreen() {
     storefrontQuery,
     setLocationQuery,
     applyLocationQuery,
-    useDeviceLocation,
+    useDeviceLocation: requestDeviceLocation,
   } = useStorefrontQueryController();
   const { authSession, profileId } = useStorefrontProfileController();
   const { isSavedStorefront } = useStorefrontRouteController();
   const {
     gamificationState: { visitedStorefrontIds },
   } = useStorefrontRewardsController();
+  const isMemberAuthenticated = authSession.status === 'authenticated';
   const debouncedDealSearchQuery = useDebouncedValue(dealSearchQuery, 250);
   const query = React.useMemo(
     () => ({
@@ -51,21 +56,26 @@ export function HotDealsScreen() {
       searchQuery: debouncedDealSearchQuery,
       hotDealsOnly: true,
     }),
-    [debouncedDealSearchQuery, storefrontQuery]
+    [debouncedDealSearchQuery, storefrontQuery],
   );
-  const { data, isLoading } = useBrowseSummaries(query, sortKey, PAGE_SIZE, offset);
+  const { data, error, isLoading } = useBrowseSummaries(query, sortKey, PAGE_SIZE, offset);
 
   const handleApplyLocationQuery = React.useCallback(() => {
     void applyLocationQuery();
   }, [applyLocationQuery]);
 
   const handleRefreshDeviceLocation = React.useCallback(() => {
-    void useDeviceLocation();
-  }, [useDeviceLocation]);
+    void requestDeviceLocation();
+  }, [requestDeviceLocation]);
+
+  const handleRetryError = React.useCallback(() => {
+    // Trigger a fresh data fetch by resetting offset
+    setOffset(0);
+  }, []);
 
   React.useEffect(() => {
     setOffset(0);
-  }, [activeLocationLabel, debouncedDealSearchQuery, sortKey]);
+  }, [activeLocationLabel, debouncedDealSearchQuery, isMemberAuthenticated, sortKey]);
 
   React.useEffect(() => {
     if (isLoading) {
@@ -88,8 +98,8 @@ export function HotDealsScreen() {
   return (
     <ScreenShell
       eyebrow="Hot Deals"
-      title="Live dispensary promotions."
-      subtitle="Built and working off the production data path, but intentionally kept off the visible tabs for now."
+      title="Live offers near you."
+      subtitle="Filter by location, storefront, or offer details to review active promotions."
       headerPill={activeLocationLabel}
       onBrandIconPress={handleRefreshDeviceLocation}
     >
@@ -107,10 +117,24 @@ export function HotDealsScreen() {
         setSortKey={setSortKey}
       />
 
-      {isLoading && items.length === 0 ? (
+      {!isMemberAuthenticated ? (
+        <HotDealsMemberGate
+          onOpenMemberSignIn={() => navigation.navigate('CanopyTroveSignIn')}
+          onOpenMemberSignUp={() => navigation.navigate('CanopyTroveSignUp')}
+        />
+      ) : error && items.length === 0 ? (
+        <View style={{ padding: spacing.xl, paddingTop: spacing.xxl }}>
+          <ErrorRecoveryCard
+            title="Unable to load hot deals"
+            message={error}
+            onRetry={handleRetryError}
+            retryLabel="Refresh"
+          />
+        </View>
+      ) : isLoading && items.length === 0 ? (
         <HotDealsSkeletonList />
       ) : items.length === 0 ? (
-        <HotDealsEmptyState />
+        <HotDealsEmptyState errorText={error} />
       ) : (
         <HotDealsList
           items={items}

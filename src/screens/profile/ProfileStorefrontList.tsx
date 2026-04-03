@@ -1,17 +1,18 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
-import { RootStackParamList } from '../../navigation/RootNavigator';
-import { StorefrontSummary } from '../../types/storefront';
+import type { AppUiIconName } from '../../icons/AppUiIcon';
+import { AppUiIcon } from '../../icons/AppUiIcon';
+import type { RootStackParamList } from '../../navigation/RootNavigator';
+import type { StorefrontSummary } from '../../types/storefront';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
 
 type ProfileStorefrontListProps = {
   storefronts: StorefrontSummary[];
   navigation: NativeStackNavigationProp<RootStackParamList>;
   emptyText: string;
-  iconName: keyof typeof Ionicons.glyphMap;
+  iconName: AppUiIconName;
 };
 
 export function ProfileStorefrontList({
@@ -23,12 +24,12 @@ export function ProfileStorefrontList({
   if (!storefronts.length) {
     return (
       <CustomerStateCard
-        title="Nothing here yet"
+        title="No storefronts here yet"
         body={emptyText}
         tone="neutral"
         iconName={iconName}
         eyebrow="Collection state"
-        note="This list fills in naturally as you save storefronts or open detail pages."
+        note="This list fills in naturally as you save storefronts or open storefront detail pages."
       />
     );
   }
@@ -40,6 +41,9 @@ export function ProfileStorefrontList({
           key={storefront.id}
           onPress={() => navigation.navigate('StorefrontDetail', { storefront })}
           style={styles.storefrontRow}
+          accessibilityRole="button"
+          accessibilityLabel={storefront.displayName}
+          accessibilityHint={`Opens the detail page for ${storefront.displayName}`}
         >
           <View style={styles.storefrontBody}>
             <Text style={styles.storefrontTitle}>{storefront.displayName}</Text>
@@ -48,7 +52,7 @@ export function ProfileStorefrontList({
             </Text>
           </View>
           <View style={styles.storefrontIconWrap}>
-            <Ionicons name={iconName} size={18} color={colors.goldSoft} />
+            <AppUiIcon name={iconName} size={18} color={colors.goldSoft} />
           </View>
         </Pressable>
       ))}
@@ -98,10 +102,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(245, 200, 106, 0.10)',
     borderWidth: 1,
     borderColor: 'rgba(245, 200, 106, 0.20)',
-  },
-  emptyText: {
-    color: colors.textSoft,
-    fontSize: typography.body,
-    lineHeight: 22,
   },
 });

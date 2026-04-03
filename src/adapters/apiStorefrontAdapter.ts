@@ -1,5 +1,5 @@
-import { StorefrontDetails, StorefrontSummary } from '../types/storefront';
-import {
+import type { StorefrontDetails, StorefrontSummary } from '../types/storefront';
+import type {
   StorefrontDetailApiDocument,
   StorefrontSummaryApiDocument,
 } from '../types/storefrontApi';
@@ -7,7 +7,7 @@ import { normalizeStorefrontHours } from '../utils/storefrontHours';
 import { getStorefrontPromotionBadges } from '../utils/storefrontPromotions';
 
 export function fromStorefrontSummaryApiDocument(
-  document: StorefrontSummaryApiDocument
+  document: StorefrontSummaryApiDocument,
 ): StorefrontSummary {
   const promotionBadges = getStorefrontPromotionBadges(document);
   return {
@@ -18,7 +18,7 @@ export function fromStorefrontSummaryApiDocument(
     legalName: document.legalName,
     addressLine1: document.addressLine1,
     city: document.city,
-    state: 'NY',
+    state: document.state,
     zip: document.zip,
     coordinates: {
       latitude: document.latitude,
@@ -28,13 +28,14 @@ export function fromStorefrontSummaryApiDocument(
     travelMinutes: document.travelMinutes,
     rating: document.rating,
     reviewCount: document.reviewCount,
-    openNow: document.openNow,
+    openNow: typeof document.openNow === 'boolean' ? document.openNow : null,
     isVerified: document.isVerified,
     mapPreviewLabel: document.mapPreviewLabel,
     promotionText: document.promotionText ?? null,
     promotionBadges,
     promotionExpiresAt: document.promotionExpiresAt ?? null,
     activePromotionId: document.activePromotionId ?? null,
+    activePromotionCount: document.activePromotionCount ?? null,
     favoriteFollowerCount: document.favoriteFollowerCount ?? null,
     menuUrl: document.menuUrl ?? null,
     verifiedOwnerBadgeLabel: document.verifiedOwnerBadgeLabel ?? null,
@@ -49,7 +50,7 @@ export function fromStorefrontSummaryApiDocument(
 }
 
 export function fromStorefrontDetailApiDocument(
-  document: StorefrontDetailApiDocument
+  document: StorefrontDetailApiDocument,
 ): StorefrontDetails {
   return {
     storefrontId: document.storefrontId,
@@ -62,11 +63,27 @@ export function fromStorefrontDetailApiDocument(
     verifiedOwnerBadgeLabel: document.verifiedOwnerBadgeLabel ?? null,
     favoriteFollowerCount: document.favoriteFollowerCount ?? null,
     ownerFeaturedBadges: document.ownerFeaturedBadges ?? [],
+    activePromotions: (document.activePromotions ?? []).map((promotion) => ({
+      id: promotion.id,
+      title: promotion.title,
+      description: promotion.description,
+      badges: [...promotion.badges],
+      startsAt: promotion.startsAt,
+      endsAt: promotion.endsAt,
+      cardTone: promotion.cardTone,
+    })),
+    photoCount:
+      typeof document.photoCount === 'number'
+        ? document.photoCount
+        : Array.isArray(document.photoUrls)
+          ? document.photoUrls.length
+          : 0,
     appReviewCount: document.appReviewCount,
     appReviews: document.appReviews.map((review) => ({
       ...review,
       authorProfileId: review.authorProfileId ?? null,
       gifUrl: review.gifUrl ?? null,
+      photoUrls: [...(review.photoUrls ?? [])],
       tags: [...review.tags],
       helpfulCount: review.helpfulCount ?? 0,
       ownerReply: review.ownerReply ?? null,

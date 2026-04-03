@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import {
+import type React from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import type {
   BrowseSortKey,
   Coordinates,
   MarketArea,
@@ -8,13 +9,8 @@ import {
 } from '../types/storefront';
 import { getCachedMarketAreas } from '../services/marketAreaService';
 import { getCachedDeviceLocation } from '../services/locationService';
-import {
-  StoredStorefrontPreferences,
-} from '../services/storefrontPreferencesService';
-import {
-  getActiveStorefrontLocationState,
-  getDefaultMarketArea,
-} from './storefrontQueryShared';
+import type { StoredStorefrontPreferences } from '../services/storefrontPreferencesService';
+import { getActiveStorefrontLocationState, getDefaultMarketArea } from './storefrontQueryShared';
 import { useStorefrontQueryBootstrap } from './useStorefrontQueryBootstrap';
 import { useStorefrontQueryLocationActions } from './useStorefrontQueryLocationActions';
 import { useStorefrontQueryPersistence } from './useStorefrontQueryPersistence';
@@ -41,34 +37,33 @@ export function useStorefrontQueryModel({
   const [availableAreas, setAvailableAreas] = useState<MarketArea[]>(getCachedMarketAreas());
   const defaultArea = getDefaultMarketArea(availableAreas);
   const [selectedAreaId, setSelectedAreaIdState] = useState<string>(
-    cachedPreferences?.selectedAreaId ?? defaultArea.id
+    cachedPreferences?.selectedAreaId ?? defaultArea.id,
   );
-  const [searchQuery, setSearchQuery] = useState(cachedPreferences?.searchQuery ?? '');
-  const [locationQuery, setLocationQuery] = useState(
-    cachedPreferences?.locationQuery ?? defaultArea.label
+  const [searchQuery, setSearchQueryState] = useState(cachedPreferences?.searchQuery ?? '');
+  const [locationQuery, setLocationQueryState] = useState(
+    cachedPreferences?.locationQuery ?? defaultArea.label,
   );
-  const [deviceLocationLabel, setDeviceLocationLabel] = useState<string | null>(
-    cachedPreferences?.deviceLocationLabel ?? null
+  const [deviceLocationLabel, setDeviceLocationLabelState] = useState<string | null>(
+    cachedPreferences?.deviceLocationLabel ?? null,
   );
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isResolvingLocation, setIsResolvingLocation] = useState(false);
-  const [browseSortKey, setBrowseSortKey] = useState<BrowseSortKey>(
-    cachedPreferences?.browseSortKey ?? 'distance'
+  const [browseSortKey, setBrowseSortKeyState] = useState<BrowseSortKey>(
+    cachedPreferences?.browseSortKey ?? 'distance',
   );
-  const [browseHotDealsOnly, setBrowseHotDealsOnly] = useState(
-    cachedPreferences?.browseHotDealsOnly ?? false
+  const [browseHotDealsOnly, setBrowseHotDealsOnlyState] = useState(
+    cachedPreferences?.browseHotDealsOnly ?? false,
   );
-  const [deviceLocation, setDeviceLocation] = useState<Coordinates | null>(() =>
-    getCachedDeviceLocation()
+  const [deviceLocation, setDeviceLocationState] = useState<Coordinates | null>(() =>
+    getCachedDeviceLocation(),
   );
-  const [searchLocation, setSearchLocation] = useState<Coordinates | null>(
-    cachedPreferences?.searchLocation ?? null
+  const [searchLocation, setSearchLocationState] = useState<Coordinates | null>(
+    cachedPreferences?.searchLocation ?? null,
   );
-  const [searchLocationLabel, setSearchLocationLabel] = useState<string | null>(
-    cachedPreferences?.searchLocationLabel ?? defaultArea.label
+  const [searchLocationLabel, setSearchLocationLabelState] = useState<string | null>(
+    cachedPreferences?.searchLocationLabel ?? defaultArea.label,
   );
-  const selectedArea =
-    availableAreas.find((area) => area.id === selectedAreaId) ?? defaultArea;
+  const selectedArea = availableAreas.find((area) => area.id === selectedAreaId) ?? defaultArea;
   const { activeLocation, activeLocationLabel, activeLocationMode } =
     getActiveStorefrontLocationState({
       deviceLocation,
@@ -82,38 +77,26 @@ export function useStorefrontQueryModel({
     (value: string) => {
       const nextArea = availableAreas.find((area) => area.id === value) ?? defaultArea;
       setSelectedAreaIdState(nextArea.id);
-      setSearchLocation(nextArea.center);
-      setSearchLocationLabel(nextArea.label);
-      setLocationQuery(nextArea.label);
+      setSearchLocationState(nextArea.center);
+      setSearchLocationLabelState(nextArea.label);
+      setLocationQueryState(nextArea.label);
       setLocationError(null);
     },
-    [availableAreas, defaultArea]
+    [availableAreas, defaultArea],
   );
-  const { applyLocationQuery, useDeviceLocation } = useStorefrontQueryLocationActions({
-    availableAreas,
-    locationQuery,
-    setSelectedAreaIdState,
-    setSearchLocation,
-    setSearchLocationLabel,
-    setLocationQuery,
-    setLocationError,
-    setIsResolvingLocation,
-    setDeviceLocation,
-    setDeviceLocationLabel,
-  });
 
   const storefrontQuery = useMemo<StorefrontListQuery>(
     () => ({
-      areaId: selectedAreaId,
+      areaId: selectedArea.id,
       searchQuery,
       origin: activeLocation,
       locationLabel: activeLocationLabel,
       hotDealsOnly: browseHotDealsOnly,
     }),
-    [activeLocation, activeLocationLabel, browseHotDealsOnly, searchQuery, selectedAreaId]
+    [activeLocation, activeLocationLabel, browseHotDealsOnly, searchQuery, selectedArea.id],
   );
 
-  const { hasHydratedPreferences } = useStorefrontQueryPersistence({
+  const { hasHydratedPreferences, markQueryInputTouched } = useStorefrontQueryPersistence({
     cachedPreferences,
     profileId,
     profileCreatedAt,
@@ -129,16 +112,73 @@ export function useStorefrontQueryModel({
     searchLocationLabel,
     gamificationState,
     setSelectedAreaIdState,
-    setSearchQuery,
-    setLocationQuery,
-    setBrowseSortKey,
-    setBrowseHotDealsOnly,
+    setSearchQuery: setSearchQueryState,
+    setLocationQuery: setLocationQueryState,
+    setBrowseSortKey: setBrowseSortKeyState,
+    setBrowseHotDealsOnly: setBrowseHotDealsOnlyState,
     setSavedStorefrontIds,
-    setSearchLocation,
-    setSearchLocationLabel,
-    setDeviceLocationLabel,
+    setSearchLocation: setSearchLocationState,
+    setSearchLocationLabel: setSearchLocationLabelState,
+    setDeviceLocationLabel: setDeviceLocationLabelState,
     setGamificationState,
   });
+
+  const { applyLocationQuery, useDeviceLocation } = useStorefrontQueryLocationActions({
+    availableAreas,
+    locationQuery,
+    markQueryInputTouched,
+    setSelectedAreaIdState,
+    setSearchLocation: setSearchLocationState,
+    setSearchLocationLabel: setSearchLocationLabelState,
+    setLocationQuery: setLocationQueryState,
+    setLocationError,
+    setIsResolvingLocation,
+    setDeviceLocation: setDeviceLocationState,
+    setDeviceLocationLabel: setDeviceLocationLabelState,
+  });
+
+  const setSearchQuery = useCallback(
+    (value: string) => {
+      markQueryInputTouched();
+      setSearchQueryState(value);
+    },
+    [markQueryInputTouched],
+  );
+  const setLocationQuery = useCallback(
+    (value: string) => {
+      markQueryInputTouched();
+      setLocationQueryState(value);
+    },
+    [markQueryInputTouched],
+  );
+  const setBrowseSortKey = useCallback(
+    (value: BrowseSortKey) => {
+      markQueryInputTouched();
+      setBrowseSortKeyState(value);
+    },
+    [markQueryInputTouched],
+  );
+  const setBrowseHotDealsOnly = useCallback(
+    (value: boolean) => {
+      markQueryInputTouched();
+      setBrowseHotDealsOnlyState(value);
+    },
+    [markQueryInputTouched],
+  );
+  const setDeviceLocation = useCallback(
+    (value: Coordinates | null) => {
+      markQueryInputTouched();
+      setDeviceLocationState(value);
+    },
+    [markQueryInputTouched],
+  );
+  const setTrackedSelectedAreaId = useCallback(
+    (value: string) => {
+      markQueryInputTouched();
+      setSelectedAreaId(value);
+    },
+    [markQueryInputTouched, setSelectedAreaId],
+  );
 
   useStorefrontQueryBootstrap({
     availableAreas,
@@ -148,9 +188,9 @@ export function useStorefrontQueryModel({
     deviceLocationLabel,
     setAvailableAreas,
     setSelectedAreaIdState,
-    setLocationQuery,
-    setDeviceLocation,
-    setDeviceLocationLabel,
+    setLocationQuery: setLocationQueryState,
+    setDeviceLocation: setDeviceLocationState,
+    setDeviceLocationLabel: setDeviceLocationLabelState,
   });
 
   return {
@@ -171,7 +211,7 @@ export function useStorefrontQueryModel({
     activeLocationLabel,
     storefrontQuery,
     hasHydratedPreferences,
-    setSelectedAreaId,
+    setSelectedAreaId: setTrackedSelectedAreaId,
     setSearchQuery,
     setLocationQuery,
     setBrowseSortKey,

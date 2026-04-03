@@ -1,12 +1,13 @@
-import {
+import type {
   OwnerDispensaryClaimDocument,
+  OwnerLicenseComplianceDocument,
   OwnerPortalAccessState,
   OwnerProfileDocument,
-  OwnerPortalWorkspaceDocument,
   OwnerStorefrontProfileToolsDocument,
   OwnerStorefrontPromotionDocument,
 } from '../../types/ownerPortal';
-import { StorefrontSummary } from '../../types/storefront';
+import type { StorefrontSummary } from '../../types/storefront';
+import type { OwnerPortalWorkspaceWithCompliance } from './ownerPortalCompliance';
 
 export const OWNER_PORTAL_PREVIEW_UID = 'owner-preview';
 
@@ -37,8 +38,12 @@ export const ownerPortalPreviewStorefront: StorefrontSummary = {
   openNow: true,
   isVerified: true,
   mapPreviewLabel: '1.4 mi route preview',
-  promotionText: 'Preview deal: 15% off premium flower',
+  promotionText: 'Today only: 20% off premium flower.',
+  promotionBadges: ['20% Off', 'Today Only', 'Weekend Drop'],
+  promotionExpiresAt: '2026-03-30T02:00:00.000Z',
   activePromotionId: 'owner-preview-promo-live',
+  activePromotionCount: 1,
+  premiumCardVariant: 'hot_deal',
   promotionPlacementSurfaces: ['nearby', 'browse', 'hot_deals'],
   promotionPlacementScope: 'storefront_area',
   thumbnailUrl: null,
@@ -58,7 +63,11 @@ export const ownerPortalPreviewSearchResults: StorefrontSummary[] = [
     distanceMiles: 4.8,
     travelMinutes: 16,
     mapPreviewLabel: '4.8 mi route preview',
-    promotionText: 'Preview deal: Free pre-roll with cart purchase',
+    promotionText: 'Owner highlight: curated carts and late pickup window.',
+    promotionBadges: ['Owner Picks', 'Small Batch'],
+    premiumCardVariant: 'owner_featured',
+    promotionPlacementSurfaces: ['browse'],
+    promotionPlacementScope: 'statewide',
   },
   {
     ...ownerPortalPreviewStorefront,
@@ -72,7 +81,14 @@ export const ownerPortalPreviewSearchResults: StorefrontSummary[] = [
     distanceMiles: 6.2,
     travelMinutes: 21,
     mapPreviewLabel: '6.2 mi route preview',
-    promotionText: 'Preview deal: Buy 2 gummies, get 1 free',
+    promotionText: null,
+    promotionBadges: [],
+    promotionExpiresAt: null,
+    activePromotionId: null,
+    activePromotionCount: 0,
+    premiumCardVariant: 'standard',
+    promotionPlacementSurfaces: [],
+    promotionPlacementScope: null,
   },
 ];
 
@@ -118,14 +134,35 @@ export const ownerPortalPreviewProfileTools: OwnerStorefrontProfileToolsDocument
   updatedAt: '2026-03-28T13:40:00.000Z',
 };
 
+export const ownerPortalPreviewLicenseCompliance: OwnerLicenseComplianceDocument = {
+  ownerUid: OWNER_PORTAL_PREVIEW_UID,
+  dispensaryId: ownerPortalPreviewStorefront.id,
+  licenseNumber: 'OCM-CAURD-2048',
+  licenseType: 'Adult-use retail dispensary',
+  jurisdiction: 'NY',
+  issuedAt: '2025-05-15T00:00:00.000Z',
+  expiresAt: '2027-05-15T00:00:00.000Z',
+  renewalWindowStartsAt: '2027-01-15T00:00:00.000Z',
+  renewalUrgentAt: '2027-03-16T00:00:00.000Z',
+  renewalStatus: 'active',
+  renewalSubmittedAt: null,
+  lastReminderSentAt: null,
+  lastReminderStage: null,
+  source: 'verification_seed',
+  notes: 'Track renewal timing against the current NY two-year license cycle.',
+  createdAt: '2026-03-28T13:40:00.000Z',
+  updatedAt: '2026-03-28T13:40:00.000Z',
+};
+
 export const ownerPortalPreviewPromotions: OwnerStorefrontPromotionDocument[] = [
   {
     id: 'owner-preview-promo-live',
     storefrontId: ownerPortalPreviewStorefront.id,
     ownerUid: OWNER_PORTAL_PREVIEW_UID,
-    title: '20% off premium flower',
-    description: '20% off premium flower through Sunday evening.',
-    badges: ['20% Off', 'Hot Deal', 'Weekend Drop'],
+    title: 'Today only: 20% off premium flower',
+    description:
+      'Primary hot-deal lane with same-day urgency across Nearby, Browse, and Hot Deals.',
+    badges: ['20% Off', 'Today Only', 'Weekend Drop'],
     startsAt: '2026-03-28T09:00:00.000Z',
     endsAt: '2026-03-30T02:00:00.000Z',
     status: 'active',
@@ -141,23 +178,44 @@ export const ownerPortalPreviewPromotions: OwnerStorefrontPromotionDocument[] = 
     id: 'owner-preview-promo-next',
     storefrontId: ownerPortalPreviewStorefront.id,
     ownerUid: OWNER_PORTAL_PREVIEW_UID,
-    title: 'Loyalty edible bundle',
-    description: 'Bundle pricing for saved followers next week.',
-    badges: ['Bundle', 'Next Week'],
+    title: 'Owner picks vape flight',
+    description:
+      'Separate owner-featured highlight for curated carts and accessory pairings next week.',
+    badges: ['Owner Picks', 'Small Batch'],
     startsAt: '2026-04-02T15:00:00.000Z',
     endsAt: '2026-04-06T03:00:00.000Z',
     status: 'scheduled',
     audience: 'frequent_visitors',
     alertFollowersOnStart: true,
     cardTone: 'owner_featured',
-    placementSurfaces: ['browse', 'hot_deals'],
+    placementSurfaces: ['browse'],
     placementScope: 'statewide',
     createdAt: '2026-03-28T11:00:00.000Z',
     updatedAt: '2026-03-28T11:00:00.000Z',
   },
 ];
 
-export const ownerPortalPreviewWorkspace: OwnerPortalWorkspaceDocument = {
+const ownerPortalPreviewCompliance: OwnerLicenseComplianceDocument = {
+  ownerUid: OWNER_PORTAL_PREVIEW_UID,
+  dispensaryId: ownerPortalPreviewStorefront.id,
+  licenseNumber: 'OCM-CAURD-2048',
+  licenseType: 'Adult-use retail dispensary',
+  jurisdiction: 'NY',
+  issuedAt: '2026-01-18T00:00:00.000Z',
+  expiresAt: '2028-01-18T00:00:00.000Z',
+  renewalWindowStartsAt: '2027-09-20T00:00:00.000Z',
+  renewalUrgentAt: '2027-11-19T00:00:00.000Z',
+  renewalStatus: 'active',
+  renewalSubmittedAt: null,
+  lastReminderSentAt: '2026-03-15T12:00:00.000Z',
+  lastReminderStage: '120_day',
+  source: 'verification_seed',
+  notes: 'Preview data only. Live compliance payload will replace this when the backend sends it.',
+  createdAt: '2026-01-18T00:00:00.000Z',
+  updatedAt: '2026-03-29T16:20:00.000Z',
+};
+
+export const ownerPortalPreviewWorkspace = {
   ownerProfile: ownerPortalPreviewProfile,
   ownerClaim: ownerPortalPreviewClaim,
   storefrontSummary: {
@@ -168,7 +226,7 @@ export const ownerPortalPreviewWorkspace: OwnerPortalWorkspaceDocument = {
     state: ownerPortalPreviewStorefront.state,
     zip: ownerPortalPreviewStorefront.zip,
     promotionText: ownerPortalPreviewStorefront.promotionText,
-    promotionBadges: ['20% Off', 'Hot Deal', 'Weekend Drop'],
+    promotionBadges: ['20% Off', 'Today Only', 'Weekend Drop'],
   },
   metrics: {
     followerCount: 118,
@@ -190,8 +248,8 @@ export const ownerPortalPreviewWorkspace: OwnerPortalWorkspaceDocument = {
   patternFlags: [
     {
       id: 'followers-waiting',
-      title: 'Followers react fast to new deals',
-      body: 'Saved followers convert best when the deal launches within the same day.',
+      title: 'Followers react fast to hot-deal urgency',
+      body: 'Saved followers convert best when the lead offer launches as a same-day hot deal.',
       tone: 'success',
     },
     {
@@ -252,9 +310,9 @@ export const ownerPortalPreviewWorkspace: OwnerPortalWorkspaceDocument = {
   promotionPerformance: [
     {
       promotionId: 'owner-preview-promo-live',
-      title: '20% off premium flower',
+      title: 'Today only: 20% off premium flower',
       status: 'active',
-      badges: ['20% Off', 'Hot Deal', 'Weekend Drop'],
+      badges: ['20% Off', 'Today Only', 'Weekend Drop'],
       startsAt: '2026-03-28T09:00:00.000Z',
       endsAt: '2026-03-30T02:00:00.000Z',
       metrics: {
@@ -272,9 +330,9 @@ export const ownerPortalPreviewWorkspace: OwnerPortalWorkspaceDocument = {
     },
     {
       promotionId: 'owner-preview-promo-next',
-      title: 'Loyalty edible bundle',
+      title: 'Owner picks vape flight',
       status: 'scheduled',
-      badges: ['Bundle', 'Next Week'],
+      badges: ['Owner Picks', 'Small Batch'],
       startsAt: '2026-04-02T15:00:00.000Z',
       endsAt: '2026-04-06T03:00:00.000Z',
       metrics: {
@@ -292,9 +350,29 @@ export const ownerPortalPreviewWorkspace: OwnerPortalWorkspaceDocument = {
     },
   ],
   profileTools: ownerPortalPreviewProfileTools,
+  licenseCompliance: ownerPortalPreviewCompliance,
   ownerAlertStatus: {
     pushEnabled: true,
     updatedAt: '2026-03-28T13:42:00.000Z',
   },
-};
-
+  runtimeStatus: {
+    policy: {
+      safeModeEnabled: false,
+      ownerPortalWritesEnabled: true,
+      promotionWritesEnabled: true,
+      reviewRepliesEnabled: true,
+      profileToolsWritesEnabled: true,
+      updatedAt: '2026-03-28T13:30:00.000Z',
+      reason: null,
+      trigger: 'normal',
+    },
+    incidentCounts: {
+      last15Minutes: 0,
+      criticalLast15Minutes: 0,
+      criticalLast24Hours: 0,
+      clientLast24Hours: 1,
+      serverLast24Hours: 0,
+    },
+    recentIncidents: [],
+  },
+} as unknown as OwnerPortalWorkspaceWithCompliance;

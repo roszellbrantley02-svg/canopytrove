@@ -18,7 +18,7 @@ describe('ownerBilling config', () => {
       'EXPO_PUBLIC_OWNER_PORTAL_ANNUAL_CHECKOUT_URL',
     ]);
     expect(config.getOwnerBillingPublicSetupMessage('checkout')).toContain(
-      'EXPO_PUBLIC_OWNER_PORTAL_ANNUAL_CHECKOUT_URL'
+      'EXPO_PUBLIC_OWNER_PORTAL_ANNUAL_CHECKOUT_URL',
     );
   });
 
@@ -32,7 +32,7 @@ describe('ownerBilling config', () => {
     expect(config.hasConfiguredOwnerBillingPublicCheckoutLinks()).toBe(true);
     expect(config.hasConfiguredOwnerBillingPublicPortalLink()).toBe(true);
     expect(config.getOwnerBillingPublicSetupMessage('portal')).toBe(
-      'Public owner billing management is configured.'
+      'Public owner billing management is configured.',
     );
   });
 });

@@ -3,31 +3,41 @@ import {
   getCachedRecentStorefrontIds,
   subscribeToRecentStorefrontIds,
 } from '../services/recentStorefrontService';
+import { areStringArraysEqual } from './storefrontControllerShared';
 
 export function useStorefrontRouteState(initialSavedStorefrontIds: string[]) {
-  const [savedStorefrontIds, setSavedStorefrontIds] = React.useState<string[]>(
-    initialSavedStorefrontIds
-  );
+  const [savedStorefrontIds, setSavedStorefrontIds] =
+    React.useState<string[]>(initialSavedStorefrontIds);
   const [recentStorefrontIds, setRecentStorefrontIds] = React.useState<string[]>(() =>
-    getCachedRecentStorefrontIds()
+    getCachedRecentStorefrontIds(),
   );
+  const lastLocalSavedStorefrontMutationAtRef = React.useRef(0);
+  const markLocalSavedStorefrontMutation = React.useCallback(() => {
+    lastLocalSavedStorefrontMutationAtRef.current = Date.now();
+  }, []);
 
   const isSavedStorefront = React.useCallback(
     (storefrontId: string) => savedStorefrontIds.includes(storefrontId),
-    [savedStorefrontIds]
+    [savedStorefrontIds],
   );
 
-  const toggleSavedStorefront = React.useCallback((storefrontId: string) => {
-    setSavedStorefrontIds((current) =>
-      current.includes(storefrontId)
-        ? current.filter((id) => id !== storefrontId)
-        : [...current, storefrontId]
-    );
-  }, []);
+  const toggleSavedStorefront = React.useCallback(
+    (storefrontId: string) => {
+      markLocalSavedStorefrontMutation();
+      setSavedStorefrontIds((current) =>
+        current.includes(storefrontId)
+          ? current.filter((id) => id !== storefrontId)
+          : [...current, storefrontId],
+      );
+    },
+    [markLocalSavedStorefrontMutation],
+  );
 
   React.useEffect(() => {
     const unsubscribe = subscribeToRecentStorefrontIds((nextRecentStorefrontIds) => {
-      setRecentStorefrontIds(nextRecentStorefrontIds);
+      setRecentStorefrontIds((current) =>
+        areStringArraysEqual(current, nextRecentStorefrontIds) ? current : nextRecentStorefrontIds,
+      );
     });
 
     return unsubscribe;
@@ -39,6 +49,8 @@ export function useStorefrontRouteState(initialSavedStorefrontIds: string[]) {
     savedStorefrontIds,
     setRecentStorefrontIds,
     setSavedStorefrontIds,
+    lastLocalSavedStorefrontMutationAtRef,
+    markLocalSavedStorefrontMutation,
     toggleSavedStorefront,
   };
 }

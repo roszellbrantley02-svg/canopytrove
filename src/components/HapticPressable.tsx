@@ -1,5 +1,6 @@
 import React from 'react';
-import { Platform, Pressable, PressableProps, Vibration } from 'react-native';
+import type { PressableProps } from 'react-native';
+import { Platform, Pressable, Vibration } from 'react-native';
 
 type HapticPressableProps = PressableProps & {
   hapticType?: 'selection' | 'impact' | 'notification';

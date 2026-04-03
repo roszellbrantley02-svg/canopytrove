@@ -7,10 +7,21 @@ function parsePositiveInteger(value: string | undefined, fallback: number) {
   return Math.floor(parsed);
 }
 
+const DEFAULT_LOCAL_CORS_ORIGINS = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:8081',
+  'http://127.0.0.1:8081',
+  'http://localhost:19006',
+  'http://127.0.0.1:19006',
+] as const;
+
 function parseCorsOrigin(value: string | undefined) {
   const normalizedValue = value?.trim();
-  if (!normalizedValue || normalizedValue === '*') {
-    return '*';
+  if (!normalizedValue) {
+    return [...DEFAULT_LOCAL_CORS_ORIGINS];
   }
 
   const origins = normalizedValue
@@ -18,7 +29,15 @@ function parseCorsOrigin(value: string | undefined) {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  if (!origins.length || origins.includes('*')) {
+    throw new Error('CORS_ORIGIN must be an explicit origin list.');
+  }
+
   return origins.length === 1 ? origins[0] : origins;
+}
+
+function isWildcardCorsOrigin(value: string | string[]) {
+  return value === '*' || (Array.isArray(value) && value.includes('*'));
 }
 
 function readConfiguredValue(value: string | null | undefined) {
@@ -26,11 +45,66 @@ function readConfiguredValue(value: string | null | undefined) {
   return normalizedValue ? normalizedValue : null;
 }
 
+function parseBoolean(value: string | undefined, fallback: boolean) {
+  if (!value) {
+    return fallback;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  if (normalizedValue === 'true' || normalizedValue === '1') {
+    return true;
+  }
+
+  if (normalizedValue === 'false' || normalizedValue === '0') {
+    return false;
+  }
+
+  return fallback;
+}
+
+function parseCsv(value: string | undefined) {
+  return (value ?? '')
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export type TransactionalEmailRuntimeConfig = {
+  emailDeliveryProvider: string | null;
+  resendApiKey: string | null;
+  resendWebhookSecret: string | null;
+  emailFromAddress: string | null;
+  emailReplyToAddress: string | null;
+  welcomeEmailsEnabled: boolean;
+};
+
+export function getTransactionalEmailRuntimeConfig(): TransactionalEmailRuntimeConfig {
+  return {
+    emailDeliveryProvider: readConfiguredValue(process.env.EMAIL_DELIVERY_PROVIDER),
+    resendApiKey: readConfiguredValue(process.env.RESEND_API_KEY),
+    resendWebhookSecret: readConfiguredValue(process.env.RESEND_WEBHOOK_SECRET),
+    emailFromAddress: readConfiguredValue(process.env.EMAIL_FROM_ADDRESS),
+    emailReplyToAddress: readConfiguredValue(process.env.EMAIL_REPLY_TO_ADDRESS),
+    welcomeEmailsEnabled: parseBoolean(process.env.WELCOME_EMAILS_ENABLED, true),
+  };
+}
+
+const transactionalEmailRuntimeConfig = getTransactionalEmailRuntimeConfig();
+
 export const serverConfig = {
   port: Number(process.env.PORT || 4100),
+  trustProxyHops: parsePositiveInteger(process.env.TRUST_PROXY_HOPS, 1),
   corsOrigin: parseCorsOrigin(process.env.CORS_ORIGIN),
   expoAccessToken: readConfiguredValue(process.env.EXPO_ACCESS_TOKEN),
   adminApiKey: readConfiguredValue(process.env.ADMIN_API_KEY),
+  openAiApiKey: readConfiguredValue(process.env.OPENAI_API_KEY),
+  openAiModel: readConfiguredValue(process.env.OPENAI_MODEL) ?? 'gpt-4o-mini',
+  emailDeliveryProvider: transactionalEmailRuntimeConfig.emailDeliveryProvider,
+  resendApiKey: transactionalEmailRuntimeConfig.resendApiKey,
+  resendWebhookSecret: transactionalEmailRuntimeConfig.resendWebhookSecret,
+  emailFromAddress: transactionalEmailRuntimeConfig.emailFromAddress,
+  emailReplyToAddress: transactionalEmailRuntimeConfig.emailReplyToAddress,
+  welcomeEmailsEnabled: transactionalEmailRuntimeConfig.welcomeEmailsEnabled,
   stripeSecretKey: readConfiguredValue(process.env.STRIPE_SECRET_KEY),
   stripeWebhookSecret: readConfiguredValue(process.env.STRIPE_WEBHOOK_SECRET),
   stripeOwnerMonthlyPriceId: readConfiguredValue(process.env.STRIPE_OWNER_MONTHLY_PRICE_ID),
@@ -38,8 +112,67 @@ export const serverConfig = {
   stripeOwnerSuccessUrl: readConfiguredValue(process.env.OWNER_BILLING_SUCCESS_URL),
   stripeOwnerCancelUrl: readConfiguredValue(process.env.OWNER_BILLING_CANCEL_URL),
   stripeOwnerPortalReturnUrl: readConfiguredValue(process.env.OWNER_BILLING_PORTAL_RETURN_URL),
+  launchProgramStartAt: readConfiguredValue(process.env.LAUNCH_PROGRAM_START_AT),
+  launchProgramDurationDays: parsePositiveInteger(
+    process.env.LAUNCH_PROGRAM_DURATION_DAYS,
+    183
+  ),
+  launchEarlyAdopterLimit: parsePositiveInteger(
+    process.env.LAUNCH_EARLY_ADOPTER_LIMIT,
+    500
+  ),
+  ownerLaunchTrialDays: parsePositiveInteger(process.env.OWNER_LAUNCH_TRIAL_DAYS, 30),
+  ownerPortalPrelaunchEnabled: parseBoolean(
+    process.env.OWNER_PORTAL_PRELAUNCH_ENABLED ??
+      process.env.EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED,
+    false
+  ),
+  ownerPortalAllowlist: parseCsv(
+    process.env.OWNER_PORTAL_ALLOWLIST ?? process.env.EXPO_PUBLIC_OWNER_PORTAL_ALLOWLIST
+  ),
   allowDevSeed: process.env.ALLOW_DEV_SEED === 'true',
   requestLoggingEnabled: process.env.REQUEST_LOGGING_ENABLED !== 'false',
+  runtimeAutoMitigationEnabled: process.env.RUNTIME_AUTO_MITIGATION_ENABLED !== 'false',
+  runtimeIncidentThreshold: parsePositiveInteger(process.env.RUNTIME_INCIDENT_THRESHOLD, 3),
+  opsHealthcheckEnabled: parseBoolean(process.env.OPS_HEALTHCHECK_ENABLED, true),
+  opsHealthcheckApiUrl: readConfiguredValue(process.env.OPS_HEALTHCHECK_API_URL),
+  opsHealthcheckApiRawUrl: readConfiguredValue(process.env.OPS_HEALTHCHECK_API_RAW_URL),
+  opsHealthcheckSiteUrl: readConfiguredValue(process.env.OPS_HEALTHCHECK_SITE_URL),
+  opsHealthcheckTimeoutMs: parsePositiveInteger(process.env.OPS_HEALTHCHECK_TIMEOUT_MS, 8_000),
+  opsHealthcheckFailureConfirmationSweeps: parsePositiveInteger(
+    process.env.OPS_HEALTHCHECK_FAILURE_CONFIRMATION_SWEEPS,
+    2
+  ),
+  opsHealthcheckFailureRetryCount: parsePositiveInteger(
+    process.env.OPS_HEALTHCHECK_FAILURE_RETRY_COUNT,
+    1
+  ),
+  opsHealthcheckFailureRetryDelayMs: parsePositiveInteger(
+    process.env.OPS_HEALTHCHECK_FAILURE_RETRY_DELAY_MS,
+    1_000
+  ),
+  opsHealthcheckIntervalMinutes: parsePositiveInteger(
+    process.env.OPS_HEALTHCHECK_INTERVAL_MINUTES,
+    5
+  ),
+  ownerLicenseComplianceSchedulerEnabled: parseBoolean(
+    process.env.OWNER_LICENSE_COMPLIANCE_SCHEDULER_ENABLED,
+    true
+  ),
+  ownerLicenseComplianceIntervalHours: parsePositiveInteger(
+    process.env.OWNER_LICENSE_COMPLIANCE_INTERVAL_HOURS,
+    24
+  ),
+  ownerPromotionSchedulerEnabled: parseBoolean(
+    process.env.OWNER_PROMOTION_SCHEDULER_ENABLED,
+    true
+  ),
+  ownerPromotionSweepIntervalMinutes: parsePositiveInteger(
+    process.env.OWNER_PROMOTION_SWEEP_INTERVAL_MINUTES,
+    5
+  ),
+  opsAlertWebhookUrl: readConfiguredValue(process.env.OPS_ALERT_WEBHOOK_URL),
+  opsAlertCooldownMinutes: parsePositiveInteger(process.env.OPS_ALERT_COOLDOWN_MINUTES, 30),
   readRateLimitPerMinute: parsePositiveInteger(process.env.READ_RATE_LIMIT_PER_MINUTE, 600),
   writeRateLimitPerMinute: parsePositiveInteger(process.env.WRITE_RATE_LIMIT_PER_MINUTE, 180),
   adminRateLimitPerTenMinutes: parsePositiveInteger(
@@ -47,6 +180,23 @@ export const serverConfig = {
     10
   ),
 } as const;
+
+export function hasRestrictedCorsOrigin() {
+  return !isWildcardCorsOrigin(serverConfig.corsOrigin);
+}
+
+export function isProductionLikeBackendRuntime() {
+  return (
+    process.env.NODE_ENV?.trim() === 'production' ||
+    Boolean(process.env.K_SERVICE || process.env.CLOUD_RUN_JOB)
+  );
+}
+
+export function assertSecureServerConfig() {
+  if (!hasRestrictedCorsOrigin()) {
+    throw new Error('CORS_ORIGIN must be an explicit origin list.');
+  }
+}
 
 const ownerBillingBackendEnvMap = {
   STRIPE_SECRET_KEY: serverConfig.stripeSecretKey,
@@ -79,4 +229,22 @@ export function getMissingOwnerBillingBackendEnvVars(options?: { includeWebhook?
 
 export function hasConfiguredOwnerBillingBackend(options?: { includeWebhook?: boolean }) {
   return getMissingOwnerBillingBackendEnvVars(options).length === 0;
+}
+
+export function hasConfiguredOwnerPortalClaimSync() {
+  return !serverConfig.ownerPortalPrelaunchEnabled || serverConfig.ownerPortalAllowlist.length > 0;
+}
+
+export function hasConfiguredTransactionalEmailDelivery(
+  emailRuntimeConfig: TransactionalEmailRuntimeConfig = getTransactionalEmailRuntimeConfig()
+) {
+  if (!emailRuntimeConfig.welcomeEmailsEnabled) {
+    return false;
+  }
+
+  if (emailRuntimeConfig.emailDeliveryProvider === 'resend') {
+    return Boolean(emailRuntimeConfig.resendApiKey && emailRuntimeConfig.emailFromAddress);
+  }
+
+  return false;
 }

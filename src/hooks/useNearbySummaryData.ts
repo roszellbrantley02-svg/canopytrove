@@ -1,5 +1,7 @@
-import { startTransition, useEffect, useState } from 'react';
+import { startTransition, useEffect, useMemo, useState } from 'react';
+import { useStorefrontProfileController } from '../context/StorefrontController';
 import { storefrontRepository } from '../repositories/storefrontRepository';
+import { reportRuntimeError } from '../services/runtimeReportingService';
 import {
   getCachedLatestNearbySummarySnapshot,
   getCachedNearbySummarySnapshot,
@@ -7,109 +9,183 @@ import {
   loadNearbySummarySnapshot,
   saveNearbySummarySnapshot,
 } from '../services/storefrontSummarySnapshotService';
-import { StorefrontListQuery, StorefrontSummary } from '../types/storefront';
+import type { StorefrontListQuery, StorefrontSummary } from '../types/storefront';
 import { useStorefrontPromotionRevision } from './useStorefrontPromotionRevision';
+import {
+  shouldKeepWarmNearbyResults,
+  shouldPersistNearbySnapshot,
+} from './storefrontSummarySnapshotGuards';
 
 export function useNearbySummaries(query: StorefrontListQuery | null) {
+  const { authSession } = useStorefrontProfileController();
   const promotionRevision = useStorefrontPromotionRevision();
+  const hasQuery = Boolean(query);
+  const areaId = query?.areaId;
+  const searchQuery = query?.searchQuery ?? '';
+  const locationLabel = query?.locationLabel ?? '';
+  const originLatitude = query?.origin.latitude ?? 0;
+  const originLongitude = query?.origin.longitude ?? 0;
+  const hotDealsOnly = query?.hotDealsOnly;
+  const stableQuery = useMemo<StorefrontListQuery | null>(
+    () =>
+      hasQuery
+        ? {
+            areaId,
+            searchQuery,
+            origin: {
+              latitude: originLatitude,
+              longitude: originLongitude,
+            },
+            locationLabel,
+            hotDealsOnly,
+          }
+        : null,
+    [areaId, hasQuery, hotDealsOnly, locationLabel, originLatitude, originLongitude, searchQuery],
+  );
   const [data, setData] = useState<StorefrontSummary[]>(() =>
-    query
-      ? getCachedNearbySummarySnapshot(query) ?? getCachedLatestNearbySummarySnapshot() ?? []
-      : []
+    stableQuery
+      ? (getCachedNearbySummarySnapshot(stableQuery) ??
+        getCachedLatestNearbySummarySnapshot() ??
+        [])
+      : [],
   );
   const [isLoading, setIsLoading] = useState(() =>
-    query
+    stableQuery
       ? !Boolean(
-          getCachedNearbySummarySnapshot(query)?.length ||
-            getCachedLatestNearbySummarySnapshot()?.length
+          getCachedNearbySummarySnapshot(stableQuery)?.length ||
+          getCachedLatestNearbySummarySnapshot()?.length,
         )
-      : false
+      : false,
   );
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!query) {
+    if (!stableQuery) {
       startTransition(() => {
         setData([]);
       });
+      setError(null);
       setIsLoading(false);
       return;
     }
 
     let alive = true;
-    const cached = getCachedNearbySummarySnapshot(query);
+    const cached = getCachedNearbySummarySnapshot(stableQuery);
     const fallback = getCachedLatestNearbySummarySnapshot();
-    const hasCachedData = Boolean(cached?.length || fallback?.length);
-    setData((current) => cached ?? fallback ?? current);
-    setIsLoading(!hasCachedData);
+    startTransition(() => {
+      setData(cached ?? fallback ?? []);
+    });
+    setError(null);
+    setIsLoading(true);
 
     void (async () => {
-      if (!cached?.length) {
-        if (!fallback?.length) {
-          const latestSnapshot = await loadLatestNearbySummarySnapshot();
-          if (alive && latestSnapshot?.length) {
-            startTransition(() => {
-              setData((current) => (current.length ? current : latestSnapshot));
+      try {
+        if (!cached?.length) {
+          if (!fallback?.length) {
+            try {
+              const latestSnapshot = await loadLatestNearbySummarySnapshot();
+              if (alive && latestSnapshot?.length) {
+                startTransition(() => {
+                  setData((current) => (current.length ? current : latestSnapshot));
+                });
+              }
+            } catch (latestSnapshotError) {
+              reportRuntimeError(latestSnapshotError, {
+                source: 'nearby-latest-snapshot-load',
+              });
+            }
+          }
+
+          try {
+            const snapshot = await loadNearbySummarySnapshot(stableQuery);
+            if (alive && snapshot?.length) {
+              startTransition(() => {
+                setData(snapshot);
+              });
+            }
+          } catch (snapshotError) {
+            reportRuntimeError(snapshotError, {
+              source: 'nearby-summary-snapshot-load',
             });
-            setIsLoading(false);
           }
         }
 
-        const snapshot = await loadNearbySummarySnapshot(query);
-        if (alive && snapshot?.length) {
+        const liveData = await storefrontRepository.getNearbySummaries(stableQuery);
+        if (!alive) {
+          return;
+        }
+
+        if (!shouldKeepWarmNearbyResults(cached, fallback, liveData)) {
           startTransition(() => {
-            setData(snapshot);
+            setData(liveData);
           });
+        }
+        setError(null);
+        if (shouldPersistNearbySnapshot(liveData)) {
+          void saveNearbySummarySnapshot(stableQuery, liveData);
+        }
+      } catch (nextError) {
+        reportRuntimeError(nextError, {
+          source: 'nearby-summary-fetch',
+        });
+
+        if (!alive) {
+          return;
+        }
+
+        setError(
+          nextError instanceof Error
+            ? nextError.message
+            : 'Unable to load nearby storefronts right now.',
+        );
+      } finally {
+        if (alive) {
           setIsLoading(false);
         }
       }
-
-      const liveData = await storefrontRepository.getNearbySummaries(query);
-      if (!alive) {
-        return;
-      }
-
-      startTransition(() => {
-        setData(liveData);
-      });
-      setIsLoading(false);
-      void saveNearbySummarySnapshot(query, liveData);
     })();
 
     return () => {
       alive = false;
     };
-  }, [promotionRevision, query?.areaId, query?.searchQuery, query?.origin.latitude, query?.origin.longitude]);
+  }, [authSession.status, authSession.uid, promotionRevision, stableQuery]);
 
-  return { data, isLoading };
+  return { data, error, isLoading };
 }
 
 export function useNearbyWarmSnapshot() {
-  useStorefrontPromotionRevision();
-  const [data, setData] = useState<StorefrontSummary[]>(() => getCachedLatestNearbySummarySnapshot() ?? []);
+  const { authSession } = useStorefrontProfileController();
+  const promotionRevision = useStorefrontPromotionRevision();
+  const [data, setData] = useState<StorefrontSummary[]>(
+    () => getCachedLatestNearbySummarySnapshot() ?? [],
+  );
 
   useEffect(() => {
     let alive = true;
-    if (data.length) {
-      return () => {
-        alive = false;
-      };
-    }
+    const cached = getCachedLatestNearbySummarySnapshot() ?? [];
+    startTransition(() => {
+      setData(cached);
+    });
 
     void (async () => {
-      const snapshot = await loadLatestNearbySummarySnapshot();
-      if (!alive || !snapshot?.length) {
-        return;
-      }
+      try {
+        const snapshot = await loadLatestNearbySummarySnapshot();
+        if (!alive || !snapshot?.length) {
+          return;
+        }
 
-      startTransition(() => {
-        setData(snapshot);
-      });
+        startTransition(() => {
+          setData(snapshot);
+        });
+      } catch (error) {
+        console.warn('[useNearbyWarmSnapshot] failed to load nearby summary snapshot:', error);
+      }
     })();
 
     return () => {
       alive = false;
     };
-  }, [data.length]);
+  }, [authSession.status, authSession.uid, promotionRevision]);
 
   return data;
 }

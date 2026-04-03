@@ -1,6 +1,6 @@
 import { storefrontApiBaseUrl } from '../config/storefrontSourceConfig';
+import type { OwnerBillingCycle } from '../config/ownerBilling';
 import {
-  OwnerBillingCycle,
   getMissingOwnerBillingPublicCheckoutEnvVars,
   getMissingOwnerBillingPublicPortalEnvVars,
   getOwnerBillingPublicCheckoutUrl,
@@ -28,9 +28,7 @@ export function hasConfiguredOwnerBillingFlow() {
   return Boolean(storefrontApiBaseUrl || hasConfiguredOwnerBillingPublicCheckoutLinks());
 }
 
-export async function createOwnerBillingCheckoutSession(
-  billingCycle: OwnerBillingCycle
-) {
+export async function createOwnerBillingCheckoutSession(billingCycle: OwnerBillingCycle) {
   const fallbackUrl = getOwnerBillingPublicCheckoutUrl(billingCycle);
 
   if (storefrontApiBaseUrl) {
@@ -45,7 +43,7 @@ export async function createOwnerBillingCheckoutSession(
           body: JSON.stringify({
             billingCycle,
           }),
-        }
+        },
       );
     } catch (error) {
       if (!fallbackUrl) {
@@ -56,7 +54,7 @@ export async function createOwnerBillingCheckoutSession(
 
   if (!fallbackUrl) {
     throw new Error(
-      `Owner checkout is not configured for this build. Missing public env: ${getMissingOwnerBillingPublicCheckoutEnvVars().join(', ')}.`
+      `Owner checkout is not configured for this build. Missing public env: ${getMissingOwnerBillingPublicCheckoutEnvVars().join(', ')}.`,
     );
   }
 
@@ -77,7 +75,7 @@ export async function createOwnerBillingPortalSession() {
 
   if (!ownerBillingConfig.billingPortalUrl) {
     throw new Error(
-      `Owner billing management is not configured for this build. Missing public env: ${getMissingOwnerBillingPublicPortalEnvVars().join(', ')}.`
+      `Owner billing management is not configured for this build. Missing public env: ${getMissingOwnerBillingPublicPortalEnvVars().join(', ')}.`,
     );
   }
 

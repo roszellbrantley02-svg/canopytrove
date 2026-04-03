@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { storefrontApiBaseUrl, storefrontSourceMode } from '../config/storefrontSourceConfig';
-import {
-  StorefrontBackendSeedStatus,
-  getStorefrontBackendSeedStatus,
-} from '../services/storefrontBackendService';
+import type { StorefrontBackendSeedStatus } from '../services/storefrontBackendService';
+import { getStorefrontBackendSeedStatus } from '../services/storefrontBackendService';
 
 const initialState: StorefrontBackendSeedStatus | null = null;
 

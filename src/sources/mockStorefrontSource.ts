@@ -1,8 +1,12 @@
 import { storefrontSeedRecords } from '../data/storefrontSeedRecords';
 import { toStorefrontDetails, toStorefrontSummary } from '../adapters/storefrontAdapter';
-import { BrowseSortKey, Coordinates, StorefrontSummary } from '../types/storefront';
-import { StorefrontRecord } from '../types/storefrontRecord';
-import { StorefrontSource, StorefrontSourceSummaryQuery, StorefrontSummaryPage } from './storefrontSource';
+import type { BrowseSortKey, Coordinates, StorefrontSummary } from '../types/storefront';
+import type { StorefrontRecord } from '../types/storefrontRecord';
+import type {
+  StorefrontSource,
+  StorefrontSourceSummaryQuery,
+  StorefrontSummaryPage,
+} from './storefrontSource';
 
 const allRecords = [...storefrontSeedRecords];
 const recordIndex = new Map(allRecords.map((record) => [record.id, record]));
@@ -98,7 +102,10 @@ function sortItems(items: StorefrontSummary[], sortKey: BrowseSortKey = 'distanc
   }
 }
 
-function paginate(items: StorefrontSummary[], query?: StorefrontSourceSummaryQuery): StorefrontSummaryPage {
+function paginate(
+  items: StorefrontSummary[],
+  query?: StorefrontSourceSummaryQuery,
+): StorefrontSummaryPage {
   const offset = Math.max(0, query?.offset ?? 0);
   const limit = query?.limit ?? null;
   const pagedItems = limit === null ? items.slice(offset) : items.slice(offset, offset + limit);

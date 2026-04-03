@@ -87,10 +87,7 @@ export function LegalCenterScreen() {
               />
             ) : null}
             {legalDocumentLinks.map((link) => (
-              <View
-                key={link.key}
-                style={[styles.resultCard, !link.url && styles.resultCardWarm]}
-              >
+              <View key={link.key} style={[styles.resultCard, !link.url && styles.resultCardWarm]}>
                 <Text style={styles.resultMeta}>{link.envVar}</Text>
                 <Text style={styles.resultTitle}>
                   {link.label} {link.url ? 'Ready' : 'Missing'}
@@ -187,6 +184,9 @@ export function LegalCenterScreen() {
                     void unblockCommunityAuthor(profileId).then(refreshBlockedAuthors);
                   }}
                   style={styles.secondaryButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Unblock ${profileId}`}
+                  accessibilityHint="Unblocks this author to see their reviews again."
                 >
                   <Text style={styles.secondaryButtonText}>Unblock</Text>
                 </HapticPressable>
@@ -198,6 +198,9 @@ export function LegalCenterScreen() {
                   void clearBlockedCommunityAuthors().then(refreshBlockedAuthors);
                 }}
                 style={styles.secondaryButton}
+                accessibilityRole="button"
+                accessibilityLabel="Clear block list"
+                accessibilityHint="Unblocks all authors to see their reviews again."
               >
                 <Text style={styles.secondaryButtonText}>Clear Block List</Text>
               </HapticPressable>
@@ -212,7 +215,13 @@ export function LegalCenterScreen() {
           body="These URLs should point to live public documents before the app goes to the stores."
         >
           <View style={styles.form}>
-            <HapticPressable onPress={openSupportEmail} style={styles.primaryButton}>
+            <HapticPressable
+              onPress={openSupportEmail}
+              style={styles.primaryButton}
+              accessibilityRole="button"
+              accessibilityLabel="Email support"
+              accessibilityHint="Opens an email compose window to contact support."
+            >
               <Text style={styles.primaryButtonText}>Email Support</Text>
             </HapticPressable>
             {legalSupportLinks.map((link) =>
@@ -221,10 +230,13 @@ export function LegalCenterScreen() {
                   key={link.key}
                   onPress={() => openExternalLink(link.url)}
                   style={styles.secondaryButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${link.label}`}
+                  accessibilityHint="Opens the external legal link in a browser."
                 >
                   <Text style={styles.secondaryButtonText}>{`Open ${link.label}`}</Text>
                 </HapticPressable>
-              ) : null
+              ) : null,
             )}
             {legalDocumentLinks.map((link) =>
               link.url ? (
@@ -232,10 +244,13 @@ export function LegalCenterScreen() {
                   key={link.key}
                   onPress={() => openExternalLink(link.url)}
                   style={styles.secondaryButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${link.label}`}
+                  accessibilityHint="Opens the external legal document in a browser."
                 >
                   <Text style={styles.secondaryButtonText}>{`Open ${link.label}`}</Text>
                 </HapticPressable>
-              ) : null
+              ) : null,
             )}
             {!hasPublishedLegalLinks ? (
               <CustomerStateCard
@@ -254,9 +269,12 @@ export function LegalCenterScreen() {
                 </View>
               </CustomerStateCard>
             ) : null}
-            {!legalConfig.privacyPolicyUrl && !legalConfig.termsUrl && !legalConfig.communityGuidelinesUrl ? (
+            {!legalConfig.privacyPolicyUrl &&
+            !legalConfig.termsUrl &&
+            !legalConfig.communityGuidelinesUrl ? (
               <Text style={styles.helperText}>
-                Publish the public legal URLs and add them to the Expo public env vars before store submission.
+                Publish the public legal URLs and add them to the Expo public env vars before store
+                submission.
               </Text>
             ) : null}
           </View>

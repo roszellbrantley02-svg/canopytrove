@@ -1,6 +1,5 @@
 ﻿import React from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppIconStatCard } from '../../components/AppIconStatCard';
 import { SectionCard } from '../../components/SectionCard';
@@ -12,9 +11,10 @@ import {
   StarIcon,
   TrophyIcon,
 } from '../../icons/AppIcons';
+import { AppUiIcon } from '../../icons/AppUiIcon';
 import { brand } from '../../config/brand';
 import { colors } from '../../theme/tokens';
-import { AppProfile } from '../../types/storefront';
+import type { AppProfile } from '../../types/storefront';
 import { styles } from './profileStyles';
 
 export function ProfileHeroCard({
@@ -47,12 +47,12 @@ export function ProfileHeroCard({
   onStartGuestSession: () => void;
 }) {
   const heroMetaParts = [
-    rank > 0 ? `Rank #${rank}` : null,
-    `${visitedCount} shops visited`,
+    rank > 0 ? `Standing #${rank}` : null,
+    `${visitedCount} storefronts visited`,
     `${joinedDays} days on ${brand.productName}`,
   ].filter(Boolean) as string[];
   const heroHighlights = [
-    { label: 'Rank', value: rank > 0 ? `#${rank}` : 'New' },
+    { label: 'Standing', value: rank > 0 ? `#${rank}` : 'New' },
     { label: 'Visited', value: String(visitedCount) },
     { label: 'Member span', value: joinedDays > 0 ? `${joinedDays}d` : 'Today' },
   ];
@@ -71,19 +71,40 @@ export function ProfileHeroCard({
         </View>
         <View style={styles.heroBody}>
           <View style={styles.heroTitleRow}>
-            <Text style={styles.heroName}>{displayName}</Text>
+            <View style={styles.heroKickerRow}>
+              <Text style={styles.heroKicker}>
+                {appProfile?.kind === 'authenticated' ? 'Member profile' : 'Guest access'}
+              </Text>
+              <View style={styles.heroMiniChip}>
+                <Text style={styles.heroMiniChipText}>{levelTitle}</Text>
+              </View>
+            </View>
+            <Text
+              style={styles.heroName}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+              maxFontSizeMultiplier={1.15}
+            >
+              {displayName}
+            </Text>
             <View style={styles.heroBadge}>
-              <Ionicons
-                name={appProfile?.kind === 'authenticated' ? 'shield-checkmark' : 'person-circle-outline'}
+              <AppUiIcon
+                name={
+                  appProfile?.kind === 'authenticated'
+                    ? 'shield-checkmark'
+                    : 'person-circle-outline'
+                }
                 size={12}
                 color={colors.primary}
               />
               <Text style={styles.heroBadgeText}>
-                {appProfile?.kind === 'authenticated' ? 'Member account' : 'Guest profile'}
+                {appProfile?.kind === 'authenticated' ? 'Verified member' : 'Guest access'}
               </Text>
             </View>
           </View>
-          <Text style={styles.heroMeta}>{heroMetaParts.join(' ·')}</Text>
+          <Text style={styles.heroMeta} numberOfLines={2} ellipsizeMode="tail">
+            {heroMetaParts.join(' · ')}
+          </Text>
         </View>
       </View>
 
@@ -102,22 +123,36 @@ export function ProfileHeroCard({
           <Text style={styles.progressSubtitle}>{levelTitle}</Text>
         </View>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${Math.max(6, levelProgress.progress * 100)}%` }]} />
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${Math.max(6, levelProgress.progress * 100)}%` },
+            ]}
+          />
         </View>
         <Text style={styles.progressCaption}>
           {levelProgress.pointsToNext > 0
-            ? `${levelProgress.pointsToNext} points to level ${level + 1}`
-            : 'Top of the current level band'}
+            ? `${levelProgress.pointsToNext} activity points to level ${level + 1}`
+            : 'At the top of this level'}
         </Text>
       </View>
 
       <View style={styles.heroActions}>
-        <Pressable onPress={onOpenLeaderboard} style={styles.primaryButton}>
-          <Ionicons name="trophy-outline" size={16} color={colors.backgroundDeep} />
-          <Text style={styles.primaryButtonText}>Open Leaderboard</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open progress"
+          accessibilityHint="Opens your leaderboard and progress view."
+          onPress={onOpenLeaderboard}
+          style={styles.primaryButton}
+        >
+          <AppUiIcon name="stats-chart-outline" size={16} color={colors.backgroundDeep} />
+          <Text style={styles.primaryButtonText}>Open Progress</Text>
         </Pressable>
         {authSessionStatus === 'signed-out' ? (
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Browse as guest"
+            accessibilityHint="Starts guest access for browsing without a member account."
             disabled={isStartingGuestSession}
             onPress={onStartGuestSession}
             style={[styles.secondaryButton, isStartingGuestSession && styles.buttonDisabled]}
@@ -125,10 +160,10 @@ export function ProfileHeroCard({
             {isStartingGuestSession ? (
               <ActivityIndicator size="small" color={colors.text} />
             ) : (
-              <Ionicons name="person-add-outline" size={16} color={colors.text} />
+              <AppUiIcon name="person-add-outline" size={16} color={colors.text} />
             )}
             <Text style={styles.secondaryButtonText}>
-              {isStartingGuestSession ? 'Starting...' : 'Start Guest Session'}
+              {isStartingGuestSession ? 'Starting...' : 'Browse as Guest'}
             </Text>
           </Pressable>
         ) : null}
@@ -137,16 +172,25 @@ export function ProfileHeroCard({
   );
 }
 
-export function ProfileDetailsSection({
+export function ProfileAccountSection({
   displayNameInput,
   setDisplayNameInput,
   isSavingDisplayName,
   hasDisplayName,
   profileActionStatus,
   authSessionStatus,
+  memberEmail,
+  ownerPortalEnabled,
+  ownerPortalPreviewEnabled,
   onSaveDisplayName,
   onClearDisplayName,
   onSignOut,
+  onOpenMemberSignIn,
+  onOpenMemberSignUp,
+  onOpenOwnerSignIn,
+  onOpenOwnerPreviewPortal,
+  showOwnerPreview = false,
+  onDismissOwnerPreview,
 }: {
   displayNameInput: string;
   setDisplayNameInput: (value: string) => void;
@@ -154,24 +198,151 @@ export function ProfileDetailsSection({
   hasDisplayName: boolean;
   profileActionStatus: string | null;
   authSessionStatus: string;
+  memberEmail: string | null;
+  ownerPortalEnabled: boolean;
+  ownerPortalPreviewEnabled: boolean;
   onSaveDisplayName: () => void;
   onClearDisplayName: () => void;
   onSignOut: () => void;
+  onOpenMemberSignIn: () => void;
+  onOpenMemberSignUp: () => void;
+  onOpenOwnerSignIn: () => void;
+  onOpenOwnerPreviewPortal: () => void;
+  showOwnerPreview?: boolean;
+  onDismissOwnerPreview?: () => void;
 }) {
+  const isMemberAuthenticated = authSessionStatus === 'authenticated';
+  const isGuestSession = authSessionStatus === 'anonymous';
+  const accountTitle = isMemberAuthenticated
+    ? 'Member account is active'
+    : isGuestSession
+      ? 'Guest access is active'
+      : 'No member account is connected';
+  const accountBody =
+    isMemberAuthenticated && memberEmail
+      ? `${memberEmail} is connected to this profile.`
+      : isGuestSession
+        ? 'You are browsing with guest access. Connect a member account to keep your history.'
+        : 'Sign in to keep your history, reviews, and saved storefronts together.';
+
   return (
     <SectionCard
-      title="Profile details"
-      body="Set the name that appears on your reviews, profile, and community activity."
+      title="Account and identity"
+      body="Manage your member sign-in, display name, and owner access."
     >
-      <TextInput
-        value={displayNameInput}
-        onChangeText={setDisplayNameInput}
-        placeholder="Display name"
-        placeholderTextColor={colors.textSoft}
-        style={styles.input}
-      />
+      <View style={styles.previewCard}>
+        <View style={styles.previewCardHeader}>
+          <View style={styles.progressText}>
+            <Text style={styles.previewCardTitle}>{accountTitle}</Text>
+            <Text style={styles.previewCardBody}>{accountBody}</Text>
+          </View>
+          <View style={styles.heroBadge}>
+            <AppUiIcon
+              name={
+                isMemberAuthenticated
+                  ? 'shield-checkmark'
+                  : isGuestSession
+                    ? 'person-circle-outline'
+                    : 'log-in-outline'
+              }
+              size={12}
+              color={colors.primary}
+            />
+            <Text style={styles.heroBadgeText}>
+              {isMemberAuthenticated ? 'Member' : isGuestSession ? 'Guest' : 'Signed out'}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.accountSnapshotGrid}>
+          <View style={styles.accountSnapshotCard}>
+            <Text style={styles.accountSnapshotValue}>
+              {isMemberAuthenticated ? 'Member' : isGuestSession ? 'Guest' : 'Offline'}
+            </Text>
+            <Text style={styles.accountSnapshotLabel}>Session</Text>
+            <Text style={styles.accountSnapshotBody}>
+              {isMemberAuthenticated
+                ? 'Activity synced to this account.'
+                : isGuestSession
+                  ? 'Connect an account to save activity.'
+                  : 'Sign in to sync history.'}
+            </Text>
+          </View>
+          <View style={styles.accountSnapshotCard}>
+            <Text style={styles.accountSnapshotValue} numberOfLines={1} ellipsizeMode="tail">
+              {displayNameInput.trim() ? displayNameInput.trim() : 'Not set'}
+            </Text>
+            <Text style={styles.accountSnapshotLabel}>Review name</Text>
+            <Text style={styles.accountSnapshotBody}>Shown on reviews.</Text>
+          </View>
+          <View style={styles.accountSnapshotCard}>
+            <Text style={styles.accountSnapshotValue}>
+              {ownerPortalEnabled ? 'Ready' : 'Locked'}
+            </Text>
+            <Text style={styles.accountSnapshotLabel}>Owner tools</Text>
+            <Text style={styles.accountSnapshotBody}>
+              {ownerPortalEnabled ? 'Managed in owner access.' : 'Not enabled.'}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>Display name</Text>
+        <Text style={styles.fieldHint}>Shown on your profile and reviews.</Text>
+        <TextInput
+          accessibilityLabel="Display name"
+          accessibilityHint="Sets the name shown on your reviews and profile."
+          value={displayNameInput}
+          onChangeText={setDisplayNameInput}
+          placeholder="Display name"
+          placeholderTextColor={colors.textSoft}
+          style={styles.input}
+          returnKeyType="done"
+          maxFontSizeMultiplier={1.1}
+        />
+      </View>
+
       <View style={styles.heroActions}>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={isMemberAuthenticated ? 'Switch member account' : 'Member sign in'}
+          accessibilityHint="Opens the member sign-in flow."
+          onPress={onOpenMemberSignIn}
+          style={styles.primaryButton}
+        >
+          <Text style={styles.primaryButtonText}>
+            {isMemberAuthenticated ? 'Switch Member Account' : 'Member Sign In'}
+          </Text>
+        </Pressable>
+        {!isMemberAuthenticated ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Create member account"
+            accessibilityHint="Opens the member account sign-up flow."
+            onPress={onOpenMemberSignUp}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryButtonText}>Create Account</Text>
+          </Pressable>
+        ) : null}
+        {ownerPortalEnabled ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Owner sign in"
+            accessibilityHint="Opens the owner portal sign-in flow."
+            onPress={onOpenOwnerSignIn}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryButtonText}>Owner Sign In</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      <View style={styles.heroActions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Save display name"
+          accessibilityHint="Saves your current display name."
           disabled={isSavingDisplayName}
           onPress={onSaveDisplayName}
           style={[styles.primaryButton, isSavingDisplayName && styles.buttonDisabled]}
@@ -182,6 +353,9 @@ export function ProfileDetailsSection({
           </Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Clear display name"
+          accessibilityHint="Removes the saved display name from your profile."
           disabled={isSavingDisplayName || !hasDisplayName}
           onPress={onClearDisplayName}
           style={[
@@ -189,17 +363,59 @@ export function ProfileDetailsSection({
             (isSavingDisplayName || !hasDisplayName) && styles.buttonDisabled,
           ]}
         >
-          <Ionicons name="close-circle-outline" size={16} color={colors.text} />
+          <AppUiIcon name="close-circle-outline" size={16} color={colors.text} />
           <Text style={styles.secondaryButtonText}>Clear Name</Text>
         </Pressable>
         {authSessionStatus === 'anonymous' || authSessionStatus === 'authenticated' ? (
-          <Pressable onPress={onSignOut} style={styles.secondaryButton}>
-            <Ionicons name="log-out-outline" size={16} color={colors.text} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Sign out"
+            accessibilityHint="Signs out of the current member session."
+            onPress={onSignOut}
+            style={styles.secondaryButton}
+          >
+            <AppUiIcon name="log-out-outline" size={16} color={colors.text} />
             <Text style={styles.secondaryButtonText}>Sign Out</Text>
           </Pressable>
         ) : null}
       </View>
-      {profileActionStatus ? <Text style={styles.environmentNote}>{profileActionStatus}</Text> : null}
+
+      {profileActionStatus ? (
+        <Text style={styles.environmentNote}>{profileActionStatus}</Text>
+      ) : null}
+
+      {ownerPortalEnabled && ownerPortalPreviewEnabled && showOwnerPreview ? (
+        <View style={styles.previewCard}>
+          <View style={styles.previewCardHeader}>
+            <Text style={styles.previewCardTitle}>Owner preview workspace</Text>
+            {onDismissOwnerPreview ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss owner preview workspace"
+                accessibilityHint="Closes the owner preview workspace banner."
+                onPress={onDismissOwnerPreview}
+                style={styles.previewDismissButton}
+              >
+                <AppUiIcon name="close" size={18} color={colors.textSoft} />
+              </Pressable>
+            ) : null}
+          </View>
+          <Text style={styles.previewCardBody}>
+            Review owner tools without affecting live storefront data.
+          </Text>
+          <View style={styles.heroActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open owner preview workspace"
+              accessibilityHint="Opens the preview-only owner workspace."
+              onPress={onOpenOwnerPreviewPortal}
+              style={styles.primaryButton}
+            >
+              <Text style={styles.primaryButtonText}>Open Preview Workspace</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
     </SectionCard>
   );
 }
@@ -220,19 +436,21 @@ export function ProfileStatsSection({
   currentStreak: number;
 }) {
   const statCards = [
-    { label: 'Points', value: String(totalPoints), icon: TrophyIcon, tone: colors.primary },
-    { label: 'Badges', value: String(badgeCount), icon: BadgeIcon, tone: colors.cyan },
+    { label: 'Activity', value: String(totalPoints), icon: TrophyIcon, tone: colors.primary },
+    { label: 'Milestones', value: String(badgeCount), icon: BadgeIcon, tone: colors.cyan },
     { label: 'Reviews', value: String(totalReviews), icon: ReviewIcon, tone: colors.warning },
     { label: 'Helpful', value: String(totalHelpfulVotes), icon: StarIcon, tone: colors.accent },
-    { label: 'Visited', value: String(dispensariesVisited), icon: LocationPinIcon, tone: colors.blue },
+    {
+      label: 'Visited',
+      value: String(dispensariesVisited),
+      icon: LocationPinIcon,
+      tone: colors.blue,
+    },
     { label: 'Streak', value: String(currentStreak), icon: FireIcon, tone: colors.danger },
   ] as const;
 
   return (
-    <SectionCard
-      title="Profile stats"
-      body="Progress is driven by real visits, thoughtful reviews, and helpful community feedback."
-    >
+    <SectionCard title="Profile stats" body="">
       <View style={styles.infoGrid}>
         {statCards.map((card) => (
           <AppIconStatCard

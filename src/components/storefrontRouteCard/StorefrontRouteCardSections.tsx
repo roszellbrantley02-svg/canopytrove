@@ -1,19 +1,23 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { MapGridPreview } from '../MapGridPreview';
-import { PreviewStatusTone } from '../mapGridPreview/mapGridPreviewTones';
-import { BrandMarkIcon } from '../../icons/BrandMarkIcon';
+import type { PreviewStatusTone } from '../mapGridPreview/mapGridPreviewTones';
+import { LocationPinIcon } from '../../icons/AppIcons';
+import { AppUiIcon } from '../../icons/AppUiIcon';
 import { colors } from '../../theme/tokens';
-import { StorefrontSummary } from '../../types/storefront';
+import type { StorefrontSummary } from '../../types/storefront';
 import { getStorefrontRatingDisplay } from '../../utils/storefrontRatings';
 import {
   formatStorefrontPromotionExpiry,
   getStorefrontPromotionBadges,
 } from '../../utils/storefrontPromotions';
 import { styles } from './storefrontRouteCardStyles';
-
-type PreviewTone = 'promotion' | 'saved' | 'visited' | 'neverVisited';
+import type { StorefrontCardVisualLane } from './storefrontRouteCardVisualState';
+import {
+  getStorefrontCardHeroLabel,
+  getStorefrontCardPreviewTone,
+  getStorefrontCardVisualLane,
+} from './storefrontRouteCardVisualState';
 
 type StorefrontRouteCardBodyProps = {
   storefront: StorefrontSummary;
@@ -27,7 +31,7 @@ type StorefrontRouteCardBodyProps = {
   onSecondaryActionPress?: () => void;
   onSecondaryActionPressIn?: () => void;
   showPromotionText: boolean;
-  previewTone: PreviewTone;
+  cardVisualLane: StorefrontCardVisualLane;
   previewStatusLabel: string;
   previewStatusTone: PreviewStatusTone;
 };
@@ -36,22 +40,23 @@ export function getStorefrontRouteCardState({
   isSaved,
   isVisited,
   hasPromotion,
+  premiumCardVariant,
   openNow,
   isOperationalStatusPending,
 }: {
   isSaved: boolean;
   isVisited: boolean;
   hasPromotion: boolean;
+  premiumCardVariant?: StorefrontSummary['premiumCardVariant'];
   openNow: boolean | null;
   isOperationalStatusPending: boolean;
 }) {
-  const previewTone: PreviewTone = hasPromotion
-    ? 'promotion'
-    : isSaved
-      ? 'saved'
-      : isVisited
-        ? 'visited'
-        : 'neverVisited';
+  const cardVisualLane = getStorefrontCardVisualLane({
+    isSaved,
+    isVisited,
+    hasPromotion,
+    premiumCardVariant,
+  });
   const previewStatusTone: PreviewStatusTone =
     typeof openNow === 'boolean'
       ? openNow
@@ -70,7 +75,7 @@ export function getStorefrontRouteCardState({
         : 'Check Hours';
 
   return {
-    previewTone,
+    cardVisualLane,
     previewStatusTone,
     previewStatusLabel,
   };
@@ -88,26 +93,63 @@ export function StorefrontRouteCardBody({
   onSecondaryActionPress,
   onSecondaryActionPressIn,
   showPromotionText,
-  previewTone,
+  cardVisualLane,
   previewStatusLabel,
   previewStatusTone,
 }: StorefrontRouteCardBodyProps) {
   const promotionText = storefront.promotionText?.trim() || null;
   const promotionBadges = getStorefrontPromotionBadges(storefront).slice(0, 5);
   const promotionExpiryLabel = formatStorefrontPromotionExpiry(storefront.promotionExpiresAt);
+  const activePromotionCount =
+    storefront.activePromotionCount ?? (promotionBadges.length || promotionText ? 1 : 0);
+  const hasLiveDeals = activePromotionCount > 0;
   const ownerFeaturedBadges = (storefront.ownerFeaturedBadges ?? []).slice(0, 4);
   const ratingDisplay = getStorefrontRatingDisplay({
     publishedRating: storefront.rating,
     publishedReviewCount: storefront.reviewCount,
   });
-  const isOwnerFeatured = storefront.premiumCardVariant === 'owner_featured';
-  const heroLabel = isOwnerFeatured
-    ? 'Owner featured'
-    : promotionBadges.length
-      ? 'Live deal'
-      : storefront.isVerified
-        ? 'Verified storefront'
-        : 'Local storefront';
+  const previewTone = getStorefrontCardPreviewTone(cardVisualLane);
+  const heroLabel = getStorefrontCardHeroLabel({
+    lane: cardVisualLane,
+    activePromotionCount,
+    isVerified: storefront.isVerified,
+  });
+  const bodyToneStyle =
+    cardVisualLane === 'hotDeal'
+      ? styles.bodyHotDeal
+      : cardVisualLane === 'ownerFeatured'
+        ? styles.bodyOwnerFeatured
+        : cardVisualLane === 'saved'
+          ? styles.bodySaved
+          : cardVisualLane === 'visited'
+            ? styles.bodyVisited
+            : cardVisualLane === 'newToYou'
+              ? styles.bodyNewToYou
+              : null;
+  const kickerChipStyle =
+    cardVisualLane === 'hotDeal'
+      ? styles.kickerChipHotDeal
+      : cardVisualLane === 'ownerFeatured'
+        ? styles.kickerChipOwnerFeatured
+        : cardVisualLane === 'saved'
+          ? styles.kickerChipSaved
+          : cardVisualLane === 'visited'
+            ? styles.kickerChipVisited
+            : cardVisualLane === 'newToYou'
+              ? styles.kickerChipNewToYou
+              : styles.kickerChipDefault;
+  const kickerChipTextStyle =
+    cardVisualLane === 'hotDeal'
+      ? styles.kickerChipTextHotDeal
+      : cardVisualLane === 'ownerFeatured'
+        ? styles.kickerChipTextOwnerFeatured
+        : cardVisualLane === 'saved'
+          ? styles.kickerChipTextSaved
+          : cardVisualLane === 'visited'
+            ? styles.kickerChipTextVisited
+            : cardVisualLane === 'newToYou'
+              ? styles.kickerChipTextNewToYou
+              : null;
 
   return (
     <>
@@ -119,59 +161,43 @@ export function StorefrontRouteCardBody({
           headline={storefront.addressLine1}
           supportingText={`${storefront.city}, ${storefront.state} ${storefront.zip}`}
           height={compact ? 146 : 182}
+          imageUrl={storefront.thumbnailUrl}
         />
       </View>
 
-      <View
-        style={[
-          styles.body,
-          promotionBadges.length ? styles.bodyPromotion : null,
-          isOwnerFeatured ? styles.bodyOwnerFeatured : null,
-        ]}
-      >
+      <View style={[styles.body, bodyToneStyle]}>
         <View style={styles.kickerRow}>
-          <View
-            style={[
-              styles.kickerChip,
-              isOwnerFeatured
-                ? styles.kickerChipOwnerFeatured
-                : promotionBadges.length
-                  ? styles.kickerChipPromotion
-                  : styles.kickerChipDefault,
-            ]}
-          >
-            <Text
-              style={[
-                styles.kickerChipText,
-                isOwnerFeatured
-                  ? styles.kickerChipTextOwnerFeatured
-                  : promotionBadges.length
-                    ? styles.kickerChipTextPromotion
-                    : null,
-              ]}
-            >
+          <View style={[styles.kickerChip, kickerChipStyle]}>
+            <Text numberOfLines={1} style={[styles.kickerChipText, kickerChipTextStyle]}>
               {heroLabel}
             </Text>
           </View>
           <View style={styles.kickerMetric}>
-            <Ionicons name="location-outline" size={13} color={colors.textSoft} />
-            <Text style={styles.kickerMetricText}>{`${storefront.city}, ${storefront.state}`}</Text>
+            <AppUiIcon name="location-outline" size={13} color={colors.textSoft} />
+            <Text
+              numberOfLines={1}
+              style={styles.kickerMetricText}
+            >{`${storefront.city}, ${storefront.state}`}</Text>
           </View>
         </View>
 
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{storefront.displayName}</Text>
+          <Text numberOfLines={2} style={styles.title}>
+            {storefront.displayName}
+          </Text>
           {storefront.verifiedOwnerBadgeLabel ? (
             <View style={styles.ownerHeadlineChip}>
-              <Ionicons name="shield-checkmark" size={12} color={colors.primary} />
-              <Text style={styles.ownerHeadlineText}>{storefront.verifiedOwnerBadgeLabel}</Text>
+              <AppUiIcon name="shield-checkmark" size={12} color={colors.primary} />
+              <Text numberOfLines={1} style={styles.ownerHeadlineText}>
+                {storefront.verifiedOwnerBadgeLabel}
+              </Text>
             </View>
           ) : null}
         </View>
 
         <View style={styles.metaRow}>
           <View style={styles.metaChip}>
-            <Ionicons
+            <AppUiIcon
               name={ratingDisplay.isReady ? 'star' : 'star-outline'}
               size={12}
               color={ratingDisplay.isReady ? colors.primary : colors.textSoft}
@@ -179,21 +205,25 @@ export function StorefrontRouteCardBody({
             <Text style={styles.metaChipText}>{ratingDisplay.badgeLabel}</Text>
           </View>
           <View style={styles.metaChip}>
-            <Ionicons name="people-outline" size={12} color={colors.cyan} />
+            <AppUiIcon name="people-outline" size={12} color={colors.cyan} />
             <Text style={styles.metaChipText}>{ratingDisplay.countLabel}</Text>
           </View>
           <View style={styles.metaChip}>
-            <BrandMarkIcon size={14} />
+            <LocationPinIcon size={14} color={colors.goldSoft} />
             <Text style={styles.metaChipText}>{storefront.distanceMiles.toFixed(1)} mi</Text>
           </View>
         </View>
 
         {ratingDisplay.helperLabel ? (
-          <Text style={styles.ratingHelperText}>{ratingDisplay.helperLabel}</Text>
+          <Text numberOfLines={1} style={styles.ratingHelperText}>
+            {ratingDisplay.helperLabel}
+          </Text>
         ) : null}
 
         {storefront.ownerCardSummary ? (
-          <Text style={styles.ownerSummaryText}>{storefront.ownerCardSummary}</Text>
+          <Text numberOfLines={3} style={styles.ownerSummaryText}>
+            {storefront.ownerCardSummary}
+          </Text>
         ) : null}
 
         {ownerFeaturedBadges.length ? (
@@ -219,7 +249,16 @@ export function StorefrontRouteCardBody({
             ))}
             {promotionExpiryLabel ? (
               <View style={styles.promotionBadgeExpiry}>
-                <Text style={styles.promotionBadgeExpiryText}>{promotionExpiryLabel}</Text>
+                <Text numberOfLines={1} style={styles.promotionBadgeExpiryText}>
+                  {promotionExpiryLabel}
+                </Text>
+              </View>
+            ) : null}
+            {activePromotionCount > 1 ? (
+              <View style={styles.promotionBadgeExpiry}>
+                <Text
+                  style={styles.promotionBadgeExpiryText}
+                >{`${activePromotionCount} live now`}</Text>
               </View>
             ) : null}
           </View>
@@ -227,14 +266,28 @@ export function StorefrontRouteCardBody({
 
         {showPromotionText && promotionText ? (
           <View style={styles.promotionBanner}>
-            <Ionicons name="flame" size={14} color={colors.background} />
-            <Text style={styles.promotionText}>{promotionText}</Text>
+            <AppUiIcon name="flame" size={14} color={colors.background} />
+            <Text numberOfLines={2} style={styles.promotionText}>
+              {promotionText}
+            </Text>
+          </View>
+        ) : !showPromotionText && hasLiveDeals ? (
+          <View style={styles.promotionTeaserBanner}>
+            <AppUiIcon name="lock-closed-outline" size={14} color={colors.text} />
+            <Text numberOfLines={2} style={styles.promotionTeaserText}>
+              {activePromotionCount > 1
+                ? `Members unlock ${activePromotionCount} live deals`
+                : 'Members unlock this live deal'}
+            </Text>
           </View>
         ) : null}
 
         <View style={styles.actionRow}>
           {secondaryActionLabel && onSecondaryActionPress ? (
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${secondaryActionLabel} for ${storefront.displayName}`}
+              accessibilityHint="Runs the secondary storefront card action."
               onPressIn={(event) => {
                 event.stopPropagation();
                 (onSecondaryActionPressIn ?? onPressIn)?.();
@@ -245,12 +298,15 @@ export function StorefrontRouteCardBody({
               }}
               style={styles.secondaryCta}
             >
-              <Ionicons name="storefront-outline" size={14} color={colors.text} />
+              <AppUiIcon name="storefront-outline" size={14} color={colors.text} />
               <Text style={styles.secondaryCtaText}>{secondaryActionLabel}</Text>
             </Pressable>
           ) : null}
 
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${primaryActionLabel} for ${storefront.displayName}`}
+            accessibilityHint="Runs the primary storefront card action."
             onPressIn={(event) => {
               event.stopPropagation();
               (onPrimaryActionPressIn ?? onPressIn)?.();
@@ -264,7 +320,7 @@ export function StorefrontRouteCardBody({
               secondaryActionLabel && onSecondaryActionPress && styles.primaryCtaSplit,
             ]}
           >
-            <Ionicons name="arrow-forward" size={14} color={colors.backgroundDeep} />
+            <AppUiIcon name="arrow-forward" size={14} color={colors.backgroundDeep} />
             <Text style={styles.primaryCtaText}>{primaryActionLabel}</Text>
           </Pressable>
         </View>

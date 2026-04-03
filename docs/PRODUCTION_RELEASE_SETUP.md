@@ -25,6 +25,12 @@ Production env templates now live at:
 
 Use those as the canonical fill-in templates for app and backend production env.
 
+Do not treat `eas.json` as the place where release env lives anymore.
+
+- keep `eas.json` limited to build-profile metadata
+- configure preview/production app env in hosted EAS environments
+- use `.env.example` and `.env.production.example` only as the fill-in templates for those hosted values
+
 Local-only overrides should live outside those release templates:
 
 - app local overrides: `.env.local`
@@ -46,16 +52,58 @@ Minimum backend env:
 
 - `STOREFRONT_BACKEND_SOURCE=firestore`
 - `FIREBASE_PROJECT_ID`
+- `FIREBASE_DATABASE_ID` if the project is using a named Firestore database instead of `(default)`
 - `FIREBASE_SERVICE_ACCOUNT_JSON` or `GOOGLE_APPLICATION_CREDENTIALS`
 - `GOOGLE_MAPS_API_KEY`
 - `ADMIN_API_KEY`
 - `EXPO_ACCESS_TOKEN`
+- `OPENAI_API_KEY` if the owner AI assistant should run live instead of fallback-only
 
 Console-side items that are still outside the repo:
 
 - Firebase Auth project display / branding should say `Canopy Trove`
 - Firebase Auth authorized domains should include `canopytrove.com`
 - if Google sign-in is used, the Google OAuth consent screen should also say `Canopy Trove`
+
+### Runtime Monitoring And Alerts
+
+Recommended backend env for always-on health sweeps:
+
+- `SENTRY_DSN`
+- `OPS_HEALTHCHECK_ENABLED=true`
+- `OPS_HEALTHCHECK_API_URL=https://api.canopytrove.com/health`
+- `OPS_HEALTHCHECK_SITE_URL=https://canopytrove.com`
+- `OPS_ALERT_WEBHOOK_URL`
+
+Current behavior:
+
+- the backend scheduler can sweep the public API and public site on an interval
+- failures and recoveries can post to the configured webhook
+- the internal admin runtime panel can trigger a manual sweep
+- `GET /health` now includes `runtimeMonitoring`
+
+Recommended app build env for hosted mobile crash monitoring:
+
+- `EXPO_PUBLIC_SENTRY_DSN`
+- `EXPO_PUBLIC_SENTRY_ENVIRONMENT`
+- `EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`
+
+Optional but useful for native source map upload:
+
+- `SENTRY_ORG`
+- `SENTRY_PROJECT`
+- `SENTRY_AUTH_TOKEN`
+
+Use hosted EAS env for those values instead of committing them into `eas.json`.
+
+### Owner AI Runtime
+
+The owner AI surfaces are part of the live product now, but they only use the external model provider when the hosted backend has:
+
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` (optional, defaults to `gpt-5-mini`)
+
+Without `OPENAI_API_KEY`, the owner AI assistant remains available but uses fallback/template generation only.
 
 ## 2. Owner Billing
 
@@ -118,11 +166,17 @@ The in-app legal center now shows a release-status card that reads directly from
 
 Dev builds stay open for developer access, but preview/release builds do not silently open the owner portal anymore.
 
-If you want specific real owner emails to access the owner portal outside dev mode, set:
+Default public launch posture:
 
-- `EXPO_PUBLIC_OWNER_PORTAL_ALLOWLIST`
+- `EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=false`
+- `EXPO_PUBLIC_OWNER_PORTAL_PREVIEW_ENABLED=false`
+- `EXPO_PUBLIC_OWNER_PORTAL_ALLOWLIST=` blank
 
-Use a comma-separated list of the exact allowed email addresses.
+If you still want a controlled owner rollout:
+
+- keep the public app bundle neutral
+- set `OWNER_PORTAL_ALLOWLIST` privately on the backend
+- do not ship real allowlisted owner emails in `EXPO_PUBLIC_OWNER_PORTAL_ALLOWLIST`
 
 ## 4. Mobile App Identity
 

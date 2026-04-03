@@ -1,15 +1,19 @@
 import React from 'react';
 import type { DimensionValue } from 'react-native';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
-import { useGamificationLeaderboard, useGamificationLeaderboardRank } from '../hooks/useGamificationData';
+import {
+  useGamificationLeaderboard,
+  useGamificationLeaderboardRank,
+} from '../hooks/useGamificationData';
 import {
   useStorefrontProfileController,
   useStorefrontRewardsController,
 } from '../context/StorefrontController';
-import { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import {
   LeaderboardEarnedBadgesSection,
   LeaderboardEntriesSection,
@@ -34,19 +38,19 @@ export function LeaderboardScreen() {
   const currentProfileId = highlightProfileId ?? profileId;
   const earnedBadgeIds = React.useMemo(
     () => new Set(gamificationState.badges),
-    [gamificationState.badges]
+    [gamificationState.badges],
   );
   const earnedBadges = React.useMemo(
     () => badgeDefinitions.filter((badge) => earnedBadgeIds.has(badge.id)),
-    [badgeDefinitions, earnedBadgeIds]
+    [badgeDefinitions, earnedBadgeIds],
   );
   const lockedBadges = React.useMemo(
     () => badgeDefinitions.filter((badge) => !earnedBadgeIds.has(badge.id)),
-    [badgeDefinitions, earnedBadgeIds]
+    [badgeDefinitions, earnedBadgeIds],
   );
   const pointsToNextLevel = Math.max(
     0,
-    gamificationState.nextLevelPoints - gamificationState.totalPoints
+    gamificationState.nextLevelPoints - gamificationState.totalPoints,
   );
   const levelProgress = gamificationState.nextLevelPoints
     ? Math.min(1, gamificationState.totalPoints / gamificationState.nextLevelPoints)
@@ -57,12 +61,16 @@ export function LeaderboardScreen() {
   const resolvedRank = Math.max(rankData.rank, currentProfileId ? 1 : 0);
   const levelProgressWidth: DimensionValue = `${Math.max(6, levelProgress * 100)}%`;
 
+  // Note: useGamificationLeaderboard and useGamificationLeaderboardRank hooks don't currently
+  // expose error states. If API failures occur, we should add error handling to these hooks
+  // and then add ErrorRecoveryCard rendering here when those errors are exposed.
+
   return (
     <ScreenShell
-      eyebrow="Rewards"
-      title="Community leaderboard."
-      subtitle="Canopy Trove rankings now run from the same rewards state that powers badges, levels, and trophies."
-      headerPill="Leaderboard"
+      eyebrow="Progress"
+      title="Community standings."
+      subtitle="See how your profile activity compares across reviews, visits, and long-term progress signals."
+      headerPill="Standings"
     >
       <MotionInView delay={100}>
         <LeaderboardHeaderRow onBack={() => navigation.goBack()} />

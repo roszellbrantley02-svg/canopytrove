@@ -9,11 +9,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { CustomerStateCard } from './CustomerStateCard';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import { HapticPressable } from './HapticPressable';
 import type { GiphyGifResult } from '../services/giphyService';
+import { AppUiIcon } from '../icons/AppUiIcon';
 
 type GifPickerModalProps = {
   visible: boolean;
@@ -41,12 +41,7 @@ export function GifPickerModal({
   onSelectGif,
 }: GifPickerModalProps) {
   return (
-    <Modal
-      animationType="slide"
-      transparent
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
@@ -56,8 +51,14 @@ export function GifPickerModal({
                 Search for a reaction GIF and add it to the review.
               </Text>
             </View>
-            <HapticPressable onPress={onClose} style={styles.modalCloseButton}>
-              <Ionicons name="close" size={18} color={colors.text} />
+            <HapticPressable
+              onPress={onClose}
+              style={styles.modalCloseButton}
+              accessibilityRole="button"
+              accessibilityLabel="Close GIF picker"
+              accessibilityHint="Closes the GIF selection modal."
+            >
+              <AppUiIcon name="close" size={18} color={colors.text} />
             </HapticPressable>
           </View>
 
@@ -67,6 +68,8 @@ export function GifPickerModal({
             placeholder="Search GIFs"
             placeholderTextColor={colors.textSoft}
             style={styles.urlInput}
+            accessibilityLabel="GIF search"
+            accessibilityHint="Search for GIFs to add to the review."
           />
 
           {isLoading ? (
@@ -106,6 +109,9 @@ export function GifPickerModal({
                 hapticType="selection"
                 onPress={() => onSelectGif(result.id)}
                 style={styles.gifTile}
+                accessibilityRole="button"
+                accessibilityLabel="GIF selection"
+                accessibilityHint="Selects this GIF to add to the review."
               >
                 <Image source={{ uri: result.previewUrl }} style={styles.gifTileImage} />
               </HapticPressable>
@@ -187,13 +193,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     fontSize: typography.body,
   },
-  errorText: {
-    marginBottom: spacing.sm,
-    color: colors.warning,
-    fontSize: typography.caption,
-    fontWeight: '800',
-    lineHeight: 18,
-  },
   gifLoadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -227,13 +226,5 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     fontSize: typography.caption,
     textAlign: 'center',
-  },
-  emptyText: {
-    width: '100%',
-    color: colors.textSoft,
-    fontSize: typography.body,
-    lineHeight: 22,
-    textAlign: 'center',
-    paddingVertical: spacing.lg,
   },
 });

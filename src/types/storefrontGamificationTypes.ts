@@ -1,4 +1,4 @@
-import { AppProfile } from './storefrontBaseTypes';
+import type { AppProfile } from './storefrontBaseTypes';
 
 export type GamificationBadgeCategory =
   | 'review'
@@ -10,12 +10,7 @@ export type GamificationBadgeCategory =
   | 'community'
   | 'explorer';
 
-export type GamificationBadgeTier =
-  | 'bronze'
-  | 'silver'
-  | 'gold'
-  | 'platinum'
-  | 'diamond';
+export type GamificationBadgeTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 
 export type GamificationBadgeDefinition = {
   id: string;

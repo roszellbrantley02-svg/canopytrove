@@ -1,4 +1,4 @@
-import { BrowseSortKey, StorefrontDetails, StorefrontListQuery } from '../types/storefront';
+import type { BrowseSortKey, StorefrontDetails, StorefrontListQuery } from '../types/storefront';
 import { clearStorefrontRepositoryCacheEntries } from './storefrontRepositoryCache';
 import {
   getBrowseSummaries,
@@ -25,7 +25,7 @@ export const storefrontRepository = {
     query: StorefrontListQuery,
     sortKey: BrowseSortKey = 'distance',
     limit = 4,
-    offset = 0
+    offset = 0,
   ) {
     await getBrowseSummaries(query, sortKey, limit, offset);
   },

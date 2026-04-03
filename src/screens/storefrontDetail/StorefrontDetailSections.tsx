@@ -9,6 +9,8 @@ export {
 export {
   DetailOfficialRecordCard,
   DetailLiveUpdateUnavailableCard,
+  DetailLiveDealsSection,
+  DetailLockedLiveDealsSection,
   DetailStoreSummarySection,
   DetailHoursSection,
 } from './StorefrontDetailInfoSections';
@@ -16,4 +18,5 @@ export {
   DetailReviewsSection,
   DetailReviewsEmptyCard,
   DetailPhotosSection,
+  DetailLockedPhotosSection,
 } from './StorefrontDetailCommunitySections';

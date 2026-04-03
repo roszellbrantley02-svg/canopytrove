@@ -1,5 +1,5 @@
 import React from 'react';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   useStorefrontProfileController,
   useStorefrontQueryController,
@@ -7,6 +7,7 @@ import {
   useStorefrontRouteController,
 } from '../../context/StorefrontController';
 import {
+  ownerPortalAccessAvailable,
   ownerPortalPrelaunchEnabled,
   ownerPortalPreviewEnabled,
 } from '../../config/ownerPortalConfig';
@@ -14,8 +15,9 @@ import { storefrontSourceMode } from '../../config/storefrontSourceConfig';
 import { useStorefrontBackendHealth } from '../../hooks/useStorefrontBackendHealth';
 import { useStorefrontBackendSeedStatus } from '../../hooks/useStorefrontBackendSeedStatus';
 import { useGamificationLeaderboardRank } from '../../hooks/useGamificationData';
-import { useRecentStorefrontIds, useSavedSummaries } from '../../hooks/useStorefrontData';
-import { RootStackParamList } from '../../navigation/RootNavigator';
+import { useMemberEmailSubscription } from '../../hooks/useMemberEmailSubscription';
+import { useRecentStorefrontIds, useSavedSummaries } from '../../hooks/useStorefrontSummaryData';
+import type { RootStackParamList } from '../../navigation/RootNavigator';
 import { storefrontSourceStatus } from '../../sources';
 import { legalConfig } from '../../config/legal';
 import {
@@ -25,9 +27,7 @@ import {
 import { useProfileActions } from './useProfileActions';
 import { useProfileDerivedState } from './useProfileDerivedState';
 
-export function useProfileScreenModel(
-  navigation: NativeStackNavigationProp<RootStackParamList>
-) {
+export function useProfileScreenModel(navigation: NativeStackNavigationProp<RootStackParamList>) {
   const { savedStorefrontIds } = useStorefrontRouteController();
   const {
     appProfile,
@@ -39,14 +39,19 @@ export function useProfileScreenModel(
     startGuestSession,
     updateDisplayName,
   } = useStorefrontProfileController();
-  const { activeLocation, activeLocationLabel, activeLocationMode } = useStorefrontQueryController();
+  const { activeLocation, activeLocationLabel, activeLocationMode } =
+    useStorefrontQueryController();
   const { badgeDefinitions, gamificationState, levelTitle } = useStorefrontRewardsController();
   const { data: rankData } = useGamificationLeaderboardRank();
-  const { data: savedStorefronts, isLoading: isLoadingSaved } = useSavedSummaries(savedStorefrontIds);
+  const { data: savedStorefronts, isLoading: isLoadingSaved } =
+    useSavedSummaries(savedStorefrontIds);
   const { data: recentStorefrontIds, isLoading: isLoadingRecentIds } = useRecentStorefrontIds();
-  const { data: recentStorefronts, isLoading: isLoadingRecentStorefronts } = useSavedSummaries(recentStorefrontIds);
+  const { data: recentStorefronts, isLoading: isLoadingRecentStorefronts } =
+    useSavedSummaries(recentStorefrontIds);
   const backendHealth = useStorefrontBackendHealth();
-  const { data: backendSeedStatus, isLoading: isLoadingBackendSeedStatus } = useStorefrontBackendSeedStatus();
+  const emailSubscription = useMemberEmailSubscription(authSession);
+  const { data: backendSeedStatus, isLoading: isLoadingBackendSeedStatus } =
+    useStorefrontBackendSeedStatus();
   const [displayNameInput, setDisplayNameInput] = React.useState(appProfile?.displayName ?? '');
   const {
     displayName,
@@ -100,7 +105,7 @@ export function useProfileScreenModel(
     updateDisplayName,
   });
   const [communitySafetyState, setCommunitySafetyState] = React.useState(() =>
-    getCommunitySafetyState()
+    getCommunitySafetyState(),
   );
 
   React.useEffect(() => {
@@ -136,14 +141,18 @@ export function useProfileScreenModel(
     dismissOwnerPreview,
     displayName,
     displayNameInput,
+    emailSubscriptionActionStatus: emailSubscription.actionStatus,
+    emailSubscriptionStatus: emailSubscription.status,
     earnedBadges,
     featuredBadges,
     gamificationState,
     isLoadingBackendSeedStatus,
+    isLoadingEmailSubscription: emailSubscription.isLoading,
     isLoadingRecentIds,
     isLoadingRecentStorefronts,
     isLoadingSaved,
     isSavingDisplayName,
+    isSavingEmailSubscription: emailSubscription.isSaving,
     isSeeding,
     isStartingGuestSession,
     joinedDays,
@@ -160,6 +169,7 @@ export function useProfileScreenModel(
     openOwnerPortal,
     openOwnerSignIn,
     ownerPortalAccess,
+    ownerPortalAccessAvailable,
     ownerPortalPrelaunchEnabled,
     ownerPortalPreviewEnabled,
     profileActionStatus,
@@ -182,6 +192,8 @@ export function useProfileScreenModel(
     storefrontSourceMode,
     storefrontSourceStatus,
     saveDisplayName,
+    subscribeToEmailUpdates: emailSubscription.subscribe,
+    unsubscribeFromEmailUpdates: emailSubscription.unsubscribe,
     clearDisplayName: clearProfileDisplayName,
   };
 }

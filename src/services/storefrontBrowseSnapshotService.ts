@@ -1,13 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BrowseSortKey, BrowseSummaryResult, StorefrontListQuery } from '../types/storefront';
-import { createBrowseSnapshotKey } from './storefrontSnapshotShared';
+import type { BrowseSortKey, BrowseSummaryResult, StorefrontListQuery } from '../types/storefront';
+import {
+  createBrowseSnapshotKey,
+  pruneSnapshotCacheToLimit,
+  trackStoredBrowseSnapshotKey,
+} from './storefrontSnapshotShared';
 
 const browseSnapshotCache = new Map<string, BrowseSummaryResult>();
+const MAX_BROWSE_MEMORY_SNAPSHOTS = 24;
 
 export function getCachedBrowseSummarySnapshot(
   query: StorefrontListQuery,
   sortKey: BrowseSortKey,
-  limit: number
+  limit: number,
 ) {
   return browseSnapshotCache.get(createBrowseSnapshotKey(query, sortKey, limit)) ?? null;
 }
@@ -15,7 +20,7 @@ export function getCachedBrowseSummarySnapshot(
 export async function loadBrowseSummarySnapshot(
   query: StorefrontListQuery,
   sortKey: BrowseSortKey,
-  limit: number
+  limit: number,
 ): Promise<BrowseSummaryResult | null> {
   const cacheKey = createBrowseSnapshotKey(query, sortKey, limit);
   const cached = browseSnapshotCache.get(cacheKey);
@@ -31,6 +36,7 @@ export async function loadBrowseSummarySnapshot(
 
     const snapshot = JSON.parse(rawValue) as BrowseSummaryResult;
     browseSnapshotCache.set(cacheKey, snapshot);
+    pruneSnapshotCacheToLimit(browseSnapshotCache, MAX_BROWSE_MEMORY_SNAPSHOTS);
     return snapshot;
   } catch {
     return null;
@@ -41,13 +47,15 @@ export async function saveBrowseSummarySnapshot(
   query: StorefrontListQuery,
   sortKey: BrowseSortKey,
   limit: number,
-  result: BrowseSummaryResult
+  result: BrowseSummaryResult,
 ): Promise<void> {
   const cacheKey = createBrowseSnapshotKey(query, sortKey, limit);
   browseSnapshotCache.set(cacheKey, result);
+  pruneSnapshotCacheToLimit(browseSnapshotCache, MAX_BROWSE_MEMORY_SNAPSHOTS);
 
   try {
     await AsyncStorage.setItem(cacheKey, JSON.stringify(result));
+    await trackStoredBrowseSnapshotKey(cacheKey);
   } catch {
     // Snapshot persistence should not block render flow.
   }

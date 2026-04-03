@@ -1,3 +1,5 @@
+import type { RuntimeOpsStatus } from './runtimeOps';
+
 export type OwnerPortalUserRole = 'customer' | 'owner' | 'admin';
 
 export type OwnerPortalAccountStatus = 'active' | 'invited' | 'suspended';
@@ -20,11 +22,7 @@ export type VerificationStatus =
   | 'failed'
   | 'expired';
 
-export type OwnerClaimStatus =
-  | 'pending'
-  | 'approved'
-  | 'rejected'
-  | 'needs_resubmission';
+export type OwnerClaimStatus = 'pending' | 'approved' | 'rejected' | 'needs_resubmission';
 
 export type OwnerSubscriptionStatus =
   | 'inactive'
@@ -74,6 +72,12 @@ export type OwnerPortalAccessState = {
   enabled: boolean;
   restricted: boolean;
   allowlisted: boolean;
+};
+
+export type OwnerPortalAuthClaimsSyncResponse = {
+  ok: true;
+  role: 'owner' | 'admin';
+  syncedAt: string;
 };
 
 export type OwnerPortalSignUpInput = {
@@ -155,10 +159,56 @@ export type OwnerPortalSubscriptionDocument = {
   lastCheckoutOpenedAt?: string | null;
 };
 
-export type OwnerPromotionAudience =
-  | 'all_followers'
-  | 'frequent_visitors'
-  | 'new_customers';
+export type OwnerLicenseRenewalStatus =
+  | 'unknown'
+  | 'active'
+  | 'window_open'
+  | 'urgent'
+  | 'submitted'
+  | 'expired';
+
+export type OwnerLicenseReminderStage =
+  | '120_day'
+  | '90_day'
+  | '60_day'
+  | '30_day'
+  | '14_day'
+  | '7_day'
+  | 'expired';
+
+export type OwnerLicenseComplianceDocument = {
+  ownerUid: string;
+  dispensaryId: string;
+  licenseNumber: string;
+  licenseType: string;
+  state?: string;
+  jurisdiction: 'NY';
+  issuedAt: string | null;
+  expiresAt: string | null;
+  renewalWindowStartsAt: string | null;
+  renewalWindowEndsAt?: string | null;
+  renewalUrgentAt: string | null;
+  renewalStatus: OwnerLicenseRenewalStatus;
+  renewalSubmittedAt: string | null;
+  lastReminderSentAt: string | null;
+  lastReminderAt?: string | null;
+  lastReminderStage: OwnerLicenseReminderStage | null;
+  lastReviewedAt?: string | null;
+  lastReviewedLabel?: string | null;
+  renewalSubmissionStatus?: string | null;
+  checklist?: Array<{
+    id: string;
+    label: string;
+    completed: boolean;
+    detail: string;
+  }>;
+  source: 'owner_input' | 'admin_input' | 'verification_seed';
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OwnerPromotionAudience = 'all_followers' | 'frequent_visitors' | 'new_customers';
 
 export type OwnerPromotionStatus = 'draft' | 'scheduled' | 'active' | 'expired';
 
@@ -183,6 +233,7 @@ export type OwnerStorefrontPromotionDocument = {
   cardTone: OwnerPromotionCardTone;
   placementSurfaces: OwnerPromotionPlacementSurface[];
   placementScope: OwnerPromotionPlacementScope;
+  followersAlertedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -193,6 +244,8 @@ export type OwnerStorefrontProfileToolsDocument = {
   menuUrl: string | null;
   featuredPhotoUrls: string[];
   cardPhotoUrl: string | null;
+  featuredPhotoPaths?: string[];
+  cardPhotoPath?: string | null;
   verifiedBadgeLabel: string | null;
   featuredBadges: string[];
   cardSummary: string | null;
@@ -286,7 +339,7 @@ export type OwnerPortalWorkspaceDocument = {
     displayName: string;
     addressLine1: string;
     city: string;
-    state: 'NY';
+    state: string;
     zip: string;
     promotionText?: string | null;
     promotionBadges?: string[];
@@ -298,19 +351,32 @@ export type OwnerPortalWorkspaceDocument = {
   promotions: OwnerStorefrontPromotionDocument[];
   promotionPerformance: OwnerPromotionPerformanceSnapshot[];
   profileTools: OwnerStorefrontProfileToolsDocument | null;
+  licenseCompliance: OwnerLicenseComplianceDocument | null;
   ownerAlertStatus: {
     pushEnabled: boolean;
     updatedAt: string | null;
   };
+  runtimeStatus: RuntimeOpsStatus;
 };
 
 export type OwnerPortalProfileToolsInput = {
   menuUrl?: string | null;
   featuredPhotoUrls?: string[];
   cardPhotoUrl?: string | null;
+  featuredPhotoPaths?: string[];
+  cardPhotoPath?: string | null;
   verifiedBadgeLabel?: string | null;
   featuredBadges?: string[];
   cardSummary?: string | null;
+};
+
+export type OwnerPortalLicenseComplianceInput = {
+  licenseNumber?: string;
+  licenseType?: string;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  renewalSubmittedAt?: string | null;
+  notes?: string | null;
 };
 
 export type OwnerPortalPromotionInput = {
@@ -325,3 +391,64 @@ export type OwnerPortalPromotionInput = {
   placementSurfaces: OwnerPromotionPlacementSurface[];
   placementScope: OwnerPromotionPlacementScope;
 };
+
+export type OwnerAiPriority = {
+  title: string;
+  body: string;
+  tone: 'info' | 'warning' | 'success';
+};
+
+export type OwnerAiActionPlan = {
+  headline: string;
+  summary: string;
+  priorities: OwnerAiPriority[];
+  generatedAt: string;
+  usedFallback: boolean;
+};
+
+export type OwnerAiPromotionDraft = {
+  title: string;
+  description: string;
+  badges: string[];
+  audience: OwnerPromotionAudience;
+  cardTone: OwnerPromotionCardTone;
+  placementSurfaces: OwnerPromotionPlacementSurface[];
+  placementScope: OwnerPromotionPlacementScope;
+  reasoning: string;
+  generatedAt: string;
+  usedFallback: boolean;
+};
+
+export type OwnerAiReviewReplyDraft = {
+  text: string;
+  tone: string;
+  reasoning: string;
+  generatedAt: string;
+  usedFallback: boolean;
+};
+
+export type OwnerAiProfileSuggestion = {
+  cardSummary: string;
+  verifiedBadgeLabel: string | null;
+  featuredBadges: string[];
+  reasoning: string;
+  generatedAt: string;
+  usedFallback: boolean;
+};
+
+export type OwnerAiDraftRequest = {
+  goal?: string | null;
+  tone?: string | null;
+  focus?: string | null;
+};
+
+export type OwnerPortalAiPromotionDraftInput = {
+  brief: string | null;
+  audience: OwnerPromotionAudience;
+  cardTone: OwnerPromotionCardTone;
+  placementScope: OwnerPromotionPlacementScope;
+};
+
+export type OwnerPortalAiReviewReplyResponse = OwnerAiReviewReplyDraft;
+export type OwnerPortalAiPromotionDraftResponse = OwnerAiPromotionDraft;
+export type OwnerPortalAiActionPlanResponse = OwnerAiActionPlan;

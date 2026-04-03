@@ -9,6 +9,12 @@ import {
 } from '../services/ownerBillingService';
 
 export const ownerBillingRoutes = Router();
+const ownerBillingSessionRateLimiter = createRateLimitMiddleware({
+  name: 'owner-billing-session',
+  windowMs: 60_000,
+  max: 6,
+  methods: ['POST'],
+});
 
 ownerBillingRoutes.use(
   createRateLimitMiddleware({
@@ -27,31 +33,39 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Unknown owner billing failure.';
 }
 
-ownerBillingRoutes.post('/owner-billing/checkout-session', async (request, response) => {
-  try {
-    const body =
-      typeof request.body === 'object' && request.body
-        ? (request.body as Record<string, unknown>)
-        : {};
-    response.json(await createOwnerBillingCheckoutSession(request, body.billingCycle));
-  } catch (error) {
-    response.status(getErrorStatus(error)).json({
-      ok: false,
-      error: getErrorMessage(error),
-    });
+ownerBillingRoutes.post(
+  '/owner-billing/checkout-session',
+  ownerBillingSessionRateLimiter,
+  async (request, response) => {
+    try {
+      const body =
+        typeof request.body === 'object' && request.body
+          ? (request.body as Record<string, unknown>)
+          : {};
+      response.json(await createOwnerBillingCheckoutSession(request, body.billingCycle));
+    } catch (error) {
+      response.status(getErrorStatus(error)).json({
+        ok: false,
+        error: getErrorMessage(error),
+      });
+    }
   }
-});
+);
 
-ownerBillingRoutes.post('/owner-billing/portal-session', async (request, response) => {
-  try {
-    response.json(await createOwnerBillingPortalSession(request));
-  } catch (error) {
-    response.status(getErrorStatus(error)).json({
-      ok: false,
-      error: getErrorMessage(error),
-    });
+ownerBillingRoutes.post(
+  '/owner-billing/portal-session',
+  ownerBillingSessionRateLimiter,
+  async (request, response) => {
+    try {
+      response.json(await createOwnerBillingPortalSession(request));
+    } catch (error) {
+      response.status(getErrorStatus(error)).json({
+        ok: false,
+        error: getErrorMessage(error),
+      });
+    }
   }
-});
+);
 
 export async function ownerBillingWebhookHandler(request: Request, response: Response) {
   try {

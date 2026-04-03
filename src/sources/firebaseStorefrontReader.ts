@@ -1,11 +1,12 @@
-import { QueryConstraint, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import type { QueryConstraint } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import {
   fromStorefrontDetailDocument,
   fromStorefrontSummaryDocument,
 } from '../adapters/firestoreDocumentAdapter';
 import { getFirebaseDb } from '../config/firebase';
-import { StorefrontSummary } from '../types/storefront';
-import { StorefrontSourceSummaryQuery } from './storefrontSource';
+import type { StorefrontSummary } from '../types/storefront';
+import type { StorefrontSourceSummaryQuery } from './storefrontSource';
 import {
   applySearch,
   filterByRadius,
@@ -25,7 +26,7 @@ async function getSummarySnapshots(constraints: QueryConstraint[]) {
 
   const snapshots = await getDocs(query(collection(db, SUMMARY_COLLECTION), ...constraints));
   return snapshots.docs.map((snapshot) =>
-    fromStorefrontSummaryDocument(snapshot.id, snapshot.data() as Record<string, unknown>)
+    fromStorefrontSummaryDocument(snapshot.id, snapshot.data() as Record<string, unknown>),
   );
 }
 
@@ -37,7 +38,7 @@ export async function getAllFirebaseSummaries() {
 
   const snapshots = await getDocs(collection(db, SUMMARY_COLLECTION));
   return snapshots.docs.map((snapshot) =>
-    fromStorefrontSummaryDocument(snapshot.id, snapshot.data() as Record<string, unknown>)
+    fromStorefrontSummaryDocument(snapshot.id, snapshot.data() as Record<string, unknown>),
   );
 }
 
@@ -59,7 +60,7 @@ export async function getFirebaseSummariesByIds(storefrontIds: string[]) {
       }
 
       return fromStorefrontSummaryDocument(snapshot.id, snapshot.data() as Record<string, unknown>);
-    })
+    }),
   );
 
   return summaries.filter((summary): summary is StorefrontSummary => Boolean(summary));
@@ -98,7 +99,9 @@ export async function getFilteredFirebaseSummaries(sourceQuery?: StorefrontSourc
   } else if (searchNarrowing.city) {
     baseConstraints.push(where('city', '==', searchNarrowing.city));
   }
-  const areaConstraints = areaId ? [where('marketId', '==', areaId), ...baseConstraints] : baseConstraints;
+  const areaConstraints = areaId
+    ? [where('marketId', '==', areaId), ...baseConstraints]
+    : baseConstraints;
 
   const boundingFilter = (summary: StorefrontSummary) =>
     summary.coordinates.longitude >= origin.longitude - longitudeDelta &&
@@ -108,26 +111,29 @@ export async function getFilteredFirebaseSummaries(sourceQuery?: StorefrontSourc
     return filterByRadius(
       applySearch((await getSummarySnapshots(areaConstraints)).filter(boundingFilter), searchQuery),
       origin,
-      radiusMiles
+      radiusMiles,
     );
   } catch {
     try {
       return filterByRadius(
-        applySearch((await getSummarySnapshots(baseConstraints)).filter(boundingFilter), searchQuery),
+        applySearch(
+          (await getSummarySnapshots(baseConstraints)).filter(boundingFilter),
+          searchQuery,
+        ),
         origin,
-        radiusMiles
+        radiusMiles,
       );
     } catch {
       const allSummaries = await getDocs(collection(db, SUMMARY_COLLECTION));
       return filterByRadius(
         applySearch(
           allSummaries.docs.map((snapshot) =>
-            fromStorefrontSummaryDocument(snapshot.id, snapshot.data() as Record<string, unknown>)
+            fromStorefrontSummaryDocument(snapshot.id, snapshot.data() as Record<string, unknown>),
           ),
-          searchQuery
+          searchQuery,
         ),
         origin,
-        radiusMiles
+        radiusMiles,
       );
     }
   }

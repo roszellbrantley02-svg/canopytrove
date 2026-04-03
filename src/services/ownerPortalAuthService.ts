@@ -1,42 +1,34 @@
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { trackAnalyticsEvent } from './analyticsService';
 import {
   sendCanopyTrovePasswordReset,
   signInCanopyTroveEmailPassword,
   signUpCanopyTroveEmailPassword,
 } from './canopyTroveAuthService';
+import type { OwnerPortalSignUpInput, OwnerProfileDocument } from '../types/ownerPortal';
 import {
-  OwnerPortalSignUpInput,
-  OwnerProfileDocument,
-  OwnerUserDocument,
-} from '../types/ownerPortal';
-import {
-  assertOwnerPortalEmailAllowed,
   createDefaultOwnerProfileDocument,
-  createDefaultUserDocument,
-  createNow,
   getOwnerPortalDb,
   OWNER_PROFILES_COLLECTION,
-  USERS_COLLECTION,
 } from './ownerPortalShared';
-
-async function upsertOwnerUserDocument(userDocument: OwnerUserDocument) {
-  const db = getOwnerPortalDb();
-  const userRef = doc(db, USERS_COLLECTION, userDocument.uid);
-  await setDoc(
-    userRef,
-    {
-      ...userDocument,
-      updatedAt: userDocument.lastLoginAt,
-    },
-    { merge: true }
-  );
-}
+import { ensureOwnerPortalSessionReady } from './ownerPortalSessionService';
+import { sendOwnerWelcomeEmailIfNeeded } from './ownerWelcomeEmailService';
+import { reportRuntimeError } from './runtimeReportingService';
 
 async function upsertOwnerProfileDocument(ownerProfile: OwnerProfileDocument) {
   const db = getOwnerPortalDb();
   const ownerProfileRef = doc(db, OWNER_PROFILES_COLLECTION, ownerProfile.uid);
   await setDoc(ownerProfileRef, ownerProfile, { merge: true });
+}
+
+async function syncOwnerWelcomeEmail(source: 'signup' | 'signin') {
+  try {
+    await sendOwnerWelcomeEmailIfNeeded();
+  } catch (error) {
+    reportRuntimeError(error, {
+      source: `owner-welcome-email-${source}`,
+    });
+  }
 }
 
 export async function signUpOwnerPortalAccount(input: OwnerPortalSignUpInput) {
@@ -46,26 +38,20 @@ export async function signUpOwnerPortalAccount(input: OwnerPortalSignUpInput) {
     source: 'owner_portal',
   });
 
-  assertOwnerPortalEmailAllowed(normalizedEmail);
-
   const authSession = await signUpCanopyTroveEmailPassword(
     normalizedEmail,
     input.password,
-    input.displayName
+    input.displayName,
   );
   if (!authSession?.uid) {
     throw new Error('Unable to create owner account.');
   }
 
-  const userDocument = createDefaultUserDocument(
-    authSession.uid,
-    normalizedEmail,
-    input.displayName.trim()
-  );
-  const ownerProfile = createDefaultOwnerProfileDocument(authSession.uid, input);
+  await ensureOwnerPortalSessionReady();
 
-  await upsertOwnerUserDocument(userDocument);
+  const ownerProfile = createDefaultOwnerProfileDocument(authSession.uid, input);
   await upsertOwnerProfileDocument(ownerProfile);
+  await syncOwnerWelcomeEmail('signup');
 
   trackAnalyticsEvent('signup_completed', {
     role: 'owner',
@@ -74,15 +60,12 @@ export async function signUpOwnerPortalAccount(input: OwnerPortalSignUpInput) {
 
   return {
     authSession,
-    userDocument,
     ownerProfile,
   };
 }
 
 export async function signInOwnerPortalAccount(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
-  assertOwnerPortalEmailAllowed(normalizedEmail);
-
   const authSession = await signInCanopyTroveEmailPassword(normalizedEmail, password);
   if (!authSession?.uid) {
     throw new Error('Unable to sign in.');
@@ -93,22 +76,8 @@ export async function signInOwnerPortalAccount(email: string, password: string) 
     source: 'owner_portal',
   });
 
-  const db = getOwnerPortalDb();
-  const userRef = doc(db, USERS_COLLECTION, authSession.uid);
-  const userSnapshot = await getDoc(userRef);
-  if (!userSnapshot.exists()) {
-    await upsertOwnerUserDocument(
-      createDefaultUserDocument(
-        authSession.uid,
-        normalizedEmail,
-        authSession.displayName ?? ''
-      )
-    );
-  } else {
-    await updateDoc(userRef, {
-      lastLoginAt: createNow(),
-    });
-  }
+  await ensureOwnerPortalSessionReady();
+  await syncOwnerWelcomeEmail('signin');
 
   return authSession;
 }

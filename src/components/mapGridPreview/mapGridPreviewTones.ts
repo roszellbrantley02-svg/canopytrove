@@ -1,6 +1,12 @@
 import { colors } from '../../theme/tokens';
 
-export type PreviewTone = 'default' | 'saved' | 'visited' | 'promotion' | 'neverVisited';
+export type PreviewTone =
+  | 'default'
+  | 'saved'
+  | 'visited'
+  | 'promotion'
+  | 'ownerFeatured'
+  | 'neverVisited';
 export type PreviewStatusTone = PreviewTone | 'open' | 'closed' | 'checking';
 
 export function getToneStyles(tone: PreviewTone) {
@@ -46,6 +52,20 @@ export function getToneStyles(tone: PreviewTone) {
         labelTextColor: '#FFC0C0',
         labelBorderColor: 'rgba(255,122,122,0.22)',
         labelBackgroundColor: 'rgba(255,122,122,0.10)',
+      };
+    case 'ownerFeatured':
+      return {
+        panelBackgroundColor: '#10201A',
+        borderColor: 'rgba(0,245,140,0.36)',
+        shadowColor: colors.primary,
+        primaryGlowColor: 'rgba(0, 245, 140, 0.16)',
+        secondaryGlowColor: 'rgba(0, 245, 140, 0.08)',
+        blockBorderColor: 'rgba(0,245,140,0.12)',
+        blockBackgroundColor: 'rgba(0,245,140,0.06)',
+        blockOffsetBackgroundColor: 'rgba(0,245,140,0.04)',
+        labelTextColor: colors.primary,
+        labelBorderColor: 'rgba(0,245,140,0.22)',
+        labelBackgroundColor: 'rgba(0,245,140,0.10)',
       };
     case 'neverVisited':
       return {

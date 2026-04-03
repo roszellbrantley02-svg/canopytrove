@@ -1,12 +1,10 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { OwnerPortalBusinessDetailsInput, OwnerProfileDocument } from '../types/ownerPortal';
-import {
-  createNow,
-  getOwnerPortalDb,
-  OWNER_PROFILES_COLLECTION,
-} from './ownerPortalShared';
+import type { OwnerPortalBusinessDetailsInput, OwnerProfileDocument } from '../types/ownerPortal';
+import { createNow, getOwnerPortalDb, OWNER_PROFILES_COLLECTION } from './ownerPortalShared';
+import { ensureOwnerPortalSessionReady } from './ownerPortalSessionService';
 
 export async function getOwnerProfile(uid: string) {
+  await ensureOwnerPortalSessionReady();
   const db = getOwnerPortalDb();
   const ownerProfileRef = doc(db, OWNER_PROFILES_COLLECTION, uid);
   const snapshot = await getDoc(ownerProfileRef);
@@ -19,8 +17,9 @@ export async function getOwnerProfile(uid: string) {
 
 export async function saveOwnerBusinessDetails(
   uid: string,
-  input: OwnerPortalBusinessDetailsInput
+  input: OwnerPortalBusinessDetailsInput,
 ) {
+  await ensureOwnerPortalSessionReady();
   const db = getOwnerPortalDb();
   const ownerProfileRef = doc(db, OWNER_PROFILES_COLLECTION, uid);
   await setDoc(
@@ -32,6 +31,6 @@ export async function saveOwnerBusinessDetails(
       onboardingStep: 'claim_listing',
       updatedAt: createNow(),
     },
-    { merge: true }
+    { merge: true },
   );
 }

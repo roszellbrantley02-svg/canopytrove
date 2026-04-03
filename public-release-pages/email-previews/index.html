@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Canopy Trove Email Previews</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #081017;
+        --panel: #111a22;
+        --text: #f2f8f6;
+        --muted: #9eb2ad;
+        --accent: #f5c86a;
+        --line: rgba(143, 255, 209, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 32px 18px;
+        background:
+          radial-gradient(circle at top, rgba(143, 255, 209, 0.09), transparent 40%),
+          linear-gradient(180deg, #081017 0%, #05090d 100%);
+        color: var(--text);
+        font-family: Arial, sans-serif;
+      }
+
+      main {
+        width: min(760px, 100%);
+        padding: 28px;
+        border-radius: 28px;
+        border: 1px solid var(--line);
+        background: rgba(17, 26, 34, 0.92);
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 32px;
+        line-height: 1.1;
+      }
+
+      p {
+        margin: 0 0 18px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      ul {
+        margin: 24px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      li + li {
+        margin-top: 14px;
+      }
+
+      a {
+        display: block;
+        padding: 18px 20px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(245, 200, 106, 0.06);
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      strong {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--accent);
+        font-size: 15px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Email previews</h1>
+      <p>
+        These are browser previews of the current welcome emails. They are easier to inspect than
+        the TypeScript source file.
+      </p>
+      <ul>
+        <li>
+          <a href="./member-welcome.html">
+            <strong>Member welcome</strong>
+            Thank-you email for members who opt in for updates.
+          </a>
+        </li>
+        <li>
+          <a href="./owner-welcome.html">
+            <strong>Owner welcome</strong>
+            Early-partnership thank-you email for owner accounts.
+          </a>
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>

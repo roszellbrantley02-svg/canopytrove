@@ -1,4 +1,4 @@
-import { MarketArea } from '../types/storefront';
+import type { MarketArea } from '../types/storefront';
 
 export const mockAreas: MarketArea[] = [
   {

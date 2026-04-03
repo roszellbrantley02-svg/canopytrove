@@ -10,7 +10,7 @@ import {
   loadNearbySummarySnapshot,
   loadStorefrontDetailSnapshot,
 } from './storefrontSummarySnapshotService';
-import { BrowseSortKey, MarketArea, StorefrontListQuery } from '../types/storefront';
+import type { BrowseSortKey, MarketArea, StorefrontListQuery } from '../types/storefront';
 
 const DEFAULT_BROWSE_LIMIT = 4;
 
@@ -22,7 +22,7 @@ function createBootstrapQuery(
   area: MarketArea | undefined,
   searchQuery: string,
   searchLocation?: { latitude: number; longitude: number } | null,
-  searchLocationLabel?: string | null
+  searchLocationLabel?: string | null,
 ): StorefrontListQuery | null {
   if (!area) {
     return null;
@@ -53,7 +53,7 @@ export async function primeAppBootstrap() {
     selectedArea,
     preferences?.searchQuery ?? '',
     preferences?.searchLocation ?? null,
-    preferences?.searchLocationLabel ?? null
+    preferences?.searchLocationLabel ?? null,
   );
 
   if (!query) {
@@ -66,14 +66,14 @@ export async function primeAppBootstrap() {
   void loadBrowseSummarySnapshot(
     query,
     (preferences?.browseSortKey ?? 'distance') as BrowseSortKey,
-    DEFAULT_BROWSE_LIMIT
+    DEFAULT_BROWSE_LIMIT,
   );
   void Promise.all(
     Array.from(
       new Set([
-        ...((preferences?.savedStorefrontIds ?? []).slice(0, 3)),
+        ...(preferences?.savedStorefrontIds ?? []).slice(0, 3),
         ...localRecentStorefrontIds.slice(0, 3),
-      ])
-    ).map((storefrontId) => loadStorefrontDetailSnapshot(storefrontId))
+      ]),
+    ).map((storefrontId) => loadStorefrontDetailSnapshot(storefrontId)),
   );
 }

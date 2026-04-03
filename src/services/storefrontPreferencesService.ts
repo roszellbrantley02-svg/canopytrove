@@ -1,10 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { brand } from '../config/brand';
-import {
-  BrowseSortKey,
-  Coordinates,
-  StorefrontGamificationState,
-} from '../types/storefront';
+import type { BrowseSortKey, Coordinates, StorefrontGamificationState } from '../types/storefront';
 
 const STOREFRONT_PREFERENCES_KEY = `${brand.storageNamespace}:storefront-preferences`;
 
@@ -46,7 +42,7 @@ export async function loadStorefrontPreferences(): Promise<StoredStorefrontPrefe
 }
 
 export async function saveStorefrontPreferences(
-  preferences: StoredStorefrontPreferences
+  preferences: StoredStorefrontPreferences,
 ): Promise<void> {
   memoryCachedPreferences = preferences;
 

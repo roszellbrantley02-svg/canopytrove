@@ -1,67 +1,86 @@
 import { hasFirebaseConfig } from '../config/firebase';
 import { storefrontApiBaseUrl, storefrontSourceMode } from '../config/storefrontSourceConfig';
+import {
+  applyStorefrontMemberDealAccessToDetail,
+  applyStorefrontMemberDealAccessToSummaries,
+} from '../services/storefrontMemberDealAccessService';
 import { apiStorefrontSource } from './apiStorefrontSource';
 import { firebaseStorefrontSource } from './firebaseStorefrontSource';
 import { mockStorefrontSource } from './mockStorefrontSource';
-import { StorefrontSource } from './storefrontSource';
+import type { StorefrontSource } from './storefrontSource';
 
 const canUseFirebaseSource = storefrontSourceMode === 'firebase' && hasFirebaseConfig;
 const canUseApiSource = storefrontSourceMode === 'api' && Boolean(storefrontApiBaseUrl);
 
-function withFallbackSource(primary: StorefrontSource, fallback: StorefrontSource): StorefrontSource {
+function createUnavailableSource(reason: string): StorefrontSource {
+  const fail = async (): Promise<never> => {
+    throw new Error(reason);
+  };
+
+  return {
+    getAllSummaries: fail,
+    getSummariesByIds: fail,
+    getSummaryPage: fail,
+    getSummaries: fail,
+    getDetailsById: fail,
+  };
+}
+
+function withMemberDealAccess(source: StorefrontSource): StorefrontSource {
   return {
     async getAllSummaries() {
-      try {
-        return await primary.getAllSummaries();
-      } catch {
-        return fallback.getAllSummaries();
-      }
+      return applyStorefrontMemberDealAccessToSummaries(await source.getAllSummaries());
     },
     async getSummariesByIds(storefrontIds) {
-      try {
-        return await primary.getSummariesByIds(storefrontIds);
-      } catch {
-        return fallback.getSummariesByIds(storefrontIds);
-      }
+      return applyStorefrontMemberDealAccessToSummaries(
+        await source.getSummariesByIds(storefrontIds),
+      );
     },
     async getSummaryPage(query) {
-      try {
-        return await primary.getSummaryPage(query);
-      } catch {
-        return fallback.getSummaryPage(query);
-      }
+      const page = await source.getSummaryPage(query);
+      return {
+        ...page,
+        items: applyStorefrontMemberDealAccessToSummaries(page.items),
+      };
     },
     async getSummaries(query) {
-      try {
-        return await primary.getSummaries(query);
-      } catch {
-        return fallback.getSummaries(query);
-      }
+      return applyStorefrontMemberDealAccessToSummaries(await source.getSummaries(query));
     },
     async getDetailsById(storefrontId) {
-      try {
-        return await primary.getDetailsById(storefrontId);
-      } catch {
-        return fallback.getDetailsById(storefrontId);
-      }
+      return applyStorefrontMemberDealAccessToDetail(await source.getDetailsById(storefrontId));
     },
   };
 }
 
-const configuredSource = canUseApiSource
-  ? apiStorefrontSource
-  : canUseFirebaseSource
-    ? firebaseStorefrontSource
-    : mockStorefrontSource;
+const configuredSource =
+  storefrontSourceMode === 'api'
+    ? canUseApiSource
+      ? apiStorefrontSource
+      : createUnavailableSource('Storefront source is set to api, but the API base URL is missing.')
+    : storefrontSourceMode === 'firebase'
+      ? canUseFirebaseSource
+        ? firebaseStorefrontSource
+        : createUnavailableSource(
+            'Storefront source is set to firebase, but Firebase client config is missing.',
+          )
+      : mockStorefrontSource;
 
-export const storefrontSource =
-  configuredSource === mockStorefrontSource
-    ? mockStorefrontSource
-    : withFallbackSource(configuredSource, mockStorefrontSource);
+export const storefrontSource = withMemberDealAccess(
+  configuredSource === mockStorefrontSource ? mockStorefrontSource : configuredSource,
+);
 
 export const storefrontSourceStatus = {
   requestedMode: storefrontSourceMode,
-  activeMode: canUseApiSource ? 'api' : canUseFirebaseSource ? 'firebase' : 'mock',
+  activeMode:
+    storefrontSourceMode === 'api'
+      ? canUseApiSource
+        ? 'api'
+        : 'unavailable'
+      : storefrontSourceMode === 'firebase'
+        ? canUseFirebaseSource
+          ? 'firebase'
+          : 'unavailable'
+        : 'mock',
   fallbackReason:
     storefrontSourceMode === 'api' && !storefrontApiBaseUrl
       ? 'Missing storefront API base URL'

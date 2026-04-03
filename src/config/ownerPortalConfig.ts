@@ -9,6 +9,8 @@ export const ownerPortalPrelaunchEnabled =
 export const ownerPortalPreviewEnabled =
   rawPreviewEnabled.toLowerCase() === 'true' || rawPreviewEnabled === '1';
 
+export const ownerPortalAccessAvailable = true;
+
 export const ownerPortalAllowlist = rawAllowlist
   .split(',')
   .map((value: string) => value.trim().toLowerCase())
@@ -22,6 +24,10 @@ export function isOwnerPortalEmailAllowlisted(email: string | null | undefined) 
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+
+  if (!ownerPortalPrelaunchEnabled) {
+    return true;
+  }
 
   if (!hasOwnerPortalAllowlist) {
     return normalizedEmail.endsWith('.test') || isDeveloperBuild;

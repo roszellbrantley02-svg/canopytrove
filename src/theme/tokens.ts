@@ -1,3 +1,5 @@
+import type { TextStyle } from 'react-native';
+
 export const colors = {
   backgroundDeep: '#060B10',
   background: '#0A1117',
@@ -48,20 +50,80 @@ export const radii = {
 };
 
 export const typography = {
-  display: 30,
-  title: 22,
+  display: 32,
+  title: 24,
   section: 18,
   body: 15,
   caption: 12,
 };
 
+export const fontFamilies = {
+  display: 'SpaceGrotesk_700Bold',
+  displayMedium: 'SpaceGrotesk_500Medium',
+  body: 'DMSans_400Regular',
+  bodyMedium: 'DMSans_500Medium',
+  bodyBold: 'DMSans_700Bold',
+} as const;
+
+export const textStyles = {
+  display: {
+    fontFamily: fontFamilies.display,
+    fontSize: typography.display,
+    lineHeight: 40,
+    letterSpacing: -0.55,
+  } satisfies TextStyle,
+  title: {
+    fontFamily: fontFamilies.display,
+    fontSize: typography.title,
+    lineHeight: 32,
+    letterSpacing: -0.35,
+  } satisfies TextStyle,
+  section: {
+    fontFamily: fontFamilies.displayMedium,
+    fontSize: typography.section,
+    lineHeight: 26,
+    letterSpacing: -0.18,
+  } satisfies TextStyle,
+  body: {
+    fontFamily: fontFamilies.body,
+    fontSize: typography.body,
+    lineHeight: 24,
+  } satisfies TextStyle,
+  bodyStrong: {
+    fontFamily: fontFamilies.bodyBold,
+    fontSize: typography.body,
+    lineHeight: 24,
+  } satisfies TextStyle,
+  caption: {
+    fontFamily: fontFamilies.bodyMedium,
+    fontSize: typography.caption,
+    lineHeight: 18,
+  } satisfies TextStyle,
+  labelCaps: {
+    fontFamily: fontFamilies.bodyBold,
+    fontSize: typography.caption,
+    lineHeight: 18,
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
+  } satisfies TextStyle,
+  button: {
+    fontFamily: fontFamilies.bodyBold,
+    fontSize: typography.body,
+    lineHeight: 22,
+    letterSpacing: 0.3,
+  } satisfies TextStyle,
+} as const;
+
 export const motion = {
   quick: 180,
+  dense: 210,
   standard: 260,
   ambient: 420,
   page: 220,
+  denseRevealDistance: 9,
   revealDistance: 14,
   revealScale: 0.988,
+  denseSectionStagger: 20,
   sectionStagger: 70,
   tabLift: 3,
   tabSceneShift: 10,

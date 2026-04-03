@@ -8,7 +8,7 @@ export const customerEntryStyles = StyleSheet.create({
   heroCard: {
     borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: 'rgba(245, 200, 106, 0.18)',
+    borderColor: colors.borderSoft,
     backgroundColor: colors.surfaceGlassStrong,
     padding: spacing.xl,
     gap: spacing.lg,
@@ -29,7 +29,7 @@ export const customerEntryStyles = StyleSheet.create({
     backgroundColor: 'rgba(245, 200, 106, 0.08)',
   },
   heroKicker: {
-    color: colors.goldSoft,
+    color: colors.textSoft,
     fontSize: typography.caption,
     fontWeight: '900',
     letterSpacing: 1,
@@ -68,7 +68,7 @@ export const customerEntryStyles = StyleSheet.create({
     fontWeight: '900',
   },
   summaryTileLabel: {
-    color: colors.goldSoft,
+    color: colors.textSoft,
     fontSize: typography.caption,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -97,7 +97,7 @@ export const customerEntryStyles = StyleSheet.create({
     backgroundColor: 'rgba(245, 200, 106, 0.08)',
   },
   trustChipText: {
-    color: colors.accent,
+    color: colors.textSoft,
     fontSize: typography.caption,
     fontWeight: '800',
   },
@@ -120,7 +120,7 @@ export const customerEntryStyles = StyleSheet.create({
     gap: spacing.sm,
   },
   fieldLabel: {
-    color: colors.goldSoft,
+    color: colors.textSoft,
     fontSize: typography.caption,
     fontWeight: '800',
     letterSpacing: 0.6,
@@ -130,6 +130,9 @@ export const customerEntryStyles = StyleSheet.create({
     color: colors.textSoft,
     fontSize: typography.caption,
     lineHeight: 18,
+  },
+  fieldHintDanger: {
+    color: colors.rose,
   },
   inputPremium: {
     minHeight: 50,
@@ -178,10 +181,53 @@ export const customerEntryStyles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 22,
   },
+  optInCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: 'rgba(8, 14, 19, 0.72)',
+    padding: spacing.lg,
+  },
+  optInCardSelected: {
+    borderColor: 'rgba(245, 200, 106, 0.24)',
+    backgroundColor: 'rgba(245, 200, 106, 0.08)',
+  },
+  optInIndicator: {
+    width: 22,
+    height: 22,
+    marginTop: 2,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: 'rgba(8, 14, 19, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optInIndicatorSelected: {
+    borderColor: colors.gold,
+    backgroundColor: colors.gold,
+  },
+  optInTextStack: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  optInTitle: {
+    color: colors.text,
+    fontSize: typography.body,
+    fontWeight: '800',
+  },
+  optInBody: {
+    color: colors.textMuted,
+    fontSize: typography.caption,
+    lineHeight: 18,
+  },
   ctaPanel: {
     borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: 'rgba(245, 200, 106, 0.18)',
+    borderColor: colors.borderSoft,
     backgroundColor: 'rgba(18, 25, 31, 0.88)',
     padding: spacing.xl,
     gap: spacing.lg,
@@ -198,13 +244,13 @@ export const customerEntryStyles = StyleSheet.create({
   primaryButton: {
     minHeight: 50,
     borderRadius: radii.lg,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
   primaryButtonText: {
-    color: colors.background,
+    color: colors.backgroundDeep,
     fontSize: typography.body,
     fontWeight: '900',
     textTransform: 'uppercase',

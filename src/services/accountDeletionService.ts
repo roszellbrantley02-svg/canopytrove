@@ -5,11 +5,8 @@ import { getFirebaseDb } from '../config/firebase';
 import { deleteStorefrontBackendProfile } from './storefrontBackendService';
 import { createFreshAppProfile } from './appProfileService';
 import { buildCanopyTroveAccountDeletionSummary } from './accountDeletionSummary';
-import {
-  deleteCanopyTroveAuthAccount,
-  CanopyTroveAuthDeletionResult,
-  signOutCanopyTroveSession,
-} from './canopyTroveAuthService';
+import type { CanopyTroveAuthDeletionResult } from './canopyTroveAuthService';
+import { deleteCanopyTroveAuthAccount, signOutCanopyTroveSession } from './canopyTroveAuthService';
 
 export type CanopyTroveAccountDeletionResult = {
   ok: boolean;
@@ -47,19 +44,19 @@ async function deleteOwnerPortalAccountData(accountId: string | null) {
 
   await Promise.all(
     directDocCollections.map((collectionName) =>
-      deleteDoc(doc(db, collectionName, normalizedAccountId)).catch(() => undefined)
-    )
+      deleteDoc(doc(db, collectionName, normalizedAccountId)).catch(() => undefined),
+    ),
   );
 
   const dispensaryClaimsSnapshot = await getDocs(
-    query(collection(db, 'dispensaryClaims'), where('ownerUid', '==', normalizedAccountId))
+    query(collection(db, 'dispensaryClaims'), where('ownerUid', '==', normalizedAccountId)),
   ).catch(() => null);
 
   if (dispensaryClaimsSnapshot) {
     await Promise.all(
       dispensaryClaimsSnapshot.docs.map((documentSnapshot) =>
-        deleteDoc(documentSnapshot.ref).catch(() => undefined)
-      )
+        deleteDoc(documentSnapshot.ref).catch(() => undefined),
+      ),
     );
   }
 }

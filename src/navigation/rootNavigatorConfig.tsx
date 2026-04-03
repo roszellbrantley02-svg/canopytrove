@@ -1,8 +1,10 @@
-import { Animated, Easing } from 'react-native';
-import { NavigatorScreenParams } from '@react-navigation/native';
+import type { Animated } from 'react-native';
+import { Easing } from 'react-native';
+import type { NavigatorScreenParams } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BrowseScreen } from '../screens/BrowseScreen';
+import { AdminRuntimePanelScreen } from '../screens/AdminRuntimePanelScreen';
 import { CanopyTroveForgotPasswordScreen } from '../screens/CanopyTroveForgotPasswordScreen';
 import { CanopyTroveSignInScreen } from '../screens/CanopyTroveSignInScreen';
 import { CanopyTroveSignUpScreen } from '../screens/CanopyTroveSignUpScreen';
@@ -28,8 +30,12 @@ import { ReportStorefrontScreen } from '../screens/ReportStorefrontScreen';
 import { StorefrontDetailScreen } from '../screens/StorefrontDetailScreen';
 import { DeleteAccountScreen } from '../screens/DeleteAccountScreen';
 import { WriteReviewScreen } from '../screens/WriteReviewScreen';
-import { colors, motion } from '../theme/tokens';
-import { StorefrontSummary } from '../types/storefront';
+import { colors } from '../theme/tokens';
+import type {
+  AppReview,
+  StorefrontReviewReportContext,
+  StorefrontSummary,
+} from '../types/storefront';
 
 export type RootTabParamList = {
   Nearby: undefined;
@@ -40,19 +46,27 @@ export type RootTabParamList = {
 export type RootStackParamList = {
   Tabs: NavigatorScreenParams<RootTabParamList> | undefined;
   StorefrontDetail: {
-    storefront: StorefrontSummary;
+    storefront?: StorefrontSummary;
+    storefrontId?: string;
   };
   WriteReview: {
     storefront: StorefrontSummary;
+    existingReview?: AppReview;
   };
   ReportStorefront: {
     storefront: StorefrontSummary;
+    reviewContext?: StorefrontReviewReportContext;
+    initialReason?: string;
+    initialDescription?: string;
+    entryMode?: 'general_report' | 'suggest_edit' | 'report_closed';
   };
   LegalCenter: undefined;
   DeleteAccount: undefined;
-  Leaderboard: {
-    highlightProfileId?: string;
-  } | undefined;
+  Leaderboard:
+    | {
+        highlightProfileId?: string;
+      }
+    | undefined;
   HotDeals: undefined;
   CanopyTroveSignIn: undefined;
   CanopyTroveSignUp: undefined;
@@ -112,6 +126,7 @@ export type RootStackParamList = {
         preview?: boolean;
       }
     | undefined;
+  AdminRuntimePanel: undefined;
 };
 
 export const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -119,27 +134,39 @@ export const Stack = createNativeStackNavigator<RootStackParamList>();
 export const tabNavigatorScreenOptions = {
   headerShown: false,
   animation: 'fade' as const,
-  lazy: true,
+  lazy: false,
   freezeOnBlur: true,
   tabBarHideOnKeyboard: true,
   transitionSpec: {
     animation: 'timing' as const,
     config: {
-      duration: motion.quick,
-      easing: Easing.out(Easing.cubic),
+      duration: 300,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
     },
   },
   sceneStyleInterpolator: ({ current }: { current: { progress: Animated.Value } }) => ({
     sceneStyle: {
       opacity: current.progress.interpolate({
         inputRange: [-1, 0, 1],
-        outputRange: [0.92, 1, 0.92],
+        outputRange: [0.9, 1, 0.9],
       }),
       transform: [
         {
+          translateX: current.progress.interpolate({
+            inputRange: [-1, 0, 1],
+            outputRange: [14, 0, -14],
+          }),
+        },
+        {
           translateY: current.progress.interpolate({
             inputRange: [-1, 0, 1],
-            outputRange: [motion.tabSceneShift, 0, motion.tabSceneShift],
+            outputRange: [4, 0, 4],
+          }),
+        },
+        {
+          scale: current.progress.interpolate({
+            inputRange: [-1, 0, 1],
+            outputRange: [0.985, 1, 0.985],
           }),
         },
       ],
@@ -154,42 +181,121 @@ export const tabNavigatorScreenOptions = {
 export const stackNavigatorScreenOptions = {
   headerShown: false,
   animation: 'slide_from_right' as const,
-  animationDuration: motion.page,
+  animationDuration: 280,
   animationMatchesGesture: true,
   fullScreenGestureEnabled: true,
   contentStyle: { backgroundColor: colors.background },
 };
 
-const customerFlowScreenOptions = {
-  animation: 'fade_from_bottom' as const,
-  animationDuration: motion.page,
+const detailFlowScreenOptions = {
+  animation: 'simple_push' as const,
+  animationDuration: 300,
+};
+
+const bottomRiseScreenOptions = {
+  animation: 'slide_from_bottom' as const,
+  animationDuration: 300,
+};
+
+const workspaceFlowScreenOptions = {
+  animation: 'slide_from_right' as const,
+  animationDuration: 280,
 };
 
 export const stackScreens = [
   { name: 'Tabs', component: null, options: undefined },
-  { name: 'StorefrontDetail', component: StorefrontDetailScreen, options: customerFlowScreenOptions },
-  { name: 'WriteReview', component: WriteReviewScreen, options: customerFlowScreenOptions },
-  { name: 'ReportStorefront', component: ReportStorefrontScreen, options: customerFlowScreenOptions },
-  { name: 'LegalCenter', component: LegalCenterScreen, options: customerFlowScreenOptions },
-  { name: 'DeleteAccount', component: DeleteAccountScreen, options: customerFlowScreenOptions },
-  { name: 'Leaderboard', component: LeaderboardScreen, options: customerFlowScreenOptions },
-  { name: 'HotDeals', component: HotDealsScreen, options: customerFlowScreenOptions },
-  { name: 'CanopyTroveSignIn', component: CanopyTroveSignInScreen, options: customerFlowScreenOptions },
-  { name: 'CanopyTroveSignUp', component: CanopyTroveSignUpScreen, options: customerFlowScreenOptions },
-  { name: 'CanopyTroveForgotPassword', component: CanopyTroveForgotPasswordScreen, options: customerFlowScreenOptions },
-  { name: 'OwnerPortalAccess', component: OwnerPortalAccessScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalSignIn', component: OwnerPortalSignInScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalSignUp', component: OwnerPortalSignUpScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalForgotPassword', component: OwnerPortalForgotPasswordScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalHome', component: OwnerPortalHomeScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalReviewInbox', component: OwnerPortalReviewInboxScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalPromotions', component: OwnerPortalPromotionsScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalProfileTools', component: OwnerPortalProfileToolsScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalBusinessDetails', component: OwnerPortalBusinessDetailsScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalClaimListing', component: OwnerPortalClaimListingScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalBusinessVerification', component: OwnerPortalBusinessVerificationScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalIdentityVerification', component: OwnerPortalIdentityVerificationScreen, options: { animation: 'slide_from_right' as const } },
-  { name: 'OwnerPortalSubscription', component: OwnerPortalSubscriptionScreen, options: { animation: 'slide_from_right' as const } },
+  { name: 'StorefrontDetail', component: StorefrontDetailScreen, options: detailFlowScreenOptions },
+  { name: 'WriteReview', component: WriteReviewScreen, options: bottomRiseScreenOptions },
+  { name: 'ReportStorefront', component: ReportStorefrontScreen, options: bottomRiseScreenOptions },
+  { name: 'LegalCenter', component: LegalCenterScreen, options: bottomRiseScreenOptions },
+  { name: 'DeleteAccount', component: DeleteAccountScreen, options: bottomRiseScreenOptions },
+  { name: 'Leaderboard', component: LeaderboardScreen, options: detailFlowScreenOptions },
+  { name: 'HotDeals', component: HotDealsScreen, options: detailFlowScreenOptions },
+  {
+    name: 'CanopyTroveSignIn',
+    component: CanopyTroveSignInScreen,
+    options: bottomRiseScreenOptions,
+  },
+  {
+    name: 'CanopyTroveSignUp',
+    component: CanopyTroveSignUpScreen,
+    options: bottomRiseScreenOptions,
+  },
+  {
+    name: 'CanopyTroveForgotPassword',
+    component: CanopyTroveForgotPasswordScreen,
+    options: bottomRiseScreenOptions,
+  },
+  {
+    name: 'OwnerPortalAccess',
+    component: OwnerPortalAccessScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalSignIn',
+    component: OwnerPortalSignInScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalSignUp',
+    component: OwnerPortalSignUpScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalForgotPassword',
+    component: OwnerPortalForgotPasswordScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalHome',
+    component: OwnerPortalHomeScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalReviewInbox',
+    component: OwnerPortalReviewInboxScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalPromotions',
+    component: OwnerPortalPromotionsScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalProfileTools',
+    component: OwnerPortalProfileToolsScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalBusinessDetails',
+    component: OwnerPortalBusinessDetailsScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalClaimListing',
+    component: OwnerPortalClaimListingScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalBusinessVerification',
+    component: OwnerPortalBusinessVerificationScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalIdentityVerification',
+    component: OwnerPortalIdentityVerificationScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalSubscription',
+    component: OwnerPortalSubscriptionScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'AdminRuntimePanel',
+    component: AdminRuntimePanelScreen,
+    options: workspaceFlowScreenOptions,
+  },
 ] as const;
 
 export const tabScreens = [

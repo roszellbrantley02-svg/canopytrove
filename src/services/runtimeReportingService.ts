@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 import { storefrontApiBaseUrl } from '../config/storefrontSourceConfig';
+import { analyticsRuntimeState } from './analyticsRuntimeState';
+import { captureMonitoringException } from './sentryMonitoringService';
 
 type RuntimeErrorReport = {
   name?: string;
@@ -18,6 +20,10 @@ type ErrorUtilsShape = {
 const REPORT_TIMEOUT_MS = 3_000;
 
 let reportingInitialized = false;
+
+type RuntimeReportingOptions = {
+  captureToMonitoring?: boolean;
+};
 
 function createUrl() {
   if (!storefrontApiBaseUrl) {
@@ -58,11 +64,23 @@ async function postRuntimeReport(payload: RuntimeErrorReport) {
   }
 }
 
-export function reportRuntimeError(error: unknown, context?: Omit<RuntimeErrorReport, 'message'>) {
+export function reportRuntimeError(
+  error: unknown,
+  context?: Omit<RuntimeErrorReport, 'message'>,
+  options?: RuntimeReportingOptions,
+) {
   const normalizedError =
     error instanceof Error
       ? error
       : new Error(typeof error === 'string' ? error : 'Unknown runtime error');
+
+  if (options?.captureToMonitoring !== false) {
+    captureMonitoringException(normalizedError, {
+      source: context?.source,
+      screen: context?.screen ?? analyticsRuntimeState.currentScreen ?? undefined,
+      isFatal: context?.isFatal,
+    });
+  }
 
   void postRuntimeReport({
     name: context?.name ?? normalizedError.name,
@@ -70,7 +88,7 @@ export function reportRuntimeError(error: unknown, context?: Omit<RuntimeErrorRe
     stack: context?.stack ?? normalizedError.stack,
     isFatal: context?.isFatal,
     source: context?.source,
-    screen: context?.screen,
+    screen: context?.screen ?? analyticsRuntimeState.currentScreen ?? undefined,
   });
 }
 
@@ -89,10 +107,16 @@ export function initializeRuntimeReporting() {
 
   const previousHandler = errorUtils?.getGlobalHandler?.();
   errorUtils?.setGlobalHandler?.((error, isFatal) => {
-    reportRuntimeError(error, {
-      isFatal,
-      source: 'global-handler',
-    });
+    reportRuntimeError(
+      error,
+      {
+        isFatal,
+        source: 'global-handler',
+      },
+      {
+        captureToMonitoring: false,
+      },
+    );
 
     previousHandler?.(error, isFatal);
   });

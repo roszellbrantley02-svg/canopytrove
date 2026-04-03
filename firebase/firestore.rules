@@ -10,27 +10,37 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function hasRoleClaim(role) {
+      return isSignedIn() &&
+        (('role' in request.auth.token) && request.auth.token.role == role);
+    }
+
     function isAdmin() {
       return isSignedIn() &&
-        (request.auth.token.admin == true || request.auth.token.role == 'admin');
-    }
-
-    function userDoc(uid) {
-      return get(/databases/$(database)/documents/users/$(uid));
-    }
-
-    function ownerProfileDoc(uid) {
-      return get(/databases/$(database)/documents/ownerProfiles/$(uid));
-    }
-
-    function userRole(uid) {
-      return exists(/databases/$(database)/documents/users/$(uid))
-        ? userDoc(uid).data.role
-        : null;
+        ((('admin' in request.auth.token) && request.auth.token.admin == true) ||
+          hasRoleClaim('admin'));
     }
 
     function isOwner(uid) {
-      return isSelf(uid) && userRole(uid) == 'owner';
+      return isSelf(uid) && hasRoleClaim('owner');
+    }
+
+    function businessVerificationDoc(uid) {
+      return get(/databases/$(database)/documents/businessVerifications/$(uid));
+    }
+
+    function identityVerificationDoc(uid) {
+      return get(/databases/$(database)/documents/identityVerifications/$(uid));
+    }
+
+    function subscriptionDoc(uid) {
+      return get(/databases/$(database)/documents/subscriptions/$(uid));
+    }
+
+    function hasWritableUserRole(uid) {
+      return request.resource.data.role == 'customer' ||
+        (request.resource.data.role == 'owner' && isOwner(uid)) ||
+        (request.resource.data.role == 'admin' && isAdmin());
     }
 
     function ownsDispensary(dispensaryId) {
@@ -40,26 +50,64 @@ service cloud.firestore {
     }
 
     function ownerVerified(uid) {
-      return exists(/databases/$(database)/documents/ownerProfiles/$(uid)) &&
-        ownerProfileDoc(uid).data.businessVerificationStatus == 'verified' &&
-        ownerProfileDoc(uid).data.identityVerificationStatus == 'verified';
+      return exists(/databases/$(database)/documents/businessVerifications/$(uid)) &&
+        exists(/databases/$(database)/documents/identityVerifications/$(uid)) &&
+        businessVerificationDoc(uid).data.verificationStatus in ['verified', 'approved'] &&
+        identityVerificationDoc(uid).data.verificationStatus in ['verified', 'approved'];
     }
 
-    function ownerSubscribed(uid) {
-      return exists(/databases/$(database)/documents/ownerProfiles/$(uid)) &&
-        ownerProfileDoc(uid).data.subscriptionStatus in ['trial', 'active'];
+    function ownerSubscribed(uid, dispensaryId) {
+      return exists(/databases/$(database)/documents/subscriptions/$(uid)) &&
+        subscriptionDoc(uid).data.status in ['trial', 'active'] &&
+        subscriptionDoc(uid).data.dispensaryId == dispensaryId;
+    }
+
+    function isDefaultOwnerProfileCreate(uid) {
+      return request.resource.data.uid == uid &&
+        request.resource.data.dispensaryId == null &&
+        request.resource.data.businessVerificationStatus == 'unverified' &&
+        request.resource.data.identityVerificationStatus == 'unverified' &&
+        request.resource.data.subscriptionStatus == 'inactive' &&
+        request.resource.data.badgeLevel == 0 &&
+        request.resource.data.earnedBadgeIds == [] &&
+        request.resource.data.selectedBadgeIds == [];
+    }
+
+    function preservesOwnerProfileControlledFields() {
+      return request.resource.data.uid == resource.data.uid &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.dispensaryId == resource.data.dispensaryId &&
+        request.resource.data.businessVerificationStatus == resource.data.businessVerificationStatus &&
+        request.resource.data.identityVerificationStatus == resource.data.identityVerificationStatus &&
+        request.resource.data.subscriptionStatus == resource.data.subscriptionStatus &&
+        request.resource.data.badgeLevel == resource.data.badgeLevel &&
+        request.resource.data.earnedBadgeIds == resource.data.earnedBadgeIds &&
+        request.resource.data.selectedBadgeIds == resource.data.selectedBadgeIds;
     }
 
     match /users/{uid} {
-      allow create: if isSelf(uid);
-      allow read, update: if isSelf(uid) || isAdmin();
+      allow create: if isSelf(uid) &&
+        request.resource.data.uid == uid &&
+        hasWritableUserRole(uid);
+      allow read: if isSelf(uid) || isAdmin();
+      allow update: if isAdmin() || (
+        isSelf(uid) &&
+        request.resource.data.uid == resource.data.uid &&
+        hasWritableUserRole(uid)
+      );
       allow delete: if isAdmin();
     }
 
     match /ownerProfiles/{uid} {
-      allow create: if isOwner(uid) || isAdmin();
+      allow create: if isAdmin() || (
+        isOwner(uid) &&
+        isDefaultOwnerProfileCreate(uid)
+      );
       allow read: if isSelf(uid) || isAdmin();
-      allow update: if isSelf(uid) || isAdmin();
+      allow update: if isAdmin() || (
+        isSelf(uid) &&
+        preservesOwnerProfileControlledFields()
+      );
       allow delete: if isAdmin();
     }
 
@@ -80,8 +128,12 @@ service cloud.firestore {
 
     match /dispensaryClaims/{claimId} {
       allow create: if isSignedIn() &&
+        claimId == request.auth.uid + '_' + request.resource.data.dispensaryId &&
         request.resource.data.ownerUid == request.auth.uid &&
-        userRole(request.auth.uid) == 'owner';
+        request.resource.data.claimStatus == 'pending' &&
+        request.resource.data.reviewedAt == null &&
+        request.resource.data.reviewNotes == null &&
+        isOwner(request.auth.uid);
       allow read: if isAdmin() || (
         isSignedIn() && resource.data.ownerUid == request.auth.uid
       );
@@ -89,7 +141,14 @@ service cloud.firestore {
     }
 
     match /businessVerifications/{verificationId} {
-      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow create: if isSignedIn() &&
+        verificationId == request.auth.uid &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.verificationStatus == 'pending' &&
+        request.resource.data.adminNotes == null &&
+        request.resource.data.reviewedAt == null &&
+        request.resource.data.verificationSource == 'owner_upload' &&
+        isOwner(request.auth.uid);
       allow read: if isAdmin() || (
         isSignedIn() && resource.data.ownerUid == request.auth.uid
       );
@@ -98,7 +157,15 @@ service cloud.firestore {
     }
 
     match /identityVerifications/{verificationId} {
-      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow create: if isSignedIn() &&
+        verificationId == request.auth.uid &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.verificationStatus == 'pending' &&
+        request.resource.data.provider == 'manual_review' &&
+        request.resource.data.providerReferenceId == null &&
+        request.resource.data.adminNotes == null &&
+        request.resource.data.reviewedAt == null &&
+        isOwner(request.auth.uid);
       allow read: if isAdmin() || (
         isSignedIn() && resource.data.ownerUid == request.auth.uid
       );
@@ -110,13 +177,7 @@ service cloud.firestore {
       allow read: if isAdmin() || (
         isSignedIn() && resource.data.ownerUid == request.auth.uid
       );
-      allow create: if isSignedIn() &&
-        request.resource.data.ownerUid == request.auth.uid &&
-        request.resource.data.provider == 'internal_prelaunch' &&
-        request.resource.data.status == 'trial' &&
-        request.resource.data.externalSubscriptionId == null &&
-        request.resource.data.cancelAtPeriodEnd == false;
-      allow update, delete: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     match /deals/{dealId} {
@@ -126,13 +187,13 @@ service cloud.firestore {
         request.resource.data.ownerUid == request.auth.uid &&
         ownsDispensary(request.resource.data.dispensaryId) &&
         ownerVerified(request.auth.uid) &&
-        ownerSubscribed(request.auth.uid);
+        ownerSubscribed(request.auth.uid, request.resource.data.dispensaryId);
       allow update: if isAdmin() || (
         isSignedIn() &&
         resource.data.ownerUid == request.auth.uid &&
         ownsDispensary(resource.data.dispensaryId) &&
         ownerVerified(request.auth.uid) &&
-        ownerSubscribed(request.auth.uid)
+        ownerSubscribed(request.auth.uid, resource.data.dispensaryId)
       );
       allow delete: if isAdmin();
     }
@@ -145,7 +206,17 @@ service cloud.firestore {
         request.resource.data.ownerUid == request.auth.uid &&
         ownsDispensary(request.resource.data.dispensaryId) &&
         ownerVerified(request.auth.uid) &&
-        ownerSubscribed(request.auth.uid);
+        ownerSubscribed(request.auth.uid, request.resource.data.dispensaryId);
+      allow update, delete: if isAdmin();
+    }
+
+    match /storefront_review_photos/{mediaId} {
+      allow create: if isSignedIn() &&
+        request.resource.data.profileId == request.auth.uid &&
+        request.resource.data.moderationStatus == 'pending';
+      allow read: if isAdmin() || (
+        isSignedIn() && resource.data.profileId == request.auth.uid
+      );
       allow update, delete: if isAdmin();
     }
 
@@ -160,7 +231,7 @@ service cloud.firestore {
     }
 
     match /ownerTasks/{taskId} {
-      allow read: if isSignedIn();
+      allow read: if isOwner(request.auth.uid) || isAdmin();
       allow write: if isAdmin();
     }
 

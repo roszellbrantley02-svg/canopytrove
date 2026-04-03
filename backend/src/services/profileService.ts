@@ -1,6 +1,4 @@
-import { CollectionReference } from 'firebase-admin/firestore';
-import { getBackendFirebaseDb } from '../firebase';
-import { backendStorefrontSourceStatus } from '../sources';
+import { getOptionalFirestoreCollection } from '../firestoreCollections';
 import { AppProfileApiDocument } from '../types';
 
 const PROFILE_COLLECTION = 'profiles';
@@ -8,12 +6,7 @@ const PROFILE_COLLECTION = 'profiles';
 const profileStore = new Map<string, AppProfileApiDocument>();
 
 function getProfileCollection() {
-  const db = getBackendFirebaseDb();
-  if (!db || backendStorefrontSourceStatus.activeMode !== 'firestore') {
-    return null;
-  }
-
-  return db.collection(PROFILE_COLLECTION) as CollectionReference<AppProfileApiDocument>;
+  return getOptionalFirestoreCollection<AppProfileApiDocument>(PROFILE_COLLECTION);
 }
 
 function createDefaultProfile(profileId: string): AppProfileApiDocument {

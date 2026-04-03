@@ -1,17 +1,24 @@
 import React from 'react';
 import { ScrollView } from 'react-native';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { CustomerStateCard } from '../components/CustomerStateCard';
 import { MotionInView } from '../components/MotionInView';
-import { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { MapGridPreview } from '../components/MapGridPreview';
+import { useStorefrontSummariesByIds } from '../hooks/useStorefrontSummaryData';
 import { colors } from '../theme/tokens';
+import type { StorefrontSummary } from '../types/storefront';
 import { styles } from './storefrontDetail/storefrontDetailStyles';
 import {
   DetailHero,
   DetailHoursSection,
+  DetailLockedLiveDealsSection,
+  DetailLockedPhotosSection,
+  DetailLiveDealsSection,
   DetailLiveUpdateUnavailableCard,
   DetailLoadingCard,
   DetailOfficialRecordCard,
@@ -28,14 +35,21 @@ import { useStorefrontDetailScreenModel } from './storefrontDetail/useStorefront
 
 type DetailRoute = RouteProp<RootStackParamList, 'StorefrontDetail'>;
 
-export function StorefrontDetailScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const route = useRoute<DetailRoute>();
-  const { storefront } = route.params;
+type StorefrontDetailContentProps = {
+  navigation: NativeStackNavigationProp<RootStackParamList>;
+  storefront: StorefrontSummary;
+};
+
+function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailContentProps) {
   const model = useStorefrontDetailScreenModel(storefront, navigation);
+  const canViewMemberLockedContent = model.authSession.status === 'authenticated';
+  const visibleLiveDealCount = storefront.activePromotionCount ?? 0;
 
   return (
-    <LinearGradient colors={[colors.background, colors.backgroundAlt, colors.background]} style={styles.gradient}>
+    <LinearGradient
+      colors={[colors.background, colors.backgroundAlt, colors.background]}
+      style={styles.gradient}
+    >
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <MotionInView delay={0} distance={12}>
@@ -56,6 +70,7 @@ export function StorefrontDetailScreen() {
               headline={storefront.addressLine1}
               supportingText={`${storefront.city}, ${storefront.state} ${storefront.zip}`}
               height={220}
+              imageUrl={storefront.thumbnailUrl}
             />
           </MotionInView>
 
@@ -72,7 +87,10 @@ export function StorefrontDetailScreen() {
           </MotionInView>
 
           <MotionInView delay={180}>
-            <DetailOperationalSection body={model.operationalCardBody} rows={model.operationalRows} />
+            <DetailOperationalSection
+              body={model.operationalCardBody}
+              rows={model.operationalRows}
+            />
           </MotionInView>
 
           <MotionInView delay={180}>
@@ -93,17 +111,36 @@ export function StorefrontDetailScreen() {
               isSaved={model.isSaved}
               onToggleSaved={model.toggleSavedStorefront}
               onWriteReview={model.writeReview}
-              onReport={model.reportStorefront}
+              writeReviewLabel={model.writeReviewLabel}
+              onSuggestEdit={model.suggestStorefrontEdit}
+              onReportClosed={model.reportStorefrontClosed}
             />
           </MotionInView>
 
-          {(model.isLoading || model.isOperationalDataPending) && !model.hasAnySupplementalDetail ? (
+          {model.detailData.activePromotions?.length ? (
+            <MotionInView delay={280}>
+              <DetailLiveDealsSection promotions={model.detailData.activePromotions} />
+            </MotionInView>
+          ) : !canViewMemberLockedContent && visibleLiveDealCount > 0 ? (
+            <MotionInView delay={280}>
+              <DetailLockedLiveDealsSection
+                liveDealCount={visibleLiveDealCount}
+                onOpenMemberSignIn={() => navigation.navigate('CanopyTroveSignIn')}
+                onOpenMemberSignUp={() => navigation.navigate('CanopyTroveSignUp')}
+              />
+            </MotionInView>
+          ) : null}
+
+          {(model.isLoading || model.isOperationalDataPending) &&
+          !model.hasAnySupplementalDetail ? (
             <MotionInView delay={320}>
               <DetailLoadingCard />
             </MotionInView>
           ) : null}
 
-          {!model.isLoading && !model.isOperationalDataPending && !model.hasAnySupplementalDetail ? (
+          {!model.isLoading &&
+          !model.isOperationalDataPending &&
+          !model.hasAnySupplementalDetail ? (
             <MotionInView delay={350}>
               <DetailOfficialRecordCard error={model.error} />
             </MotionInView>
@@ -136,9 +173,12 @@ export function StorefrontDetailScreen() {
                 appReviews={model.detailData.appReviews}
                 hiddenReviewCount={model.hiddenReviewCount}
                 pendingHelpfulReviewId={model.pendingHelpfulReviewId}
+                pendingReviewReportId={model.pendingReviewReportId}
                 profileId={model.profileId}
+                reviewModerationStatusText={model.reviewModerationStatusText}
                 onMarkHelpful={model.markReviewHelpful}
                 onBlockAuthor={model.blockReviewAuthor}
+                onReportReview={model.reportReview}
               />
             </MotionInView>
           ) : (
@@ -155,8 +195,79 @@ export function StorefrontDetailScreen() {
               />
             </MotionInView>
           ) : null}
+
+          {!canViewMemberLockedContent && model.hasLockedPhotos ? (
+            <MotionInView delay={530}>
+              <DetailLockedPhotosSection
+                photoCount={model.lockedPhotoCount}
+                visiblePhotoCount={model.visiblePhotoCount}
+                onOpenMemberSignIn={() => navigation.navigate('CanopyTroveSignIn')}
+                onOpenMemberSignUp={() => navigation.navigate('CanopyTroveSignUp')}
+              />
+            </MotionInView>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
+}
+
+export function StorefrontDetailScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<DetailRoute>();
+  const routeParams =
+    (route.params as Partial<RootStackParamList['StorefrontDetail']> | undefined) ?? undefined;
+  const storefrontFromRoute = routeParams?.storefront ?? null;
+  const storefrontId = routeParams?.storefrontId ?? storefrontFromRoute?.id ?? null;
+  const storefrontLookup = useStorefrontSummariesByIds(
+    storefrontFromRoute || !storefrontId ? [] : [storefrontId],
+  );
+  const storefront = storefrontFromRoute ?? storefrontLookup.data[0] ?? null;
+  const isLinkHydrating =
+    !storefrontFromRoute && Boolean(storefrontId) && storefrontLookup.isLoading && !storefront;
+  const storefrontLookupError = storefrontLookup.error;
+
+  if (isLinkHydrating) {
+    return (
+      <LinearGradient
+        colors={[colors.background, colors.backgroundAlt, colors.background]}
+        style={styles.gradient}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <DetailLoadingCard />
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
+
+  if (!storefront) {
+    return (
+      <LinearGradient
+        colors={[colors.background, colors.backgroundAlt, colors.background]}
+        style={styles.gradient}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <CustomerStateCard
+              title="Storefront unavailable"
+              body={
+                storefrontId
+                  ? (storefrontLookupError ??
+                    'This storefront link could not be resolved. It may be unavailable, unpublished, or no longer part of the current Canopy Trove listing set.')
+                  : 'This storefront could not be opened because the navigation data was incomplete. Return to browse and try again.'
+              }
+              iconName="compass-outline"
+              tone="warm"
+              eyebrow={storefrontId ? 'Deep link' : 'Navigation'}
+              centered={true}
+            />
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
+
+  return <StorefrontDetailContent navigation={navigation} storefront={storefront} />;
 }

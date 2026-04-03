@@ -3,21 +3,38 @@ import {
   fromStorefrontDetailApiDocument,
   fromStorefrontSummaryApiDocument,
 } from '../adapters/apiStorefrontAdapter';
-import {
+import type {
   StorefrontDetailApiDocument,
   StorefrontSummariesApiResponse,
   StorefrontSummaryApiDocument,
 } from '../types/storefrontApi';
-import { StorefrontSource, StorefrontSourceSummaryQuery, StorefrontSummaryPage } from './storefrontSource';
+import { getCanopyTroveAuthIdToken } from '../services/canopyTroveAuthService';
+import type {
+  StorefrontSource,
+  StorefrontSourceSummaryQuery,
+  StorefrontSummaryPage,
+} from './storefrontSource';
 
 const API_REQUEST_TIMEOUT_MS = 6_000;
+
+function normalizeAreaId(areaId?: string | null) {
+  const normalized = areaId?.trim().toLowerCase();
+  if (!normalized || normalized === 'all' || normalized === 'nearby') {
+    return null;
+  }
+
+  return areaId ?? null;
+}
 
 function createUrl(pathname: string, searchParams?: Record<string, string | null | undefined>) {
   if (!storefrontApiBaseUrl) {
     return null;
   }
 
-  const url = new URL(pathname, storefrontApiBaseUrl.endsWith('/') ? storefrontApiBaseUrl : `${storefrontApiBaseUrl}/`);
+  const url = new URL(
+    pathname,
+    storefrontApiBaseUrl.endsWith('/') ? storefrontApiBaseUrl : `${storefrontApiBaseUrl}/`,
+  );
   if (searchParams) {
     for (const [key, value] of Object.entries(searchParams)) {
       if (value) {
@@ -29,17 +46,41 @@ function createUrl(pathname: string, searchParams?: Record<string, string | null
   return url.toString();
 }
 
-async function requestJson<T>(url: string): Promise<T> {
+function requestJson<T>(url: string): Promise<T>;
+function requestJson<T>(url: string, options: { allowNotFound: true }): Promise<T | null>;
+async function requestJson<T>(
+  url: string,
+  options?: {
+    allowNotFound?: boolean;
+  },
+): Promise<T | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
   }, API_REQUEST_TIMEOUT_MS);
 
   try {
+    const headers = new Headers();
+    let idToken: string | null = null;
+    try {
+      // Public storefront reads should degrade to guest access if auth refresh is stale.
+      idToken = await getCanopyTroveAuthIdToken();
+    } catch {
+      idToken = null;
+    }
+    if (idToken) {
+      headers.set('Authorization', `Bearer ${idToken}`);
+    }
+
     const response = await fetch(url, {
+      headers,
       signal: controller.signal,
     });
     if (!response.ok) {
+      if (response.status === 404 && options?.allowNotFound) {
+        return null;
+      }
+
       throw new Error(`Storefront API request failed with ${response.status}`);
     }
 
@@ -64,7 +105,7 @@ function toSummaryPage(response: StorefrontSummariesApiResponse): StorefrontSumm
 
 function toQueryParams(query?: StorefrontSourceSummaryQuery) {
   return {
-    areaId: query?.areaId ?? null,
+    areaId: normalizeAreaId(query?.areaId),
     searchQuery: query?.searchQuery?.trim() || null,
     originLat: query?.origin ? String(query.origin.latitude) : null,
     originLng: query?.origin ? String(query.origin.longitude) : null,
@@ -117,7 +158,9 @@ export const apiStorefrontSource: StorefrontSource = {
       return null;
     }
 
-    const response = await requestJson<StorefrontDetailApiDocument | null>(url);
+    const response = await requestJson<StorefrontDetailApiDocument>(url, {
+      allowNotFound: true,
+    });
     return response ? fromStorefrontDetailApiDocument(response) : null;
   },
 };

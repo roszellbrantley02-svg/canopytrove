@@ -1,10 +1,6 @@
-import React, { useContext, useMemo } from 'react';
-import {
-  StorefrontProfileControllerContext,
-  StorefrontQueryControllerContext,
-  StorefrontRewardsControllerContext,
-  StorefrontRouteControllerContext,
-} from './storefrontControllerShared';
+import type React from 'react';
+import { useContext, useMemo } from 'react';
+import { StorefrontControllerContext } from './storefrontControllerShared';
 
 function useRequiredContext<T>(context: React.Context<T | null>, hookName: string) {
   const value = useContext(context);
@@ -15,46 +11,34 @@ function useRequiredContext<T>(context: React.Context<T | null>, hookName: strin
 }
 
 export function useStorefrontQueryController() {
-  return useRequiredContext(
-    StorefrontQueryControllerContext,
-    'useStorefrontQueryController'
-  );
+  return useRequiredContext(StorefrontControllerContext, 'useStorefrontQueryController').query;
 }
 
 export function useStorefrontRouteController() {
-  return useRequiredContext(
-    StorefrontRouteControllerContext,
-    'useStorefrontRouteController'
-  );
+  return useRequiredContext(StorefrontControllerContext, 'useStorefrontRouteController').route;
 }
 
 export function useStorefrontProfileController() {
-  return useRequiredContext(
-    StorefrontProfileControllerContext,
-    'useStorefrontProfileController'
-  );
+  return useRequiredContext(StorefrontControllerContext, 'useStorefrontProfileController').profile;
 }
 
 export function useStorefrontRewardsController() {
-  return useRequiredContext(
-    StorefrontRewardsControllerContext,
-    'useStorefrontRewardsController'
-  );
+  return useRequiredContext(StorefrontControllerContext, 'useStorefrontRewardsController').rewards;
 }
 
 export function useStorefrontController() {
-  const queryValue = useStorefrontQueryController();
-  const routeValue = useStorefrontRouteController();
-  const profileValue = useStorefrontProfileController();
-  const rewardsValue = useStorefrontRewardsController();
+  const controllerValue = useRequiredContext(
+    StorefrontControllerContext,
+    'useStorefrontController',
+  );
 
   return useMemo(
     () => ({
-      ...queryValue,
-      ...routeValue,
-      ...profileValue,
-      ...rewardsValue,
+      ...controllerValue.query,
+      ...controllerValue.route,
+      ...controllerValue.profile,
+      ...controllerValue.rewards,
     }),
-    [profileValue, queryValue, rewardsValue, routeValue]
+    [controllerValue],
   );
 }

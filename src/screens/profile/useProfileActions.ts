@@ -8,9 +8,9 @@ import { getFirebaseDb, hasFirebaseConfig } from '../../config/firebase';
 import { seedStorefrontBackendFirestore } from '../../services/storefrontBackendService';
 import { storefrontSourceMode } from '../../config/storefrontSourceConfig';
 import { getOwnerPortalAccessState } from '../../services/ownerPortalService';
-import { CanopyTroveAuthSession } from '../../types/identity';
-import { RootStackParamList } from '../../navigation/RootNavigator';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { CanopyTroveAuthSession } from '../../types/identity';
+import type { RootStackParamList } from '../../navigation/RootNavigator';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ownerPortalPreviewEnabled } from '../../config/ownerPortalConfig';
 
 type UseProfileActionsArgs = {
@@ -29,7 +29,7 @@ type UseProfileActionsArgs = {
 };
 
 export function useProfileActions({
-  authSession,
+  authSession: _authSession,
   backendHealth,
   clearDisplayName,
   displayNameInput,
@@ -47,10 +47,12 @@ export function useProfileActions({
 
   const fallbackSeedCounts = React.useMemo(() => getMockFirestoreSeedCounts(), []);
   const canSeedViaBackend =
-    storefrontSourceMode === 'api' && backendHealth.status === 'healthy' && backendHealth.allowDevSeed;
+    storefrontSourceMode === 'api' &&
+    backendHealth.status === 'healthy' &&
+    backendHealth.allowDevSeed;
   const canSeedViaFirebase = storefrontSourceMode !== 'api' && hasFirebaseConfig;
   const canSeed = canSeedViaBackend || canSeedViaFirebase;
-  const ownerPortalAccess = getOwnerPortalAccessState(authSession.email);
+  const ownerPortalAccess = getOwnerPortalAccessState();
 
   const handleSeedFirebase = React.useCallback(async () => {
     const db = getFirebaseDb();
@@ -66,7 +68,9 @@ export function useProfileActions({
       clearStorefrontRepositoryCache();
       setSeedStatus(`Seeded ${result.summaryCount} summaries and ${result.detailCount} details.`);
     } catch (error) {
-      setSeedStatus(`Seed failed: ${error instanceof Error ? error.message : 'Unknown seed failure'}`);
+      setSeedStatus(
+        `Seed failed: ${error instanceof Error ? error.message : 'Unknown seed failure'}`,
+      );
     } finally {
       setIsSeeding(false);
     }
@@ -78,9 +82,13 @@ export function useProfileActions({
     try {
       const result = await seedStorefrontBackendFirestore();
       clearStorefrontRepositoryCache();
-      setSeedStatus(`Seeded ${result.summaryCount} summaries and ${result.detailCount} details through the backend API.`);
+      setSeedStatus(
+        `Seeded ${result.summaryCount} summaries and ${result.detailCount} details through the backend API.`,
+      );
     } catch (error) {
-      setSeedStatus(`Backend seed failed: ${error instanceof Error ? error.message : 'Unknown backend seed failure'}`);
+      setSeedStatus(
+        `Backend seed failed: ${error instanceof Error ? error.message : 'Unknown backend seed failure'}`,
+      );
     } finally {
       setIsSeeding(false);
     }
@@ -148,17 +156,14 @@ export function useProfileActions({
     openLegalCenter: () => navigation.navigate('LegalCenter'),
     openDeleteAccount: () => navigation.navigate('DeleteAccount'),
     openOwnerSignIn: () => {
-      if (ownerPortalPreviewEnabled) {
-        setShowOwnerPreview(true);
-        return;
-      }
-
       navigation.navigate('OwnerPortalAccess');
     },
     openOwnerPortal: () =>
       navigation.navigate(
-        ownerPortalPreviewEnabled ? 'OwnerPortalHome' : 'OwnerPortalAccess',
-        ownerPortalPreviewEnabled ? { preview: true } : undefined
+        ownerPortalPreviewEnabled && ownerPortalAccess.enabled
+          ? 'OwnerPortalHome'
+          : 'OwnerPortalAccess',
+        ownerPortalPreviewEnabled && ownerPortalAccess.enabled ? { preview: true } : undefined,
       ),
     saveDisplayName: () => {
       void handleSaveDisplayName();

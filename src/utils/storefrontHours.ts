@@ -21,4 +21,3 @@ export function normalizeStorefrontHours(hours: string[] | null | undefined) {
 export function hasPublishedStorefrontHours(hours: string[] | null | undefined) {
   return normalizeStorefrontHours(hours).length > 0;
 }
-

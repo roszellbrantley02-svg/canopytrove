@@ -16,6 +16,23 @@
       "supportsTablet": true,
       "icon": "./assets/ios-icon.png",
       "bundleIdentifier": "com.rezell.canopytrove",
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1", "0A2A.1", "3B52.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": ["E174.1", "85F4.1"]
+          }
+        ]
+      },
+      "associatedDomains": ["applinks:canopytrove.com", "applinks:www.canopytrove.com"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -23,16 +40,36 @@
     "android": {
       "icon": "./assets/android-icon.png",
       "adaptiveIcon": {
-        "backgroundColor": "#121614",
+        "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.rezell.canopytrove",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "canopytrove.com",
+              "pathPrefix": "/storefronts/"
+            },
+            {
+              "scheme": "https",
+              "host": "www.canopytrove.com",
+              "pathPrefix": "/storefronts/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES"
       ]
     },
     "web": {
@@ -46,12 +83,20 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Canopy Trove uses your photos so you can attach review images that stay private until moderation approves them.",
+          "cameraPermission": "Canopy Trove uses your camera so you can take review photos before they enter the private moderation queue."
+        }
+      ],
+      [
         "expo-notifications",
         {
           "defaultChannel": "post-visit-follow-up"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@sentry/react-native"
     ],
     "owner": "rezell",
     "extra": {

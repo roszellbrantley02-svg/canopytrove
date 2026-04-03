@@ -1,35 +1,31 @@
 import React from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ownerPortalPreviewEnabled } from '../../config/ownerPortalConfig';
 import { useStorefrontProfileController } from '../../context/StorefrontController';
+import { useOwnerPortalAccessState } from '../../hooks/useOwnerPortalAccessState';
 import { useSavedSummaries } from '../../hooks/useStorefrontSummaryData';
-import { RootStackParamList } from '../../navigation/RootNavigator';
-import {
-  getOwnerDispensaryClaim,
-  getOwnerPortalAccessState,
-  getOwnerProfile,
-} from '../../services/ownerPortalService';
-import {
-  OwnerDispensaryClaimDocument,
-  OwnerProfileDocument,
-} from '../../types/ownerPortal';
+import type { RootStackParamList } from '../../navigation/RootNavigator';
+import { getOwnerDispensaryClaim, getOwnerProfile } from '../../services/ownerPortalService';
+import type { OwnerDispensaryClaimDocument, OwnerProfileDocument } from '../../types/ownerPortal';
 import { getNextStepContent } from './ownerPortalHomeShared';
+import { OWNER_PORTAL_PREVIEW_UID, ownerPortalPreviewAccessState } from './ownerPortalPreviewData';
 import {
-  OWNER_PORTAL_PREVIEW_UID,
-  ownerPortalPreviewAccessState,
-  ownerPortalPreviewClaim,
-  ownerPortalPreviewProfile,
-  ownerPortalPreviewStorefront,
-} from './ownerPortalPreviewData';
+  getOwnerPortalPreviewClaim,
+  getOwnerPortalPreviewClaimedStorefrontSummary,
+  getOwnerPortalPreviewProfile,
+} from '../../services/ownerPortalPreviewService';
+import type { StorefrontSummary } from '../../types/storefront';
 
 export function useOwnerPortalHomeScreenModel(preview = false) {
   const isPreview = ownerPortalPreviewEnabled && preview;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { authSession } = useStorefrontProfileController();
+  const liveAccessState = useOwnerPortalAccessState(authSession);
   const ownerUid = authSession.uid;
   const [ownerProfile, setOwnerProfile] = React.useState<OwnerProfileDocument | null>(null);
   const [ownerClaim, setOwnerClaim] = React.useState<OwnerDispensaryClaimDocument | null>(null);
+  const [previewStorefront, setPreviewStorefront] = React.useState<StorefrontSummary | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [errorText, setErrorText] = React.useState<string | null>(null);
   const previewOwnerUid = OWNER_PORTAL_PREVIEW_UID;
@@ -38,19 +34,56 @@ export function useOwnerPortalHomeScreenModel(preview = false) {
 
   React.useEffect(() => {
     if (isPreview) {
-      setOwnerProfile(ownerPortalPreviewProfile);
-      setOwnerClaim(ownerPortalPreviewClaim);
+      let alive = true;
+
+      setIsLoading(true);
+      void (async () => {
+        try {
+          const [nextOwnerProfile, nextOwnerClaim, nextStorefront] = await Promise.all([
+            getOwnerPortalPreviewProfile(),
+            getOwnerPortalPreviewClaim(),
+            getOwnerPortalPreviewClaimedStorefrontSummary(),
+          ]);
+          if (!alive) {
+            return;
+          }
+
+          setOwnerProfile(nextOwnerProfile);
+          setOwnerClaim(nextOwnerClaim);
+          setPreviewStorefront(nextStorefront);
+          setErrorText(null);
+        } catch (error) {
+          if (!alive) {
+            return;
+          }
+
+          setErrorText(
+              error instanceof Error ? error.message : 'Unable to load preview owner data.',
+          );
+        } finally {
+          if (alive) {
+            setIsLoading(false);
+          }
+        }
+      })();
+
+      return () => {
+        alive = false;
+      };
+    }
+
+    let alive = true;
+    if (!ownerUid) {
+      setOwnerProfile(null);
+      setOwnerClaim(null);
+      setPreviewStorefront(null);
       setErrorText(null);
       setIsLoading(false);
       return;
     }
 
-    let alive = true;
-    if (!ownerUid) {
-      setIsLoading(false);
-      return;
-    }
-
+    setIsLoading(true);
+    setErrorText(null);
     void (async () => {
       try {
         const nextOwnerProfile = await getOwnerProfile(ownerUid);
@@ -66,7 +99,7 @@ export function useOwnerPortalHomeScreenModel(preview = false) {
 
         const nextOwnerClaim = await getOwnerDispensaryClaim(
           ownerUid,
-          nextOwnerProfile.dispensaryId
+          nextOwnerProfile.dispensaryId,
         );
         if (alive) {
           setOwnerClaim(nextOwnerClaim);
@@ -88,10 +121,10 @@ export function useOwnerPortalHomeScreenModel(preview = false) {
   }, [authSession.uid, isPreview, ownerUid]);
 
   const accessState = React.useMemo(
-    () => (isPreview ? ownerPortalPreviewAccessState : getOwnerPortalAccessState(authSession.email)),
-    [authSession.email, isPreview]
+    () => (isPreview ? ownerPortalPreviewAccessState : liveAccessState.accessState),
+    [isPreview, liveAccessState.accessState],
   );
-  const claimedStorefront = isPreview ? ownerPortalPreviewStorefront : claimedStorefronts[0] ?? null;
+  const claimedStorefront = isPreview ? previewStorefront : (claimedStorefronts[0] ?? null);
   const nextStep = ownerProfile ? getNextStepContent(ownerProfile.onboardingStep) : null;
 
   const handleContinue = React.useCallback(() => {
@@ -117,13 +150,13 @@ export function useOwnerPortalHomeScreenModel(preview = false) {
       case 'OwnerPortalBusinessVerification':
         navigation.navigate(
           'OwnerPortalBusinessVerification',
-          isPreview ? { preview: true } : undefined
+          isPreview ? { preview: true } : undefined,
         );
         return;
       case 'OwnerPortalIdentityVerification':
         navigation.navigate(
           'OwnerPortalIdentityVerification',
-          isPreview ? { preview: true } : undefined
+          isPreview ? { preview: true } : undefined,
         );
         return;
       case 'OwnerPortalSubscription':
@@ -136,6 +169,7 @@ export function useOwnerPortalHomeScreenModel(preview = false) {
 
   return {
     accessState,
+    isCheckingAccess: liveAccessState.isCheckingAccess,
     authSession,
     claimedStorefront,
     errorText,

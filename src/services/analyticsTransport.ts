@@ -1,13 +1,21 @@
 import { Platform } from 'react-native';
-import { AnalyticsEventBatchRequest, AnalyticsEventInput } from '../types/analytics';
+import type { AnalyticsEventBatchRequest, AnalyticsEventInput } from '../types/analytics';
 import { REPORT_TIMEOUT_MS } from './analyticsConfig';
+
+export type AnalyticsBatchPostResult =
+  | { kind: 'success'; status: number }
+  | { kind: 'retryable_failure'; status: number | null }
+  | { kind: 'terminal_failure'; status: number };
 
 export async function postAnalyticsBatch(
   url: string | null,
-  batch: AnalyticsEventInput[]
-) {
+  batch: AnalyticsEventInput[],
+): Promise<AnalyticsBatchPostResult> {
   if (!url || !batch.length) {
-    return false;
+    return {
+      kind: 'retryable_failure',
+      status: null,
+    };
   }
 
   const controller = new AbortController();
@@ -30,9 +38,29 @@ export async function postAnalyticsBatch(
       signal: controller.signal,
     });
 
-    return response.ok;
+    if (response.ok) {
+      return {
+        kind: 'success',
+        status: response.status,
+      };
+    }
+
+    if (response.status === 400 || response.status === 413) {
+      return {
+        kind: 'terminal_failure',
+        status: response.status,
+      };
+    }
+
+    return {
+      kind: 'retryable_failure',
+      status: response.status,
+    };
   } catch {
-    return false;
+    return {
+      kind: 'retryable_failure',
+      status: null,
+    };
   } finally {
     clearTimeout(timeoutId);
   }

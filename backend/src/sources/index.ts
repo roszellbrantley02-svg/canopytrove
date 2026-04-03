@@ -14,58 +14,50 @@ function readSourceMode(): BackendSourceMode {
   return rawMode === 'firestore' ? 'firestore' : 'mock';
 }
 
-function withFallbackSource(primary: StorefrontBackendSource, fallback: StorefrontBackendSource): StorefrontBackendSource {
+function createMissingFirestoreConfigError() {
+  return new Error(
+    'Storefront backend source is set to firestore, but backend Firebase environment config is missing.'
+  );
+}
+
+async function failUnavailableFirestoreSource<T>(): Promise<T> {
+  throw createMissingFirestoreConfigError();
+}
+
+function createUnavailableFirestoreSource(): StorefrontBackendSource {
   return {
-    async getAllSummaries() {
-      try {
-        return await primary.getAllSummaries();
-      } catch {
-        return fallback.getAllSummaries();
-      }
+    getAllSummaries() {
+      return failUnavailableFirestoreSource();
     },
-    async getSummariesByIds(ids) {
-      try {
-        return await primary.getSummariesByIds(ids);
-      } catch {
-        return fallback.getSummariesByIds(ids);
-      }
+    getSummariesByIds() {
+      return failUnavailableFirestoreSource();
     },
-    async getSummaryPage(query) {
-      try {
-        return await primary.getSummaryPage(query);
-      } catch {
-        return fallback.getSummaryPage(query);
-      }
+    getSummaryPage() {
+      return failUnavailableFirestoreSource();
     },
-    async getSummaries(query) {
-      try {
-        return await primary.getSummaries(query);
-      } catch {
-        return fallback.getSummaries(query);
-      }
+    getSummaries() {
+      return failUnavailableFirestoreSource();
     },
-    async getDetailsById(storefrontId) {
-      try {
-        return await primary.getDetailsById(storefrontId);
-      } catch {
-        return fallback.getDetailsById(storefrontId);
-      }
+    getDetailsById() {
+      return failUnavailableFirestoreSource();
     },
   };
 }
 
 const requestedMode = readSourceMode();
-const canUseFirestoreSource = requestedMode === 'firestore' && hasBackendFirebaseConfig;
-const configuredSource = canUseFirestoreSource ? firestoreStorefrontSource : mockStorefrontSource;
+const hasAvailableSource = requestedMode !== 'firestore' || hasBackendFirebaseConfig;
 
 export const backendStorefrontSource =
-  configuredSource === mockStorefrontSource
-    ? mockStorefrontSource
-    : withFallbackSource(configuredSource, mockStorefrontSource);
+  requestedMode === 'firestore'
+    ? hasBackendFirebaseConfig
+      ? firestoreStorefrontSource
+      : createUnavailableFirestoreSource()
+    : mockStorefrontSource;
 
 export const backendStorefrontSourceStatus = {
   requestedMode,
-  activeMode: canUseFirestoreSource ? 'firestore' : 'mock',
+  activeMode: requestedMode,
+  available: hasAvailableSource,
   fallbackReason:
     requestedMode === 'firestore' && !hasBackendFirebaseConfig
       ? 'Missing backend Firebase environment config'
@@ -82,9 +74,13 @@ export async function warmBackendStorefrontSource() {
     return;
   }
 
+  if (!backendStorefrontSourceStatus.available) {
+    throw createMissingFirestoreConfigError();
+  }
+
   try {
     await warmFirestoreStorefrontSource();
   } catch {
-    // Startup warming should not block backend availability.
+    // Startup warming should not block backend availability once Firestore mode is configured.
   }
 }

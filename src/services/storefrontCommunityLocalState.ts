@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { brand } from '../config/brand';
+import type { StoredStorefrontCommunityState } from './storefrontCommunityLocalShared';
 import {
   cloneStorefrontCommunityState,
   EMPTY_STOREFRONT_COMMUNITY_STATE,
-  StoredStorefrontCommunityState,
 } from './storefrontCommunityLocalShared';
 
 const STOREFRONT_COMMUNITY_KEY = `${brand.storageNamespace}:storefront-community`;
@@ -33,9 +33,7 @@ export async function loadStorefrontCommunityState(): Promise<StoredStorefrontCo
   try {
     const rawValue = await AsyncStorage.getItem(STOREFRONT_COMMUNITY_KEY);
     if (!rawValue) {
-      memoryCachedCommunityState = cloneStorefrontCommunityState(
-        EMPTY_STOREFRONT_COMMUNITY_STATE
-      );
+      memoryCachedCommunityState = cloneStorefrontCommunityState(EMPTY_STOREFRONT_COMMUNITY_STATE);
       return memoryCachedCommunityState;
     }
 
@@ -48,9 +46,7 @@ export async function loadStorefrontCommunityState(): Promise<StoredStorefrontCo
     memoryCachedCommunityState = cloneStorefrontCommunityState(normalized);
     return memoryCachedCommunityState;
   } catch {
-    memoryCachedCommunityState = cloneStorefrontCommunityState(
-      EMPTY_STOREFRONT_COMMUNITY_STATE
-    );
+    memoryCachedCommunityState = cloneStorefrontCommunityState(EMPTY_STOREFRONT_COMMUNITY_STATE);
     return memoryCachedCommunityState;
   }
 }

@@ -1,4 +1,4 @@
-import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import React, { useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { type StoredStorefrontPreferences } from '../services/storefrontPreferencesService';
 import type { BrowseSortKey, Coordinates, StorefrontGamificationState } from '../types/storefront';
 import { useStorefrontQueryHydration } from './useStorefrontQueryHydration';
@@ -59,6 +59,36 @@ export function useStorefrontQueryPersistence({
 }: UseStorefrontQueryPersistenceArgs) {
   const [hasHydratedPreferences, setHasHydratedPreferences] = useState(Boolean(cachedPreferences));
   const lastSavedPreferencesPayloadRef = useRef<string | null>(null);
+  const queryInputMutationCountRef = useRef(0);
+  const latestHydratableStateRef = useRef({
+    selectedAreaId,
+    searchQuery,
+    locationQuery,
+    browseSortKey,
+    browseHotDealsOnly,
+    savedStorefrontIds,
+    searchLocation,
+    searchLocationLabel,
+    deviceLocationLabel,
+    gamificationState,
+  });
+
+  latestHydratableStateRef.current = {
+    selectedAreaId,
+    searchQuery,
+    locationQuery,
+    browseSortKey,
+    browseHotDealsOnly,
+    savedStorefrontIds,
+    searchLocation,
+    searchLocationLabel,
+    deviceLocationLabel,
+    gamificationState,
+  };
+
+  const markQueryInputTouched = React.useCallback(() => {
+    queryInputMutationCountRef.current += 1;
+  }, []);
 
   useStorefrontQueryHydration({
     cachedPreferences,
@@ -66,6 +96,8 @@ export function useStorefrontQueryPersistence({
     profileCreatedAt,
     defaultAreaLabel,
     selectedAreaId,
+    latestHydratableStateRef,
+    queryInputMutationCountRef,
     setHasHydratedPreferences,
     lastSavedPreferencesPayloadRef,
     setSelectedAreaIdState,
@@ -98,5 +130,6 @@ export function useStorefrontQueryPersistence({
 
   return {
     hasHydratedPreferences,
+    markQueryInputTouched,
   };
 }

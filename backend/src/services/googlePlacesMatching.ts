@@ -4,6 +4,7 @@ import {
   GoogleSearchPlace,
   GOOGLE_MAPS_API_KEY,
   PLACE_ID_TTL_MS,
+  googlePlacesCacheLimits,
   persistPlaceId,
   placeIdCache,
   placeIdInFlight,
@@ -67,7 +68,13 @@ export async function matchPlaceId(summary: StorefrontSummaryApiDocument) {
     return summary.placeId.trim();
   }
 
-  return resolveCached(summary.id, placeIdCache, placeIdInFlight, PLACE_ID_TTL_MS, async () => {
+  return resolveCached(
+    summary.id,
+    placeIdCache,
+    placeIdInFlight,
+    PLACE_ID_TTL_MS,
+    googlePlacesCacheLimits.placeId,
+    async () => {
     for (const query of createSearchQueries(summary)) {
       const payload = await requestGoogleJson<{ places?: GoogleSearchPlace[] }>(
         'https://places.googleapis.com/v1/places:searchText',
@@ -100,5 +107,6 @@ export async function matchPlaceId(summary: StorefrontSummaryApiDocument) {
     }
 
     return null;
-  });
+    }
+  );
 }

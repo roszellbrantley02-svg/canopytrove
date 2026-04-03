@@ -8,29 +8,123 @@ service firebase.storage {
 
     function isAdmin() {
       return isSignedIn() &&
-        (request.auth.token.admin == true || request.auth.token.role == 'admin');
+        ((('admin' in request.auth.token) && request.auth.token.admin == true) ||
+          (('role' in request.auth.token) && request.auth.token.role == 'admin'));
+    }
+
+    function isOwner() {
+      return isSignedIn() &&
+        (('role' in request.auth.token) && request.auth.token.role == 'owner');
     }
 
     function isSelf(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function storefrontDoc(dispensaryId) {
+      return firestore.get(/databases/(default)/documents/dispensaries/$(dispensaryId));
+    }
+
+    function businessVerificationDoc(ownerUid) {
+      return firestore.get(/databases/(default)/documents/businessVerifications/$(ownerUid));
+    }
+
+    function identityVerificationDoc(ownerUid) {
+      return firestore.get(/databases/(default)/documents/identityVerifications/$(ownerUid));
+    }
+
+    function subscriptionDoc(ownerUid) {
+      return firestore.get(/databases/(default)/documents/subscriptions/$(ownerUid));
+    }
+
+    function ownsDispensary(dispensaryId, ownerUid) {
+      return firestore.exists(/databases/(default)/documents/dispensaries/$(dispensaryId)) &&
+        storefrontDoc(dispensaryId).data.ownerUid == ownerUid;
+    }
+
+    function ownerVerified(ownerUid) {
+      return firestore.exists(/databases/(default)/documents/businessVerifications/$(ownerUid)) &&
+        firestore.exists(/databases/(default)/documents/identityVerifications/$(ownerUid)) &&
+        businessVerificationDoc(ownerUid).data.verificationStatus in ['verified', 'approved'] &&
+        identityVerificationDoc(ownerUid).data.verificationStatus in ['verified', 'approved'];
+    }
+
+    function ownerSubscribed(ownerUid, dispensaryId) {
+      return firestore.exists(/databases/(default)/documents/subscriptions/$(ownerUid)) &&
+        subscriptionDoc(ownerUid).data.status in ['trial', 'active'] &&
+        subscriptionDoc(ownerUid).data.dispensaryId == dispensaryId;
+    }
+
+    function validOwnerImageUpload() {
+      return request.resource.size < 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    function validCommunityReviewImageUpload() {
+      return request.resource.size < 6 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    function canWriteOwnerStorefrontMedia(dispensaryId, ownerUid) {
+      return isAdmin() || (
+        isOwner() &&
+        isSelf(ownerUid) &&
+        ownsDispensary(dispensaryId, ownerUid) &&
+        ownerVerified(ownerUid) &&
+        ownerSubscribed(ownerUid, dispensaryId) &&
+        validOwnerImageUpload()
+      );
+    }
+
+    function canWriteCommunityReviewMedia(profileId) {
+      return isSignedIn() &&
+        isSelf(profileId) &&
+        validCommunityReviewImageUpload();
+    }
+
     match /owner-private/{ownerUid}/{allPaths=**} {
       allow read, write: if isAdmin() || isSelf(ownerUid);
     }
 
+    match /community-review-media/pending/{profileId}/{storefrontId}/{draftId}/{allPaths=**} {
+      allow read: if isAdmin() || isSelf(profileId);
+      allow write: if isAdmin() || canWriteCommunityReviewMedia(profileId);
+    }
+
+    match /community-review-media/quarantine/{storefrontId}/{reviewId}/{mediaId}/{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /community-review-media/approved/{storefrontId}/{reviewId}/{mediaId}/{allPaths=**} {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && validCommunityReviewImageUpload();
+    }
+
     match /dispensary-media/{dispensaryId}/approved/{allPaths=**} {
-      allow read: if true;
+      allow read: if isAdmin();
       allow write: if isAdmin();
     }
 
-    match /dispensary-media/{dispensaryId}/pending/{ownerUid}/{allPaths=**} {
-      allow read, write: if isAdmin() || isSelf(ownerUid);
+    match /dispensary-media/{dispensaryId}/approved/owner/{ownerUid}/{allPaths=**} {
+      allow read: if isAdmin();
+      allow write: if canWriteOwnerStorefrontMedia(dispensaryId, ownerUid);
     }
 
+    match /dispensary-media/{dispensaryId}/pending/{ownerUid}/{allPaths=**} {
+      allow read: if isAdmin() || isSelf(ownerUid);
+      allow write: if canWriteOwnerStorefrontMedia(dispensaryId, ownerUid);
+    }
+
+    // Preserve the legacy path shape as admin-only so arbitrary signed-in
+    // users can no longer write deal media.
     match /deals-media/{dispensaryId}/{dealId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAdmin() || isSignedIn();
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /deals-media/{dispensaryId}/{ownerUid}/{dealId}/{allPaths=**} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
     }
   }
 }

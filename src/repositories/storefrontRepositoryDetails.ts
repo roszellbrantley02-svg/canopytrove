@@ -1,7 +1,7 @@
 import { storefrontSourceMode } from '../config/storefrontSourceConfig';
 import { mergeLocalStorefrontCommunityIntoDetail } from '../services/storefrontCommunityLocalService';
 import { storefrontSource } from '../sources';
-import { StorefrontDetails } from '../types/storefront';
+import type { StorefrontDetails } from '../types/storefront';
 import {
   getFreshDetail,
   invalidateStorefrontDetailsCache,
@@ -22,19 +22,25 @@ function getApiDetailTtlMs(detail: StorefrontDetails | null) {
     : API_PENDING_DETAIL_TTL_MS;
 }
 
-export async function getStorefrontDetails(storefrontId: string): Promise<StorefrontDetails | null> {
-  return resolveDetailWithCache(storefrontId, async () => {
-    const detail = await storefrontSource.getDetailsById(storefrontId);
-    if (!detail) {
-      return detail;
-    }
+export async function getStorefrontDetails(
+  storefrontId: string,
+): Promise<StorefrontDetails | null> {
+  return resolveDetailWithCache(
+    storefrontId,
+    async () => {
+      const detail = await storefrontSource.getDetailsById(storefrontId);
+      if (!detail) {
+        return detail;
+      }
 
-    if (storefrontSourceMode === 'api') {
-      return detail;
-    }
+      if (storefrontSourceMode === 'api') {
+        return detail;
+      }
 
-    return mergeLocalStorefrontCommunityIntoDetail(detail);
-  }, storefrontSourceMode === 'api' ? getApiDetailTtlMs : undefined);
+      return mergeLocalStorefrontCommunityIntoDetail(detail);
+    },
+    storefrontSourceMode === 'api' ? getApiDetailTtlMs : undefined,
+  );
 }
 
 export async function prefetchStorefrontDetails(storefrontId: string): Promise<void> {

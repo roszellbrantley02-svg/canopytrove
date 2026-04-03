@@ -1,15 +1,15 @@
 import React from 'react';
-import {
-  NavigationContainer,
-  NavigationContainerRef,
-} from '@react-navigation/native';
+import type { NavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { CanopyTroveTabBar } from '../components/CanopyTroveTabBar';
+import { FavoriteDealNotificationBridge } from '../components/FavoriteDealNotificationBridge';
+import { NotificationResponseBridge } from '../components/NotificationResponseBridge';
 import { PostVisitPromptHost } from '../components/PostVisitPromptHost';
 import { trackScreenView } from '../services/analyticsService';
 import { navigationTheme } from '../theme/navigationTheme';
 import { motion } from '../theme/tokens';
+import type { RootStackParamList } from './rootNavigatorConfig';
 import {
-  RootStackParamList,
   Stack,
   Tab,
   stackNavigatorScreenOptions,
@@ -17,6 +17,7 @@ import {
   tabNavigatorScreenOptions,
   tabScreens,
 } from './rootNavigatorConfig';
+import { linkingConfig } from './linkingConfig';
 import { getActiveRouteName } from './rootNavigatorTracking';
 
 export type { RootStackParamList, RootTabParamList } from './rootNavigatorConfig';
@@ -24,7 +25,7 @@ export type { RootStackParamList, RootTabParamList } from './rootNavigatorConfig
 function TabsNavigator() {
   return (
     <Tab.Navigator
-      detachInactiveScreens={true}
+      detachInactiveScreens={false}
       tabBar={(props) => <CanopyTroveTabBar {...props} />}
       screenOptions={tabNavigatorScreenOptions}
     >
@@ -38,14 +39,17 @@ function TabsNavigator() {
 export function RootNavigator() {
   const navigationRef = React.useRef<NavigationContainerRef<RootStackParamList>>(null);
   const routeNameRef = React.useRef<string | null>(null);
+  const [navigationReady, setNavigationReady] = React.useState(false);
 
   return (
     <NavigationContainer
       ref={navigationRef}
+      linking={linkingConfig}
       theme={navigationTheme}
       onReady={() => {
         const activeRouteName = navigationRef.current?.getCurrentRoute()?.name ?? null;
         routeNameRef.current = activeRouteName;
+        setNavigationReady(true);
         if (activeRouteName) {
           trackScreenView(activeRouteName);
         }
@@ -60,9 +64,7 @@ export function RootNavigator() {
         trackScreenView(activeRouteName);
       }}
     >
-      <Stack.Navigator
-        screenOptions={stackNavigatorScreenOptions}
-      >
+      <Stack.Navigator screenOptions={stackNavigatorScreenOptions}>
         <Stack.Screen
           name="Tabs"
           component={TabsNavigator}
@@ -82,6 +84,8 @@ export function RootNavigator() {
             />
           ))}
       </Stack.Navigator>
+      <NotificationResponseBridge navigationReady={navigationReady} navigationRef={navigationRef} />
+      <FavoriteDealNotificationBridge />
       <PostVisitPromptHost navigationRef={navigationRef} />
     </NavigationContainer>
   );

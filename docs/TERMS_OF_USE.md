@@ -16,7 +16,7 @@ Users are responsible for the reviews, ratings, and reports they submit. Canopy 
 
 ## Owner Portal
 
-Owner access is restricted to verified storefront representatives. Claim submissions, identity review, business verification, and owner billing may be limited, paused, or rejected when documentation is incomplete or inaccurate.
+Owner access is restricted to verified storefront representatives. Claim submissions, identity review, business verification, and owner billing may be limited, paused, or rejected when documentation is incomplete or inaccurate. Owner billing is intended for licensed dispensary operators or approved staff managing a claimed storefront, not for consumer purchases.
 
 ## No Medical Or Legal Advice
 

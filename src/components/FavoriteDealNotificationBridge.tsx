@@ -1,5 +1,6 @@
 import React from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import type { AppStateStatus } from 'react-native';
+import { AppState } from 'react-native';
 import { storefrontSourceMode } from '../config/storefrontSourceConfig';
 import {
   useStorefrontProfileController,
@@ -7,11 +8,13 @@ import {
 } from '../context/StorefrontController';
 import { storefrontSource } from '../sources';
 import {
-  getRegisteredFavoriteDealPushToken,
-  initializeFavoriteDealNotifications,
+  getRegisteredCustomerDealPushToken,
+  initializeCustomerDealNotifications,
   scheduleFavoriteDealNotification,
   syncFavoriteDealNotifications,
 } from '../services/favoriteDealNotificationService';
+import { getRuntimeOpsStatus, hasRuntimeSafeMode } from '../services/runtimeOpsService';
+import { reportRuntimeError } from '../services/runtimeReportingService';
 import { syncStorefrontBackendFavoriteDealAlerts } from '../services/storefrontBackendService';
 import { FAVORITE_DEAL_ALERT_POLL_INTERVAL_MS } from '../utils/favoriteDealAlerts';
 
@@ -23,62 +26,70 @@ export function FavoriteDealNotificationBridge() {
 
   const syncAlerts = React.useCallback(
     async (allowNotifications: boolean) => {
-      if (syncInFlightRef.current) {
-        await syncInFlightRef.current;
-      }
+      try {
+        if (syncInFlightRef.current) {
+          await syncInFlightRef.current;
+        }
 
-      const nextSync = (async () => {
-        await initializeFavoriteDealNotifications();
-        const shouldUseBackend =
-          storefrontSourceMode === 'api' &&
-          authSession.status === 'authenticated' &&
-          Boolean(profileId);
+        const nextSync = (async () => {
+          await initializeCustomerDealNotifications();
+          const runtimeStatus = await getRuntimeOpsStatus();
+          const notificationsEnabled = allowNotifications && !hasRuntimeSafeMode(runtimeStatus);
+          const shouldUseBackend =
+            storefrontSourceMode === 'api' &&
+            authSession.status === 'authenticated' &&
+            Boolean(profileId);
 
-        if (shouldUseBackend) {
-          const devicePushToken = allowNotifications
-            ? await getRegisteredFavoriteDealPushToken({ prompt: true })
-            : await getRegisteredFavoriteDealPushToken({ prompt: false });
-          const response = await syncStorefrontBackendFavoriteDealAlerts({
-            profileId,
-            savedStorefrontIds,
-            allowNotifications,
-            devicePushToken,
-          });
+          if (shouldUseBackend) {
+            const devicePushToken = notificationsEnabled
+              ? await getRegisteredCustomerDealPushToken({ prompt: true })
+              : await getRegisteredCustomerDealPushToken({ prompt: false });
+            const response = await syncStorefrontBackendFavoriteDealAlerts({
+              profileId,
+              savedStorefrontIds,
+              allowNotifications: notificationsEnabled,
+              devicePushToken,
+            });
 
-          if (allowNotifications && response.deliveryMode !== 'backend_push') {
-            for (const notification of response.notifications) {
-              await scheduleFavoriteDealNotification({
-                storefrontId: notification.storefrontId,
-                storefrontName: notification.storefrontName,
-                promotionText: notification.promotionText,
-              });
+            if (notificationsEnabled && response.deliveryMode !== 'backend_push') {
+              for (const notification of response.notifications) {
+                await scheduleFavoriteDealNotification({
+                  storefrontId: notification.storefrontId,
+                  storefrontName: notification.storefrontName,
+                  promotionText: notification.promotionText,
+                });
+              }
             }
+
+            return;
           }
 
-          return;
+          const savedSummaries = savedStorefrontIds.length
+            ? await storefrontSource.getSummariesByIds(savedStorefrontIds)
+            : [];
+
+          await syncFavoriteDealNotifications({
+            savedSummaries,
+            allowNotifications: notificationsEnabled,
+          });
+        })();
+
+        syncInFlightRef.current = nextSync;
+
+        try {
+          await nextSync;
+        } finally {
+          if (syncInFlightRef.current === nextSync) {
+            syncInFlightRef.current = null;
+          }
         }
-
-        const savedSummaries = savedStorefrontIds.length
-          ? await storefrontSource.getSummariesByIds(savedStorefrontIds)
-          : [];
-
-        await syncFavoriteDealNotifications({
-          savedSummaries,
-          allowNotifications,
+      } catch (error) {
+        reportRuntimeError(error, {
+          source: 'favorite-deal-notification-sync',
         });
-      })();
-
-      syncInFlightRef.current = nextSync;
-
-      try {
-        await nextSync;
-      } finally {
-        if (syncInFlightRef.current === nextSync) {
-          syncInFlightRef.current = null;
-        }
       }
     },
-    [authSession.status, profileId, savedStorefrontIds]
+    [authSession.status, profileId, savedStorefrontIds],
   );
 
   React.useEffect(() => {

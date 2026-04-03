@@ -12,7 +12,10 @@ const POST_VISIT_FOLLOW_UP_KEY = `${brand.storageNamespace}:post-visit-follow-up
 const POST_VISIT_ARRIVAL_RADIUS_METERS = 180;
 
 export type PostVisitPromptKind = 'guest_first_visit' | 'return_visit';
-export type PostVisitPromptSource = 'foreground_arrival' | 'app_resume_arrival';
+export type PostVisitPromptSource =
+  | 'foreground_arrival'
+  | 'app_resume_arrival'
+  | 'geofence_arrival';
 
 export type PendingPostVisitPrompt = {
   id: string;
@@ -44,15 +47,12 @@ export type PostVisitFollowUpState = {
   reviewedStorefrontIdsByProfileKey: Record<string, string[]>;
 };
 
-type PassiveLocationGetter = () => Promise<
-  | {
-      coordinates: {
-        latitude: number;
-        longitude: number;
-      } | null;
-    }
-  | null
->;
+type PassiveLocationGetter = () => Promise<{
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  } | null;
+} | null>;
 
 const EMPTY_POST_VISIT_STATE: PostVisitFollowUpState = {
   pendingPrompt: null,
@@ -105,7 +105,7 @@ function cloneState(state: PostVisitFollowUpState): PostVisitFollowUpState {
       Object.entries(state.reviewedStorefrontIdsByProfileKey).map(([profileKey, storefrontIds]) => [
         profileKey,
         [...storefrontIds],
-      ])
+      ]),
     ),
   };
 }
@@ -135,7 +135,7 @@ function setState(nextState: PostVisitFollowUpState) {
 function createReviewProfileKey(
   profileId: string,
   isAuthenticated: boolean,
-  accountId?: string | null
+  accountId?: string | null,
 ) {
   if (isAuthenticated && accountId?.trim()) {
     return `account:${accountId.trim()}`;
@@ -154,7 +154,7 @@ function toRadians(value: number) {
 
 function getDistanceMeters(
   left: { latitude: number; longitude: number },
-  right: { latitude: number; longitude: number }
+  right: { latitude: number; longitude: number },
 ) {
   const earthRadiusMeters = 6_371_000;
   const latitudeDelta = toRadians(right.latitude - left.latitude);
@@ -172,7 +172,7 @@ function getDistanceMeters(
 function isWithinArrivalRadius(
   coordinates: { latitude: number; longitude: number },
   storefront: StorefrontSummary,
-  radiusMeters: number
+  radiusMeters: number,
 ) {
   return getDistanceMeters(coordinates, storefront.coordinates) <= radiusMeters;
 }
@@ -181,7 +181,7 @@ function rememberReviewedStorefront(reviewProfileKey: string, storefrontId: stri
   const previousIds = memoryState.reviewedStorefrontIdsByProfileKey[reviewProfileKey] ?? [];
   const nextIds = [storefrontId, ...previousIds.filter((value) => value !== storefrontId)].slice(
     0,
-    256
+    256,
   );
 
   memoryState = {
@@ -195,12 +195,12 @@ function rememberReviewedStorefront(reviewProfileKey: string, storefrontId: stri
 
 function getLocalReviewedStorefrontIdsForProfile(
   profileId: string,
-  communityState: Awaited<ReturnType<typeof loadStorefrontCommunityState>>
+  communityState: Awaited<ReturnType<typeof loadStorefrontCommunityState>>,
 ) {
   return new Set(
     Object.entries(communityState.appReviewsByStorefrontId)
       .filter(([, reviews]) => reviews.some((review) => review.profileId === profileId))
-      .map(([storefrontId]) => storefrontId)
+      .map(([storefrontId]) => storefrontId),
   );
 }
 
@@ -210,7 +210,7 @@ async function isJourneyEligibleForPrompt(journey: ActivePostVisitJourney) {
   }
 
   const rememberedReviewedStorefrontIds = new Set(
-    memoryState.reviewedStorefrontIdsByProfileKey[journey.reviewProfileKey] ?? []
+    memoryState.reviewedStorefrontIdsByProfileKey[journey.reviewProfileKey] ?? [],
   );
   if (rememberedReviewedStorefrontIds.has(journey.storefront.id)) {
     return false;
@@ -220,7 +220,7 @@ async function isJourneyEligibleForPrompt(journey: ActivePostVisitJourney) {
     getCachedStorefrontCommunityState() ?? (await loadStorefrontCommunityState());
   const localReviewedStorefrontIds = getLocalReviewedStorefrontIdsForProfile(
     journey.profileId,
-    communityState
+    communityState,
   );
 
   return !localReviewedStorefrontIds.has(journey.storefront.id);
@@ -228,7 +228,7 @@ async function isJourneyEligibleForPrompt(journey: ActivePostVisitJourney) {
 
 function buildPendingPrompt(
   journey: ActivePostVisitJourney,
-  source: PostVisitPromptSource
+  source: PostVisitPromptSource,
 ): PendingPostVisitPrompt {
   return {
     id: `post-visit-${journey.storefront.id}-${Date.now().toString(36)}`,
@@ -244,7 +244,7 @@ function buildPendingPrompt(
 
 function applyJourneyLocation(
   journey: ActivePostVisitJourney,
-  coordinates: { latitude: number; longitude: number }
+  coordinates: { latitude: number; longitude: number },
 ) {
   if (
     journey.arrivalDetectedAt ||
@@ -256,6 +256,42 @@ function applyJourneyLocation(
   return {
     ...journey,
     arrivalDetectedAt: new Date().toISOString(),
+  };
+}
+
+async function resolveArrivalCoordinates(
+  coordinates?: { latitude: number; longitude: number } | null,
+) {
+  if (coordinates) {
+    return coordinates;
+  }
+
+  try {
+    const locationResult = await getBestAvailableDeviceLocation();
+    return locationResult.coordinates ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function buildCompletedJourneyState(
+  journey: ActivePostVisitJourney,
+  source: PostVisitPromptSource,
+) {
+  if (await isJourneyEligibleForPrompt(journey)) {
+    return {
+      ...memoryState,
+      activeJourney: null,
+      pendingPrompt:
+        memoryState.pendingPrompt?.journeyId === journey.id
+          ? memoryState.pendingPrompt
+          : buildPendingPrompt(journey, source),
+    };
+  }
+
+  return {
+    ...memoryState,
+    activeJourney: null,
   };
 }
 
@@ -283,7 +319,7 @@ export async function initializePostVisitPrompts() {
                   parsed.pendingPrompt.reviewProfileKey ??
                   createReviewProfileKey(
                     parsed.pendingPrompt.profileId,
-                    parsed.pendingPrompt.promptKind === 'return_visit'
+                    parsed.pendingPrompt.promptKind === 'return_visit',
                   ),
                 storefront: cloneStorefrontSummary(parsed.pendingPrompt.storefront),
               }
@@ -300,7 +336,7 @@ export async function initializePostVisitPrompts() {
                   parsed.activeJourney.reviewProfileKey ??
                   createReviewProfileKey(
                     parsed.activeJourney.profileId,
-                    parsed.activeJourney.isAuthenticated
+                    parsed.activeJourney.isAuthenticated,
                   ),
                 storefront: cloneStorefrontSummary(parsed.activeJourney.storefront),
               }
@@ -323,7 +359,7 @@ export function getPostVisitFollowUpState() {
 }
 
 export function subscribeToPostVisitFollowUpState(
-  listener: (state: PostVisitFollowUpState) => void
+  listener: (state: PostVisitFollowUpState) => void,
 ) {
   subscribers.add(listener);
   return () => {
@@ -334,7 +370,7 @@ export function subscribeToPostVisitFollowUpState(
 export async function syncPostVisitPromptForProfile(
   profileId: string,
   isAuthenticated: boolean,
-  accountId?: string | null
+  accountId?: string | null,
 ) {
   await initializePostVisitPrompts();
 
@@ -343,7 +379,7 @@ export async function syncPostVisitPromptForProfile(
   }
 
   const reviewProfileKey = createReviewProfileKey(profileId, isAuthenticated, accountId);
-  let nextState = cloneState(memoryState);
+  const nextState = cloneState(memoryState);
   let didChange = false;
 
   if (nextState.activeJourney && nextState.activeJourney.profileId === profileId) {
@@ -394,7 +430,7 @@ export async function dismissPostVisitPrompt() {
 export async function markStorefrontReviewed(
   profileId: string,
   storefrontId: string,
-  accountId?: string | null
+  accountId?: string | null,
 ) {
   await initializePostVisitPrompts();
 
@@ -439,7 +475,7 @@ export async function startPostVisitJourney(options: {
     reviewProfileKey: createReviewProfileKey(
       options.profileId,
       options.isAuthenticated,
-      options.accountId
+      options.accountId,
     ),
     isAuthenticated: options.isAuthenticated,
     routeMode: options.routeMode,
@@ -505,21 +541,7 @@ export async function evaluatePostVisitJourney(getPassiveDeviceLocation?: Passiv
   const didJourneyChange = nextJourney.arrivalDetectedAt !== activeJourney.arrivalDetectedAt;
 
   if (nextJourney.arrivalDetectedAt) {
-    if (await isJourneyEligibleForPrompt(nextJourney)) {
-      return setState({
-        ...memoryState,
-        activeJourney: null,
-        pendingPrompt:
-          memoryState.pendingPrompt?.journeyId === nextJourney.id
-            ? memoryState.pendingPrompt
-            : buildPendingPrompt(nextJourney, 'app_resume_arrival'),
-      });
-    }
-
-    return setState({
-      ...memoryState,
-      activeJourney: null,
-    });
+    return setState(await buildCompletedJourneyState(nextJourney, 'app_resume_arrival'));
   }
 
   if (didJourneyChange) {
@@ -532,10 +554,52 @@ export async function evaluatePostVisitJourney(getPassiveDeviceLocation?: Passiv
   return cloneState(memoryState);
 }
 
-export async function recordPostVisitGeofenceEntry() {
+// These entry and exit handlers reuse the same arrival and prompt logic as
+// the foreground flow so background geofencing can plug into the same state machine.
+export async function recordPostVisitGeofenceEntry(
+  coordinates?: { latitude: number; longitude: number } | null,
+) {
+  await initializePostVisitPrompts();
+
+  const activeJourney = memoryState.activeJourney;
+  if (!activeJourney) {
+    return cloneState(memoryState);
+  }
+
+  const resolvedCoordinates = await resolveArrivalCoordinates(coordinates);
+  if (!resolvedCoordinates) {
+    return cloneState(memoryState);
+  }
+
+  const nextJourney = applyJourneyLocation(activeJourney, resolvedCoordinates);
+  if (nextJourney.arrivalDetectedAt) {
+    return setState(await buildCompletedJourneyState(nextJourney, 'geofence_arrival'));
+  }
+
+  if (nextJourney.arrivalDetectedAt !== activeJourney.arrivalDetectedAt) {
+    return setState({
+      ...memoryState,
+      activeJourney: nextJourney,
+    });
+  }
+
   return cloneState(memoryState);
 }
 
 export async function finalizePostVisitJourneyFromGeofenceExit() {
-  return cloneState(memoryState);
+  await initializePostVisitPrompts();
+
+  const activeJourney = memoryState.activeJourney;
+  if (!activeJourney) {
+    return cloneState(memoryState);
+  }
+
+  if (activeJourney.arrivalDetectedAt) {
+    return setState(await buildCompletedJourneyState(activeJourney, 'geofence_arrival'));
+  }
+
+  return setState({
+    ...memoryState,
+    activeJourney: null,
+  });
 }

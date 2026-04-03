@@ -24,7 +24,7 @@ describe('ownerPortalConfig', () => {
     vi.stubEnv('EXPO_PUBLIC_OWNER_PORTAL_PREVIEW_ENABLED', '0');
     vi.stubEnv(
       'EXPO_PUBLIC_OWNER_PORTAL_ALLOWLIST',
-      'owner@canopytrove.test, second@canopytrove.test'
+      'owner@canopytrove.test, second@canopytrove.test',
     );
 
     const config = await import('./ownerPortalConfig');
@@ -32,5 +32,17 @@ describe('ownerPortalConfig', () => {
     expect(config.ownerPortalPreviewEnabled).toBe(false);
     expect(config.isOwnerPortalEmailAllowlisted('owner@canopytrove.test')).toBe(true);
     expect(config.isOwnerPortalEmailAllowlisted('blocked@canopytrove.test')).toBe(false);
+  });
+
+  it('treats owner access as open when prelaunch is disabled', async () => {
+    vi.stubEnv('EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED', 'false');
+    vi.stubEnv('EXPO_PUBLIC_OWNER_PORTAL_PREVIEW_ENABLED', '0');
+    vi.stubEnv('EXPO_PUBLIC_OWNER_PORTAL_ALLOWLIST', '');
+
+    const config = await import('./ownerPortalConfig');
+
+    expect(config.ownerPortalAccessAvailable).toBe(true);
+    expect(config.ownerPortalPrelaunchEnabled).toBe(false);
+    expect(config.isOwnerPortalEmailAllowlisted('owner@canopytrove.com')).toBe(true);
   });
 });

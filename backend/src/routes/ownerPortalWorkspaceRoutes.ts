@@ -3,26 +3,57 @@ import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
 import {
   parseOwnerPortalAlertSyncBody,
+  parseOwnerPortalLicenseComplianceBody,
   parseOwnerPortalProfileToolsBody,
   parseOwnerPortalPromotionBody,
   parseOwnerPortalPromotionIdParam,
   parseOwnerPortalReviewReplyBody,
   parseReviewIdParam,
 } from '../http/validation';
-import {
-  getOwnerPortalAccessErrorStatus,
-  ensureOwnerPortalAccess,
-} from '../services/ownerPortalAccessService';
+import { createOwnerPortalJsonRoute } from './ownerPortalRouteUtils';
 import { syncOwnerPortalAlerts } from '../services/ownerPortalAlertService';
+import { syncOwnerPortalAuthClaims } from '../services/ownerPortalAuthClaimsService';
 import {
   createOwnerPortalPromotion,
   getOwnerPortalWorkspace,
   replyToOwnerPortalReview,
+  saveOwnerPortalLicenseCompliance,
   saveOwnerPortalProfileTools,
   updateOwnerPortalPromotion,
 } from '../services/ownerPortalWorkspaceService';
+import { assertRuntimePolicyAllowsOwnerAction } from '../services/runtimeOpsService';
 
 export const ownerPortalWorkspaceRoutes = Router();
+const ownerClaimSyncRateLimiter = createRateLimitMiddleware({
+  name: 'owner-claim-sync',
+  windowMs: 60_000,
+  max: 10,
+  methods: ['POST'],
+});
+const ownerComplianceRateLimiter = createRateLimitMiddleware({
+  name: 'owner-license-compliance',
+  windowMs: 60_000,
+  max: 10,
+  methods: ['PUT'],
+});
+const ownerProfileToolsRateLimiter = createRateLimitMiddleware({
+  name: 'owner-profile-tools',
+  windowMs: 60_000,
+  max: 10,
+  methods: ['PUT'],
+});
+const ownerPromotionRateLimiter = createRateLimitMiddleware({
+  name: 'owner-promotions',
+  windowMs: 60_000,
+  max: 10,
+  methods: ['POST', 'PUT'],
+});
+const ownerReviewReplyRateLimiter = createRateLimitMiddleware({
+  name: 'owner-review-replies',
+  windowMs: 60_000,
+  max: 10,
+  methods: ['POST'],
+});
 ownerPortalWorkspaceRoutes.use(
   createRateLimitMiddleware({
     name: 'write',
@@ -32,104 +63,115 @@ ownerPortalWorkspaceRoutes.use(
   })
 );
 
-ownerPortalWorkspaceRoutes.get('/owner-portal/workspace', async (request, response) => {
-  try {
-    const { ownerUid } = await ensureOwnerPortalAccess(request);
-    response.json(await getOwnerPortalWorkspace(ownerUid));
-  } catch (error) {
-    response.status(getOwnerPortalAccessErrorStatus(error)).json({
-      ok: false,
-      error: error instanceof Error ? error.message : 'Unknown owner workspace failure',
-    });
-  }
-});
+ownerPortalWorkspaceRoutes.get(
+  '/owner-portal/workspace',
+  createOwnerPortalJsonRoute('Unknown owner workspace failure', async ({ ownerUid }) =>
+    getOwnerPortalWorkspace(ownerUid)
+  )
+);
 
-ownerPortalWorkspaceRoutes.put('/owner-portal/profile-tools', async (request, response) => {
-  try {
-    const { ownerUid } = await ensureOwnerPortalAccess(request);
-    response.json(
-      await saveOwnerPortalProfileTools(
-        ownerUid,
-        parseOwnerPortalProfileToolsBody(request.body)
-      )
-    );
-  } catch (error) {
-    response.status(getOwnerPortalAccessErrorStatus(error)).json({
-      ok: false,
-      error: error instanceof Error ? error.message : 'Unknown owner profile tools failure',
-    });
-  }
-});
+ownerPortalWorkspaceRoutes.post(
+  '/owner-portal/auth/sync-claims',
+  ownerClaimSyncRateLimiter,
+  createOwnerPortalJsonRoute('Unknown owner auth claim sync failure', async ({
+    ownerUid,
+    ownerEmail,
+  }) =>
+    syncOwnerPortalAuthClaims({
+      ownerUid,
+      ownerEmail,
+    })
+  )
+);
 
-ownerPortalWorkspaceRoutes.post('/owner-portal/promotions', async (request, response) => {
-  try {
-    const { ownerUid } = await ensureOwnerPortalAccess(request);
-    response.json(
-      await createOwnerPortalPromotion(ownerUid, parseOwnerPortalPromotionBody(request.body))
+ownerPortalWorkspaceRoutes.get(
+  '/owner-portal/license-compliance',
+  createOwnerPortalJsonRoute('Unknown owner license compliance failure', async ({ ownerUid }) => {
+    const workspace = await getOwnerPortalWorkspace(ownerUid);
+    return workspace.licenseCompliance;
+  })
+);
+
+ownerPortalWorkspaceRoutes.put(
+  '/owner-portal/license-compliance',
+  ownerComplianceRateLimiter,
+  createOwnerPortalJsonRoute('Unknown owner license compliance failure', async ({
+    ownerUid,
+    request,
+  }) => saveOwnerPortalLicenseCompliance(ownerUid, parseOwnerPortalLicenseComplianceBody(request.body)))
+);
+
+ownerPortalWorkspaceRoutes.put(
+  '/owner-portal/profile-tools',
+  ownerProfileToolsRateLimiter,
+  createOwnerPortalJsonRoute('Unknown owner profile tools failure', async ({
+    ownerUid,
+    request,
+  }) => {
+    await assertRuntimePolicyAllowsOwnerAction('profile_tools');
+    return saveOwnerPortalProfileTools(
+      ownerUid,
+      parseOwnerPortalProfileToolsBody(request.body)
     );
-  } catch (error) {
-    response.status(getOwnerPortalAccessErrorStatus(error)).json({
-      ok: false,
-      error: error instanceof Error ? error.message : 'Unknown owner promotion failure',
-    });
-  }
-});
+  })
+);
+
+ownerPortalWorkspaceRoutes.post(
+  '/owner-portal/promotions',
+  ownerPromotionRateLimiter,
+  createOwnerPortalJsonRoute('Unknown owner promotion failure', async ({
+    ownerUid,
+    request,
+  }) => {
+    await assertRuntimePolicyAllowsOwnerAction('promotion');
+    return createOwnerPortalPromotion(
+      ownerUid,
+      parseOwnerPortalPromotionBody(request.body)
+    );
+  })
+);
 
 ownerPortalWorkspaceRoutes.put(
   '/owner-portal/promotions/:promotionId',
-  async (request, response) => {
-    try {
-      const { ownerUid } = await ensureOwnerPortalAccess(request);
-      response.json(
-        await updateOwnerPortalPromotion(
-          ownerUid,
-          parseOwnerPortalPromotionIdParam(request.params.promotionId),
-          parseOwnerPortalPromotionBody(request.body)
-        )
+  ownerPromotionRateLimiter,
+  createOwnerPortalJsonRoute('Unknown owner promotion update failure', async ({
+    ownerUid,
+    request,
+  }) => {
+      await assertRuntimePolicyAllowsOwnerAction('promotion');
+      return updateOwnerPortalPromotion(
+        ownerUid,
+        parseOwnerPortalPromotionIdParam(request.params.promotionId),
+        parseOwnerPortalPromotionBody(request.body)
       );
-    } catch (error) {
-      response.status(getOwnerPortalAccessErrorStatus(error)).json({
-        ok: false,
-        error: error instanceof Error ? error.message : 'Unknown owner promotion update failure',
-      });
-    }
-  }
+    })
 );
 
 ownerPortalWorkspaceRoutes.post(
   '/owner-portal/reviews/:reviewId/reply',
-  async (request, response) => {
-    try {
-      const { ownerUid } = await ensureOwnerPortalAccess(request);
-      response.json(
-        await replyToOwnerPortalReview(
-          ownerUid,
-          parseReviewIdParam(request.params.reviewId),
-          parseOwnerPortalReviewReplyBody(request.body).text
-        )
+  ownerReviewReplyRateLimiter,
+  createOwnerPortalJsonRoute('Unknown owner review reply failure', async ({
+    ownerUid,
+    request,
+  }) => {
+      await assertRuntimePolicyAllowsOwnerAction('review_reply');
+      return replyToOwnerPortalReview(
+        ownerUid,
+        parseReviewIdParam(request.params.reviewId),
+        parseOwnerPortalReviewReplyBody(request.body).text
       );
-    } catch (error) {
-      response.status(getOwnerPortalAccessErrorStatus(error)).json({
-        ok: false,
-        error: error instanceof Error ? error.message : 'Unknown owner review reply failure',
-      });
-    }
-  }
+    })
 );
 
-ownerPortalWorkspaceRoutes.post('/owner-portal/alerts/sync', async (request, response) => {
-  try {
-    const { ownerUid } = await ensureOwnerPortalAccess(request);
-    response.json(
-      await syncOwnerPortalAlerts({
-        ownerUid,
-        ...parseOwnerPortalAlertSyncBody(request.body),
-      })
-    );
-  } catch (error) {
-    response.status(getOwnerPortalAccessErrorStatus(error)).json({
-      ok: false,
-      error: error instanceof Error ? error.message : 'Unknown owner alert sync failure',
-    });
-  }
-});
+ownerPortalWorkspaceRoutes.post(
+  '/owner-portal/alerts/sync',
+  createOwnerPortalJsonRoute('Unknown owner alert sync failure', async ({
+    ownerUid,
+    request,
+  }) =>
+    syncOwnerPortalAlerts({
+      ownerUid,
+      ...parseOwnerPortalAlertSyncBody(request.body),
+    })
+  )
+);

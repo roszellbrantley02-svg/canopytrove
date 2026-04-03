@@ -1,4 +1,4 @@
-import { GamificationBadgeDefinition } from '../../types/storefront';
+import type { GamificationBadgeDefinition } from '../../types/storefront';
 
 export const CANOPYTROVE_BADGES: GamificationBadgeDefinition[] = [
   {

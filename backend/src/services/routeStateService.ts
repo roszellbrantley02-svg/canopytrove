@@ -1,6 +1,4 @@
-import { CollectionReference } from 'firebase-admin/firestore';
-import { getBackendFirebaseDb } from '../firebase';
-import { backendStorefrontSourceStatus } from '../sources';
+import { getOptionalFirestoreCollection } from '../firestoreCollections';
 import { StorefrontRouteStateApiDocument } from '../types';
 
 const ROUTE_STATE_COLLECTION = 'route_state';
@@ -17,12 +15,7 @@ const DEFAULT_ROUTE_STATE = (profileId: string): StorefrontRouteStateApiDocument
 const routeStateStore = new Map<string, StorefrontRouteStateApiDocument>();
 
 function getRouteStateCollection() {
-  const db = getBackendFirebaseDb();
-  if (!db || backendStorefrontSourceStatus.activeMode !== 'firestore') {
-    return null;
-  }
-
-  return db.collection(ROUTE_STATE_COLLECTION) as CollectionReference<StorefrontRouteStateApiDocument>;
+  return getOptionalFirestoreCollection<StorefrontRouteStateApiDocument>(ROUTE_STATE_COLLECTION);
 }
 
 function normalizeRouteState(routeState: StorefrontRouteStateApiDocument) {

@@ -24,4 +24,5 @@ export {
   submitStorefrontBackendReport,
   submitStorefrontBackendReview,
   submitStorefrontBackendReviewHelpful,
+  updateStorefrontBackendReview,
 } from './storefrontBackendWriteApi';

@@ -1,4 +1,4 @@
-import { CanopyTroveAuthDeletionResult } from './canopyTroveAuthService';
+import type { CanopyTroveAuthDeletionResult } from './canopyTroveAuthService';
 
 export function buildCanopyTroveAccountDeletionSummary(input: {
   isAuthenticatedAccount: boolean;

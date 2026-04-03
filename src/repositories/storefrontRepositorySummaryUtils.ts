@@ -1,6 +1,6 @@
 import { storefrontSource } from '../sources';
-import { StorefrontSummaryPage } from '../sources/storefrontSource';
-import {
+import type { StorefrontSummaryPage } from '../sources/storefrontSource';
+import type {
   BrowseSortKey,
   Coordinates,
   StorefrontListQuery,
@@ -14,15 +14,25 @@ export function toRadians(value: number) {
 }
 
 export function calculateDistanceMiles(origin: Coordinates, destination: Coordinates) {
+  if (
+    !Number.isFinite(origin.latitude) ||
+    !Number.isFinite(origin.longitude) ||
+    !Number.isFinite(destination.latitude) ||
+    !Number.isFinite(destination.longitude)
+  ) {
+    return 0;
+  }
+
   const earthRadiusMiles = 3958.8;
   const deltaLatitude = toRadians(destination.latitude - origin.latitude);
   const deltaLongitude = toRadians(destination.longitude - origin.longitude);
   const latitudeA = toRadians(origin.latitude);
   const latitudeB = toRadians(destination.latitude);
 
-  const a =
+  const raw =
     Math.sin(deltaLatitude / 2) ** 2 +
     Math.cos(latitudeA) * Math.cos(latitudeB) * Math.sin(deltaLongitude / 2) ** 2;
+  const a = Math.min(1, Math.max(0, raw));
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return earthRadiusMiles * c;
@@ -95,7 +105,9 @@ export function filterHotDeals(items: StorefrontSummary[], hotDealsOnly?: boolea
     return items;
   }
 
-  return items.filter((item) => Boolean(item.promotionText?.trim()));
+  return items.filter(
+    (item) => Boolean(item.promotionText?.trim()) || Boolean(item.activePromotionId),
+  );
 }
 
 export function matchesSearchQuery(item: StorefrontSummary, searchQuery: string) {
@@ -118,7 +130,11 @@ export function matchesSearchQuery(item: StorefrontSummary, searchQuery: string)
   return haystack.includes(searchValue);
 }
 
-export function paginateItems(items: StorefrontSummary[], limit: number, offset = 0): StorefrontSummaryPage {
+export function paginateItems(
+  items: StorefrontSummary[],
+  limit: number,
+  offset = 0,
+): StorefrontSummaryPage {
   const safeOffset = Math.max(0, offset);
   const safeLimit = Math.max(0, limit);
 
@@ -136,43 +152,43 @@ export function normalizeBrowseAreaId(areaId?: string) {
     return undefined;
   }
 
-  return areaId;
+  return normalizedAreaId;
 }
 
 export function filterByArea(items: StorefrontSummary[], areaId?: string) {
-  if (!areaId) {
+  const normalizedAreaId = normalizeBrowseAreaId(areaId);
+  if (!normalizedAreaId) {
     return items;
   }
 
-  return items.filter((item) => item.marketId === areaId);
+  return items.filter((item) => item.marketId.trim().toLowerCase() === normalizedAreaId);
 }
 
-export async function getAllBrowseCandidates(
-  query: StorefrontListQuery,
-  sortKey: BrowseSortKey
-) {
-  const normalizedAreaId = normalizeBrowseAreaId(query.areaId);
-  const allSummaries = withQueryMetrics(
-    await applyStorefrontPromotionOverrides(await storefrontSource.getAllSummaries()),
-    query.origin
+async function getAllBrowseSourceSummaries(query: StorefrontListQuery) {
+  const sourceSummaries = await storefrontSource.getAllSummaries();
+
+  return withQueryMetrics(
+    await applyStorefrontPromotionOverrides(dedupeById(sourceSummaries)),
+    query.origin,
   );
+}
+
+export async function getAllBrowseCandidates(query: StorefrontListQuery, sortKey: BrowseSortKey) {
+  const normalizedAreaId = normalizeBrowseAreaId(query.areaId);
+  const allSummaries = await getAllBrowseSourceSummaries(query);
+  const searchMatchedItems = allSummaries.filter((item) =>
+    matchesSearchQuery(item, query.searchQuery),
+  );
+  const areaMatchedItems = filterByArea(searchMatchedItems, normalizedAreaId);
+  const candidateItems =
+    normalizedAreaId && areaMatchedItems.length === 0 ? searchMatchedItems : areaMatchedItems;
 
   return sortSummariesByPriorityPlacement(
-    sortBrowseResults(
-      dedupeById(
-        filterHotDeals(
-          filterByArea(allSummaries, normalizedAreaId).filter((item) =>
-            matchesSearchQuery(item, query.searchQuery)
-          ),
-          query.hotDealsOnly
-        )
-      ),
-      sortKey
-    ),
+    sortBrowseResults(dedupeById(filterHotDeals(candidateItems, query.hotDealsOnly)), sortKey),
     {
       surface: query.hotDealsOnly ? 'hot_deals' : 'browse',
-      areaId: query.areaId,
-    }
+      areaId: normalizedAreaId,
+    },
   );
 }
 
@@ -181,7 +197,7 @@ async function getScopedPage(
   radiusMiles: number,
   sortKey: BrowseSortKey,
   limit: number,
-  offset = 0
+  offset = 0,
 ) {
   return storefrontSource.getSummaryPage({
     areaId: normalizeBrowseAreaId(query.areaId),
@@ -201,10 +217,11 @@ export async function getOriginDrivenPage(
   sortKey: BrowseSortKey,
   limit: number,
   offset = 0,
-  minimumCount = limit
+  minimumCount = limit,
 ) {
+  const normalizedAreaId = normalizeBrowseAreaId(query.areaId);
   const scopedPage = await getScopedPage(query, radiusMiles, sortKey, limit, offset);
-  if ((!query.hotDealsOnly && scopedPage.total >= minimumCount) || !query.areaId) {
+  if ((!query.hotDealsOnly && scopedPage.total >= minimumCount) || !normalizedAreaId) {
     if (!query.hotDealsOnly) {
       return scopedPage;
     }
@@ -218,27 +235,24 @@ export async function getOriginDrivenPage(
   }
 
   if (query.hotDealsOnly) {
-    const allSummaries = withQueryMetrics(
-      await applyStorefrontPromotionOverrides(await storefrontSource.getAllSummaries()),
-      query.origin
-    );
+    const allSummaries = await getAllBrowseSourceSummaries(query);
     const filteredItems = sortBrowseResults(
       dedupeById(
         filterHotDeals(
           filterByRadius(
             allSummaries.filter((item) => matchesSearchQuery(item, query.searchQuery)),
-            radiusMiles
+            radiusMiles,
           ),
-          true
-        )
+          true,
+        ),
       ),
-      sortKey
+      sortKey,
     );
 
     return paginateItems(filteredItems, limit, offset);
   }
 
-  if (scopedPage.total >= minimumCount || !query.areaId) {
+  if (scopedPage.total >= minimumCount || !normalizedAreaId) {
     return scopedPage;
   }
 
@@ -269,15 +283,12 @@ export async function getOriginDrivenPage(
     }
   }
 
-  const allSummaries = withQueryMetrics(
-    (await applyStorefrontPromotionOverrides(await storefrontSource.getAllSummaries())).filter((item) =>
-      matchesSearchQuery(item, query.searchQuery)
-    ),
-    query.origin
+  const allSummaries = (await getAllBrowseSourceSummaries(query)).filter((item) =>
+    matchesSearchQuery(item, query.searchQuery),
   );
   const items = sortBrowseResults(
     dedupeById(filterHotDeals(filterByRadius(allSummaries, radiusMiles), query.hotDealsOnly)),
-    sortKey
+    sortKey,
   );
 
   return paginateItems(items, limit, offset);
@@ -287,13 +298,14 @@ export async function getBrowsePage(
   query: StorefrontListQuery,
   sortKey: BrowseSortKey,
   limit: number,
-  offset = 0
+  offset = 0,
 ) {
+  const normalizedAreaId = normalizeBrowseAreaId(query.areaId);
+
   if (query.hotDealsOnly) {
     return paginateItems(await getAllBrowseCandidates(query, sortKey), limit, offset);
   }
 
-  const normalizedAreaId = normalizeBrowseAreaId(query.areaId);
   const page = await storefrontSource.getSummaryPage({
     areaId: normalizedAreaId,
     searchQuery: query.searchQuery,
@@ -308,15 +320,30 @@ export async function getBrowsePage(
     return page;
   }
 
+  if (normalizedAreaId) {
+    const fallbackPage = await storefrontSource.getSummaryPage({
+      searchQuery: query.searchQuery,
+      origin: query.origin,
+      sortKey,
+      limit,
+      offset,
+      prioritySurface: query.hotDealsOnly ? 'hot_deals' : 'browse',
+    });
+
+    if (fallbackPage.total > 0) {
+      return fallbackPage;
+    }
+  }
+
   return paginateItems(
     await getAllBrowseCandidates(
       {
         ...query,
         hotDealsOnly: false,
       },
-      sortKey
+      sortKey,
     ),
     limit,
-    offset
+    offset,
   );
 }

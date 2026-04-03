@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, fontFamilies, radii, spacing, textStyles, typography } from '../../theme/tokens';
 
 export const styles = StyleSheet.create({
   screen: {
@@ -111,29 +111,25 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   liveBadgeText: {
+    ...textStyles.labelCaps,
     color: colors.goldSoft,
-    fontSize: typography.caption,
-    fontWeight: '800',
-    textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
   eyebrow: {
+    ...textStyles.labelCaps,
     color: colors.goldSoft,
-    fontSize: typography.caption,
-    fontWeight: '900',
-    textTransform: 'uppercase',
     letterSpacing: 1,
   },
   title: {
+    ...textStyles.display,
     color: colors.text,
     fontSize: typography.display,
-    fontWeight: '900',
     lineHeight: 36,
     textAlign: 'center',
   },
   subtitle: {
+    ...textStyles.body,
     color: colors.textMuted,
-    fontSize: typography.body,
     lineHeight: 22,
     textAlign: 'center',
   },
@@ -152,9 +148,9 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   statusChipText: {
+    ...textStyles.caption,
+    fontFamily: fontFamilies.bodyBold,
     color: colors.accent,
-    fontSize: typography.caption,
-    fontWeight: '800',
   },
   progressRail: {
     marginTop: spacing.sm,
@@ -183,14 +179,13 @@ export const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   bootNoteTitle: {
+    ...textStyles.bodyStrong,
     color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '900',
     textAlign: 'center',
   },
   bootNoteBody: {
+    ...textStyles.body,
     color: colors.textMuted,
-    fontSize: typography.body,
     lineHeight: 22,
     textAlign: 'center',
   },
@@ -209,11 +204,9 @@ export const styles = StyleSheet.create({
     gap: spacing.md,
   },
   heroEyebrow: {
+    ...textStyles.labelCaps,
     color: colors.goldSoft,
-    fontSize: typography.caption,
-    fontWeight: '800',
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
   },
   heroBadge: {
     borderRadius: radii.pill,
@@ -224,9 +217,9 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   heroBadgeText: {
+    ...textStyles.caption,
+    fontFamily: fontFamilies.bodyBold,
     color: colors.accent,
-    fontSize: typography.caption,
-    fontWeight: '800',
   },
   heroMapWrap: {
     borderRadius: radii.md,
@@ -238,13 +231,13 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   heroTitle: {
+    ...textStyles.section,
     color: colors.text,
     fontSize: typography.section,
-    fontWeight: '900',
   },
   heroBody: {
+    ...textStyles.body,
     color: colors.textMuted,
-    fontSize: typography.body,
     lineHeight: 22,
   },
   heroLineShort: {

@@ -1,10 +1,11 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import type { DimensionValue } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { SectionCard } from '../../components/SectionCard';
+import type { AppUiIconName } from '../../icons/AppUiIcon';
+import { AppUiIcon } from '../../icons/AppUiIcon';
 import { colors } from '../../theme/tokens';
-import {
+import type {
   GamificationBadgeDefinition,
   GamificationLeaderboardEntry,
   GamificationLeaderboardResponse,
@@ -14,12 +15,18 @@ import { styles } from './leaderboardStyles';
 export function LeaderboardHeaderRow({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.topRow}>
-      <Pressable onPress={onBack} style={styles.headerBadge}>
-        <Ionicons name="arrow-back" size={16} color={colors.text} />
+      <Pressable
+        onPress={onBack}
+        style={styles.headerBadge}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+        accessibilityHint="Returns to the previous screen."
+      >
+        <AppUiIcon name="arrow-back" size={16} color={colors.text} />
         <Text style={styles.headerBadgeText}>Back</Text>
       </Pressable>
       <View style={styles.headerBadge}>
-        <Ionicons name="trophy-outline" size={14} color={colors.warning} />
+        <AppUiIcon name="shield-checkmark-outline" size={14} color={colors.textSoft} />
         <Text style={styles.headerBadgeText}>Live</Text>
       </View>
     </View>
@@ -43,8 +50,12 @@ export function LeaderboardStandingsSection({
 }) {
   return (
     <SectionCard
+      eyebrow="Member profile"
+      badgeLabel={levelTitle}
+      iconName="trophy-outline"
+      tone="gold"
       title="Your standings"
-      body="This uses the same profile-scoped rewards state as visits, badges, and progression."
+      body="This view uses the same profile activity state as visits, reviews, badges, and long-term progress."
     >
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
@@ -53,7 +64,7 @@ export function LeaderboardStandingsSection({
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statValue}>{totalPoints}</Text>
-          <Text style={styles.statLabel}>Points</Text>
+          <Text style={styles.statLabel}>Activity</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statValue}>Lv {level}</Text>
@@ -82,8 +93,12 @@ export function LeaderboardProgressSection({
 }) {
   return (
     <SectionCard
-      title="Progression"
-      body="Levels, points, and badge unlocks now live in one shared rewards track."
+      eyebrow="Level track"
+      badgeLabel={pointsToNextLevel > 0 ? `${pointsToNextLevel} to go` : 'Current band maxed'}
+      iconName="stats-chart-outline"
+      tone="primary"
+      title="Profile progress"
+      body="Levels, activity totals, and badge unlocks live in one shared profile track."
     >
       <View style={styles.progressCard}>
         <View style={styles.progressHeader}>
@@ -95,7 +110,7 @@ export function LeaderboardProgressSection({
         </View>
         <Text style={styles.progressCaption}>
           {pointsToNextLevel > 0
-            ? `${pointsToNextLevel} points to the next level`
+            ? `${pointsToNextLevel} activity points to the next level`
             : 'Top of the current level band'}
         </Text>
       </View>
@@ -110,11 +125,15 @@ export function LeaderboardEarnedBadgesSection({
 }) {
   return (
     <SectionCard
+      eyebrow="Earned rewards"
+      badgeLabel={earnedBadges.length ? `${earnedBadges.length} unlocked` : 'No unlocks yet'}
+      iconName="ribbon-outline"
+      tone="primary"
       title="Unlocked badges"
       body={
         earnedBadges.length
           ? 'These are already earned on this Canopy Trove profile.'
-          : 'No badges earned yet. Reviews, visits, and future photo/community flows will unlock them.'
+          : 'No badges earned yet. Reviews, visits, and useful community activity will unlock them over time.'
       }
     >
       {earnedBadges.length ? (
@@ -122,11 +141,7 @@ export function LeaderboardEarnedBadgesSection({
           {earnedBadges.map((badge) => (
             <View key={badge.id} style={styles.badgeCard}>
               <View style={[styles.badgeIconWrap, { backgroundColor: badge.color }]}>
-                <Ionicons
-                  name={badge.icon as keyof typeof Ionicons.glyphMap}
-                  size={18}
-                  color={colors.background}
-                />
+                <AppUiIcon name={badge.icon as AppUiIconName} size={18} color={colors.background} />
               </View>
               <Text style={styles.badgeName}>{badge.name}</Text>
               <Text style={styles.badgeCategory}>{badge.category}</Text>
@@ -135,7 +150,7 @@ export function LeaderboardEarnedBadgesSection({
         </View>
       ) : (
         <Text style={styles.helperText}>
-          Badge unlocks will appear here as this profile accumulates points and milestones.
+          Badge unlocks will appear here as this profile accumulates milestones.
         </Text>
       )}
     </SectionCard>
@@ -149,18 +164,22 @@ export function LeaderboardTargetsSection({
 }) {
   return (
     <SectionCard
-      title="Next badge targets"
-      body="Locked achievements are still visible so the progression path is clear."
+      eyebrow="Next targets"
+      badgeLabel={
+        lockedBadges.length
+          ? `${Math.min(6, lockedBadges.length)} showing`
+          : 'No pending milestones'
+      }
+      iconName="sparkles-outline"
+      tone="cyan"
+      title="Next badge milestones"
+      body="Locked milestones stay visible so the next useful unlocks are easy to understand."
     >
       <View style={styles.badgeGrid}>
         {lockedBadges.slice(0, 6).map((badge) => (
           <View key={badge.id} style={[styles.badgeCard, styles.badgeCardLocked]}>
             <View style={[styles.badgeIconWrap, styles.badgeIconWrapLocked]}>
-              <Ionicons
-                name={badge.icon as keyof typeof Ionicons.glyphMap}
-                size={18}
-                color={colors.textMuted}
-              />
+              <AppUiIcon name={badge.icon as AppUiIconName} size={18} color={colors.textMuted} />
             </View>
             <Text style={styles.badgeName}>{badge.name}</Text>
             <Text style={styles.badgeDescription}>{badge.description}</Text>
@@ -193,7 +212,7 @@ function LeaderboardEntryCard({
       </View>
       <View style={styles.entryStats}>
         <Text style={styles.entryPoints}>{entry.totalPoints}</Text>
-        <Text style={styles.entryPointsLabel}>Points</Text>
+        <Text style={styles.entryPointsLabel}>Activity</Text>
       </View>
     </View>
   );
@@ -210,13 +229,17 @@ export function LeaderboardEntriesSection({
 }) {
   return (
     <SectionCard
-      title="Top Canopy Trove profiles"
+      eyebrow="Community activity"
+      badgeLabel={isLoading ? 'Refreshing' : leaderboard.items.length ? 'Live ranks' : 'Waiting'}
+      iconName="people-outline"
+      tone="gold"
+      title="Top profile activity"
       body={
         isLoading
-          ? 'Loading leaderboard...'
+          ? 'Loading standings...'
           : leaderboard.items.length
-            ? 'All-time rankings from persisted rewards state.'
-            : 'No leaderboard entries yet.'
+            ? 'All-time rankings from persisted profile activity state.'
+            : 'No standings yet.'
       }
     >
       {leaderboard.items.length ? (
@@ -235,7 +258,7 @@ export function LeaderboardEntriesSection({
         </ScrollView>
       ) : (
         <Text style={styles.helperText}>
-          Leaderboard data will appear here as Canopy Trove profiles start earning rewards.
+          Standings will appear here as Canopy Trove profiles accumulate activity.
         </Text>
       )}
     </SectionCard>

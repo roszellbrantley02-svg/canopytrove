@@ -42,4 +42,3 @@ describe('legal config', () => {
     expect(config.legalReadinessText).toContain('Privacy Policy');
   });
 });
-

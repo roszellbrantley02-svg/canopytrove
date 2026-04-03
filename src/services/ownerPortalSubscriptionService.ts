@@ -1,9 +1,9 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseDb } from '../config/firebase';
-import { OwnerPortalSubscriptionDocument } from '../types/ownerPortal';
+import type { OwnerPortalSubscriptionDocument } from '../types/ownerPortal';
+import { ensureOwnerPortalSessionReady } from './ownerPortalSessionService';
 
 const SUBSCRIPTIONS_COLLECTION = 'subscriptions';
-const OWNER_PROFILES_COLLECTION = 'ownerProfiles';
 
 function getOwnerSubscriptionDb() {
   const db = getFirebaseDb();
@@ -14,49 +14,16 @@ function getOwnerSubscriptionDb() {
   return db;
 }
 
-function createNow() {
-  return new Date().toISOString();
-}
-
-function createFutureDate(days: number) {
-  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-}
-
 export async function activateOwnerPrelaunchTrial(ownerUid: string, dispensaryId: string) {
-  const db = getOwnerSubscriptionDb();
-  const now = createNow();
-  const subscriptionDocument: OwnerPortalSubscriptionDocument = {
-    ownerUid,
-    dispensaryId,
-    provider: 'internal_prelaunch',
-    externalSubscriptionId: null,
-    planId: 'owner-prelaunch',
-    status: 'trial',
-    billingCycle: 'monthly',
-    currentPeriodStart: now,
-    currentPeriodEnd: createFutureDate(30),
-    cancelAtPeriodEnd: false,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  await Promise.all([
-    setDoc(doc(db, SUBSCRIPTIONS_COLLECTION, ownerUid), subscriptionDocument),
-    setDoc(
-      doc(db, OWNER_PROFILES_COLLECTION, ownerUid),
-      {
-        subscriptionStatus: 'trial',
-        onboardingStep: 'completed',
-        updatedAt: now,
-      },
-      { merge: true }
-    ),
-  ]);
-
-  return subscriptionDocument;
+  void ownerUid;
+  void dispensaryId;
+  throw new Error(
+    'Prelaunch trials must be activated by the billing backend, not from the client app.',
+  );
 }
 
 export async function getOwnerSubscription(ownerUid: string) {
+  await ensureOwnerPortalSessionReady();
   const db = getOwnerSubscriptionDb();
   const subscriptionRef = doc(db, SUBSCRIPTIONS_COLLECTION, ownerUid);
   const snapshot = await getDoc(subscriptionRef);

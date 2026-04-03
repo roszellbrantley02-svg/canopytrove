@@ -1,21 +1,29 @@
 import React from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SearchIcon } from '../icons/AppIcons';
-import { LayeredAppIcon } from '../icons/LayeredAppIcon';
-import { colors, radii, spacing, typography } from '../theme/tokens';
+import { AppUiIcon } from '../icons/AppUiIcon';
+import { SearchGlyphIcon } from '../icons/ProvidedGlyphIcons';
+import { colors, spacing, typography } from '../theme/tokens';
 
 type SearchFieldProps = {
   value: string;
   onChangeText: (value: string) => void;
   placeholder: string;
   onSubmitEditing?: () => void;
+  isActive?: boolean;
+  testID?: string;
 };
 
-function SearchFieldComponent({ value, onChangeText, placeholder, onSubmitEditing }: SearchFieldProps) {
+function SearchFieldComponent({
+  value,
+  onChangeText,
+  placeholder,
+  onSubmitEditing,
+  isActive,
+  testID,
+}: SearchFieldProps) {
   return (
-    <View style={styles.shell}>
-      <LayeredAppIcon icon={SearchIcon} size={18} outlineStroke={3.1} fillStroke={1.55} />
+    <View testID={testID} style={[styles.shell, isActive && styles.shellActive]}>
+      <SearchGlyphIcon size={18} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -25,10 +33,18 @@ function SearchFieldComponent({ value, onChangeText, placeholder, onSubmitEditin
         style={styles.input}
         selectionColor={colors.primary}
         returnKeyType="search"
+        accessibilityLabel="Search"
+        accessibilityHint={`Enter search term, ${placeholder.toLowerCase()}`}
       />
       {value.trim() ? (
-        <Pressable onPress={() => onChangeText('')} style={styles.clearButton}>
-          <Ionicons name="close" size={14} color={colors.text} />
+        <Pressable
+          onPress={() => onChangeText('')}
+          style={styles.clearButton}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+          accessibilityHint="Clears the current search query."
+        >
+          <AppUiIcon name="close" size={14} color={colors.text} />
         </Pressable>
       ) : null}
     </View>
@@ -53,6 +69,10 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
     elevation: 6,
+  },
+  shellActive: {
+    borderColor: 'rgba(245, 200, 106, 0.42)',
+    backgroundColor: 'rgba(245, 200, 106, 0.08)',
   },
   input: {
     flex: 1,

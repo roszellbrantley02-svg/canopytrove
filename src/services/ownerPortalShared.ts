@@ -1,10 +1,9 @@
 import { getFirebaseDb } from '../config/firebase';
-import { isOwnerPortalEmailAllowlisted, ownerPortalPrelaunchEnabled } from '../config/ownerPortalConfig';
-import {
+import { ownerPortalPrelaunchEnabled } from '../config/ownerPortalConfig';
+import type {
   OwnerPortalAccessState,
   OwnerPortalSignUpInput,
   OwnerProfileDocument,
-  OwnerUserDocument,
 } from '../types/ownerPortal';
 
 export const USERS_COLLECTION = 'users';
@@ -24,26 +23,9 @@ export function createNow() {
   return new Date().toISOString();
 }
 
-export function createDefaultUserDocument(
-  uid: string,
-  email: string,
-  displayName: string
-): OwnerUserDocument {
-  const now = createNow();
-  return {
-    uid,
-    email,
-    role: 'owner',
-    displayName: displayName || null,
-    createdAt: now,
-    lastLoginAt: now,
-    accountStatus: 'active',
-  };
-}
-
 export function createDefaultOwnerProfileDocument(
   uid: string,
-  input: Pick<OwnerPortalSignUpInput, 'legalName' | 'companyName'>
+  input: Pick<OwnerPortalSignUpInput, 'legalName' | 'companyName'>,
 ): OwnerProfileDocument {
   const now = createNow();
   return {
@@ -64,21 +46,17 @@ export function createDefaultOwnerProfileDocument(
   };
 }
 
-export function getOwnerPortalAccessState(email: string | null): OwnerPortalAccessState {
+export function getOwnerPortalAccessState(input?: {
+  claimRole?: 'owner' | 'admin' | null;
+}): OwnerPortalAccessState {
   const enabled = ownerPortalPrelaunchEnabled;
-  const allowlisted = isOwnerPortalEmailAllowlisted(email);
+  const allowlisted = !enabled || input?.claimRole === 'owner' || input?.claimRole === 'admin';
 
   return {
     enabled,
     restricted: enabled,
-    allowlisted: enabled && allowlisted,
+    allowlisted,
   };
-}
-
-export function assertOwnerPortalEmailAllowed(email: string) {
-  if (ownerPortalPrelaunchEnabled && !isOwnerPortalEmailAllowlisted(email)) {
-    throw new Error('This email is not allowed to access the prelaunch owner portal.');
-  }
 }
 
 export function createOwnerDispensaryClaimId(ownerUid: string, dispensaryId: string) {

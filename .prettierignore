@@ -1,0 +1,8 @@
+node_modules/
+dist/
+web-build/
+build-artifacts/
+.expo/
+android/
+ios/
+*.lock

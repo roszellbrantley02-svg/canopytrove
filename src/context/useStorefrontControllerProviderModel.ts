@@ -28,25 +28,32 @@ export function useStorefrontControllerProviderModel() {
     cachedProfileId: cachedPreferences?.profileId ?? cachedPreferences?.routeProfileId,
   });
   const routeState = useStorefrontRouteState(cachedPreferences?.savedStorefrontIds ?? []);
+  const {
+    lastLocalSavedStorefrontMutationAtRef,
+    markLocalSavedStorefrontMutation,
+    setRecentStorefrontIds,
+    setSavedStorefrontIds,
+  } = routeState;
+  const lastLocalGamificationMutationAtRef = React.useRef(0);
+  const markLocalGamificationMutation = React.useCallback(() => {
+    lastLocalGamificationMutationAtRef.current = Date.now();
+  }, []);
   const initialGamificationState = React.useMemo(
     () =>
       normalizeGamificationState(
         profileId,
         cachedPreferences?.gamificationState,
-        appProfile?.createdAt
+        appProfile?.createdAt,
       ),
-    [appProfile?.createdAt, cachedPreferences, profileId]
+    [appProfile?.createdAt, cachedPreferences, profileId],
   );
   const rewardsModel = useStorefrontRewardsModel({
     profileId,
     profileCreatedAt: appProfile?.createdAt,
     initialState: initialGamificationState,
+    onGamificationStateMutation: markLocalGamificationMutation,
   });
-  const {
-    gamificationState,
-    gamificationStateRef,
-    setGamificationState,
-  } = rewardsModel;
+  const { gamificationState, gamificationStateRef, setGamificationState } = rewardsModel;
   const {
     availableAreas,
     selectedAreaId,
@@ -92,10 +99,12 @@ export function useStorefrontControllerProviderModel() {
     savedStorefrontIds: routeState.savedStorefrontIds,
     gamificationState,
     gamificationStateRef,
+    lastLocalGamificationMutationAtRef,
+    lastLocalRouteMutationAtRef: lastLocalSavedStorefrontMutationAtRef,
     setAppProfile,
     setProfileId,
-    setRecentStorefrontIds: routeState.setRecentStorefrontIds,
-    setSavedStorefrontIds: routeState.setSavedStorefrontIds,
+    setRecentStorefrontIds,
+    setSavedStorefrontIds,
     setGamificationState,
   });
   const deleteAccount = React.useCallback(async () => {
@@ -116,10 +125,12 @@ export function useStorefrontControllerProviderModel() {
 
     setAppProfile(result.nextProfile);
     setProfileId(result.nextProfile.id);
-    routeState.setSavedStorefrontIds([]);
-    routeState.setRecentStorefrontIds([]);
+    markLocalSavedStorefrontMutation();
+    setSavedStorefrontIds([]);
+    setRecentStorefrontIds([]);
+    markLocalGamificationMutation();
     setGamificationState(
-      normalizeGamificationState(result.nextProfile.id, undefined, result.nextProfile.createdAt)
+      normalizeGamificationState(result.nextProfile.id, undefined, result.nextProfile.createdAt),
     );
     clearStorefrontRepositoryCache();
 
@@ -132,13 +143,16 @@ export function useStorefrontControllerProviderModel() {
     appProfile,
     authSession.status,
     authSession.uid,
+    markLocalGamificationMutation,
+    markLocalSavedStorefrontMutation,
     profileId,
-    routeState,
+    setRecentStorefrontIds,
+    setSavedStorefrontIds,
     setAppProfile,
     setGamificationState,
     setProfileId,
   ]);
-  const { profileValue, queryValue, rewardsValue, routeValue } = useStorefrontControllerValues({
+  const { controllerValue } = useStorefrontControllerValues({
     appProfile,
     authSession,
     isStartingGuestSession,
@@ -177,5 +191,5 @@ export function useStorefrontControllerProviderModel() {
       applyLocationQuery,
     },
   });
-  return { profileValue, queryValue, rewardsValue, routeValue };
+  return { controllerValue };
 }

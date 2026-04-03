@@ -1,7 +1,8 @@
 import React from 'react';
-import { act, create, ReactTestRenderer } from 'react-test-renderer';
+import type { ReactTestRenderer } from 'react-test-renderer';
+import { act, create } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MarketArea, StorefrontGamificationState } from '../types/storefront';
+import type { MarketArea, StorefrontGamificationState } from '../types/storefront';
 
 const marketAreaMocks = vi.hoisted(() => ({
   getAvailableMarketAreas: vi.fn(),
@@ -118,14 +119,14 @@ describe('useStorefrontQueryModel', () => {
     locationMocks.getCachedDeviceLocation.mockReturnValue(null);
     locationMocks.getBestAvailableDeviceLocation.mockResolvedValue({ coordinates: null });
     locationMocks.findNearestArea.mockImplementation((_areas, coordinates) =>
-      coordinates.latitude > 42 ? marketAreas[1] : marketAreas[0]
+      coordinates.latitude > 42 ? marketAreas[1] : marketAreas[0],
     );
   });
 
   function HookHarness() {
     const [savedStorefrontIds, setSavedStorefrontIds] = React.useState<string[]>([]);
     const [gamificationState, setGamificationState] = React.useState<StorefrontGamificationState>(
-      createGamificationState('profile-1')
+      createGamificationState('profile-1'),
     );
 
     latestValue = useStorefrontQueryModel({
@@ -164,7 +165,7 @@ describe('useStorefrontQueryModel', () => {
         areaId: 'nyc',
         searchQuery: 'Union',
         locationLabel: 'NoHo, Manhattan',
-      })
+      }),
     );
   });
 
@@ -193,5 +194,99 @@ describe('useStorefrontQueryModel', () => {
     expect(latestValue?.activeLocationMode).toBe('search');
     expect(latestValue?.activeLocationLabel).toBe('Syracuse, NY');
     expect(latestValue?.activeLocation).toEqual({ latitude: 43.05, longitude: -76.15 });
+  });
+
+  it('uses the resolved market area id when cached preferences contain a stale area id', async () => {
+    function InvalidAreaHarness() {
+      const [savedStorefrontIds, setSavedStorefrontIds] = React.useState<string[]>([]);
+      const [gamificationState, setGamificationState] = React.useState<StorefrontGamificationState>(
+        createGamificationState('profile-1'),
+      );
+
+      latestValue = useStorefrontQueryModel({
+        cachedPreferences: {
+          selectedAreaId: 'upstate-all',
+          searchQuery: '',
+          locationQuery: 'Central New York',
+          searchLocation: null,
+          searchLocationLabel: null,
+          browseSortKey: 'distance',
+          browseHotDealsOnly: false,
+          deviceLocationLabel: null,
+        },
+        profileId: 'profile-1',
+        profileCreatedAt: '2026-03-01T00:00:00.000Z',
+        savedStorefrontIds,
+        gamificationState,
+        setSavedStorefrontIds,
+        setGamificationState,
+      });
+
+      return null;
+    }
+
+    act(() => {
+      renderer = create(<InvalidAreaHarness />);
+    });
+
+    expect(latestValue?.selectedAreaId).toBe('nyc');
+    expect(latestValue?.storefrontQuery.areaId).toBe('nyc');
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    expect(latestValue?.selectedAreaId).toBe('nyc');
+    expect(latestValue?.storefrontQuery.areaId).toBe('nyc');
+  });
+
+  it('does not let delayed preference hydration overwrite an early user edit', async () => {
+    let resolvePreferences: ((value: object | null) => void) | null = null;
+    preferenceMocks.loadStorefrontPreferences.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePreferences = resolve;
+        }),
+    );
+
+    function HydrationHarness() {
+      const [savedStorefrontIds, setSavedStorefrontIds] = React.useState<string[]>([]);
+      const [gamificationState, setGamificationState] = React.useState<StorefrontGamificationState>(
+        createGamificationState('profile-1'),
+      );
+
+      latestValue = useStorefrontQueryModel({
+        cachedPreferences: null,
+        profileId: 'profile-1',
+        profileCreatedAt: '2026-03-01T00:00:00.000Z',
+        savedStorefrontIds,
+        gamificationState,
+        setSavedStorefrontIds,
+        setGamificationState,
+      });
+
+      return null;
+    }
+
+    act(() => {
+      renderer = create(<HydrationHarness />);
+    });
+
+    await act(async () => {
+      latestValue?.setSearchQuery('Buffalo');
+      await flushPromises();
+    });
+
+    await act(async () => {
+      resolvePreferences?.({
+        selectedAreaId: 'central-ny',
+        searchQuery: 'Union',
+        locationQuery: 'Syracuse, NY',
+      });
+      await flushPromises();
+    });
+
+    expect(latestValue?.searchQuery).toBe('Buffalo');
+    expect(latestValue?.selectedAreaId).toBe('nyc');
   });
 });

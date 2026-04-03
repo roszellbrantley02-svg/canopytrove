@@ -1,14 +1,9 @@
 import React from 'react';
-import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStorefrontRewardsController } from '../context/StorefrontController';
+import type { AppUiIconName } from '../icons/AppUiIcon';
+import { AppUiIcon } from '../icons/AppUiIcon';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 
 const TOAST_LIFETIME_MS = 4200;
@@ -73,6 +68,9 @@ export function GamificationRewardToastHost() {
 
   const primaryBadge = lastRewardResult.badgesEarned[0] ?? null;
   const leveledUp = lastRewardResult.levelAfter > lastRewardResult.levelBefore;
+  const badgeSummary = primaryBadge
+    ? `, ${lastRewardResult.badgesEarned.length} badge${lastRewardResult.badgesEarned.length > 1 ? 's' : ''}`
+    : '';
 
   return (
     <View
@@ -90,28 +88,25 @@ export function GamificationRewardToastHost() {
       >
         <Pressable onPress={clearLastRewardResult} style={styles.pressable}>
           <View style={styles.iconWrap}>
-            <Ionicons
-              name={primaryBadge ? (primaryBadge.icon as keyof typeof Ionicons.glyphMap) : 'trophy-outline'}
+            <AppUiIcon
+              name={primaryBadge ? (primaryBadge.icon as AppUiIconName) : 'trophy-outline'}
               size={20}
-              color={colors.background}
+              color={colors.backgroundDeep}
             />
           </View>
           <View style={styles.content}>
             <Text style={styles.title}>
               {leveledUp
-                ? `Level ${lastRewardResult.levelAfter} reached`
+                ? `Profile level ${lastRewardResult.levelAfter} reached`
                 : primaryBadge
-                  ? `Badge earned: ${primaryBadge.name}`
-                  : 'Rewards updated'}
+                  ? `Profile update: ${primaryBadge.name}`
+                  : 'Profile updated'}
             </Text>
             <Text style={styles.body}>
-              +{lastRewardResult.pointsEarned} points
-              {primaryBadge
-                ? ` · ${lastRewardResult.badgesEarned.length} badge${lastRewardResult.badgesEarned.length > 1 ? 's' : ''}`
-                : ''}
+              +{lastRewardResult.pointsEarned} activity points{badgeSummary}
             </Text>
           </View>
-          <Ionicons name="close" size={18} color={colors.textMuted} />
+          <AppUiIcon name="close" size={18} color={colors.textMuted} />
         </Pressable>
       </Animated.View>
     </View>
@@ -129,9 +124,9 @@ const styles = StyleSheet.create({
   },
   toast: {
     borderRadius: radii.lg,
-    backgroundColor: colors.card,
+    backgroundColor: colors.cardMuted,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.borderSoft,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
@@ -151,7 +146,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: colors.gold,
   },
   content: {
     flex: 1,

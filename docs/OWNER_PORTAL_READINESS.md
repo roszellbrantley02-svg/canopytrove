@@ -30,8 +30,9 @@ The guided demo still exists, but it now sits beside the real owner flow instead
 
 ## Remaining Product Gaps
 
-- Owner access is still invite-only in code.
-  - `src/services/ownerPortalShared.ts` still uses the prelaunch flag and optional allowlist.
+- Owner access posture still needs a business decision.
+  - Public owner onboarding now works cleanly when prelaunch is disabled.
+  - A private allowlist can still be enforced on the backend when a controlled rollout is intentional.
 - Billing still needs production configuration.
   - `backend/.env.example` now defines the Stripe env set, but the live keys, price ids, webhook endpoint, and return URLs still need to be configured on the hosted backend.
 - Review tooling is backend-complete but not yet surfaced as a dedicated admin UI.

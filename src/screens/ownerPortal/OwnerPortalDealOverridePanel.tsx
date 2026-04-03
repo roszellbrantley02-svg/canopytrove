@@ -1,11 +1,11 @@
 import React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { mockStorefrontSource } from '../../sources/mockStorefrontSource';
 import {
   clearAllStorefrontPromotionOverrides,
   saveStorefrontPromotionOverrides,
 } from '../../services/storefrontPromotionOverrideService';
-import { StorefrontSummary } from '../../types/storefront';
+import { getOwnerPortalPreviewStorefrontSummaries } from '../../services/ownerPortalPreviewService';
+import type { StorefrontSummary } from '../../types/storefront';
 import {
   MAX_STOREFRONT_PROMOTION_BADGES,
   normalizeStorefrontPromotionBadges,
@@ -13,7 +13,7 @@ import {
 import { OwnerPortalDealBadgeEditor } from './OwnerPortalDealBadgeEditor';
 import { ownerPortalStyles as styles } from './ownerPortalStyles';
 
-const QUICK_BADGES = ['10% Off', '20% Off', 'Hot Deal', 'Fresh Drop', 'Bundle Deal'];
+const QUICK_BADGES = ['10% Off', '20% Off', 'Today Only', 'Fresh Drop', 'Bundle Deal'];
 const DURATION_OPTIONS = [
   { label: '2h', hours: 2 },
   { label: '6h', hours: 6 },
@@ -70,13 +70,13 @@ export function OwnerPortalDealOverridePanel({
 
     void (async () => {
       try {
-        const summaries = await mockStorefrontSource.getAllSummaries();
+        const summaries = await getOwnerPortalPreviewStorefrontSummaries();
         if (!alive) {
           return;
         }
 
         const sorted = [...summaries].sort((left, right) =>
-          left.displayName.localeCompare(right.displayName)
+          left.displayName.localeCompare(right.displayName),
         );
         setAllStorefronts(sorted);
         setCatalogError(null);
@@ -86,7 +86,7 @@ export function OwnerPortalDealOverridePanel({
         }
 
         setCatalogError(
-          error instanceof Error ? error.message : 'Unable to load preview storefront cards.'
+          error instanceof Error ? error.message : 'Unable to load preview storefront cards.',
         );
       } finally {
         if (alive) {
@@ -102,7 +102,7 @@ export function OwnerPortalDealOverridePanel({
 
   const storefrontCatalog = React.useMemo(
     () => dedupeStorefronts([claimedStorefront, ...allStorefronts]),
-    [allStorefronts, claimedStorefront]
+    [allStorefronts, claimedStorefront],
   );
 
   React.useEffect(() => {
@@ -115,22 +115,22 @@ export function OwnerPortalDealOverridePanel({
     () =>
       storefrontCatalog.find((storefront) => storefront.id === selectedStorefrontId) ??
       claimedStorefront,
-    [claimedStorefront, selectedStorefrontId, storefrontCatalog]
+    [claimedStorefront, selectedStorefrontId, storefrontCatalog],
   );
 
   const filteredStorefronts = React.useMemo(
     () => storefrontCatalog.filter((storefront) => matchesStorefront(storefront, searchText)),
-    [searchText, storefrontCatalog]
+    [searchText, storefrontCatalog],
   );
 
   const visibleStorefronts = React.useMemo(
     () => filteredStorefronts.slice(0, MAX_VISIBLE_RESULTS),
-    [filteredStorefronts]
+    [filteredStorefronts],
   );
 
   const normalizedBatchBadges = React.useMemo(
     () => normalizeStorefrontPromotionBadges(batchBadges),
-    [batchBadges]
+    [batchBadges],
   );
 
   const canAddBatchBadge =
@@ -171,14 +171,14 @@ export function OwnerPortalDealOverridePanel({
           storefrontId: storefront.id,
           badges: normalizedBatchBadges,
           durationHours,
-        }))
+        })),
       );
       setStatusText(
-        `Applied ${saved.length} temporary deal override${saved.length === 1 ? '' : 's'} across ${storefrontCatalog.length} preview card${storefrontCatalog.length === 1 ? '' : 's'}.`
+        `Applied ${saved.length} temporary hot-deal override${saved.length === 1 ? '' : 's'} across ${storefrontCatalog.length} preview card${storefrontCatalog.length === 1 ? '' : 's'}.`,
       );
     } catch (error) {
       setStatusText(
-        error instanceof Error ? error.message : 'Unable to apply the preview deal override.'
+        error instanceof Error ? error.message : 'Unable to apply the preview deal override.',
       );
     } finally {
       setIsSavingAll(false);
@@ -193,10 +193,10 @@ export function OwnerPortalDealOverridePanel({
       await clearAllStorefrontPromotionOverrides();
       setBatchBadges([]);
       setBatchBadgeDraft('');
-      setStatusText('Cleared every temporary preview deal override.');
+      setStatusText('Cleared every temporary hot-deal preview override.');
     } catch (error) {
       setStatusText(
-        error instanceof Error ? error.message : 'Unable to clear the preview deal overrides.'
+        error instanceof Error ? error.message : 'Unable to clear the preview deal overrides.',
       );
     } finally {
       setIsSavingAll(false);
@@ -206,8 +206,9 @@ export function OwnerPortalDealOverridePanel({
   return (
     <View style={styles.form}>
       <Text style={styles.helperText}>
-        This is a temporary override lab. It does not replace the claimed-store editor above and it
-        does not delete any owner flow code.
+        This is the preview override lab for your test owner storefront set. It does not replace
+        the claimed-store editor above, and it keeps quick hot-deal testing separate from the full
+        promotion planner.
       </Text>
 
       <View style={styles.form}>
@@ -220,7 +221,9 @@ export function OwnerPortalDealOverridePanel({
           style={styles.input}
         />
         {catalogError ? <Text style={styles.errorText}>{catalogError}</Text> : null}
-        {isLoadingCatalog ? <Text style={styles.helperText}>Loading preview storefront cards...</Text> : null}
+        {isLoadingCatalog ? (
+          <Text style={styles.helperText}>Loading preview storefront cards...</Text>
+        ) : null}
         {!isLoadingCatalog && !visibleStorefronts.length ? (
           <Text style={styles.helperText}>No preview storefront cards match this search.</Text>
         ) : null}
@@ -248,7 +251,8 @@ export function OwnerPortalDealOverridePanel({
         </View>
         {filteredStorefronts.length > visibleStorefronts.length ? (
           <Text style={styles.helperText}>
-            Showing {visibleStorefronts.length} of {filteredStorefronts.length} matching preview cards.
+            Showing {visibleStorefronts.length} of {filteredStorefronts.length} matching preview
+            cards.
           </Text>
         ) : null}
       </View>
@@ -266,10 +270,10 @@ export function OwnerPortalDealOverridePanel({
       <View style={styles.sectionDivider} />
 
       <View style={styles.form}>
-        <Text style={styles.statusLabel}>Apply one test deal to every preview card</Text>
+        <Text style={styles.statusLabel}>Apply one test hot deal to every preview card</Text>
         <Text style={styles.helperText}>
-          Use this when you want to see the whole app light up at once. These overrides stay local to
-          this preview build until you clear them.
+          Use this when you want to see the whole app light up at once with the main deal lane.
+          These overrides stay local to this preview build until you clear them.
         </Text>
 
         <View style={styles.inlineActionRow}>
@@ -284,7 +288,11 @@ export function OwnerPortalDealOverridePanel({
           <Pressable
             disabled={!canAddBatchBadge}
             onPress={() => handleAddBatchBadge(batchBadgeDraft)}
-            style={[styles.secondaryButton, styles.inlineButton, !canAddBatchBadge && styles.buttonDisabled]}
+            style={[
+              styles.secondaryButton,
+              styles.inlineButton,
+              !canAddBatchBadge && styles.buttonDisabled,
+            ]}
           >
             <Text style={styles.secondaryButtonText}>Add Badge</Text>
           </Pressable>
@@ -331,7 +339,9 @@ export function OwnerPortalDealOverridePanel({
               </Pressable>
             ))
           ) : (
-            <Text style={styles.helperText}>No global preview badges yet. Add one to test all cards.</Text>
+            <Text style={styles.helperText}>
+              No global preview badges yet. Add one to test all cards.
+            </Text>
           )}
         </View>
 
@@ -369,7 +379,11 @@ export function OwnerPortalDealOverridePanel({
                 setDurationHours(customDurationHours);
                 setStatusText(null);
               }}
-              style={[styles.secondaryButton, styles.inlineButton, !hasCustomDuration && styles.buttonDisabled]}
+              style={[
+                styles.secondaryButton,
+                styles.inlineButton,
+                !hasCustomDuration && styles.buttonDisabled,
+              ]}
             >
               <Text style={styles.secondaryButtonText}>Use Custom</Text>
             </Pressable>
@@ -385,7 +399,11 @@ export function OwnerPortalDealOverridePanel({
             onPress={() => {
               void handleApplyToAll();
             }}
-            style={[styles.primaryButton, styles.inlineButtonPrimary, isSavingAll && styles.buttonDisabled]}
+            style={[
+              styles.primaryButton,
+              styles.inlineButtonPrimary,
+              isSavingAll && styles.buttonDisabled,
+            ]}
           >
             <Text style={styles.primaryButtonText}>
               {isSavingAll ? 'Saving...' : 'Apply To Every Card'}
@@ -396,7 +414,11 @@ export function OwnerPortalDealOverridePanel({
             onPress={() => {
               void handleClearAll();
             }}
-            style={[styles.secondaryButton, styles.inlineButton, isSavingAll && styles.buttonDisabled]}
+            style={[
+              styles.secondaryButton,
+              styles.inlineButton,
+              isSavingAll && styles.buttonDisabled,
+            ]}
           >
             <Text style={styles.secondaryButtonText}>Clear All</Text>
           </Pressable>

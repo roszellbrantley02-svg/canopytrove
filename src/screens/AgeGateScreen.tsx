@@ -1,20 +1,23 @@
 import React from 'react';
-import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { brand } from '../config/brand';
 import { MotionInView } from '../components/MotionInView';
 import { HapticPressable } from '../components/HapticPressable';
-import { LayeredAppIcon } from '../icons/LayeredAppIcon';
-import { MapIcon } from '../icons/AppIcons';
-import { colors, radii, spacing, typography } from '../theme/tokens';
+import { BrandMarkIcon } from '../icons/BrandMarkIcon';
+import { colors, fontFamilies, radii, spacing, textStyles } from '../theme/tokens';
 
+// AgeGateScreen is wired from the app entry path rather than the tab/root navigator.
+// Keep this screen self-contained so age-gate behavior stays easy to test and swap.
 type AgeGateScreenProps = {
   onAccept: () => void;
 };
 
 export function AgeGateScreen({ onAccept }: AgeGateScreenProps) {
   const [isAccessBlocked, setIsAccessBlocked] = React.useState(false);
+  const { width, height } = useWindowDimensions();
+  const compactLayout = width < 390 || height < 780;
 
   const blockAccess = React.useCallback(() => {
     setIsAccessBlocked(true);
@@ -25,14 +28,20 @@ export function AgeGateScreen({ onAccept }: AgeGateScreenProps) {
   }, []);
 
   return (
-    <LinearGradient colors={[colors.backgroundDeep, colors.background, colors.backgroundAlt]} style={styles.screen}>
+    <LinearGradient
+      colors={[colors.backgroundDeep, colors.background, colors.backgroundAlt]}
+      style={styles.screen}
+    >
       <SafeAreaView style={styles.safeArea}>
         <View pointerEvents="none" style={styles.ambientWrap}>
           <View style={[styles.backdropOrb, styles.backdropOrbPrimary]} />
           <View style={[styles.backdropOrb, styles.backdropOrbWarm]} />
         </View>
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            compactLayout && styles.scrollContentCompact,
+          ]}
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
@@ -41,60 +50,93 @@ export function AgeGateScreen({ onAccept }: AgeGateScreenProps) {
               colors={['rgba(18, 31, 39, 0.96)', 'rgba(10, 18, 24, 0.92)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.card}
+              style={[styles.card, compactLayout && styles.cardCompact]}
             >
               <View style={styles.cardGlow} />
-              <View style={styles.headerRow}>
-                <View style={styles.logoWrap}>
-                  <LayeredAppIcon icon={MapIcon} size={44} />
+              <View style={styles.cardMain}>
+                <View style={[styles.headerRow, compactLayout && styles.headerRowCompact]}>
+                  <View style={[styles.logoWrap, compactLayout && styles.logoWrapCompact]}>
+                    <BrandMarkIcon size={compactLayout ? 52 : 60} />
+                  </View>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>Adults 21+</Text>
+                  </View>
                 </View>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>Adults 21+</Text>
-                </View>
-              </View>
-              <Text style={styles.eyebrow}>{brand.productName}</Text>
-              <Text style={styles.title}>Confirm you are 21 or older.</Text>
-              <Text style={styles.body}>
-                Canopy Trove is an adults-only cannabis storefront directory. You must be at least 21 to continue.
-              </Text>
-              <View style={styles.trustRow}>
-                <View style={styles.trustChip}>
-                  <Text style={styles.trustChipText}>Age-gated access</Text>
-                </View>
-                <View style={styles.trustChip}>
-                  <Text style={styles.trustChipText}>Storefront discovery</Text>
-                </View>
-                <View style={styles.trustChip}>
-                  <Text style={styles.trustChipText}>Member reviews</Text>
-                </View>
-              </View>
-              {isAccessBlocked ? (
-                <View style={[styles.noticeWrap, styles.noticeWrapDanger]}>
-                  <Text style={styles.noticeTitle}>Access blocked</Text>
-                  <Text style={styles.noticeBody}>
-                    Canopy Trove is only available to adults 21 and older. Close the app to exit safely.
+                <View style={styles.heroCopy}>
+                  <Text style={styles.eyebrow}>{brand.productDisplayName}</Text>
+                  <Text style={[styles.title, compactLayout && styles.titleCompact]}>
+                    Confirm you are 21 or older.
+                  </Text>
+                  <Text style={[styles.body, compactLayout && styles.bodyCompact]}>
+                    {brand.productDisplayName} is an adults-only cannabis storefront directory. You
+                    must be at least 21 to continue.
                   </Text>
                 </View>
-              ) : (
-                <View style={styles.noticeWrap}>
-                  <Text style={styles.noticeTitle}>Before you continue</Text>
-                  <Text style={styles.noticeBody}>
-                    By entering, you confirm you meet the age requirement for this customer directory.
-                  </Text>
+
+                <View style={styles.trustRow}>
+                  <View style={styles.trustChip}>
+                    <Text style={styles.trustChipText}>21+ only</Text>
+                  </View>
+                  <View style={styles.trustChip}>
+                    <Text style={styles.trustChipText}>Verified storefronts</Text>
+                  </View>
+                  <View style={styles.trustChip}>
+                    <Text style={styles.trustChipText}>Official records</Text>
+                  </View>
                 </View>
-              )}
-              <View style={styles.actionColumn}>
-                <HapticPressable onPress={onAccept} style={styles.primaryButton}>
-                  <Text style={styles.primaryButtonText}>Yes, I am 21 or older</Text>
-                </HapticPressable>
-                <HapticPressable onPress={blockAccess} style={styles.secondaryButton}>
-                  <Text style={styles.secondaryButtonText}>No</Text>
-                </HapticPressable>
+
                 {isAccessBlocked ? (
-                  <HapticPressable disabled={!isAccessBlocked} onPress={closeApp} style={styles.tertiaryButton}>
-                    <Text style={styles.tertiaryButtonText}>Close App</Text>
+                  <View style={[styles.noticeWrap, styles.noticeWrapDanger]}>
+                    <Text style={styles.noticeTitle}>Access blocked</Text>
+                    <Text style={styles.noticeBody}>
+                      {brand.productDisplayName} is only available to adults 21 and older. Close the
+                      app to exit safely.
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.noticeWrap}>
+                    <Text style={styles.noticeTitle}>Before you continue</Text>
+                    <Text style={styles.noticeBody}>
+                      By entering, you confirm you meet the age requirement for this customer
+                      directory.
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.cardFooter}>
+                <View style={styles.actionColumn}>
+                  <HapticPressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Confirm you are 21 or older"
+                    accessibilityHint="Continues into the Canopy Trove app."
+                    onPress={onAccept}
+                    style={styles.primaryButton}
+                  >
+                    <Text style={styles.primaryButtonText}>Yes, I am 21 or older</Text>
                   </HapticPressable>
-                ) : null}
+                  <HapticPressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Deny age-gate entry"
+                    accessibilityHint="Blocks access and shows the close-app option."
+                    onPress={blockAccess}
+                    style={styles.secondaryButton}
+                  >
+                    <Text style={styles.secondaryButtonText}>No</Text>
+                  </HapticPressable>
+                  {isAccessBlocked ? (
+                    <HapticPressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Close the app"
+                      accessibilityHint="Exits the app after access has been blocked."
+                      disabled={!isAccessBlocked}
+                      onPress={closeApp}
+                      style={styles.tertiaryButton}
+                    >
+                      <Text style={styles.tertiaryButtonText}>Close App</Text>
+                    </HapticPressable>
+                  ) : null}
+                </View>
               </View>
             </LinearGradient>
           </MotionInView>
@@ -114,9 +156,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  scrollContentCompact: {
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
   ambientWrap: {
     ...StyleSheet.absoluteFillObject,
@@ -145,21 +190,28 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(245, 200, 106, 0.08)',
   },
   cardWrap: {
+    flex: 1,
     borderRadius: radii.xl,
     alignSelf: 'stretch',
   },
   card: {
+    flex: 1,
     borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: 'rgba(245, 200, 106, 0.18)',
     padding: spacing.xl,
-    gap: spacing.md,
+    gap: spacing.lg,
+    minHeight: 0,
     shadowColor: colors.shadow,
     shadowOpacity: 0.3,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 14 },
     elevation: 14,
     overflow: 'hidden',
+  },
+  cardCompact: {
+    padding: spacing.lg,
+    gap: spacing.md,
   },
   cardGlow: {
     position: 'absolute',
@@ -176,15 +228,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
+  headerRowCompact: {
+    marginBottom: spacing.xs,
+  },
   logoWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
+    width: 88,
+    height: 88,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0, 245, 140, 0.08)',
     borderWidth: 1,
     borderColor: 'rgba(143, 255, 209, 0.22)',
+  },
+  logoWrapCompact: {
+    width: 74,
+    height: 74,
+    borderRadius: 22,
+  },
+  cardMain: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: spacing.lg,
+  },
+  heroCopy: {
+    gap: spacing.sm,
   },
   badge: {
     borderRadius: radii.pill,
@@ -195,29 +263,32 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   badgeText: {
+    ...textStyles.labelCaps,
     color: colors.goldSoft,
-    fontSize: typography.caption,
-    fontWeight: '900',
     letterSpacing: 0.7,
-    textTransform: 'uppercase',
   },
   eyebrow: {
-    color: colors.goldSoft,
-    fontSize: typography.caption,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    ...textStyles.labelCaps,
+    color: colors.textSoft,
     letterSpacing: 0.9,
   },
   title: {
+    ...textStyles.display,
     color: colors.text,
+    fontSize: 34,
+    lineHeight: 39,
+  },
+  titleCompact: {
     fontSize: 28,
     lineHeight: 33,
-    fontWeight: '900',
   },
   body: {
+    ...textStyles.body,
     color: colors.textMuted,
-    fontSize: typography.body,
     lineHeight: 23,
+  },
+  bodyCompact: {
+    lineHeight: 21,
   },
   trustRow: {
     flexDirection: 'row',
@@ -233,9 +304,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   trustChipText: {
-    color: colors.accent,
-    fontSize: typography.caption,
-    fontWeight: '800',
+    ...textStyles.caption,
+    fontFamily: fontFamilies.bodyBold,
+    color: colors.textSoft,
   },
   noticeWrap: {
     borderRadius: radii.lg,
@@ -250,31 +321,32 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 122, 122, 0.12)',
   },
   noticeTitle: {
+    ...textStyles.bodyStrong,
     color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '800',
   },
   noticeBody: {
+    ...textStyles.body,
     color: colors.textMuted,
-    fontSize: typography.body,
     lineHeight: 22,
+  },
+  cardFooter: {
+    gap: spacing.md,
   },
   actionColumn: {
     gap: spacing.sm,
-    marginTop: spacing.xs,
   },
   primaryButton: {
     borderRadius: radii.lg,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.gold,
+    minHeight: 56,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryButtonText: {
-    color: colors.background,
-    fontSize: typography.body,
-    fontWeight: '800',
+    ...textStyles.button,
+    color: colors.backgroundDeep,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -283,18 +355,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(8, 14, 19, 0.76)',
     borderWidth: 1,
     borderColor: colors.borderSoft,
+    minHeight: 54,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryButtonText: {
+    ...textStyles.button,
     color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '800',
   },
   tertiaryButton: {
     borderRadius: radii.lg,
+    minHeight: 46,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
@@ -302,8 +375,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(8, 14, 19, 0.44)',
   },
   tertiaryButtonText: {
+    ...textStyles.bodyStrong,
+    fontFamily: fontFamilies.bodyMedium,
     color: colors.textSoft,
-    fontSize: typography.body,
-    fontWeight: '700',
   },
 });

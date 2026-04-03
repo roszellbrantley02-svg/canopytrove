@@ -1,6 +1,4 @@
-import { CollectionReference } from 'firebase-admin/firestore';
-import { getBackendFirebaseDb } from '../firebase';
-import { backendStorefrontSourceStatus } from '../sources';
+import { getOptionalFirestoreCollection } from '../firestoreCollections';
 import { StorefrontGamificationStateApiDocument } from '../types';
 import {
   createDefaultGamificationStateDocument,
@@ -12,14 +10,9 @@ const GAMIFICATION_STATE_COLLECTION = 'gamification_state';
 const gamificationStateStore = new Map<string, StorefrontGamificationStateApiDocument>();
 
 function getGamificationStateCollection() {
-  const db = getBackendFirebaseDb();
-  if (!db || backendStorefrontSourceStatus.activeMode !== 'firestore') {
-    return null;
-  }
-
-  return db.collection(
+  return getOptionalFirestoreCollection<StorefrontGamificationStateApiDocument>(
     GAMIFICATION_STATE_COLLECTION
-  ) as CollectionReference<StorefrontGamificationStateApiDocument>;
+  );
 }
 
 export async function getGamificationState(profileId: string, joinedDate?: string | null) {

@@ -1,18 +1,20 @@
-import {
+import type {
   AppProfile,
   GamificationLeaderboardResponse,
   StorefrontProfileState,
 } from '../types/storefront';
+import type {
+  StorefrontBackendHealth,
+  StorefrontBackendLocationResolution,
+  StorefrontBackendMarketArea,
+  StorefrontBackendSeedStatus,
+} from './storefrontBackendHttp';
 import {
   backendCacheTtls,
   createLeaderboardRankCacheKey,
   createProfileCacheKey,
   createProfileStateCacheKey,
   requestJson,
-  StorefrontBackendHealth,
-  StorefrontBackendLocationResolution,
-  StorefrontBackendMarketArea,
-  StorefrontBackendSeedStatus,
 } from './storefrontBackendHttp';
 
 export function getStorefrontBackendHealth() {
@@ -36,7 +38,7 @@ export function resolveStorefrontBackendLocation(query: string) {
     {
       cacheKey: `resolve-location:${query.trim().toLowerCase()}`,
       ttlMs: backendCacheTtls.location,
-    }
+    },
   );
 }
 
@@ -61,7 +63,7 @@ export function getStorefrontBackendProfileState(profileId: string) {
     {
       cacheKey: createProfileStateCacheKey(profileId),
       ttlMs: backendCacheTtls.profileState,
-    }
+    },
   );
 }
 
@@ -72,7 +74,7 @@ export function getStorefrontBackendLeaderboard(limit = 25, offset = 0) {
     {
       cacheKey: `leaderboard:${limit}:${offset}`,
       ttlMs: backendCacheTtls.leaderboard,
-    }
+    },
   );
 }
 
@@ -83,6 +85,6 @@ export function getStorefrontBackendLeaderboardRank(profileId: string) {
     {
       cacheKey: createLeaderboardRankCacheKey(profileId),
       ttlMs: backendCacheTtls.leaderboard,
-    }
+    },
   );
 }

@@ -1,9 +1,5 @@
 import { storefrontSource } from '../sources';
-import {
-  BrowseSortKey,
-  BrowseSummaryResult,
-  StorefrontListQuery,
-} from '../types/storefront';
+import type { BrowseSortKey, BrowseSummaryResult, StorefrontListQuery } from '../types/storefront';
 import {
   browseSummariesCache,
   browseSummariesInFlight,
@@ -18,6 +14,7 @@ import {
   savedSummariesInFlight,
 } from './storefrontRepositoryCache';
 import {
+  dedupeById,
   getBrowsePage,
   sortByRequestedIdOrder,
 } from './storefrontRepositorySummaryUtils';
@@ -31,9 +28,10 @@ export async function getSavedSummaries(storefrontIds: string[]) {
   const key = createSavedKey(storefrontIds);
 
   return applyStorefrontPromotionOverrides(
-    await resolveWithCache(key, savedSummariesCache, savedSummariesInFlight, async () =>
-      sortByRequestedIdOrder(await storefrontSource.getSummariesByIds(storefrontIds), storefrontIds)
-    )
+    await resolveWithCache(key, savedSummariesCache, savedSummariesInFlight, async () => {
+      const savedSummaries = await storefrontSource.getSummariesByIds(storefrontIds);
+      return sortByRequestedIdOrder(dedupeById(savedSummaries), storefrontIds);
+    }),
   );
 }
 
@@ -60,13 +58,14 @@ export async function getNearbySummaries(query: StorefrontListQuery) {
         await storefrontSource.getSummaryPage({
           searchQuery: '',
           origin: query.origin,
+          radiusMiles: NEARBY_RADIUS_MILES,
           sortKey: 'distance',
           limit: 3,
           offset: 0,
           prioritySurface: 'nearby',
         })
       ).items;
-    })
+    }),
   );
 }
 
@@ -74,21 +73,26 @@ export async function getBrowseSummaries(
   query: StorefrontListQuery,
   sortKey: BrowseSortKey = 'distance',
   limit = 4,
-  offset = 0
+  offset = 0,
 ): Promise<BrowseSummaryResult> {
   const key = createBrowseKey(query, sortKey, limit, offset);
 
-  const result = await resolveWithCache(key, browseSummariesCache, browseSummariesInFlight, async () => {
-    const page = await getBrowsePage(query, sortKey, limit, offset);
+  const result = await resolveWithCache(
+    key,
+    browseSummariesCache,
+    browseSummariesInFlight,
+    async () => {
+      const page = await getBrowsePage(query, sortKey, limit, offset);
 
-    return {
-      items: page.items,
-      total: page.total,
-      limit,
-      offset,
-      hasMore: page.offset + page.items.length < page.total,
-    };
-  });
+      return {
+        items: page.items,
+        total: page.total,
+        limit,
+        offset,
+        hasMore: page.offset + page.items.length < page.total,
+      };
+    },
+  );
 
   return {
     ...result,

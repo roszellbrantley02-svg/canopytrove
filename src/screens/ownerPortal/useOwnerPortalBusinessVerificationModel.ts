@@ -1,15 +1,12 @@
 import React from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useStorefrontProfileController } from '../../context/StorefrontController';
 import { useSavedSummaries } from '../../hooks/useStorefrontSummaryData';
-import { RootStackParamList } from '../../navigation/RootNavigator';
+import type { RootStackParamList } from '../../navigation/RootNavigator';
 import { submitBusinessVerification } from '../../services/ownerPortalVerificationService';
-import { OwnerPortalUploadedFile } from '../../types/ownerPortal';
-import {
-  formatStorefrontAddress,
-  pickVerificationDocument,
-} from './ownerPortalVerificationShared';
+import type { OwnerPortalUploadedFile } from '../../types/ownerPortal';
+import { formatStorefrontAddress, pickVerificationDocument } from './ownerPortalVerificationShared';
 import { useOwnerPortalProfileLoader } from './useOwnerPortalProfileLoader';
 
 export function useOwnerPortalBusinessVerificationModel() {
@@ -24,16 +21,15 @@ export function useOwnerPortalBusinessVerificationModel() {
   const [address, setAddress] = React.useState('');
   const [licenseFile, setLicenseFile] = React.useState<OwnerPortalUploadedFile | null>(null);
   const [businessDocFile, setBusinessDocFile] = React.useState<OwnerPortalUploadedFile | null>(
-    null
+    null,
   );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { isLoading, ownerProfile, setStatusText, statusText } =
     useOwnerPortalProfileLoader(ownerUid);
 
   const claimedStorefrontIds = ownerProfile?.dispensaryId ? [ownerProfile.dispensaryId] : [];
-  const { data: claimedStorefronts, isLoading: isLoadingClaimedStorefront } = useSavedSummaries(
-    claimedStorefrontIds
-  );
+  const { data: claimedStorefronts, isLoading: isLoadingClaimedStorefront } =
+    useSavedSummaries(claimedStorefrontIds);
   const claimedStorefront = claimedStorefronts[0];
 
   React.useEffect(() => {
@@ -41,7 +37,9 @@ export function useOwnerPortalBusinessVerificationModel() {
       return;
     }
 
-    setLegalBusinessName((current) => current || ownerProfile.companyName || ownerProfile.legalName);
+    setLegalBusinessName(
+      (current) => current || ownerProfile.companyName || ownerProfile.legalName,
+    );
   }, [ownerProfile]);
 
   React.useEffect(() => {
@@ -78,7 +76,7 @@ export function useOwnerPortalBusinessVerificationModel() {
       navigation.replace('OwnerPortalIdentityVerification');
     } catch (error) {
       setStatusText(
-        error instanceof Error ? error.message : 'Unable to submit business verification.'
+        error instanceof Error ? error.message : 'Unable to submit business verification.',
       );
     } finally {
       setIsSubmitting(false);
@@ -94,6 +92,7 @@ export function useOwnerPortalBusinessVerificationModel() {
     licenseType,
     navigation,
     ownerUid,
+    setStatusText,
     stateValue,
     storefrontName,
   ]);

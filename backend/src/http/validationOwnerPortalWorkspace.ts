@@ -4,6 +4,7 @@ import {
   parseEnumValue,
   parseId,
   parseIsoDateString,
+  parseNullableIsoDateString,
   parseNullableTrimmedString,
   parseOptionalStringArray,
   parseOptionalTrimmedString,
@@ -11,6 +12,7 @@ import {
 } from './validationCore';
 import { RequestValidationError } from './errors';
 import {
+  OwnerPortalLicenseComplianceInput,
   OwnerPromotionPlacementScope,
   OwnerPromotionPlacementSurface,
   OwnerPortalProfileToolsInput,
@@ -60,6 +62,47 @@ function parseOptionalHttpUrlArray(value: unknown, field: string) {
   return urls.map((url, index) => parseHttpUrl(url, `${field}[${index}]`));
 }
 
+function parseStorefrontMediaPath(value: string, field: string) {
+  const normalizedValue = value.trim();
+  if (
+    !normalizedValue.startsWith('dispensary-media/') ||
+    normalizedValue.includes('..') ||
+    normalizedValue.includes('?') ||
+    normalizedValue.startsWith('/')
+  ) {
+    throw new RequestValidationError(`${field} must be a valid storefront media path.`);
+  }
+
+  return normalizedValue;
+}
+
+function parseOptionalStorefrontMediaPath(value: unknown, field: string) {
+  const normalizedValue = parseNullableTrimmedString(value, field, {
+    maxLength: 320,
+  });
+
+  if (!normalizedValue) {
+    return normalizedValue;
+  }
+
+  return parseStorefrontMediaPath(normalizedValue, field);
+}
+
+function parseOptionalStorefrontMediaPathArray(value: unknown, field: string) {
+  const paths = parseOptionalStringArray(value, field, {
+    maxItems: 8,
+    maxItemLength: 320,
+  });
+
+  if (!paths) {
+    return paths;
+  }
+
+  return paths.map((path, index) =>
+    parseStorefrontMediaPath(path, `${field}[${index}]`)
+  );
+}
+
 export function parseOwnerPortalProfileToolsBody(body: unknown): OwnerPortalProfileToolsInput {
   const payload = asObject(body, 'body');
 
@@ -67,6 +110,14 @@ export function parseOwnerPortalProfileToolsBody(body: unknown): OwnerPortalProf
     menuUrl: parseOptionalHttpUrl(payload.menuUrl, 'body.menuUrl'),
     featuredPhotoUrls: parseOptionalHttpUrlArray(payload.featuredPhotoUrls, 'body.featuredPhotoUrls'),
     cardPhotoUrl: parseOptionalHttpUrl(payload.cardPhotoUrl, 'body.cardPhotoUrl'),
+    featuredPhotoPaths: parseOptionalStorefrontMediaPathArray(
+      payload.featuredPhotoPaths,
+      'body.featuredPhotoPaths'
+    ),
+    cardPhotoPath: parseOptionalStorefrontMediaPath(
+      payload.cardPhotoPath,
+      'body.cardPhotoPath'
+    ),
     verifiedBadgeLabel: parseNullableTrimmedString(
       payload.verifiedBadgeLabel,
       'body.verifiedBadgeLabel',
@@ -80,6 +131,32 @@ export function parseOwnerPortalProfileToolsBody(body: unknown): OwnerPortalProf
     }),
     cardSummary: parseNullableTrimmedString(payload.cardSummary, 'body.cardSummary', {
       maxLength: 160,
+    }),
+  };
+}
+
+export function parseOwnerPortalLicenseComplianceBody(
+  body: unknown
+): OwnerPortalLicenseComplianceInput {
+  const payload = asObject(body, 'body');
+
+  return {
+    licenseNumber: parseOptionalTrimmedString(payload.licenseNumber, 'body.licenseNumber', {
+      maxLength: 120,
+      emptyAsUndefined: true,
+    }),
+    licenseType: parseOptionalTrimmedString(payload.licenseType, 'body.licenseType', {
+      maxLength: 120,
+      emptyAsUndefined: true,
+    }),
+    issuedAt: parseNullableIsoDateString(payload.issuedAt, 'body.issuedAt'),
+    expiresAt: parseNullableIsoDateString(payload.expiresAt, 'body.expiresAt'),
+    renewalSubmittedAt: parseNullableIsoDateString(
+      payload.renewalSubmittedAt,
+      'body.renewalSubmittedAt'
+    ),
+    notes: parseNullableTrimmedString(payload.notes, 'body.notes', {
+      maxLength: 600,
     }),
   };
 }

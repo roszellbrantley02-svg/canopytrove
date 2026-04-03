@@ -1,6 +1,7 @@
 import React from 'react';
 import { saveRemoteStorefrontProfileState } from '../services/storefrontProfileStateService';
-import { serializeRemoteProfileState, UseStorefrontRemoteProfileSyncArgs } from './storefrontRemoteProfileSyncShared';
+import type { UseStorefrontRemoteProfileSyncArgs } from './storefrontRemoteProfileSyncShared';
+import { serializeRemoteProfileState } from './storefrontRemoteProfileSyncShared';
 
 type UseStorefrontRemoteProfilePersistenceArgs = Pick<
   UseStorefrontRemoteProfileSyncArgs,

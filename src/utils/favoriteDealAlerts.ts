@@ -37,7 +37,8 @@ export function getFavoriteDealAlertChanges({
 
     nextFingerprints[summary.id] = fingerprint;
 
-    const previousFingerprint = previousState.activeDealFingerprintsByStorefrontId[summary.id] ?? null;
+    const previousFingerprint =
+      previousState.activeDealFingerprintsByStorefrontId[summary.id] ?? null;
     if (allowNotifications && previousState.hasHydrated && previousFingerprint !== fingerprint) {
       nextNotifications.push(summary);
     }

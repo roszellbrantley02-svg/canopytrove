@@ -322,15 +322,24 @@ owner-private/{ownerUid}/business/{fileName}
 owner-private/{ownerUid}/identity/{fileName}
 dispensary-media/{dispensaryId}/pending/{ownerUid}/{photoType}/{fileName}
 dispensary-media/{dispensaryId}/approved/{photoType}/{fileName}
-deals-media/{dispensaryId}/{dealId}/{fileName}
+dispensary-media/{dispensaryId}/approved/owner/{ownerUid}/{photoType}/{fileName}
+community-review-media/pending/{profileId}/{storefrontId}/{draftId}/{fileName}
+community-review-media/quarantine/{storefrontId}/{reviewId}/{mediaId}/{fileName}
+community-review-media/approved/{storefrontId}/{reviewId}/{mediaId}/{fileName}
+deals-media/{dispensaryId}/{ownerUid}/{dealId}/{fileName}
 ```
 
 Rules:
 
 - `owner-private/**` is readable only by the owning user and admins
 - `dispensary-media/**/approved/**` is public read
-- `dispensary-media/**/pending/**` is owner/admin only
-- all uploads are validated and moderated by Cloud Functions
+- `dispensary-media/**/pending/**` is owner/admin only and still reserved for moderated submissions
+- `dispensary-media/**/approved/owner/**` is for verified, subscribed storefront owners uploading live profile media
+- `community-review-media/**/pending/**` is private until moderation approves or quarantines the upload
+- `community-review-media/**/approved/**` is public read only after approval
+- `community-review-media/**/quarantine/**` is admin-only hold space for unsafe or uncertain member uploads
+- `deals-media/**` is now admin-only compatibility storage until a deal-media surface is added
+- owner storefront media uploads are validated by Firebase rules against canonical ownership, verification, and subscription state
 
 ## Onboarding Flow
 

@@ -1,12 +1,18 @@
-import { CollectionReference } from 'firebase-admin/firestore';
-import { getBackendFirebaseDb } from '../firebase';
-import { backendStorefrontSourceStatus } from '../sources';
+import { randomUUID } from 'node:crypto';
+import { getOptionalFirestoreCollection } from '../firestoreCollections';
+import { FieldValue } from 'firebase-admin/firestore';
 import {
   AppReview,
+  StorefrontReviewUpdateInput,
   StorefrontReviewHelpfulInput,
   StorefrontReportSubmissionInput,
   StorefrontReviewSubmissionInput,
 } from '../../../src/types/storefront';
+import {
+  attachReviewPhotosToReview,
+  deleteReviewPhotoUploadsForProfile,
+  getApprovedReviewPhotoUrls,
+} from './reviewPhotoModerationService';
 
 type StoredAppReviewRecord = {
   id: string;
@@ -18,6 +24,7 @@ type StoredAppReviewRecord = {
   gifUrl?: string | null;
   tags: string[];
   photoCount: number;
+  photoIds: string[];
   helpfulCount: number;
   helpfulVoterIds: string[];
   createdAt: string;
@@ -29,6 +36,22 @@ type StoredAppReviewRecord = {
   } | null;
 };
 
+export type StorefrontAppReviewRecord = AppReview & {
+  photoUrls: string[];
+  photoCount: number;
+};
+
+export type StorefrontReviewSubmissionResult = {
+  review: StorefrontAppReviewRecord;
+  photoModeration: {
+    submittedCount: number;
+    approvedCount: number;
+    pendingCount: number;
+    rejectedCount: number;
+    message: string | null;
+  } | null;
+};
+
 export type StoredStorefrontReportRecord = {
   id: string;
   storefrontId: string;
@@ -36,6 +59,11 @@ export type StoredStorefrontReportRecord = {
   authorName: string;
   reason: string;
   description: string;
+  reportTarget?: 'storefront' | 'review';
+  reportedReviewId?: string | null;
+  reportedReviewAuthorProfileId?: string | null;
+  reportedReviewAuthorName?: string | null;
+  reportedReviewExcerpt?: string | null;
   createdAt: string;
   moderationStatus?: 'open' | 'reviewed' | 'dismissed';
   reviewedAt?: string | null;
@@ -48,8 +76,17 @@ const STOREFRONT_REPORTS_COLLECTION = 'storefront_reports';
 const appReviewStore = new Map<string, StoredAppReviewRecord[]>();
 const storefrontReportStore = new Map<string, StoredStorefrontReportRecord[]>();
 
+export class StorefrontCommunityError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number
+  ) {
+    super(message);
+  }
+}
+
 function createId(prefix: string) {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}-${randomUUID()}`;
 }
 
 function toRelativeTime(createdAt: string) {
@@ -113,7 +150,9 @@ function normalizeOwnerReply(
   };
 }
 
-function mapStoredReviewToAppReview(review: StoredAppReviewRecord): AppReview {
+async function mapStoredReviewToAppReview(
+  review: StoredAppReviewRecord
+): Promise<StorefrontAppReviewRecord> {
   return {
     id: review.id,
     authorName: review.authorName,
@@ -125,25 +164,19 @@ function mapStoredReviewToAppReview(review: StoredAppReviewRecord): AppReview {
     tags: [...review.tags],
     helpfulCount: review.helpfulCount,
     ownerReply: normalizeOwnerReply(review.ownerReply),
+    photoUrls: await getApprovedReviewPhotoUrls(review.photoIds),
+    photoCount: review.photoIds.length,
   };
 }
 
 function getAppReviewCollection() {
-  const db = getBackendFirebaseDb();
-  if (!db || backendStorefrontSourceStatus.activeMode !== 'firestore') {
-    return null;
-  }
-
-  return db.collection(APP_REVIEWS_COLLECTION) as CollectionReference<StoredAppReviewRecord>;
+  return getOptionalFirestoreCollection<StoredAppReviewRecord>(APP_REVIEWS_COLLECTION);
 }
 
 function getStorefrontReportCollection() {
-  const db = getBackendFirebaseDb();
-  if (!db || backendStorefrontSourceStatus.activeMode !== 'firestore') {
-    return null;
-  }
-
-  return db.collection(STOREFRONT_REPORTS_COLLECTION) as CollectionReference<StoredStorefrontReportRecord>;
+  return getOptionalFirestoreCollection<StoredStorefrontReportRecord>(
+    STOREFRONT_REPORTS_COLLECTION
+  );
 }
 
 function normalizeTags(tags: string[]) {
@@ -180,6 +213,13 @@ function normalizeStoredReviewRecord(review: StoredAppReviewRecord): StoredAppRe
       typeof review.helpfulCount === 'number' && Number.isFinite(review.helpfulCount)
         ? Math.max(0, Math.floor(review.helpfulCount))
         : 0,
+    photoIds: Array.from(
+      new Set(
+        Array.isArray(review.photoIds)
+          ? review.photoIds.filter((photoId): photoId is string => typeof photoId === 'string')
+          : []
+      )
+    ).slice(0, 4),
     helpfulVoterIds: normalizeHelpfulVoterIds(review.helpfulVoterIds),
     ownerReply: normalizeOwnerReply(review.ownerReply),
   };
@@ -190,6 +230,24 @@ function normalizeStoredReportRecord(
 ): StoredStorefrontReportRecord {
   return {
     ...report,
+    reportTarget: report.reportTarget === 'review' ? 'review' : 'storefront',
+    reportedReviewId:
+      typeof report.reportedReviewId === 'string' && report.reportedReviewId.trim()
+        ? report.reportedReviewId.trim()
+        : null,
+    reportedReviewAuthorProfileId:
+      typeof report.reportedReviewAuthorProfileId === 'string' &&
+      report.reportedReviewAuthorProfileId.trim()
+        ? report.reportedReviewAuthorProfileId.trim()
+        : null,
+    reportedReviewAuthorName:
+      typeof report.reportedReviewAuthorName === 'string' && report.reportedReviewAuthorName.trim()
+        ? report.reportedReviewAuthorName.trim()
+        : null,
+    reportedReviewExcerpt:
+      typeof report.reportedReviewExcerpt === 'string' && report.reportedReviewExcerpt.trim()
+        ? report.reportedReviewExcerpt.trim()
+        : null,
     moderationStatus:
       report.moderationStatus === 'reviewed' || report.moderationStatus === 'dismissed'
         ? report.moderationStatus
@@ -207,17 +265,64 @@ export async function listStorefrontAppReviews(storefrontId: string) {
   const collectionRef = getAppReviewCollection();
   if (collectionRef) {
     const snapshot = await collectionRef.where('storefrontId', '==', storefrontId).get();
-    return snapshot.docs
-      .map((documentSnapshot) => normalizeStoredReviewRecord(documentSnapshot.data() as StoredAppReviewRecord))
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-      .map(mapStoredReviewToAppReview);
+    return Promise.all(
+      snapshot.docs
+        .map((documentSnapshot) =>
+          normalizeStoredReviewRecord(documentSnapshot.data() as StoredAppReviewRecord)
+        )
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+        .map(mapStoredReviewToAppReview)
+    );
   }
 
-  return (appReviewStore.get(storefrontId) ?? [])
-    .slice()
-    .map(normalizeStoredReviewRecord)
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-    .map(mapStoredReviewToAppReview);
+  return Promise.all(
+    (appReviewStore.get(storefrontId) ?? [])
+      .slice()
+      .map(normalizeStoredReviewRecord)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .map(mapStoredReviewToAppReview)
+  );
+}
+
+async function getStoredStorefrontAppReviewById(reviewId: string) {
+  const collectionRef = getAppReviewCollection();
+  if (collectionRef) {
+    const snapshot = await collectionRef.doc(reviewId).get();
+    if (!snapshot.exists) {
+      return null;
+    }
+
+    return normalizeStoredReviewRecord(snapshot.data() as StoredAppReviewRecord);
+  }
+
+  for (const reviews of appReviewStore.values()) {
+    const review = reviews.find((candidate) => candidate.id === reviewId);
+    if (review) {
+      return normalizeStoredReviewRecord(review);
+    }
+  }
+
+  return null;
+}
+
+async function getStoredStorefrontAppReviewByProfile(storefrontId: string, profileId: string) {
+  const collectionRef = getAppReviewCollection();
+  if (collectionRef) {
+    const snapshot = await collectionRef
+      .where('storefrontId', '==', storefrontId)
+      .where('profileId', '==', profileId)
+      .get();
+
+    if (snapshot.empty) {
+      return null;
+    }
+
+    return normalizeStoredReviewRecord(snapshot.docs[0].data() as StoredAppReviewRecord);
+  }
+
+  const reviews = appReviewStore.get(storefrontId) ?? [];
+  const review = reviews.find((candidate) => candidate.profileId === profileId);
+  return review ? normalizeStoredReviewRecord(review) : null;
 }
 
 export async function listStorefrontReports(storefrontId: string) {
@@ -237,71 +342,237 @@ export async function listStorefrontReports(storefrontId: string) {
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
-export async function submitStorefrontAppReview(input: StorefrontReviewSubmissionInput) {
+export async function submitStorefrontAppReview(
+  input: StorefrontReviewSubmissionInput & { photoUploadIds?: string[] }
+): Promise<StorefrontReviewSubmissionResult> {
+  const existingReview = await getStoredStorefrontAppReviewByProfile(
+    input.storefrontId,
+    input.profileId
+  );
+  if (existingReview) {
+    throw new StorefrontCommunityError(
+      'You already reviewed this storefront. Edit your existing review instead of posting a second one.',
+      409
+    );
+  }
+
+  const photoUploadIds = Array.from(
+    new Set(
+      Array.isArray(input.photoUploadIds)
+        ? input.photoUploadIds.filter((photoId): photoId is string => typeof photoId === 'string')
+        : []
+    )
+  ).slice(0, 4);
   const reviewRecord: StoredAppReviewRecord = {
     id: createId('review'),
     storefrontId: input.storefrontId,
     profileId: input.profileId,
-      authorName: input.authorName.trim() || 'Canopy Trove user',
+    authorName: input.authorName.trim() || 'Canopy Trove user',
     rating: normalizeRating(input.rating),
     text: input.text.trim(),
     gifUrl: input.gifUrl?.trim() || null,
     tags: normalizeTags(input.tags),
     photoCount: Math.max(0, Math.floor(input.photoCount ?? 0)),
+    photoIds: [],
     helpfulCount: 0,
     helpfulVoterIds: [],
     createdAt: new Date().toISOString(),
     ownerReply: null,
   };
 
+  let photoModeration: StorefrontReviewSubmissionResult['photoModeration'] = null;
+  if (photoUploadIds.length) {
+    const attachedPhotos = await attachReviewPhotosToReview({
+      storefrontId: input.storefrontId,
+      reviewId: reviewRecord.id,
+      profileId: input.profileId,
+      photoUploadIds,
+    });
+
+    reviewRecord.photoIds = attachedPhotos.photoIds;
+    reviewRecord.photoCount = attachedPhotos.photoIds.length;
+    photoModeration = attachedPhotos.moderationSummary;
+  }
+
   const collectionRef = getAppReviewCollection();
   if (collectionRef) {
     await collectionRef.doc(reviewRecord.id).set(reviewRecord);
-    return mapStoredReviewToAppReview(reviewRecord);
+    return {
+      review: await mapStoredReviewToAppReview(reviewRecord),
+      photoModeration,
+    };
   }
 
   const currentReviews = appReviewStore.get(input.storefrontId) ?? [];
   appReviewStore.set(input.storefrontId, [reviewRecord, ...currentReviews]);
-  return mapStoredReviewToAppReview(reviewRecord);
+  return {
+    review: await mapStoredReviewToAppReview(reviewRecord),
+    photoModeration,
+  };
+}
+
+export async function updateStorefrontAppReview(
+  input: StorefrontReviewUpdateInput & { photoUploadIds?: string[] }
+): Promise<StorefrontReviewSubmissionResult> {
+  const currentReview = await getStoredStorefrontAppReviewById(input.reviewId);
+  if (!currentReview) {
+    throw new StorefrontCommunityError('Review not found.', 404);
+  }
+
+  if (currentReview.storefrontId !== input.storefrontId) {
+    throw new StorefrontCommunityError('Review does not belong to this storefront.', 400);
+  }
+
+  if (currentReview.profileId !== input.profileId) {
+    throw new StorefrontCommunityError('Only the author can edit this review.', 403);
+  }
+
+  const photoUploadIds = Array.from(
+    new Set(
+      Array.isArray(input.photoUploadIds)
+        ? input.photoUploadIds.filter((photoId): photoId is string => typeof photoId === 'string')
+        : []
+    )
+  ).slice(0, 4);
+
+  const nextReview: StoredAppReviewRecord = {
+    ...currentReview,
+    authorName: input.authorName.trim() || currentReview.authorName,
+    rating: normalizeRating(input.rating),
+    text: input.text.trim(),
+    gifUrl: input.gifUrl?.trim() || null,
+    tags: normalizeTags(input.tags),
+  };
+
+  let photoModeration: StorefrontReviewSubmissionResult['photoModeration'] = null;
+  if (photoUploadIds.length) {
+    const attachedPhotos = await attachReviewPhotosToReview({
+      storefrontId: input.storefrontId,
+      reviewId: currentReview.id,
+      profileId: input.profileId,
+      photoUploadIds,
+    });
+
+    nextReview.photoIds = attachedPhotos.photoIds;
+    nextReview.photoCount = attachedPhotos.photoIds.length;
+    photoModeration = attachedPhotos.moderationSummary;
+  }
+
+  const collectionRef = getAppReviewCollection();
+  if (collectionRef) {
+    await collectionRef.doc(currentReview.id).set(nextReview);
+    return {
+      review: await mapStoredReviewToAppReview(nextReview),
+      photoModeration,
+    };
+  }
+
+  const storefrontReviews = appReviewStore.get(input.storefrontId) ?? [];
+  const reviewIndex = storefrontReviews.findIndex((review) => review.id === input.reviewId);
+  if (reviewIndex < 0) {
+    throw new StorefrontCommunityError('Review not found.', 404);
+  }
+
+  const nextReviews = storefrontReviews.slice();
+  nextReviews[reviewIndex] = nextReview;
+  appReviewStore.set(input.storefrontId, nextReviews);
+
+  return {
+    review: await mapStoredReviewToAppReview(nextReview),
+    photoModeration,
+  };
+}
+
+export async function appendPhotoIdToStorefrontAppReview(reviewId: string, photoId: string) {
+  const collectionRef = getAppReviewCollection();
+  if (collectionRef) {
+    const reviewRef = collectionRef.doc(reviewId);
+    const snapshot = await reviewRef.get();
+    if (!snapshot.exists) {
+      return false;
+    }
+
+    const current = normalizeStoredReviewRecord(snapshot.data() as StoredAppReviewRecord);
+    if (current.photoIds.includes(photoId)) {
+      return true;
+    }
+
+    const nextPhotoIds = [...current.photoIds, photoId].slice(0, 4);
+    await reviewRef.set(
+      {
+        photoIds: nextPhotoIds,
+        photoCount: nextPhotoIds.length,
+      },
+      { merge: true }
+    );
+    return true;
+  }
+
+  for (const [storefrontId, reviews] of appReviewStore.entries()) {
+    const reviewIndex = reviews.findIndex((review) => review.id === reviewId);
+    if (reviewIndex < 0) {
+      continue;
+    }
+
+    const current = normalizeStoredReviewRecord(reviews[reviewIndex]);
+    if (current.photoIds.includes(photoId)) {
+      return true;
+    }
+
+    const nextPhotoIds = [...current.photoIds, photoId].slice(0, 4);
+    reviews[reviewIndex] = {
+      ...current,
+      photoIds: nextPhotoIds,
+      photoCount: nextPhotoIds.length,
+    };
+    appReviewStore.set(storefrontId, reviews);
+    return true;
+  }
+
+  return false;
 }
 
 export async function markStorefrontAppReviewHelpful(input: StorefrontReviewHelpfulInput) {
   const collectionRef = getAppReviewCollection();
   if (collectionRef) {
-    const snapshot = await collectionRef.doc(input.reviewId).get();
-    if (!snapshot.exists) {
-      return {
-        didApply: false,
-        reviewAuthorProfileId: null,
-      };
-    }
+    const reviewRef = collectionRef.doc(input.reviewId);
+    return collectionRef.firestore.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(reviewRef);
+      if (!snapshot.exists) {
+        return {
+          didApply: false,
+          reviewAuthorProfileId: null,
+        };
+      }
 
-    const record = normalizeStoredReviewRecord(snapshot.data() as StoredAppReviewRecord);
-    if (record.storefrontId !== input.storefrontId) {
-      return {
-        didApply: false,
-        reviewAuthorProfileId: null,
-      };
-    }
+      const record = normalizeStoredReviewRecord(snapshot.data() as StoredAppReviewRecord);
+      if (record.storefrontId !== input.storefrontId) {
+        return {
+          didApply: false,
+          reviewAuthorProfileId: null,
+        };
+      }
 
-    if (record.profileId === input.profileId || record.helpfulVoterIds.includes(input.profileId)) {
+      if (
+        record.profileId === input.profileId ||
+        record.helpfulVoterIds.includes(input.profileId)
+      ) {
+        return {
+          didApply: false,
+          reviewAuthorProfileId: record.profileId,
+        };
+      }
+
+      transaction.update(reviewRef, {
+        helpfulCount: FieldValue.increment(1),
+        helpfulVoterIds: FieldValue.arrayUnion(input.profileId),
+      });
+
       return {
-        didApply: false,
+        didApply: true,
         reviewAuthorProfileId: record.profileId,
       };
-    }
-
-    const nextRecord: StoredAppReviewRecord = {
-      ...record,
-      helpfulCount: record.helpfulCount + 1,
-      helpfulVoterIds: [...record.helpfulVoterIds, input.profileId],
-    };
-    await collectionRef.doc(input.reviewId).set(nextRecord);
-
-    return {
-      didApply: true,
-      reviewAuthorProfileId: record.profileId,
-    };
+    });
   }
 
   const storefrontReviews = appReviewStore.get(input.storefrontId) ?? [];
@@ -398,9 +669,14 @@ export async function submitStorefrontReport(input: StorefrontReportSubmissionIn
     id: createId('report'),
     storefrontId: input.storefrontId,
     profileId: input.profileId,
-      authorName: input.authorName.trim() || 'Canopy Trove user',
+    authorName: input.authorName.trim() || 'Canopy Trove user',
     reason: input.reason.trim(),
     description: input.description.trim(),
+    reportTarget: input.reportTarget === 'review' ? 'review' : 'storefront',
+    reportedReviewId: input.reportedReviewId?.trim() || null,
+    reportedReviewAuthorProfileId: input.reportedReviewAuthorProfileId?.trim() || null,
+    reportedReviewAuthorName: input.reportedReviewAuthorName?.trim() || null,
+    reportedReviewExcerpt: input.reportedReviewExcerpt?.trim() || null,
     createdAt: new Date().toISOString(),
     moderationStatus: 'open',
     reviewedAt: null,
@@ -419,6 +695,8 @@ export async function submitStorefrontReport(input: StorefrontReportSubmissionIn
 }
 
 export async function deleteCommunityContentForProfile(profileId: string) {
+  await deleteReviewPhotoUploadsForProfile(profileId);
+
   const reviewCollectionRef = getAppReviewCollection();
   const reportCollectionRef = getStorefrontReportCollection();
 
@@ -451,4 +729,9 @@ export async function deleteCommunityContentForProfile(profileId: string) {
       storefrontReportStore.delete(storefrontId);
     });
   }
+}
+
+export function clearStorefrontCommunityMemoryStateForTests() {
+  appReviewStore.clear();
+  storefrontReportStore.clear();
 }

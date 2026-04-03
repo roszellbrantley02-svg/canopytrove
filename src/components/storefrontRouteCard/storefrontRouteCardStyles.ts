@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, fontFamilies, radii, spacing, textStyles } from '../../theme/tokens';
 
 export const styles = StyleSheet.create({
   card: {
@@ -41,13 +41,25 @@ export const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
     elevation: 10,
   },
-  bodyPromotion: {
+  bodyHotDeal: {
     backgroundColor: 'rgba(33, 16, 17, 0.96)',
     borderColor: 'rgba(255,122,122,0.22)',
   },
   bodyOwnerFeatured: {
     backgroundColor: 'rgba(18, 34, 29, 0.96)',
     borderColor: 'rgba(0,245,140,0.22)',
+  },
+  bodySaved: {
+    backgroundColor: 'rgba(15, 27, 21, 0.96)',
+    borderColor: 'rgba(0,245,140,0.18)',
+  },
+  bodyVisited: {
+    backgroundColor: 'rgba(14, 23, 36, 0.96)',
+    borderColor: 'rgba(77,156,255,0.18)',
+  },
+  bodyNewToYou: {
+    backgroundColor: 'rgba(36, 28, 14, 0.96)',
+    borderColor: 'rgba(247,199,101,0.20)',
   },
   kickerRow: {
     flexDirection: 'row',
@@ -65,7 +77,7 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(245, 200, 106, 0.10)',
     borderColor: 'rgba(245, 200, 106, 0.20)',
   },
-  kickerChipPromotion: {
+  kickerChipHotDeal: {
     backgroundColor: 'rgba(255, 122, 122, 0.12)',
     borderColor: 'rgba(255, 122, 122, 0.24)',
   },
@@ -73,18 +85,37 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 245, 140, 0.10)',
     borderColor: 'rgba(0, 245, 140, 0.22)',
   },
-  kickerChipText: {
-    color: colors.goldSoft,
-    fontSize: typography.caption,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+  kickerChipSaved: {
+    backgroundColor: 'rgba(0, 245, 140, 0.09)',
+    borderColor: 'rgba(0, 245, 140, 0.18)',
   },
-  kickerChipTextPromotion: {
+  kickerChipVisited: {
+    backgroundColor: 'rgba(77, 156, 255, 0.12)',
+    borderColor: 'rgba(77, 156, 255, 0.24)',
+  },
+  kickerChipNewToYou: {
+    backgroundColor: 'rgba(245, 200, 106, 0.12)',
+    borderColor: 'rgba(245, 200, 106, 0.24)',
+  },
+  kickerChipText: {
+    ...textStyles.labelCaps,
+    color: colors.goldSoft,
+    letterSpacing: 0.5,
+  },
+  kickerChipTextHotDeal: {
     color: '#FFC9C0',
   },
   kickerChipTextOwnerFeatured: {
     color: colors.primary,
+  },
+  kickerChipTextSaved: {
+    color: '#8FF2C3',
+  },
+  kickerChipTextVisited: {
+    color: colors.blue,
+  },
+  kickerChipTextNewToYou: {
+    color: colors.warning,
   },
   kickerMetric: {
     flexDirection: 'row',
@@ -92,9 +123,9 @@ export const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   kickerMetricText: {
+    ...textStyles.caption,
+    fontFamily: fontFamilies.bodyBold,
     color: colors.textSoft,
-    fontSize: typography.caption,
-    fontWeight: '700',
   },
   ownerHeadlineChip: {
     maxWidth: 150,
@@ -109,14 +140,12 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   ownerHeadlineText: {
+    ...textStyles.labelCaps,
     color: colors.primary,
-    fontSize: typography.caption,
-    fontWeight: '900',
-    textTransform: 'uppercase',
   },
   ownerSummaryText: {
+    ...textStyles.body,
     color: colors.textMuted,
-    fontSize: typography.body,
     lineHeight: 20,
   },
   ownerBadgeWrap: {
@@ -134,10 +163,8 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   ownerBadgeText: {
+    ...textStyles.labelCaps,
     color: colors.primary,
-    fontSize: typography.caption,
-    fontWeight: '800',
-    textTransform: 'uppercase',
   },
   promotionBadgeWrap: {
     flexDirection: 'row',
@@ -154,10 +181,8 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   promotionBadgeText: {
+    ...textStyles.labelCaps,
     color: '#FFC0C0',
-    fontSize: typography.caption,
-    fontWeight: '900',
-    textTransform: 'uppercase',
   },
   promotionBadgeExpiry: {
     borderRadius: radii.pill,
@@ -168,9 +193,9 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   promotionBadgeExpiryText: {
+    ...textStyles.caption,
+    fontFamily: fontFamilies.bodyBold,
     color: colors.textSoft,
-    fontSize: typography.caption,
-    fontWeight: '800',
   },
   badgeRow: {
     flexDirection: 'row',
@@ -211,17 +236,16 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   statusText: {
+    ...textStyles.labelCaps,
     color: colors.text,
-    fontSize: typography.caption,
-    fontWeight: '800',
-    textTransform: 'uppercase',
   },
   title: {
     flex: 1,
+    fontFamily: fontFamilies.display,
     color: colors.text,
     fontSize: 21,
-    fontWeight: '800',
     lineHeight: 26,
+    letterSpacing: -0.2,
   },
   titleRow: {
     flexDirection: 'row',
@@ -245,14 +269,14 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   metaChipText: {
+    ...textStyles.caption,
+    fontFamily: fontFamilies.bodyBold,
     color: colors.accent,
-    fontSize: typography.caption,
-    fontWeight: '800',
   },
   ratingHelperText: {
+    ...textStyles.caption,
+    fontFamily: fontFamilies.bodyMedium,
     color: colors.textSoft,
-    fontSize: typography.caption,
-    fontWeight: '700',
     lineHeight: 18,
   },
   promotionBanner: {
@@ -273,9 +297,26 @@ export const styles = StyleSheet.create({
   },
   promotionText: {
     flex: 1,
+    ...textStyles.bodyStrong,
     color: colors.background,
-    fontSize: typography.body,
-    fontWeight: '800',
+    lineHeight: 20,
+  },
+  promotionTeaserBanner: {
+    minHeight: 46,
+    borderRadius: radii.lg,
+    backgroundColor: 'rgba(8, 14, 19, 0.82)',
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  promotionTeaserText: {
+    flex: 1,
+    ...textStyles.bodyStrong,
+    color: colors.text,
     lineHeight: 20,
   },
   primaryCta: {
@@ -297,9 +338,8 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   primaryCtaText: {
+    ...textStyles.button,
     color: colors.backgroundDeep,
-    fontSize: typography.body,
-    fontWeight: '900',
     letterSpacing: 0.2,
   },
   actionRow: {
@@ -323,9 +363,8 @@ export const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
   },
   secondaryCtaText: {
+    ...textStyles.button,
     color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '800',
     letterSpacing: 0.4,
   },
 });

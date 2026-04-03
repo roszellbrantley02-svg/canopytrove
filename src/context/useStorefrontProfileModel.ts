@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AppProfile } from '../types/storefront';
-import { CanopyTroveAuthSession } from '../types/identity';
+import type { AppProfile } from '../types/storefront';
+import type { CanopyTroveAuthSession } from '../types/identity';
 import {
   createAppProfileId,
   ensureAppProfile,
@@ -18,15 +18,15 @@ type UseStorefrontProfileModelArgs = {
   cachedProfileId?: string | null;
 };
 
-export function useStorefrontProfileModel({
-  cachedProfileId,
-}: UseStorefrontProfileModelArgs) {
+export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProfileModelArgs) {
   const cachedAppProfile = getCachedAppProfile();
   const [appProfile, setAppProfile] = useState<AppProfile | null>(cachedAppProfile);
-  const [authSession, setAuthSession] = useState<CanopyTroveAuthSession>(getInitialCanopyTroveAuthSession());
+  const [authSession, setAuthSession] = useState<CanopyTroveAuthSession>(
+    getInitialCanopyTroveAuthSession(),
+  );
   const [isStartingGuestSession, setIsStartingGuestSession] = useState(false);
   const [profileId, setProfileId] = useState<string>(
-    cachedAppProfile?.id ?? cachedProfileId ?? createAppProfileId()
+    cachedAppProfile?.id ?? cachedProfileId ?? createAppProfileId(),
   );
 
   const startGuestSession = useCallback(async () => {
@@ -83,7 +83,7 @@ export function useStorefrontProfileModel({
       await saveAppProfile(nextProfile);
       return true;
     },
-    [appProfile]
+    [appProfile],
   );
 
   const clearDisplayName = useCallback(() => updateDisplayName(''), [updateDisplayName]);
@@ -108,12 +108,11 @@ export function useStorefrontProfileModel({
         authSession.status === 'authenticated' || authSession.status === 'anonymous'
           ? authSession.uid
           : null,
-      displayName:
-        appProfile.displayName?.trim()
-          ? appProfile.displayName.trim()
-          : authSession.status === 'authenticated'
-            ? authSession.displayName ?? authSession.email ?? null
-            : appProfile.displayName ?? null,
+      displayName: appProfile.displayName?.trim()
+        ? appProfile.displayName.trim()
+        : authSession.status === 'authenticated'
+          ? (authSession.displayName ?? authSession.email ?? null)
+          : (appProfile.displayName ?? null),
       updatedAt: new Date().toISOString(),
     };
 

@@ -1,6 +1,8 @@
 import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
+import type { AppUiIconName } from '../../icons/AppUiIcon';
+import { AppUiIcon } from '../../icons/AppUiIcon';
+import { clampProgress } from './ownerPortalMetricUtils';
 import { ownerPortalStyles as styles } from './ownerPortalStyles';
 
 type OwnerAnalyticsTone = 'warm' | 'success' | 'cyan' | 'rose';
@@ -11,7 +13,7 @@ type OwnerAnalyticsStat = {
 };
 
 type OwnerPortalAnalyticsCardProps = {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon: AppUiIconName;
   eyebrow: string;
   title: string;
   value: string;
@@ -65,14 +67,6 @@ function getToneProgressStyle(tone: OwnerAnalyticsTone) {
   }
 }
 
-function clampProgress(value: number | undefined) {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-
-  return Math.max(0, Math.min(1, value ?? 0));
-}
-
 export function OwnerPortalAnalyticsCard({
   icon,
   eyebrow,
@@ -92,7 +86,7 @@ export function OwnerPortalAnalyticsCard({
       <View style={styles.metricCardHeader}>
         <Text style={styles.metricEyebrow}>{eyebrow}</Text>
         <View style={[styles.metricIconBadge, getToneIconStyle(tone)]}>
-          <Ionicons
+          <AppUiIcon
             color={
               tone === 'rose'
                 ? '#FFD7D1'
@@ -122,7 +116,9 @@ export function OwnerPortalAnalyticsCard({
               style={[
                 styles.metricProgressFill,
                 getToneProgressStyle(tone),
-                { width: `${Math.max(normalizedProgress * 100, normalizedProgress > 0 ? 12 : 0)}%` },
+                {
+                  width: `${Math.max(normalizedProgress * 100, normalizedProgress > 0 ? 12 : 0)}%`,
+                },
               ]}
             />
           </View>

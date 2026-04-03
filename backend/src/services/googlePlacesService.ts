@@ -7,6 +7,7 @@ import {
   DETAIL_TTL_MS,
   detailCache,
   detailInFlight,
+  googlePlacesCacheLimits,
   GooglePlaceDetailResponse,
   hasGooglePlacesConfig,
   isFresh,
@@ -24,13 +25,14 @@ async function loadPlaceDetail(placeId: string) {
     detailCache,
     detailInFlight,
     DETAIL_TTL_MS,
+    googlePlacesCacheLimits.detail,
     async () => {
       const payload = await requestGoogleJson<GooglePlaceDetailResponse>(
         `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
         {
           method: 'GET',
         },
-        'id,websiteUri,nationalPhoneNumber,regularOpeningHours.weekdayDescriptions,currentOpeningHours.openNow'
+        'id,websiteUri,nationalPhoneNumber,businessStatus,location,regularOpeningHours.weekdayDescriptions,currentOpeningHours.openNow'
       );
 
       if (!payload?.id) {
@@ -42,6 +44,15 @@ async function loadPlaceDetail(placeId: string) {
         website: typeof payload.websiteUri === 'string' ? payload.websiteUri : null,
         hours: normalizeHours(payload.regularOpeningHours?.weekdayDescriptions),
         openNow: typeof payload.currentOpeningHours?.openNow === 'boolean' ? payload.currentOpeningHours.openNow : null,
+        businessStatus: typeof payload.businessStatus === 'string' ? payload.businessStatus : null,
+        location:
+          typeof payload.location?.latitude === 'number' &&
+          typeof payload.location?.longitude === 'number'
+            ? {
+                latitude: payload.location.latitude,
+                longitude: payload.location.longitude,
+              }
+            : null,
       };
     }
   );
@@ -73,6 +84,15 @@ async function runBackgroundSummaryTasks(
 }
 
 export async function getGooglePlacesEnrichment(summary: StorefrontSummaryApiDocument) {
+  const cached = storefrontEnrichmentCache.get(summary.id);
+  if (isFresh(cached)) {
+    return cached!.value;
+  }
+
+  if (cached) {
+    storefrontEnrichmentCache.delete(summary.id);
+  }
+
   if (!hasGooglePlacesConfig()) {
     return null;
   }
@@ -82,6 +102,7 @@ export async function getGooglePlacesEnrichment(summary: StorefrontSummaryApiDoc
     storefrontEnrichmentCache,
     storefrontEnrichmentInFlight,
     DETAIL_TTL_MS,
+    googlePlacesCacheLimits.storefrontEnrichment,
     async () => {
       const placeId = await matchPlaceId(summary);
       if (!placeId) {
@@ -95,6 +116,7 @@ export async function getGooglePlacesEnrichment(summary: StorefrontSummaryApiDoc
 export function getCachedGooglePlacesEnrichment(storefrontId: string) {
   const cached = storefrontEnrichmentCache.get(storefrontId);
   if (!isFresh(cached)) {
+    storefrontEnrichmentCache.delete(storefrontId);
     return null;
   }
 

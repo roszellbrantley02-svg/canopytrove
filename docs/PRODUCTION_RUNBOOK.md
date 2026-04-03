@@ -24,6 +24,8 @@ Health checks:
   - `source.activeMode: firestore` for production
   - `authVerification: firebase-admin`
   - `requestLoggingEnabled: true`
+  - `runtimeMonitoring.configured: true` when ops sweeps are set up
+  - `runtimeMonitoring.overallOk: true` after a clean sweep
 
 ## Data readiness
 
@@ -100,3 +102,18 @@ The backend now emits one JSON log line per request with:
 - `sourceMode`
 
 Use `requestId` to correlate user-reported failures with backend logs.
+
+## Uptime Alerts
+
+Recommended hosted env:
+
+- `OPS_HEALTHCHECK_ENABLED=true`
+- `OPS_HEALTHCHECK_API_URL=https://api.canopytrove.com/health`
+- `OPS_HEALTHCHECK_SITE_URL=https://canopytrove.com`
+- `OPS_ALERT_WEBHOOK_URL`
+
+Operator path:
+
+1. verify the webhook target receives failure and recovery payloads
+2. use `GET /health` to confirm `runtimeMonitoring`
+3. use the internal admin runtime panel for manual sweeps during incident response

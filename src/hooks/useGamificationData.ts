@@ -4,7 +4,7 @@ import {
   useStorefrontProfileController,
   useStorefrontRewardsController,
 } from '../context/StorefrontController';
-import {
+import type {
   GamificationLeaderboardEntry,
   GamificationLeaderboardResponse,
 } from '../types/storefront';
@@ -17,7 +17,7 @@ function buildLocalLeaderboardEntry(
   profileId: string,
   displayName: string | null,
   profileKind: 'anonymous' | 'authenticated',
-  gamificationState: ReturnType<typeof useStorefrontRewardsController>['gamificationState']
+  gamificationState: ReturnType<typeof useStorefrontRewardsController>['gamificationState'],
 ): GamificationLeaderboardEntry {
   return {
     profileId,
@@ -47,7 +47,7 @@ export function useGamificationLeaderboard(limit = 25, offset = 0) {
               profileId,
               appProfile?.displayName ?? null,
               appProfile?.kind ?? 'anonymous',
-              gamificationState
+              gamificationState,
             ),
           ],
     total: storefrontSourceMode === 'api' ? 0 : 1,
@@ -66,7 +66,7 @@ export function useGamificationLeaderboard(limit = 25, offset = 0) {
             profileId,
             appProfile?.displayName ?? null,
             appProfile?.kind ?? 'anonymous',
-            gamificationState
+            gamificationState,
           ),
         ],
         total: 1,
@@ -93,14 +93,7 @@ export function useGamificationLeaderboard(limit = 25, offset = 0) {
     return () => {
       alive = false;
     };
-  }, [
-    appProfile?.displayName,
-    appProfile?.kind,
-    gamificationState,
-    limit,
-    offset,
-    profileId,
-  ]);
+  }, [appProfile?.displayName, appProfile?.kind, gamificationState, limit, offset, profileId]);
 
   return { data, isLoading };
 }

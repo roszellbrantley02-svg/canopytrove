@@ -1,14 +1,16 @@
-import React, { PropsWithChildren } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import type { PropsWithChildren } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, radii, spacing, typography } from '../theme/tokens';
+import type { AppUiIconName } from '../icons/AppUiIcon';
+import { AppUiIcon } from '../icons/AppUiIcon';
+import { colors, radii, spacing, textStyles } from '../theme/tokens';
 
 type CustomerStateTone = 'neutral' | 'warm' | 'info' | 'danger' | 'success';
 
 type CustomerStateCardProps = PropsWithChildren<{
   title: string;
   body: string;
-  iconName?: React.ComponentProps<typeof Ionicons>['name'];
+  iconName?: AppUiIconName;
   eyebrow?: string;
   note?: string;
   tone?: CustomerStateTone;
@@ -22,6 +24,8 @@ const toneStyles: Record<
     backgroundColor: string;
     iconColor: string;
     eyebrowColor: string;
+    iconBackground: string;
+    glowColor: string;
   }
 > = {
   neutral: {
@@ -29,30 +33,40 @@ const toneStyles: Record<
     backgroundColor: 'rgba(8, 14, 19, 0.72)',
     iconColor: colors.accent,
     eyebrowColor: colors.goldSoft,
+    iconBackground: 'rgba(143, 255, 209, 0.10)',
+    glowColor: 'rgba(143, 255, 209, 0.08)',
   },
   warm: {
     borderColor: 'rgba(245, 200, 106, 0.18)',
     backgroundColor: 'rgba(245, 200, 106, 0.08)',
     iconColor: colors.goldSoft,
     eyebrowColor: colors.goldSoft,
+    iconBackground: 'rgba(245, 200, 106, 0.12)',
+    glowColor: 'rgba(245, 200, 106, 0.09)',
   },
   info: {
     borderColor: 'rgba(0, 215, 255, 0.18)',
     backgroundColor: 'rgba(0, 215, 255, 0.08)',
     iconColor: colors.cyan,
     eyebrowColor: colors.cyan,
+    iconBackground: 'rgba(0, 215, 255, 0.12)',
+    glowColor: 'rgba(0, 215, 255, 0.09)',
   },
   danger: {
     borderColor: 'rgba(255, 122, 122, 0.22)',
     backgroundColor: 'rgba(255, 122, 122, 0.08)',
     iconColor: colors.rose,
     eyebrowColor: colors.rose,
+    iconBackground: 'rgba(255, 122, 122, 0.12)',
+    glowColor: 'rgba(255, 122, 122, 0.08)',
   },
   success: {
     borderColor: 'rgba(0, 245, 140, 0.18)',
     backgroundColor: 'rgba(0, 245, 140, 0.08)',
     iconColor: colors.primary,
     eyebrowColor: colors.primary,
+    iconBackground: 'rgba(0, 245, 140, 0.12)',
+    glowColor: 'rgba(0, 245, 140, 0.08)',
   },
 };
 
@@ -79,19 +93,32 @@ export function CustomerStateCard({
         centered && styles.cardCentered,
       ]}
     >
+      <View
+        pointerEvents="none"
+        style={[styles.ambientGlow, { backgroundColor: toneStyle.glowColor }]}
+      />
       <View style={[styles.header, centered && styles.headerCentered]}>
         <View
           style={[
             styles.iconWrap,
-            { borderColor: toneStyle.borderColor },
+            {
+              borderColor: toneStyle.borderColor,
+              backgroundColor: toneStyle.iconBackground,
+            },
             centered && styles.iconWrapCentered,
           ]}
         >
-          <Ionicons name={iconName} size={18} color={toneStyle.iconColor} />
+          <AppUiIcon name={iconName} size={18} color={toneStyle.iconColor} />
         </View>
         <View style={[styles.copy, centered && styles.copyCentered]}>
           {eyebrow ? (
-            <Text style={[styles.eyebrow, { color: toneStyle.eyebrowColor }, centered && styles.textCentered]}>
+            <Text
+              style={[
+                styles.eyebrow,
+                { color: toneStyle.eyebrowColor },
+                centered && styles.textCentered,
+              ]}
+            >
               {eyebrow}
             </Text>
           ) : null}
@@ -116,6 +143,15 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
     elevation: 6,
+    overflow: 'hidden',
+  },
+  ambientGlow: {
+    position: 'absolute',
+    top: -48,
+    right: -18,
+    width: 144,
+    height: 144,
+    borderRadius: 72,
   },
   cardCentered: {
     alignItems: 'center',
@@ -134,7 +170,6 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: radii.md,
     borderWidth: 1,
-    backgroundColor: 'rgba(8, 14, 19, 0.78)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -151,25 +186,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   eyebrow: {
-    fontSize: typography.caption,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.7,
+    ...textStyles.labelCaps,
   },
   title: {
+    ...textStyles.section,
     color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '900',
-    lineHeight: 22,
   },
   body: {
+    ...textStyles.body,
     color: colors.textMuted,
-    fontSize: typography.body,
     lineHeight: 22,
   },
   note: {
+    ...textStyles.caption,
     color: colors.textSoft,
-    fontSize: typography.caption,
     lineHeight: 18,
   },
   footer: {

@@ -1,28 +1,28 @@
 import { StyleSheet } from 'react-native';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, radii, spacing, textStyles, typography } from '../../theme/tokens';
 
 export const styles = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.md,
   },
   headerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    borderRadius: radii.md,
+    minHeight: 42,
+    borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.card,
+    backgroundColor: 'rgba(8, 14, 19, 0.74)',
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.borderSoft,
   },
   headerBadgeText: {
+    ...textStyles.labelCaps,
     color: colors.text,
-    fontSize: typography.caption,
-    fontWeight: '800',
-    textTransform: 'uppercase',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -32,11 +32,12 @@ export const styles = StyleSheet.create({
   statCard: {
     flexGrow: 1,
     minWidth: 120,
-    borderRadius: radii.md,
-    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    backgroundColor: 'rgba(8, 14, 19, 0.72)',
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
+    borderColor: colors.borderSoft,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     gap: spacing.xs,
   },
   statValue: {
@@ -53,7 +54,7 @@ export const styles = StyleSheet.create({
   helperText: {
     marginTop: spacing.md,
     color: colors.textSoft,
-    fontSize: typography.body,
+    ...textStyles.body,
     lineHeight: 22,
   },
   progressCard: {
@@ -66,15 +67,12 @@ export const styles = StyleSheet.create({
     gap: spacing.md,
   },
   progressTitle: {
+    ...textStyles.section,
     color: colors.text,
-    fontSize: typography.section,
-    fontWeight: '900',
   },
   progressSubtitle: {
-    color: colors.primary,
-    fontSize: typography.caption,
-    fontWeight: '800',
-    textTransform: 'uppercase',
+    ...textStyles.labelCaps,
+    color: colors.goldSoft,
   },
   progressBarTrack: {
     height: 12,
@@ -87,12 +85,11 @@ export const styles = StyleSheet.create({
   progressBarFill: {
     height: '100%',
     borderRadius: radii.pill,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.gold,
   },
   progressCaption: {
+    ...textStyles.caption,
     color: colors.textMuted,
-    fontSize: typography.caption,
-    fontWeight: '700',
   },
   badgeGrid: {
     flexDirection: 'row',
@@ -102,21 +99,21 @@ export const styles = StyleSheet.create({
   badgeCard: {
     width: '47%',
     minWidth: 148,
-    borderRadius: radii.md,
-    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    backgroundColor: 'rgba(8, 14, 19, 0.72)',
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
+    borderColor: colors.borderSoft,
+    padding: spacing.lg,
     gap: spacing.sm,
   },
   badgeCardLocked: {
-    backgroundColor: colors.cardMuted,
-    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(9, 14, 19, 0.82)',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   badgeIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -124,19 +121,17 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
   },
   badgeName: {
+    ...textStyles.bodyStrong,
     color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '800',
   },
   badgeCategory: {
-    color: colors.textMuted,
-    fontSize: typography.caption,
-    fontWeight: '700',
+    ...textStyles.caption,
+    color: colors.textSoft,
     textTransform: 'capitalize',
   },
   badgeDescription: {
+    ...textStyles.caption,
     color: colors.textMuted,
-    fontSize: typography.caption,
     lineHeight: 18,
   },
   leaderboardList: {
@@ -147,22 +142,27 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     padding: spacing.lg,
-    borderRadius: radii.md,
-    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    backgroundColor: 'rgba(8, 14, 19, 0.74)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
   },
   entryCardCurrent: {
-    borderColor: colors.warning,
-    backgroundColor: colors.cardMuted,
+    borderColor: 'rgba(245, 200, 106, 0.24)',
+    backgroundColor: 'rgba(245, 200, 106, 0.08)',
   },
   rankBlock: {
-    width: 48,
+    width: 54,
+    minHeight: 54,
+    borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   rankValue: {
-    color: colors.warning,
+    color: colors.goldSoft,
     fontSize: typography.section,
     fontWeight: '900',
   },
@@ -171,13 +171,12 @@ export const styles = StyleSheet.create({
     gap: 2,
   },
   entryName: {
+    ...textStyles.bodyStrong,
     color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '800',
   },
   entryMeta: {
+    ...textStyles.caption,
     color: colors.textMuted,
-    fontSize: typography.caption,
     lineHeight: 18,
   },
   entryStats: {
@@ -185,14 +184,12 @@ export const styles = StyleSheet.create({
     gap: 2,
   },
   entryPoints: {
-    color: colors.primary,
+    color: colors.goldSoft,
     fontSize: typography.section,
     fontWeight: '900',
   },
   entryPointsLabel: {
+    ...textStyles.labelCaps,
     color: colors.textSoft,
-    fontSize: typography.caption,
-    fontWeight: '700',
-    textTransform: 'uppercase',
   },
 });

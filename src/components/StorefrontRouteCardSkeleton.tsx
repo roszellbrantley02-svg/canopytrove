@@ -16,7 +16,11 @@ function StorefrontRouteCardSkeletonComponent({
     <View style={[styles.card, compact && styles.cardCompact]}>
       <View style={[styles.mapShell, compact ? styles.mapShellCompact : styles.mapShellFeature]}>
         <ShimmerBlock style={styles.mapGlow} borderRadius={0} shimmerWidth={220} />
-        <ShimmerBlock style={[styles.pill, styles.pillTopLeft]} borderRadius={radii.pill} shimmerWidth={90} />
+        <ShimmerBlock
+          style={[styles.pill, styles.pillTopLeft]}
+          borderRadius={radii.pill}
+          shimmerWidth={90}
+        />
         <ShimmerBlock
           style={[styles.pill, styles.pillBottomRight]}
           borderRadius={radii.pill}
@@ -26,12 +30,24 @@ function StorefrontRouteCardSkeletonComponent({
 
       <View style={styles.body}>
         <View style={styles.badgeRow}>
-          <ShimmerBlock style={[styles.chip, styles.chipWide]} borderRadius={radii.pill} shimmerWidth={76} />
-          <ShimmerBlock style={[styles.chip, styles.chipNarrow]} borderRadius={radii.pill} shimmerWidth={66} />
+          <ShimmerBlock
+            style={[styles.chip, styles.chipWide]}
+            borderRadius={radii.pill}
+            shimmerWidth={76}
+          />
+          <ShimmerBlock
+            style={[styles.chip, styles.chipNarrow]}
+            borderRadius={radii.pill}
+            shimmerWidth={66}
+          />
         </View>
 
         <View style={styles.titleBlock}>
-          <ShimmerBlock style={[styles.line, styles.titleLine]} borderRadius={radii.sm} shimmerWidth={118} />
+          <ShimmerBlock
+            style={[styles.line, styles.titleLine]}
+            borderRadius={radii.sm}
+            shimmerWidth={118}
+          />
           <ShimmerBlock
             style={[styles.line, styles.subtitleLine]}
             borderRadius={radii.sm}
@@ -40,8 +56,16 @@ function StorefrontRouteCardSkeletonComponent({
         </View>
 
         <View style={styles.metaRow}>
-          <ShimmerBlock style={[styles.chip, styles.metaChip]} borderRadius={radii.pill} shimmerWidth={72} />
-          <ShimmerBlock style={[styles.chip, styles.metaChip]} borderRadius={radii.pill} shimmerWidth={72} />
+          <ShimmerBlock
+            style={[styles.chip, styles.metaChip]}
+            borderRadius={radii.pill}
+            shimmerWidth={72}
+          />
+          <ShimmerBlock
+            style={[styles.chip, styles.metaChip]}
+            borderRadius={radii.pill}
+            shimmerWidth={72}
+          />
         </View>
 
         <ShimmerBlock style={styles.primaryButton} borderRadius={radii.md} shimmerWidth={128} />

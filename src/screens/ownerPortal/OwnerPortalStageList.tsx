@@ -1,6 +1,6 @@
 import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
+import { AppUiIcon } from '../../icons/AppUiIcon';
 import { ownerPortalStyles as styles } from './ownerPortalStyles';
 
 export type OwnerPortalStageTone = 'complete' | 'current' | 'pending' | 'attention';
@@ -18,10 +18,10 @@ function getToneIcon(tone: OwnerPortalStageTone) {
     case 'current':
       return { name: 'radio-button-on' as const, color: '#F5C86A', label: 'Current' };
     case 'attention':
-      return { name: 'alert-circle' as const, color: '#FF9F92', label: 'Attention' };
+      return { name: 'alert-circle-outline' as const, color: '#FF9F92', label: 'Attention' };
     case 'pending':
     default:
-      return { name: 'ellipse-outline' as const, color: '#9CC5B4', label: 'Pending' };
+      return { name: 'radio-button-off-outline' as const, color: '#9CC5B4', label: 'Pending' };
   }
 }
 
@@ -33,7 +33,7 @@ export function OwnerPortalStageList({ items }: { items: OwnerPortalStageItem[] 
         return (
           <View key={item.label} style={styles.stageRow}>
             <View style={styles.stageIconWrap}>
-              <Ionicons name={tone.name} size={18} color={tone.color} />
+              <AppUiIcon name={tone.name} size={18} color={tone.color} />
             </View>
             <View style={styles.stageCopy}>
               <Text style={styles.stageLabel}>{item.label}</Text>

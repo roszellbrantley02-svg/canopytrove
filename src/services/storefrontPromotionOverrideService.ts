@@ -1,6 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { brand } from '../config/brand';
-import { StorefrontSummary } from '../types/storefront';
+import type { StorefrontSummary } from '../types/storefront';
+import {
+  applyStorefrontMemberDealAccessToSummaries,
+  canViewMemberDeals,
+} from './storefrontMemberDealAccessService';
 import {
   getStorefrontPromotionBadges,
   getStorefrontPromotionTextFromBadges,
@@ -75,9 +79,12 @@ function scheduleNextExpiryCheck() {
     return;
   }
 
-  nextExpiryTimer = setTimeout(() => {
-    void expireStorefrontPromotionOverrides();
-  }, Math.max(1_000, nextExpiryAt - now + 250));
+  nextExpiryTimer = setTimeout(
+    () => {
+      void expireStorefrontPromotionOverrides();
+    },
+    Math.max(1_000, nextExpiryAt - now + 250),
+  );
 }
 
 async function expireStorefrontPromotionOverrides() {
@@ -85,7 +92,7 @@ async function expireStorefrontPromotionOverrides() {
 
   const now = Date.now();
   const nextState = Object.fromEntries(
-    Object.entries(memoryState).filter(([, override]) => isPromotionOverrideActive(override, now))
+    Object.entries(memoryState).filter(([, override]) => isPromotionOverrideActive(override, now)),
   );
 
   if (Object.keys(nextState).length === Object.keys(memoryState).length) {
@@ -150,7 +157,7 @@ export async function initializeStorefrontPromotionOverrides() {
         Object.values(parsed)
           .map((override) => normalizeStoredOverride(override))
           .filter((override): override is StorefrontPromotionOverride => Boolean(override))
-          .map((override) => [override.storefrontId, override])
+          .map((override) => [override.storefrontId, override]),
       );
       scheduleNextExpiryCheck();
       return memoryState;
@@ -169,7 +176,7 @@ export function getStorefrontPromotionOverrideRevision() {
 }
 
 export function subscribeToStorefrontPromotionOverrideRevision(
-  listener: (nextRevision: number) => void
+  listener: (nextRevision: number) => void,
 ) {
   listeners.add(listener);
   return () => {
@@ -196,7 +203,7 @@ export async function saveStorefrontPromotionOverrides(
     storefrontId: string;
     badges: string[];
     durationHours: number;
-  }>
+  }>,
 ) {
   await initializeStorefrontPromotionOverrides();
 
@@ -267,7 +274,7 @@ export async function clearAllStorefrontPromotionOverrides() {
 
 function applyPromotionOverride(
   summary: StorefrontSummary,
-  override: StorefrontPromotionOverride | null
+  override: StorefrontPromotionOverride | null,
 ): StorefrontSummary {
   const badges = override
     ? normalizeStorefrontPromotionBadges(override.badges)
@@ -284,6 +291,10 @@ function applyPromotionOverride(
 
 export async function applyStorefrontPromotionOverrides(summaries: StorefrontSummary[]) {
   await initializeStorefrontPromotionOverrides();
+
+  if (!canViewMemberDeals()) {
+    return applyStorefrontMemberDealAccessToSummaries(summaries);
+  }
 
   return summaries.map((summary) => {
     const override = memoryState[summary.id];

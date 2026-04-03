@@ -204,6 +204,35 @@ Rules:
 - detail reads should overlay these onto the base storefront detail payload
 - review submission should also trigger the review reward path
 - helpful votes should update these records and feed the helpful-vote reward path for the review author
+- `photoCount` is a summary count only; actual member review photos live in the moderated review-media pipeline and only become public after approval
+
+## Collection: `storefront_review_photos`
+
+Document id:
+
+- generated media id
+
+Fields:
+
+- `id: string`
+- `storefrontId: string`
+- `profileId: string`
+- `reviewId: string`
+- `storagePath: string`
+- `approvedStoragePath?: string | null`
+- `fileName: string`
+- `mimeType: string | null`
+- `size: number | null`
+- `moderationStatus: "pending" | "needs_manual_review" | "approved" | "rejected"`
+- `createdAt: string`
+- `reviewedAt: string | null`
+- `reviewNotes: string | null`
+
+Rules:
+
+- pending review photos must remain private until moderation approves them
+- the public storefront detail surface should only receive approved photo URLs
+- the moderation queue should be readable by the uploader and admins, but writable only by the uploader on create and by admins during review
 
 ## Collection: `storefront_reports`
 

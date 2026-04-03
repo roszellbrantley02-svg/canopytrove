@@ -1,14 +1,11 @@
 import React from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useStorefrontProfileController } from '../../context/StorefrontController';
-import { RootStackParamList } from '../../navigation/RootNavigator';
+import type { RootStackParamList } from '../../navigation/RootNavigator';
 import { submitIdentityVerification } from '../../services/ownerPortalVerificationService';
-import {
-  OwnerPortalIdentityIdType,
-  OwnerPortalUploadedFile,
-} from '../../types/ownerPortal';
+import type { OwnerPortalIdentityIdType, OwnerPortalUploadedFile } from '../../types/ownerPortal';
 import { useOwnerPortalProfileLoader } from './useOwnerPortalProfileLoader';
 
 export const ID_TYPE_OPTIONS: OwnerPortalIdentityIdType[] = [
@@ -106,12 +103,22 @@ export function useOwnerPortalIdentityVerificationModel() {
       navigation.replace('OwnerPortalHome');
     } catch (error) {
       setStatusText(
-        error instanceof Error ? error.message : 'Unable to submit identity verification.'
+        error instanceof Error ? error.message : 'Unable to submit identity verification.',
       );
     } finally {
       setIsSubmitting(false);
     }
-  }, [backFile, frontFile, fullName, idType, isSubmitting, navigation, ownerUid, selfieFile]);
+  }, [
+    backFile,
+    frontFile,
+    fullName,
+    idType,
+    isSubmitting,
+    navigation,
+    ownerUid,
+    selfieFile,
+    setStatusText,
+  ]);
 
   const isSubmitDisabled = isSubmitting || !fullName.trim() || !frontFile || !selfieFile;
 

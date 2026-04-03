@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-04-01",
+  "platform": "ios",
+  "launchName": "Canopy Trove",
+  "bundleIdentifier": "com.rezell.canopytrove",
+  "scheme": "canopytrove",
+  "slug": "canopytrove",
+  "version": "1.0.0",
+  "supportsTablet": true,
+  "icon": "./assets/ios-icon.png",
+  "associatedDomains": [
+    "applinks:canopytrove.com",
+    "applinks:www.canopytrove.com"
+  ],
+  "infoPlist": {
+    "ITSAppUsesNonExemptEncryption": false
+  },
+  "privacyManifest": {
+    "NSPrivacyAccessedAPITypes": [
+      {
+        "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+        "NSPrivacyAccessedAPITypeReasons": [
+          "CA92.1"
+        ]
+      },
+      {
+        "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+        "NSPrivacyAccessedAPITypeReasons": [
+          "C617.1",
+          "0A2A.1",
+          "3B52.1"
+        ]
+      },
+      {
+        "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+        "NSPrivacyAccessedAPITypeReasons": [
+          "E174.1",
+          "85F4.1"
+        ]
+      }
+    ]
+  },
+  "permissionCopy": {
+    "locationWhenInUsePermission": "Canopy Trove uses your location to find nearby dispensaries and let you share how your visit was when you arrive.",
+    "photosPermission": "Canopy Trove uses your photos so you can attach review images that stay private until moderation approves them.",
+    "cameraPermission": "Canopy Trove uses your camera so you can take review photos before they enter the private moderation queue."
+  },
+  "buildProfiles": [
+    "preview",
+    "production"
+  ],
+  "launchNote": "This project is Expo-managed. iOS launch naming and identifiers are generated from app.json/app.config.js at build time."
+}

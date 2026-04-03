@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Open Storefront | Canopy Trove&#8482;</title>
+    <meta
+      name="description"
+      content="Open this Canopy Trove storefront in the app, or return to the main site if the app is not available on this device."
+    />
+    <link rel="icon" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="canonical" href="https://canopytrove.com/storefronts" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="container topbar-inner">
+          <a class="brand" href="/">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-copy">
+              <span class="brand-title">Canopy Trove&#8482;</span>
+              <span class="brand-subtitle">Where legal cannabis feels chosen.</span>
+            </span>
+          </a>
+          <nav class="nav" aria-label="Canopy Trove public pages">
+            <a class="pill-link" href="/about">About</a>
+            <a class="pill-link" href="/privacy">Privacy</a>
+            <a class="pill-link" href="/terms">Terms</a>
+            <a class="pill-link" href="/community-guidelines">Community Guidelines</a>
+            <a class="pill-link" href="/support">Support</a>
+          </nav>
+          <button class="nav-toggle" aria-label="Open navigation" aria-expanded="false">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="container">
+            <div class="hero-card">
+              <div class="hero-copy">
+                <p class="eyebrow">Storefront link</p>
+                <h1>Open this storefront in Canopy Trove.</h1>
+                <p id="storefront-copy">
+                  If the app is installed, the storefront link can open directly in Canopy Trove.
+                  If not, use the main site links below.
+                </p>
+                <div class="hero-actions">
+                  <a id="open-app-link" class="button-primary" href="canopytrove://browse">Open in App</a>
+                  <a class="button-secondary" href="/">Return to Home</a>
+                </div>
+              </div>
+              <div class="hero-grid">
+                <div class="metric-tile">
+                  <strong>Storefront id</strong>
+                  <span id="storefront-id">Unavailable</span>
+                </div>
+                <div class="metric-tile">
+                  <strong>Deep link</strong>
+                  <span id="deep-link-copy">canopytrove://browse</span>
+                </div>
+                <div class="metric-tile">
+                  <strong>If the app does not open</strong>
+                  <span>Use the support link if the shared storefront URL appears broken or stale.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="container content-grid">
+            <article class="document-card">
+              <h2>About storefront links</h2>
+              <div class="document-meta">Updated: March 31, 2026</div>
+              <div class="content-stack">
+                <section class="section-card">
+                  <h2>How this works</h2>
+                  <p>
+                    Canopy Trove storefront links are meant to open directly to the matching
+                    storefront record inside the mobile app. This page acts as the hosted fallback
+                    when the app is unavailable or direct app-link support has not been completed on
+                    the device yet.
+                  </p>
+                </section>
+
+                <section class="section-card">
+                  <h2>Need a correction?</h2>
+                  <p>
+                    If the storefront opens to the wrong place, does not resolve, or the listing is
+                    stale, use the in-app Suggest Edit or Report Closed actions when available, or
+                    contact support from the public support page.
+                  </p>
+                </section>
+              </div>
+            </article>
+
+            <aside class="sidebar">
+              <div class="sidebar-card">
+                <h3>Support</h3>
+                <p>
+                  <a class="inline-link" href="/support">Open support</a>
+                </p>
+              </div>
+
+              <div class="sidebar-card">
+                <h3>Public pages</h3>
+                <div class="sidebar-list">
+                  <a href="/">Home</a>
+                  <a href="/about">About</a>
+                  <a href="/privacy">Privacy</a>
+                  <a href="/terms">Terms</a>
+                  <a href="/community-guidelines">Community Guidelines</a>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        var btn = document.querySelector('.nav-toggle');
+        var nav = document.querySelector('.nav');
+        if (!btn || !nav) return;
+        btn.addEventListener('click', function () {
+          var open = nav.classList.toggle('nav-open');
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          btn.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+        });
+      })();
+
+      (function () {
+        var pathParts = window.location.pathname.split('/').filter(Boolean);
+        var storefrontId = pathParts.length > 1 ? decodeURIComponent(pathParts[1]) : '';
+        var deepLink = storefrontId
+          ? 'canopytrove://storefronts/' + encodeURIComponent(storefrontId)
+          : 'canopytrove://browse';
+
+        var openAppLink = document.getElementById('open-app-link');
+        var storefrontIdNode = document.getElementById('storefront-id');
+        var storefrontCopyNode = document.getElementById('storefront-copy');
+        var deepLinkCopyNode = document.getElementById('deep-link-copy');
+
+        if (openAppLink) {
+          openAppLink.setAttribute('href', deepLink);
+        }
+
+        if (storefrontIdNode) {
+          storefrontIdNode.textContent = storefrontId || 'Unavailable';
+        }
+
+        if (deepLinkCopyNode) {
+          deepLinkCopyNode.textContent = deepLink;
+        }
+
+        if (storefrontCopyNode && storefrontId) {
+          storefrontCopyNode.textContent =
+            'This storefront link targets Canopy Trove record ' +
+            storefrontId +
+            '. If the app is installed and universal links are available on this device, it should open there directly.';
+        }
+      })();
+    </script>
+  </body>
+</html>

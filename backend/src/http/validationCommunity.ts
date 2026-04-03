@@ -1,5 +1,6 @@
 import {
   MAX_DISPLAY_NAME_LENGTH,
+  MAX_ID_LENGTH,
   MAX_REASON_LENGTH,
   MAX_REPORT_TEXT_LENGTH,
   MAX_REVIEW_TEXT_LENGTH,
@@ -7,9 +8,11 @@ import {
   MAX_TAG_COUNT,
   MAX_TAG_LENGTH,
   asObject,
+  parseEnumValue,
   parseId,
   parseNumberValue,
   parseOptionalIntegerValue,
+  parseOptionalIdArray,
   parseOptionalStringArray,
   parseOptionalTrimmedString,
   parseOptionalIsoDateString,
@@ -31,9 +34,15 @@ function parseOptionalGifUrl(value: unknown, field: string) {
       throw new RequestValidationError(`${field} must be a valid http or https URL.`);
     }
 
+    const hostname = candidate.hostname.trim().toLowerCase();
+    const isGiphyHost = hostname === 'giphy.com' || hostname.endsWith('.giphy.com');
+    if (!isGiphyHost) {
+      throw new RequestValidationError(`${field} must use a valid Giphy URL.`);
+    }
+
     return candidate.toString();
   } catch {
-    throw new RequestValidationError(`${field} must be a valid http or https URL.`);
+    throw new RequestValidationError(`${field} must use a valid Giphy URL.`);
   }
 }
 
@@ -59,16 +68,72 @@ export function parseReviewSubmissionBody(value: unknown) {
         maxItems: MAX_TAG_COUNT,
         maxItemLength: MAX_TAG_LENGTH,
       }) ?? [],
+    photoUploadIds:
+      parseOptionalIdArray(body.photoUploadIds, 'body.photoUploadIds', 4) ?? [],
     photoCount:
       parseOptionalIntegerValue(body.photoCount, 'body.photoCount', {
         min: 0,
-        max: 12,
+        max: 4,
       }) ?? 0,
+  };
+}
+
+export function parseReviewPhotoUploadBody(value: unknown) {
+  const body = asObject(value, 'body');
+  return {
+    profileId: parseId(body.profileId, 'body.profileId'),
+    reviewId: parseOptionalTrimmedString(body.reviewId, 'body.reviewId', {
+      maxLength: MAX_ID_LENGTH,
+    }),
+    fileName: parseTrimmedString(body.fileName, 'body.fileName', {
+      maxLength: 200,
+    }),
+    contentType: parseTrimmedString(body.contentType, 'body.contentType', {
+      maxLength: 100,
+    }),
+    sizeBytes: parseNumberValue(body.sizeBytes, 'body.sizeBytes', {
+      integer: true,
+      min: 1,
+    }),
   };
 }
 
 export function parseReportSubmissionBody(value: unknown) {
   const body = asObject(value, 'body');
+  const reportTarget =
+    body.reportTarget === undefined
+      ? 'storefront'
+      : parseEnumValue(body.reportTarget, 'body.reportTarget', ['storefront', 'review'] as const);
+  const reportedReviewId = parseOptionalTrimmedString(body.reportedReviewId, 'body.reportedReviewId', {
+    maxLength: MAX_REASON_LENGTH,
+  });
+  const reportedReviewAuthorProfileId = parseOptionalTrimmedString(
+    body.reportedReviewAuthorProfileId,
+    'body.reportedReviewAuthorProfileId',
+    {
+      maxLength: MAX_REASON_LENGTH,
+    }
+  );
+  const reportedReviewAuthorName = parseOptionalTrimmedString(
+    body.reportedReviewAuthorName,
+    'body.reportedReviewAuthorName',
+    {
+      maxLength: MAX_DISPLAY_NAME_LENGTH,
+    }
+  );
+  const reportedReviewExcerpt = parseOptionalTrimmedString(
+    body.reportedReviewExcerpt,
+    'body.reportedReviewExcerpt',
+    {
+      maxLength: MAX_REPORT_TEXT_LENGTH,
+    }
+  );
+
+  if (reportTarget === 'review' && !reportedReviewId) {
+    throw new RequestValidationError(
+      'body.reportedReviewId is required when body.reportTarget is review.'
+    );
+  }
 
   return {
     profileId: parseId(body.profileId, 'body.profileId'),
@@ -81,6 +146,11 @@ export function parseReportSubmissionBody(value: unknown) {
     description: parseTrimmedString(body.description, 'body.description', {
       maxLength: MAX_REPORT_TEXT_LENGTH,
     }),
+    reportTarget,
+    reportedReviewId,
+    reportedReviewAuthorProfileId,
+    reportedReviewAuthorName,
+    reportedReviewExcerpt,
   };
 }
 

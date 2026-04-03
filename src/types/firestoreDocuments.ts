@@ -5,7 +5,7 @@ export type StorefrontSummaryDocument = {
   legalName: string;
   addressLine1: string;
   city: string;
-  state: 'NY';
+  state: string;
   zip: string;
   latitude: number;
   longitude: number;
@@ -13,13 +13,14 @@ export type StorefrontSummaryDocument = {
   travelMinutes: number;
   rating: number;
   reviewCount: number;
-  openNow: boolean;
+  openNow: boolean | null;
   isVerified: boolean;
   mapPreviewLabel: string;
   promotionText?: string | null;
   promotionBadges?: string[];
   promotionExpiresAt?: string | null;
   activePromotionId?: string | null;
+  activePromotionCount?: number | null;
   favoriteFollowerCount?: number | null;
   menuUrl?: string | null;
   verifiedOwnerBadgeLabel?: string | null;
@@ -30,6 +31,8 @@ export type StorefrontSummaryDocument = {
   promotionPlacementScope?: 'storefront_area' | 'statewide' | null;
   placeId?: string;
   thumbnailUrl?: string | null;
+  ingestSource?: 'seed' | 'registry';
+  publishedAt?: string | null;
 };
 
 export type StorefrontDetailDocument = {
@@ -64,4 +67,6 @@ export type StorefrontDetailDocument = {
   amenities: string[];
   editorialSummary: string | null;
   routeMode: 'preview' | 'verified';
+  ingestSource?: 'seed' | 'registry';
+  publishedAt?: string | null;
 };

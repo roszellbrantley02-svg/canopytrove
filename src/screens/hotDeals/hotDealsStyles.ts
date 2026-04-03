@@ -1,9 +1,60 @@
 import { StyleSheet } from 'react-native';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, radii, spacing, textStyles, typography } from '../../theme/tokens';
 
 export const styles = StyleSheet.create({
   filters: {
     gap: spacing.md,
+    padding: spacing.xl,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: 'rgba(15, 24, 31, 0.86)',
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  filtersHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  filtersHeaderCompact: {
+    flexDirection: 'column',
+  },
+  filtersHeaderCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  filtersEyebrow: {
+    ...textStyles.labelCaps,
+    color: colors.textSoft,
+  },
+  filtersTitle: {
+    ...textStyles.section,
+    color: colors.text,
+  },
+  filtersPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 200, 106, 0.22)',
+    backgroundColor: 'rgba(245, 200, 106, 0.10)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  filtersPillCompact: {
+    alignSelf: 'flex-start',
+  },
+  filtersPillText: {
+    ...textStyles.caption,
+    color: colors.goldSoft,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   actionRow: {
     flexDirection: 'row',
@@ -12,7 +63,7 @@ export const styles = StyleSheet.create({
   locationButton: {
     minHeight: 40,
     borderRadius: radii.pill,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -20,9 +71,8 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   locationButtonText: {
-    color: colors.background,
-    fontSize: typography.caption,
-    fontWeight: '900',
+    ...textStyles.button,
+    color: colors.backgroundDeep,
     textTransform: 'uppercase',
   },
   errorText: {
@@ -33,22 +83,19 @@ export const styles = StyleSheet.create({
   locationSummary: {
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,122,0.28)',
-    backgroundColor: 'rgba(255,122,122,0.08)',
+    borderColor: colors.borderSoft,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     gap: 2,
   },
   locationMode: {
-    color: colors.danger,
-    fontSize: typography.caption,
-    fontWeight: '800',
-    textTransform: 'uppercase',
+    ...textStyles.labelCaps,
+    color: colors.textSoft,
   },
   locationLabel: {
+    ...textStyles.bodyStrong,
     color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '800',
   },
   sortRow: {
     flexDirection: 'row',
@@ -58,23 +105,21 @@ export const styles = StyleSheet.create({
   sortChip: {
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.borderSoft,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.card,
+    backgroundColor: colors.cardMuted,
   },
   sortChipActive: {
-    backgroundColor: colors.danger,
-    borderColor: colors.danger,
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
   },
   sortChipText: {
-    color: colors.textMuted,
-    fontSize: typography.caption,
-    fontWeight: '700',
-    textTransform: 'capitalize',
+    ...textStyles.caption,
+    color: colors.textSoft,
   },
   sortChipTextActive: {
-    color: colors.background,
+    color: colors.backgroundDeep,
   },
   list: {
     gap: spacing.lg,
@@ -83,8 +128,8 @@ export const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,122,0.3)',
-    backgroundColor: colors.card,
+    borderColor: colors.borderSoft,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
@@ -93,9 +138,8 @@ export const styles = StyleSheet.create({
     opacity: 0.72,
   },
   loadMoreButtonText: {
-    color: colors.danger,
-    fontSize: typography.body,
-    fontWeight: '800',
+    ...textStyles.button,
+    color: colors.text,
     textTransform: 'uppercase',
   },
   emptyState: {
@@ -111,5 +155,40 @@ export const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: typography.body,
     lineHeight: 22,
+  },
+  memberGateActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  memberGatePrimaryButton: {
+    minHeight: 44,
+    flex: 1,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  memberGatePrimaryButtonText: {
+    ...textStyles.button,
+    color: colors.backgroundDeep,
+    textTransform: 'uppercase',
+  },
+  memberGateSecondaryButton: {
+    minHeight: 44,
+    flex: 1,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.cardMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  memberGateSecondaryButtonText: {
+    ...textStyles.button,
+    color: colors.text,
+    textTransform: 'uppercase',
   },
 });

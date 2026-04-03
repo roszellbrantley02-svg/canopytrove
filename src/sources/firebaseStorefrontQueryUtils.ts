@@ -1,5 +1,5 @@
-import { BrowseSortKey, Coordinates, StorefrontSummary } from '../types/storefront';
-import { StorefrontSourceSummaryQuery, StorefrontSummaryPage } from './storefrontSource';
+import type { BrowseSortKey, Coordinates, StorefrontSummary } from '../types/storefront';
+import type { StorefrontSourceSummaryQuery, StorefrontSummaryPage } from './storefrontSource';
 
 export function getSearchNarrowing(searchQuery?: string) {
   const normalizedQuery = searchQuery?.trim();
@@ -90,7 +90,7 @@ export function milesToLongitudeDelta(radiusMiles: number, latitude: number) {
 export function filterByRadius(
   summaries: StorefrontSummary[],
   origin?: Coordinates,
-  radiusMiles?: number
+  radiusMiles?: number,
 ) {
   if (!origin || !radiusMiles) {
     return summaries;
@@ -117,7 +117,7 @@ export function sortItems(items: StorefrontSummary[], sortKey: BrowseSortKey = '
 
 export function paginate(
   items: StorefrontSummary[],
-  query?: StorefrontSourceSummaryQuery
+  query?: StorefrontSourceSummaryQuery,
 ): StorefrontSummaryPage {
   const offset = Math.max(0, query?.offset ?? 0);
   const limit =

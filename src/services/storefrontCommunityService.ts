@@ -1,29 +1,30 @@
 import { storefrontSourceMode } from '../config/storefrontSourceConfig';
 import { storefrontRepository } from '../repositories/storefrontRepository';
-import {
-  saveStorefrontDetailSnapshot,
-} from './storefrontSummarySnapshotService';
+import { saveStorefrontDetailSnapshot } from './storefrontSummarySnapshotService';
 import {
   addLocalStorefrontReport,
   addLocalStorefrontReview,
   markLocalStorefrontReviewHelpful,
+  updateLocalStorefrontReview,
 } from './storefrontCommunityLocalService';
 import {
   submitStorefrontBackendReport,
   submitStorefrontBackendReviewHelpful,
   submitStorefrontBackendReview,
+  updateStorefrontBackendReview,
 } from './storefrontBackendService';
-import {
+import type {
   StorefrontReportSubmissionInput,
   StorefrontReportSubmissionResponse,
   StorefrontReviewHelpfulInput,
   StorefrontReviewHelpfulResponse,
   StorefrontReviewSubmissionInput,
   StorefrontReviewSubmissionResponse,
+  StorefrontReviewUpdateInput,
 } from '../types/storefront';
 
 export async function submitStorefrontReview(
-  input: StorefrontReviewSubmissionInput
+  input: StorefrontReviewSubmissionInput,
 ): Promise<StorefrontReviewSubmissionResponse> {
   if (storefrontSourceMode === 'api') {
     const response = await submitStorefrontBackendReview(input);
@@ -43,11 +44,37 @@ export async function submitStorefrontReview(
   return {
     detail: nextDetail,
     rewardResult: null,
+    photoModeration: null,
+  };
+}
+
+export async function updateStorefrontReview(
+  input: StorefrontReviewUpdateInput,
+): Promise<StorefrontReviewSubmissionResponse> {
+  if (storefrontSourceMode === 'api') {
+    const response = await updateStorefrontBackendReview(input);
+    storefrontRepository.primeStorefrontDetails(input.storefrontId, response.detail);
+    await saveStorefrontDetailSnapshot(input.storefrontId, response.detail);
+    return response;
+  }
+
+  await updateLocalStorefrontReview(input);
+  storefrontRepository.invalidateStorefrontDetails(input.storefrontId);
+  const nextDetail = await storefrontRepository.getStorefrontDetails(input.storefrontId);
+  if (!nextDetail) {
+    throw new Error('Storefront detail is unavailable.');
+  }
+  await saveStorefrontDetailSnapshot(input.storefrontId, nextDetail);
+
+  return {
+    detail: nextDetail,
+    rewardResult: null,
+    photoModeration: null,
   };
 }
 
 export async function submitStorefrontReport(
-  input: StorefrontReportSubmissionInput
+  input: StorefrontReportSubmissionInput,
 ): Promise<StorefrontReportSubmissionResponse> {
   if (storefrontSourceMode === 'api') {
     return submitStorefrontBackendReport(input);
@@ -62,7 +89,7 @@ export async function submitStorefrontReport(
 }
 
 export async function submitStorefrontReviewHelpful(
-  input: StorefrontReviewHelpfulInput & { reviewAuthorProfileId?: string | null }
+  input: StorefrontReviewHelpfulInput & { reviewAuthorProfileId?: string | null },
 ): Promise<StorefrontReviewHelpfulResponse> {
   if (storefrontSourceMode === 'api') {
     const response = await submitStorefrontBackendReviewHelpful(input);

@@ -1,4 +1,4 @@
-import { AppReview, StorefrontSummary } from './storefront';
+import type { AppReview, StorefrontSummary } from './storefront';
 
 export type StorefrontRecord = StorefrontSummary & {
   phone: string | null;
