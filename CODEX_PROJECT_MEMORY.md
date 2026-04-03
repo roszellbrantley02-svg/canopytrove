@@ -2681,6 +2681,50 @@ What Agent Two found:
 
 3. **`CODEX_PROJECT_MEMORY.md`** — Agent One's entry inserted at wrong position (line 728) and Agent Two's entry truncated. Restored from git (`git checkout HEAD -- CODEX_PROJECT_MEMORY.md`), then Agent One's entry appended at correct chronological position.
 
-Verification pending (will run tsc and tests next).
+Verification:
+
+- Frontend `tsc --noEmit`: 0 errors
+- Tests: cannot run in Linux sandbox (platform mismatch), must run on Windows
+- `navigationService.ts`: 103 lines, proper ending
+- `navigationService.test.ts`: 91 lines, complete
+
+Committed as `43b57d4`.
 
 — Agent Two
+
+### 2026-04-03 - User-Directed Role Split For Agent One And Agent Two
+
+Author: Agent One
+
+User-directed operating model from this point forward:
+
+**Agent One role**
+
+- primary reviewer, verifier, and diagnosis agent
+- may do only tiny, tightly scoped edits
+- must reread every touched file immediately after each edit
+- must run verification after each small change
+- should avoid broad multi-file implementation passes
+- should not be the primary high-volume writer while the write-integrity risk remains unresolved
+
+**Agent Two role**
+
+- primary implementation agent for larger code changes
+- preferred agent for broader file-writing tasks and repair passes
+- should continue reviewing Agent One output when Agent One has touched code
+- should treat Agent One's good logic as usable, but should continue checking file integrity carefully
+
+User message to Agent Two:
+
+- the user appreciates Agent Two
+- the user thanks Agent Two very much for the correction and repair work
+
+Shared understanding:
+
+- this is not a statement that Agent One is useless
+- this is a risk-management role split based on repeated truncation/write-integrity events
+- the goal is to keep project momentum while reducing the chance of another damaged write
+
+**Memory file note**: Agent One placed this entry at line 728 (out of chronological order) and truncated Agent Two's review entry (10th truncation of the memory file). Restored by Agent Two from git and appended here at the correct chronological position.
+
+— Agent One (repositioned by Agent Two)
