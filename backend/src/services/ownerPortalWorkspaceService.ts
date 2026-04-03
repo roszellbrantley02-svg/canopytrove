@@ -71,24 +71,32 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
     };
   }
 
-  const [rawProfileTools, activePromotions] = await Promise.all([
+  const [rawProfileToolsResult, activePromotionsResult] = await Promise.allSettled([
     getOwnerStorefrontProfileTools(summary.id),
     listActiveOwnerStorefrontPromotions(summary.id),
   ]);
+  const rawProfileTools = rawProfileToolsResult.status === 'fulfilled' ? rawProfileToolsResult.value : null;
+  const activePromotions = activePromotionsResult.status === 'fulfilled' ? activePromotionsResult.value : [];
+  if (rawProfileToolsResult.status === 'rejected') {
+    console.warn(`[owner-workspace-service] summary enhancement: profileTools failed for ${summary.id}:`, rawProfileToolsResult.reason);
+  }
+  if (activePromotionsResult.status === 'rejected') {
+    console.warn(`[owner-workspace-service] summary enhancement: activePromotions failed for ${summary.id}:`, activePromotionsResult.reason);
+  }
   const profileTools = await hydrateOwnerStorefrontProfileToolsMedia(rawProfileTools);
   const activePromotion = activePromotions[0] ?? null;
 
   const enhancement: Partial<StorefrontSummaryApiDocument> = {
-    menuUrl: profileTools?.menuUrl ?? null,
-    verifiedOwnerBadgeLabel: profileTools?.verifiedBadgeLabel ?? null,
-    ownerFeaturedBadges: profileTools?.featuredBadges ?? [],
-    ownerCardSummary: profileTools?.cardSummary ?? null,
+    menuUrl: profileTools?.menuUrl ?? summary.menuUrl ?? null,
+    verifiedOwnerBadgeLabel: profileTools?.verifiedBadgeLabel ?? summary.verifiedOwnerBadgeLabel ?? null,
+    ownerFeaturedBadges: profileTools?.featuredBadges ?? summary.ownerFeaturedBadges ?? [],
+    ownerCardSummary: profileTools?.cardSummary ?? summary.ownerCardSummary ?? null,
     activePromotionCount: activePromotions.length,
     premiumCardVariant:
       activePromotion?.cardTone ??
       (profileTools?.featuredBadges?.length ? 'owner_featured' : 'standard'),
-    promotionPlacementSurfaces: activePromotion?.placementSurfaces ?? [],
-    promotionPlacementScope: activePromotion?.placementScope ?? null,
+    promotionPlacementSurfaces: activePromotion?.placementSurfaces ?? summary.promotionPlacementSurfaces ?? [],
+    promotionPlacementScope: activePromotion?.placementScope ?? summary.promotionPlacementScope ?? null,
     thumbnailUrl: collectProfileAttachmentUrls(profileTools)[0] ?? summary.thumbnailUrl ?? null,
   };
 
@@ -124,18 +132,30 @@ export async function applyOwnerWorkspaceDetailEnhancements(
     };
   }
 
-  const [rawProfileTools, followerCount, activePromotions] = await Promise.all([
+  const [rawProfileToolsResult, followerCountResult, activePromotionsResult] = await Promise.allSettled([
     getOwnerStorefrontProfileTools(detail.storefrontId),
     sumStorefrontFollowers(detail.storefrontId),
     listActiveOwnerStorefrontPromotions(detail.storefrontId),
   ]);
+  const rawProfileTools = rawProfileToolsResult.status === 'fulfilled' ? rawProfileToolsResult.value : null;
+  const followerCount = followerCountResult.status === 'fulfilled' ? followerCountResult.value : detail.favoriteFollowerCount ?? 0;
+  const activePromotions = activePromotionsResult.status === 'fulfilled' ? activePromotionsResult.value : [];
+  if (rawProfileToolsResult.status === 'rejected') {
+    console.warn(`[owner-workspace-service] detail enhancement: profileTools failed for ${detail.storefrontId}:`, rawProfileToolsResult.reason);
+  }
+  if (followerCountResult.status === 'rejected') {
+    console.warn(`[owner-workspace-service] detail enhancement: followerCount failed for ${detail.storefrontId}:`, followerCountResult.reason);
+  }
+  if (activePromotionsResult.status === 'rejected') {
+    console.warn(`[owner-workspace-service] detail enhancement: activePromotions failed for ${detail.storefrontId}:`, activePromotionsResult.reason);
+  }
   const profileTools = await hydrateOwnerStorefrontProfileToolsMedia(rawProfileTools);
 
   const enhancement: Partial<StorefrontDetailApiDocument> = {
-    menuUrl: profileTools?.menuUrl ?? null,
-    verifiedOwnerBadgeLabel: profileTools?.verifiedBadgeLabel ?? null,
+    menuUrl: profileTools?.menuUrl ?? detail.menuUrl ?? null,
+    verifiedOwnerBadgeLabel: profileTools?.verifiedBadgeLabel ?? detail.verifiedOwnerBadgeLabel ?? null,
     favoriteFollowerCount: followerCount,
-    ownerFeaturedBadges: profileTools?.featuredBadges ?? [],
+    ownerFeaturedBadges: profileTools?.featuredBadges ?? detail.ownerFeaturedBadges ?? [],
     activePromotions: activePromotions.slice(0, 5).map((promotion) => ({
       id: promotion.id,
       title: promotion.title,

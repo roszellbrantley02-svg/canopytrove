@@ -59,6 +59,34 @@ const storefrontDetailEnhancementCache = new Map<
   { expiresAt: number; value: Partial<StorefrontDetailApiDocument> }
 >();
 
+type OwnerWorkspaceEnhancementDeps = {
+  getProfileTools: (storefrontId: string) => Promise<OwnerStorefrontProfileToolsDocument | null>;
+  getActivePromotion: (storefrontId: string) => Promise<OwnerStorefrontPromotionDocument | null>;
+  getFollowerCount: (storefrontId: string) => Promise<number>;
+  hydrateProfileTools: (
+    profileTools: OwnerStorefrontProfileToolsDocument | null
+  ) => Promise<OwnerStorefrontProfileToolsDocument | null>;
+};
+
+const defaultOwnerWorkspaceEnhancementDeps: OwnerWorkspaceEnhancementDeps = {
+  getProfileTools: getOwnerStorefrontProfileTools,
+  getActivePromotion,
+  getFollowerCount: sumStorefrontFollowers,
+  hydrateProfileTools: hydrateOwnerStorefrontProfileToolsMedia,
+};
+
+function logOwnerWorkspaceEnhancementWarning(
+  scope: 'summary' | 'detail',
+  storefrontId: string,
+  dependency: string,
+  error: unknown
+) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.warn(
+    `[owner-workspace-${scope}] failed to load ${dependency} for ${storefrontId}: ${message}`
+  );
+}
+
 async function getOwnerProfile(ownerUid: string) {
   const collectionRef = getOwnerProfileCollection();
   if (collectionRef) {
@@ -400,7 +428,8 @@ function buildPatternFlags(options: {
 }
 
 export async function applyOwnerWorkspaceSummaryEnhancements(
-  summary: StorefrontSummaryApiDocument
+  summary: StorefrontSummaryApiDocument,
+  deps: OwnerWorkspaceEnhancementDeps = defaultOwnerWorkspaceEnhancementDeps
 ) {
   const cached = storefrontSummaryEnhancementCache.get(summary.id);
   if (cached && cached.expiresAt > Date.now()) {
@@ -410,23 +439,62 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
     };
   }
 
-  const [rawProfileTools, activePromotion] = await Promise.all([
-    getOwnerStorefrontProfileTools(summary.id),
-    getActivePromotion(summary.id),
+  const [rawProfileToolsResult, activePromotionResult] = await Promise.allSettled([
+    deps.getProfileTools(summary.id),
+    deps.getActivePromotion(summary.id),
   ]);
-  const profileTools = await hydrateOwnerStorefrontProfileToolsMedia(rawProfileTools);
+  let profileToolsResolved = false;
+  let profileTools: OwnerStorefrontProfileToolsDocument | null = null;
+  if (rawProfileToolsResult.status === 'fulfilled') {
+    try {
+      profileTools = await deps.hydrateProfileTools(rawProfileToolsResult.value);
+      profileToolsResolved = true;
+    } catch (error) {
+      logOwnerWorkspaceEnhancementWarning('summary', summary.id, 'profileToolsMedia', error);
+    }
+  } else {
+    logOwnerWorkspaceEnhancementWarning('summary', summary.id, 'profileTools', rawProfileToolsResult.reason);
+  }
+
+  const activePromotionResolved = activePromotionResult.status === 'fulfilled';
+  const activePromotion = activePromotionResolved ? activePromotionResult.value : null;
+  if (!activePromotionResolved) {
+    logOwnerWorkspaceEnhancementWarning(
+      'summary',
+      summary.id,
+      'activePromotion',
+      activePromotionResult.reason
+    );
+  }
+  const profileAttachmentUrls = collectProfileAttachmentUrls(profileTools);
 
   const enhancement: Partial<StorefrontSummaryApiDocument> = {
-    menuUrl: profileTools?.menuUrl ?? null,
-    verifiedOwnerBadgeLabel: profileTools?.verifiedBadgeLabel ?? null,
-    ownerFeaturedBadges: profileTools?.featuredBadges ?? [],
-    ownerCardSummary: profileTools?.cardSummary ?? null,
+    menuUrl: profileToolsResolved ? profileTools?.menuUrl ?? null : summary.menuUrl ?? null,
+    verifiedOwnerBadgeLabel: profileToolsResolved
+      ? profileTools?.verifiedBadgeLabel ?? null
+      : summary.verifiedOwnerBadgeLabel ?? null,
+    ownerFeaturedBadges: profileToolsResolved
+      ? profileTools?.featuredBadges ?? []
+      : summary.ownerFeaturedBadges ?? [],
+    ownerCardSummary: profileToolsResolved
+      ? profileTools?.cardSummary ?? null
+      : summary.ownerCardSummary ?? null,
     premiumCardVariant:
       activePromotion?.cardTone ??
-      (profileTools?.featuredBadges?.length ? 'owner_featured' : 'standard'),
-    promotionPlacementSurfaces: activePromotion?.placementSurfaces ?? [],
-    promotionPlacementScope: activePromotion?.placementScope ?? null,
-    thumbnailUrl: collectProfileAttachmentUrls(profileTools)[0] ?? summary.thumbnailUrl ?? null,
+      (profileToolsResolved
+        ? profileTools?.featuredBadges?.length
+          ? 'owner_featured'
+          : 'standard'
+        : summary.premiumCardVariant ?? 'standard'),
+    promotionPlacementSurfaces: activePromotionResolved
+      ? activePromotion?.placementSurfaces ?? []
+      : summary.promotionPlacementSurfaces ?? [],
+    promotionPlacementScope: activePromotionResolved
+      ? activePromotion?.placementScope ?? null
+      : summary.promotionPlacementScope ?? null,
+    thumbnailUrl: profileToolsResolved
+      ? profileAttachmentUrls[0] ?? summary.thumbnailUrl ?? null
+      : summary.thumbnailUrl ?? null,
   };
 
   if (activePromotion) {
@@ -450,7 +518,10 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
   };
 }
 
-export async function applyOwnerWorkspaceDetailEnhancements(detail: StorefrontDetailApiDocument) {
+export async function applyOwnerWorkspaceDetailEnhancements(
+  detail: StorefrontDetailApiDocument,
+  deps: OwnerWorkspaceEnhancementDeps = defaultOwnerWorkspaceEnhancementDeps
+) {
   const cached = storefrontDetailEnhancementCache.get(detail.storefrontId);
   if (cached && cached.expiresAt > Date.now()) {
     return {
@@ -459,20 +530,48 @@ export async function applyOwnerWorkspaceDetailEnhancements(detail: StorefrontDe
     };
   }
 
-  const [rawProfileTools, followerCount] = await Promise.all([
-    getOwnerStorefrontProfileTools(detail.storefrontId),
-    sumStorefrontFollowers(detail.storefrontId),
+  const [rawProfileToolsResult, followerCountResult] = await Promise.allSettled([
+    deps.getProfileTools(detail.storefrontId),
+    deps.getFollowerCount(detail.storefrontId),
   ]);
-  const profileTools = await hydrateOwnerStorefrontProfileToolsMedia(rawProfileTools);
+  let profileToolsResolved = false;
+  let profileTools: OwnerStorefrontProfileToolsDocument | null = null;
+  if (rawProfileToolsResult.status === 'fulfilled') {
+    try {
+      profileTools = await deps.hydrateProfileTools(rawProfileToolsResult.value);
+      profileToolsResolved = true;
+    } catch (error) {
+      logOwnerWorkspaceEnhancementWarning('detail', detail.storefrontId, 'profileToolsMedia', error);
+    }
+  } else {
+    logOwnerWorkspaceEnhancementWarning('detail', detail.storefrontId, 'profileTools', rawProfileToolsResult.reason);
+  }
+
+  const followerCountResolved = followerCountResult.status === 'fulfilled';
+  if (!followerCountResolved) {
+    logOwnerWorkspaceEnhancementWarning(
+      'detail',
+      detail.storefrontId,
+      'followerCount',
+      followerCountResult.reason
+    );
+  }
+  const profileAttachmentUrls = collectProfileAttachmentUrls(profileTools);
 
   const enhancement: Partial<StorefrontDetailApiDocument> = {
-    menuUrl: profileTools?.menuUrl ?? null,
-    verifiedOwnerBadgeLabel: profileTools?.verifiedBadgeLabel ?? null,
-    favoriteFollowerCount: followerCount,
-    ownerFeaturedBadges: profileTools?.featuredBadges ?? [],
-    photoUrls: collectProfileAttachmentUrls(profileTools).length
+    menuUrl: profileToolsResolved ? profileTools?.menuUrl ?? null : detail.menuUrl ?? null,
+    verifiedOwnerBadgeLabel: profileToolsResolved
+      ? profileTools?.verifiedBadgeLabel ?? null
+      : detail.verifiedOwnerBadgeLabel ?? null,
+    favoriteFollowerCount: followerCountResolved
+      ? followerCountResult.value
+      : detail.favoriteFollowerCount ?? null,
+    ownerFeaturedBadges: profileToolsResolved
+      ? profileTools?.featuredBadges ?? []
+      : detail.ownerFeaturedBadges ?? [],
+    photoUrls: profileToolsResolved && profileAttachmentUrls.length
       ? Array.from(
-          new Set([...collectProfileAttachmentUrls(profileTools), ...detail.photoUrls])
+          new Set([...profileAttachmentUrls, ...detail.photoUrls])
         ).slice(0, 12)
       : detail.photoUrls,
   };
@@ -634,7 +733,7 @@ async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPortalWor
       reviewNotes: report.reviewNotes ?? null,
     }));
 
-  const promotionPerformance = await Promise.all(
+  const settledPromotionPerformance = await Promise.allSettled(
     promotions.slice(0, 6).map(async (promotion) => ({
       promotionId: promotion.id,
       title: promotion.title,
@@ -645,6 +744,16 @@ async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPortalWor
       metrics: await aggregateDealMetrics(promotion.id),
     }))
   );
+  const promotionPerformance = settledPromotionPerformance.flatMap((result, index) => {
+    if (result.status === 'fulfilled') {
+      return [result.value];
+    }
+    console.warn(
+      `[owner-workspace] failed to aggregate metrics for promotion ${promotions[index]?.id ?? 'unknown'}:`,
+      result.reason
+    );
+    return [];
+  });
 
   const activePromotion =
     promotions.find((promotion) => derivePromotionStatus(promotion) === 'active') ?? null;

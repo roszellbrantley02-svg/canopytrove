@@ -293,10 +293,18 @@ export async function recordRuntimeIncident(input: {
 }
 
 export async function getRuntimeOpsStatus(limit = 12): Promise<RuntimeOpsStatus> {
-  const [policy, incidents] = await Promise.all([
+  const [policyResult, incidentsResult] = await Promise.allSettled([
     getStoredRuntimePolicy(),
     listRuntimeIncidentRecords(Math.max(limit, 40)),
   ]);
+  const policy = policyResult.status === 'fulfilled' ? policyResult.value : createDefaultPolicy();
+  const incidents = incidentsResult.status === 'fulfilled' ? incidentsResult.value : [];
+  if (policyResult.status === 'rejected') {
+    console.warn('[runtimeOpsService] failed to load runtime policy, using default:', policyResult.reason);
+  }
+  if (incidentsResult.status === 'rejected') {
+    console.warn('[runtimeOpsService] failed to load incident records:', incidentsResult.reason);
+  }
   const { getRuntimeMonitoringStatus } = await import('./healthMonitorService');
 
   return {

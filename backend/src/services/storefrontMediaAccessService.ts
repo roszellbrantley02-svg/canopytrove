@@ -125,16 +125,27 @@ export async function hydrateOwnerStorefrontProfileToolsMedia(
     fallbackUrl: profileTools.cardPhotoUrl,
   });
 
+  const featuredPhotoResults = await Promise.allSettled(
+    (profileTools.featuredPhotoPaths ?? []).map((storagePath) =>
+      resolveStorefrontMediaReadUrl({
+        storagePath,
+        fallbackUrl: null,
+      })
+    )
+  );
+  const resolvedFeaturedPhotos = featuredPhotoResults.flatMap((result, index) => {
+    if (result.status === 'fulfilled') {
+      return result.value ? [result.value] : [];
+    }
+    console.warn(
+      `[storefrontMediaAccess] failed to resolve featured photo URL for path ${(profileTools.featuredPhotoPaths ?? [])[index] ?? 'unknown'}:`,
+      result.reason
+    );
+    return [];
+  });
   const featuredPhotoUrls = uniqueStrings([
     cardPhotoUrl,
-    ...(await Promise.all(
-      (profileTools.featuredPhotoPaths ?? []).map((storagePath) =>
-        resolveStorefrontMediaReadUrl({
-          storagePath,
-          fallbackUrl: null,
-        })
-      )
-    )),
+    ...resolvedFeaturedPhotos,
     ...(profileTools.featuredPhotoUrls ?? []).map((url) => normalizeOptionalHttpUrl(url)),
   ]).slice(0, 8);
 
