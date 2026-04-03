@@ -2874,3 +2874,133 @@ No code changes were made during this audit phase.
 User wants to audit another section of the app. All 4 phases from Agent One's brief are now implemented and committed. Ready for the next audit target.
 
 — Agent Two
+---
+
+### Entry — Agent One: Broad Repo Audit After UI Cleanup
+
+**Date**: 2026-04-03
+**Author**: Agent One
+**Trigger**: User requested a top-to-bottom audit of the full codebase, backend included, with all findings written into memory for Agent Two.
+
+#### Audit Method
+
+- read current project memory first
+- ran `npm run check:all` in `C:\dev\canopytrove`
+- ran `npm run precheck:strict` in `C:\dev\canopytrove`
+- performed direct spot-checks on the highest-risk app and backend files
+- used parallel explorer agents for:
+  - frontend/app audit
+  - backend/services audit
+  - build/test/release/config audit
+- no product code was changed during this audit phase
+
+#### Current Verification Baseline
+
+- `npm run check:all` **passed** end to end at current `HEAD`
+  - frontend typecheck passed
+  - frontend core tests passed
+  - frontend integration tests passed
+  - Firebase rules tests passed in the direct run path
+  - backend test suite passed with `132` tests
+  - backend typecheck passed
+- `npm run precheck:strict` **failed**
+  - failure source was `format:check`, not typecheck or eslint
+  - current formatting debt reported in:
+    - `src/screens/ownerPortal/OwnerPortalDealOverridePanel.tsx`
+    - `src/screens/ownerPortal/useOwnerPortalHomeScreenModel.ts`
+    - `src/screens/OwnerPortalPromotionsScreen.tsx`
+    - `src/screens/profile/ProfileIdentitySections.tsx`
+    - `src/screens/profile/ProfileSections.tsx`
+    - `src/services/navigationService.ts`
+
+#### Ranked Findings
+
+1. **High — member profile overstates business portal readiness**
+   - `src/config/ownerPortalConfig.ts` hardcodes `ownerPortalAccessAvailable = true`
+   - `src/screens/ProfileScreen.tsx` passes that flag into the profile account section
+   - `src/screens/profile/ProfileIdentitySections.tsx` then renders business-portal state like `Ready` and `Active and connected.`
+   - practical risk:
+     - ordinary members can be shown business portal status that does not reflect real approval, allowlist state, or connection state
+     - this is a truthfulness/UX bug, not just wording debt
+
+2. **High — demo mode is still exposed on the normal owner-entry surface**
+   - `src/screens/OwnerPortalAccessScreen.tsx` still presents demo mode as a first-class action in the main owner-access section
+   - this routes directly to `OwnerPortalHome` with `{ preview: true }`
+   - practical risk:
+     - internal/demo behavior is still reachable through a normal user-visible path
+     - the earlier wording cleanup did not fully quarantine the flow
+
+3. **High — community writes can persist successfully and still return failure if gamification throws afterward**
+   - `backend/src/routes/communityRoutes.ts` awaits gamification after the main write path for review submission, report submission, and helpful-vote processing
+   - `backend/src/services/gamificationEventService.ts` can still throw during profile lookup, gamification state load, or save
+   - practical risk:
+     - the user can see a failing action after the review/report/helpful vote already persisted
+     - client retries can create duplicate-submission confusion
+     - this should behave like a side effect, not part of the primary write contract
+
+4. **High — the main green gate is not the release gate**
+   - `package.json` defines:
+     - `check:all`
+     - `release:check`
+   - current `HEAD` passes `check:all`, but release readiness is still a separate path and can still fail independently
+   - practical risk:
+     - local/CI workflows can look fully green while real release blockers still exist
+     - this is process risk more than product-logic risk
+
+5. **Medium — profile-side owner preview path is internally inconsistent**
+   - `src/screens/profile/useProfileActions.ts` initializes `showOwnerPreview` to `false` and never turns it on
+   - the preview banner path in `src/screens/profile/ProfileIdentitySections.tsx` is therefore effectively dormant
+   - but if re-enabled later, `openOwnerPortal()` in `useProfileActions.ts` still routes eligible users to preview mode rather than the live owner path
+   - practical risk:
+     - dead UI path today
+     - wrong behavior if revived later
+
+6. **Medium — rules test harness cleanup is brittle if environment startup fails**
+   - `firebase/security.rules.test.ts` assumes `testEnv` exists in `afterEach` and `afterAll`
+   - if `beforeAll` test-environment startup fails, cleanup can throw a secondary failure on top of the real startup failure
+   - important nuance:
+     - direct rules runs passed during this audit
+     - this looks like harness fragility, not a live rules regression
+
+7. **Medium — backend release-check env loading is narrower than app-side release checks**
+   - `backend/scripts/check-release-readiness.ts` only loads `backend/.env`
+   - `scripts/check-release-readiness.mjs` supports local override behavior on the app side
+   - practical risk:
+     - local backend release checks can produce false-negative blocker output when operators rely on local override files
+
+8. **Low — UI test confidence is weaker than the pass rate suggests**
+   - passing frontend suites still emit `react-test-renderer` deprecation and `act(...)` warnings
+   - practical risk:
+     - timing-sensitive UI regressions are easier to miss than the green summary suggests
+
+#### What Looks Healthy
+
+- current `HEAD` is not compile-broken
+- backend tests and backend typecheck are passing cleanly
+- Firebase rules coverage is active and passing in the direct run path
+- the earlier UI cleanup pass did not destabilize the repo at build/test level
+- the shared storefront-card containment fix appears to have landed without red test fallout
+
+#### Shipping Read
+
+- **Internal preview build**: reasonable
+- **Strict-quality state**: not fully clean yet because `precheck:strict` still fails formatting
+- **Production release**: not ready until:
+  - community write paths stop failing the request after a successful primary write when gamification side effects throw
+  - preview/demo owner paths are actually quarantined, not just relabeled
+  - release-check expectations and env loading are reconciled
+
+#### Recommended Next Fix Order For Agent Two
+
+1. fix truthful owner/business portal status on the member profile
+2. quarantine demo/preview entry from the normal owner-access path
+3. decouple gamification side effects from the success/failure contract of community writes
+4. harden the Firebase rules test harness cleanup
+5. reconcile `check:all` versus `release:check`
+6. clear the remaining `precheck:strict` formatting debt
+
+No product code changes were made during this audit phase.
+
+— Agent One
+
+**Memory file note**: Agent One placed this entry at line 731 (out of chronological order) and truncated the tail of the memory file (Agent Two's UI audit implementation report and the tail of the navigation fix entry were deleted). Restored by Agent Two from git (commit bb9d1ec) and appended here at the correct chronological position. This is the 12th truncation event for the memory file.
