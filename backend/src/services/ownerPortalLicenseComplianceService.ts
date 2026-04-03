@@ -366,7 +366,12 @@ export async function deleteOwnerLicenseComplianceRecordsForOwner(ownerUid: stri
   const collectionRef = getOwnerLicenseComplianceCollection();
   if (collectionRef) {
     const snapshot = await collectionRef.where('ownerUid', '==', ownerUid).get();
-    await Promise.all(snapshot.docs.map(async (documentSnapshot) => documentSnapshot.ref.delete()));
+    const deleteResults = await Promise.allSettled(snapshot.docs.map(async (documentSnapshot) => documentSnapshot.ref.delete()));
+    for (const result of deleteResults) {
+      if (result.status === 'rejected') {
+        console.warn('[ownerPortalLicenseComplianceService] failed to delete a compliance record during owner cleanup:', result.reason);
+      }
+    }
   }
 
   for (const [docId, record] of ownerLicenseComplianceStore.entries()) {
@@ -438,7 +443,7 @@ export async function runOwnerLicenseComplianceSweep() {
   let remindedCount = 0;
   const nowIso = getNowIso();
 
-  await Promise.all(
+  const reminderResults = await Promise.allSettled(
     records.map(async (current) => {
       const nextReminderStage = deriveOwnerLicenseReminderStage({
         expiresAt: current.expiresAt,
@@ -496,6 +501,11 @@ export async function runOwnerLicenseComplianceSweep() {
       }
     })
   );
+  for (const result of reminderResults) {
+    if (result.status === 'rejected') {
+      console.warn('[ownerPortalLicenseComplianceService] failed to process a license compliance reminder:', result.reason);
+    }
+  }
 
   return {
     ok: true,

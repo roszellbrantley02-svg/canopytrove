@@ -282,13 +282,18 @@ export async function notifyRuntimeAlertSubscribers(options: {
     }))
   );
 
-  await Promise.all(
+  const tokenCleanupResults = await Promise.allSettled(
     tickets.map(async (ticket, index) => {
       if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
         await clearRuntimeAlertSubscriptionToken(recordsWithTokens[index]);
       }
     })
   );
+  for (const result of tokenCleanupResults) {
+    if (result.status === 'rejected') {
+      console.warn('[opsAlertSubscriptionService] failed to clear stale subscription token:', result.reason);
+    }
+  }
 
   if (tickets.some((ticket) => ticket.status === 'ok')) {
     markFingerprintAlertSent(options.fingerprint);

@@ -145,9 +145,19 @@ export async function notifyOwnersOfStorefrontActivity(options: {
     };
   }
 
-  const ownerAlertRecords = await Promise.all(
+  const settledAlertRecords = await Promise.allSettled(
     ownerUids.map((ownerUid) => getOwnerPortalAlertRecord(ownerUid))
   );
+  const ownerAlertRecords = settledAlertRecords.flatMap((result, index) => {
+    if (result.status === 'fulfilled') {
+      return [result.value];
+    }
+    console.warn(
+      `[ownerPortalAlertService] failed to load alert record for ${ownerUids[index] ?? 'unknown'}:`,
+      result.reason
+    );
+    return [];
+  });
   const recordsWithTokens = ownerAlertRecords.filter((record) => record.devicePushToken);
   if (!recordsWithTokens.length) {
     return {
@@ -173,7 +183,7 @@ export async function notifyOwnersOfStorefrontActivity(options: {
     }))
   );
 
-  await Promise.all(
+  const tokenCleanupResults = await Promise.allSettled(
     tickets.map(async (ticket, index) => {
       if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
         const record = recordsWithTokens[index];
@@ -184,6 +194,11 @@ export async function notifyOwnersOfStorefrontActivity(options: {
       }
     })
   );
+  for (const result of tokenCleanupResults) {
+    if (result.status === 'rejected') {
+      console.warn('[ownerPortalAlertService] failed to clear stale device token:', result.reason);
+    }
+  }
 
   return {
     notifiedOwnerCount: tickets.filter((ticket) => ticket.status === 'ok').length,

@@ -265,7 +265,7 @@ export async function listStorefrontAppReviews(storefrontId: string) {
   const collectionRef = getAppReviewCollection();
   if (collectionRef) {
     const snapshot = await collectionRef.where('storefrontId', '==', storefrontId).get();
-    return Promise.all(
+    const settledReviews = await Promise.allSettled(
       snapshot.docs
         .map((documentSnapshot) =>
           normalizeStoredReviewRecord(documentSnapshot.data() as StoredAppReviewRecord)
@@ -273,15 +273,29 @@ export async function listStorefrontAppReviews(storefrontId: string) {
         .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
         .map(mapStoredReviewToAppReview)
     );
+    return settledReviews.flatMap((result) => {
+      if (result.status === 'fulfilled') {
+        return [result.value];
+      }
+      console.warn('[storefrontCommunityService] failed to map a review:', result.reason);
+      return [];
+    });
   }
 
-  return Promise.all(
+  const settledMemoryReviews = await Promise.allSettled(
     (appReviewStore.get(storefrontId) ?? [])
       .slice()
       .map(normalizeStoredReviewRecord)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
       .map(mapStoredReviewToAppReview)
   );
+  return settledMemoryReviews.flatMap((result) => {
+    if (result.status === 'fulfilled') {
+      return [result.value];
+    }
+    console.warn('[storefrontCommunityService] failed to map a review:', result.reason);
+    return [];
+  });
 }
 
 async function getStoredStorefrontAppReviewById(reviewId: string) {
@@ -702,7 +716,12 @@ export async function deleteCommunityContentForProfile(profileId: string) {
 
   if (reviewCollectionRef) {
     const reviewSnapshot = await reviewCollectionRef.where('profileId', '==', profileId).get();
-    await Promise.all(reviewSnapshot.docs.map((documentSnapshot) => documentSnapshot.ref.delete()));
+    const reviewDeleteResults = await Promise.allSettled(reviewSnapshot.docs.map((documentSnapshot) => documentSnapshot.ref.delete()));
+    for (const result of reviewDeleteResults) {
+      if (result.status === 'rejected') {
+        console.warn('[storefrontCommunityService] failed to delete a review during profile cleanup:', result.reason);
+      }
+    }
   } else {
     Array.from(appReviewStore.entries()).forEach(([storefrontId, reviews]) => {
       const nextReviews = reviews.filter((review) => review.profileId !== profileId);
@@ -717,7 +736,12 @@ export async function deleteCommunityContentForProfile(profileId: string) {
 
   if (reportCollectionRef) {
     const reportSnapshot = await reportCollectionRef.where('profileId', '==', profileId).get();
-    await Promise.all(reportSnapshot.docs.map((documentSnapshot) => documentSnapshot.ref.delete()));
+    const reportDeleteResults = await Promise.allSettled(reportSnapshot.docs.map((documentSnapshot) => documentSnapshot.ref.delete()));
+    for (const result of reportDeleteResults) {
+      if (result.status === 'rejected') {
+        console.warn('[storefrontCommunityService] failed to delete a report during profile cleanup:', result.reason);
+      }
+    }
   } else {
     Array.from(storefrontReportStore.entries()).forEach(([storefrontId, reports]) => {
       const nextReports = reports.filter((report) => report.profileId !== profileId);

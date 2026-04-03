@@ -4,6 +4,7 @@ import {
   listReviewPhotoModerationQueue,
   reviewReviewPhotoUpload,
 } from './reviewPhotoModerationService';
+import type { ReviewPhotoModerationQueueItem } from './reviewPhotoModerationService';
 import { appendPhotoIdToStorefrontAppReview } from './storefrontCommunityService';
 
 type ReviewDecision = 'approved' | 'rejected' | 'needs_resubmission';
@@ -14,6 +15,32 @@ const DISPENSARY_CLAIMS_COLLECTION = 'dispensaryClaims';
 const BUSINESS_VERIFICATIONS_COLLECTION = 'businessVerifications';
 const IDENTITY_VERIFICATIONS_COLLECTION = 'identityVerifications';
 const STOREFRONT_REPORTS_COLLECTION = 'storefront_reports';
+
+type AdminReviewQueueDocument = Record<string, unknown>;
+
+export type AdminReviewQueueSectionWarning =
+  | 'claims'
+  | 'businessVerifications'
+  | 'identityVerifications'
+  | 'storefrontReports'
+  | 'reviewPhotos';
+
+type AdminReviewQueueLoaders = {
+  claims: () => Promise<AdminReviewQueueDocument[]>;
+  businessVerifications: () => Promise<AdminReviewQueueDocument[]>;
+  identityVerifications: () => Promise<AdminReviewQueueDocument[]>;
+  storefrontReports: () => Promise<AdminReviewQueueDocument[]>;
+  reviewPhotos: () => Promise<ReviewPhotoModerationQueueItem[]>;
+};
+
+export type AdminReviewQueueResult = {
+  claims: AdminReviewQueueDocument[];
+  businessVerifications: AdminReviewQueueDocument[];
+  identityVerifications: AdminReviewQueueDocument[];
+  storefrontReports: AdminReviewQueueDocument[];
+  reviewPhotos: ReviewPhotoModerationQueueItem[];
+  warnings: AdminReviewQueueSectionWarning[];
+};
 
 export function getAdminReviewReadiness() {
   const missingRequirements: string[] = [];
@@ -88,54 +115,116 @@ function mapVerificationDecision(status: ReviewDecision): VerificationDecision {
   return status;
 }
 
+function unwrapAdminReviewQueueSection<T>(
+  section: AdminReviewQueueSectionWarning,
+  result: PromiseSettledResult<T>,
+  fallback: T,
+  warnings: AdminReviewQueueSectionWarning[]
+) {
+  if (result.status === 'fulfilled') {
+    return result.value;
+  }
+
+  warnings.push(section);
+  console.warn(`[admin-review] failed to load ${section} queue section`, result.reason);
+  return fallback;
+}
+
+export async function loadAdminReviewQueueSections(
+  loaders: AdminReviewQueueLoaders
+): Promise<AdminReviewQueueResult> {
+  const [
+    claimsResult,
+    businessVerificationsResult,
+    identityVerificationsResult,
+    storefrontReportsResult,
+    reviewPhotosResult,
+  ] = await Promise.allSettled([
+    loaders.claims(),
+    loaders.businessVerifications(),
+    loaders.identityVerifications(),
+    loaders.storefrontReports(),
+    loaders.reviewPhotos(),
+  ]);
+
+  const warnings: AdminReviewQueueSectionWarning[] = [];
+
+  return {
+    claims: unwrapAdminReviewQueueSection('claims', claimsResult, [], warnings),
+    businessVerifications: unwrapAdminReviewQueueSection(
+      'businessVerifications',
+      businessVerificationsResult,
+      [],
+      warnings
+    ),
+    identityVerifications: unwrapAdminReviewQueueSection(
+      'identityVerifications',
+      identityVerificationsResult,
+      [],
+      warnings
+    ),
+    storefrontReports: unwrapAdminReviewQueueSection(
+      'storefrontReports',
+      storefrontReportsResult,
+      [],
+      warnings
+    ),
+    reviewPhotos: unwrapAdminReviewQueueSection('reviewPhotos', reviewPhotosResult, [], warnings),
+    warnings,
+  };
+}
+
 export async function getAdminReviewQueue(limitInput?: unknown) {
   const db = getAdminReviewDb();
   const limit = parsePositiveLimit(limitInput);
 
-  const [claims, businessVerifications, identityVerifications, storefrontReports, reviewPhotos] =
-    await Promise.all([
-      db
+  return loadAdminReviewQueueSections({
+    claims: async () => {
+      const snapshot = await db
         .collection(DISPENSARY_CLAIMS_COLLECTION)
         .where('claimStatus', '==', 'pending')
         .limit(limit)
-        .get(),
-      db
+        .get();
+      return snapshot.docs.map((documentSnapshot) => ({
+        id: documentSnapshot.id,
+        ...documentSnapshot.data(),
+      }));
+    },
+    businessVerifications: async () => {
+      const snapshot = await db
         .collection(BUSINESS_VERIFICATIONS_COLLECTION)
         .where('verificationStatus', '==', 'pending')
         .limit(limit)
-        .get(),
-      db
+        .get();
+      return snapshot.docs.map((documentSnapshot) => ({
+        id: documentSnapshot.id,
+        ...documentSnapshot.data(),
+      }));
+    },
+    identityVerifications: async () => {
+      const snapshot = await db
         .collection(IDENTITY_VERIFICATIONS_COLLECTION)
         .where('verificationStatus', '==', 'pending')
         .limit(limit)
-        .get(),
-      db
+        .get();
+      return snapshot.docs.map((documentSnapshot) => ({
+        id: documentSnapshot.id,
+        ...documentSnapshot.data(),
+      }));
+    },
+    storefrontReports: async () => {
+      const snapshot = await db
         .collection(STOREFRONT_REPORTS_COLLECTION)
         .where('moderationStatus', '==', 'open')
         .limit(limit)
-        .get(),
-      listReviewPhotoModerationQueue(limit),
-    ]);
-
-  return {
-    claims: claims.docs.map((documentSnapshot) => ({
-      id: documentSnapshot.id,
-      ...documentSnapshot.data(),
-    })),
-    businessVerifications: businessVerifications.docs.map((documentSnapshot) => ({
-      id: documentSnapshot.id,
-      ...documentSnapshot.data(),
-    })),
-    identityVerifications: identityVerifications.docs.map((documentSnapshot) => ({
-      id: documentSnapshot.id,
-      ...documentSnapshot.data(),
-    })),
-    storefrontReports: storefrontReports.docs.map((documentSnapshot) => ({
-      id: documentSnapshot.id,
-      ...documentSnapshot.data(),
-    })),
-    reviewPhotos,
-  };
+        .get();
+      return snapshot.docs.map((documentSnapshot) => ({
+        id: documentSnapshot.id,
+        ...documentSnapshot.data(),
+      }));
+    },
+    reviewPhotos: async () => listReviewPhotoModerationQueue(limit),
+  });
 }
 
 export async function getAdminReviewPhotoQueue(limitInput?: unknown) {
