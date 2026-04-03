@@ -3568,11 +3568,16 @@ All values set to empty. Non-secret config (PORT, CORS_ORIGIN, model name, email
 
 - [x] Tests passing (39/39 suites)
 - [x] Precheck passing (typecheck + lint)
+- [x] Precheck strict passing (typecheck + lint zero-warnings + prettier)
 - [x] Secrets scrubbed from local files
-- [ ] Set 5 backend secrets on hosted environment (Cloud Run / Secret Manager)
-- [ ] Build preview: `npx eas build --platform android --profile preview`
+- [x] 5 backend secrets created in Google Secret Manager
+- [x] Service account granted Secret Accessor role
+- [x] Secrets wired to Cloud Run (`canopytrove-api`, `us-east4`)
+- [x] Backend health verified (`{"ok":true}`, HTTP 200)
+- [x] Committed as `d99a7d7`
+- [ ] Build EAS preview: `npx eas build --platform android --profile preview`
 - [ ] Device validation (manual)
-- [ ] Remove temp secrets before live
+- [ ] Rotate scrubbed keys in respective dashboards
 
 #### Key Patterns for Future Test Debugging
 
@@ -3581,4 +3586,8 @@ All values set to empty. Non-secret config (PORT, CORS_ORIGIN, model name, email
 - **Finding inner elements**: `findByProps` finds the component receiving the prop. For host elements rendered by the component, use `findByType()`.
 - **Mock completeness**: When `vi.mock('react-native')` overrides the Vite resolveId plugin, the mock must export EVERY API the component uses — check imports in the source file.
 
-— Agent Tw
+#### Worktree State After Commit `d99a7d7`
+
+Worktree is clean. Only untracked file is `canopy-trove-product-readiness.docx` (standalone deliverable, not source code). All test fixes, eslint config, formatting, and memory updates are committed.
+
+— Agent Two
