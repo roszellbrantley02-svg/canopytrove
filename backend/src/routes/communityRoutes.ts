@@ -103,7 +103,13 @@ communityRoutes.post('/storefront-details/:storefrontId/reviews', async (request
     },
   });
 
-  const detail = await getStorefrontDetail(storefrontId);
+  // Detail refresh is a convenience — must not fail the primary write response
+  let detail: Awaited<ReturnType<typeof getStorefrontDetail>> | null = null;
+  try {
+    detail = await getStorefrontDetail(storefrontId);
+  } catch (detailError) {
+    console.error('[community] post-write detail refresh failed for review_submitted:', detailError);
+  }
 
   // Gamification is a side effect — must not fail the primary write response
   let rewardResult: Awaited<ReturnType<typeof applyGamificationEvent>> | null = null;
@@ -173,7 +179,15 @@ communityRoutes.put('/storefront-details/:storefrontId/reviews/:reviewId', async
   }
 
   invalidateCachedStorefrontDetail(storefrontId);
-  const detail = await getStorefrontDetail(storefrontId);
+
+  // Detail refresh is a convenience — must not fail the primary write response
+  let detail: Awaited<ReturnType<typeof getStorefrontDetail>> | null = null;
+  try {
+    detail = await getStorefrontDetail(storefrontId);
+  } catch (detailError) {
+    console.error('[community] post-write detail refresh failed for review_updated:', detailError);
+  }
+
   response.json({
     detail,
     rewardResult: null,
@@ -378,8 +392,16 @@ communityRoutes.post('/storefront-details/:storefrontId/reviews/:reviewId/helpfu
     }
   }
 
+  // Detail refresh is a convenience — must not fail the primary write response
+  let detail: Awaited<ReturnType<typeof getStorefrontDetail>> | null = null;
+  try {
+    detail = await getStorefrontDetail(storefrontId);
+  } catch (detailError) {
+    console.error('[community] post-write detail refresh failed for helpful_vote:', detailError);
+  }
+
   response.json({
-    detail: await getStorefrontDetail(storefrontId),
+    detail,
     didApply: helpfulResult.didApply,
     reviewAuthorProfileId: helpfulResult.reviewAuthorProfileId,
   });
