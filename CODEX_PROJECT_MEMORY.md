@@ -1879,3 +1879,91 @@ e8d04d1 chore: establish canopy trove baseline
 ```
 
 Rating: 9.5/10 overall — the last major unhardened backend service is now resilient. Remaining Promise.all sites are in lower-risk admin/ops flows.
+
+### 2026-04-03 - Agent Two Repaired adminReviewService Truncation and Hardened 5 More Backend Services
+
+Author: Agent Two
+
+What Agent Two reviewed:
+
+- Read the full memory file first.
+- Checked git status: Agent One made uncommitted changes to `adminReviewService.ts` and created a new `adminReviewService.test.ts`. No new commits, no memory entry.
+- Agent One's work on `adminReviewService.ts` was excellent: created a new `loadAdminReviewQueueSections` helper with proper TypeScript types (`AdminReviewQueueLoaders`, `AdminReviewQueueResult`, `AdminReviewQueueSectionWarning`), a reusable `unwrapAdminReviewQueueSection` function, and a warnings array so callers know which sections degraded. Refactored `getAdminReviewQueue` to use the new loader pattern instead of a raw `Promise.all` on Firestore snapshots.
+- Agent One's test file (`adminReviewService.test.ts`) has 2 well-structured tests: one verifying partial queue degradation with one failing loader, one verifying clean results when all loaders succeed. Both use proper mocks with `createQueuePhoto` helper.
+- **Truncation discovered**: The file was truncated at line 297, cutting off mid-word at "verification". The 4 exported admin action functions (`reviewBusinessVerification`, `reviewIdentityVerification`, `reviewStorefrontReport`, `reviewStorefrontPhoto`) were completely lost. This is the 4th distinct truncation event in this project.
+
+What Agent Two fixed:
+
+1. **Repaired `adminReviewService.ts` truncation**: Restored the 4 missing exported functions from the git baseline at `e1c322e`. The 3 remaining `Promise.all` sites in these functions (lines 281, 295, 332) are transactional admin writes that must stay atomic — both the verification record update and the owner profile update must succeed together for data consistency.
+
+2. **Hardened `ownerPortalAlertService.ts`** (2 sites converted):
+   - Alert record loading (line 148): `Promise.all` → `Promise.allSettled` with flatMap extraction. One failed owner alert record lookup no longer crashes the entire notification sweep.
+   - Stale device token cleanup (line 176): `Promise.all` → `Promise.allSettled` with per-result warning logging. One failed token cleanup no longer prevents processing other stale tokens.
+
+3. **Hardened `opsAlertSubscriptionService.ts`** (1 site converted):
+   - Stale subscription token cleanup (line 285): `Promise.all` → `Promise.allSettled` with per-result warning logging.
+
+4. **Hardened `storefrontCommunityService.ts`** (4 sites converted):
+   - Review listing from Firestore (line 268): `Promise.all` → `Promise.allSettled` with flatMap. One failed review enrichment no longer crashes the storefront review list.
+   - Review listing from memory (line 278): Same conversion.
+   - Profile review cleanup (line 705): `Promise.all` → `Promise.allSettled` with per-delete warning logging. One failed review delete no longer blocks cleanup.
+   - Profile report cleanup (line 720): Same conversion.
+
+5. **Hardened `ownerPortalLicenseComplianceService.ts`** (2 sites converted):
+   - Record deletion for owner cleanup (line 369): `Promise.all` → `Promise.allSettled` with per-delete warning logging.
+   - Reminder sweep (line 441): `Promise.all` → `Promise.allSettled` with per-record warning logging. One failed reminder no longer aborts the entire compliance sweep.
+
+What Agent Two intentionally did NOT convert:
+
+- `accountCleanupService.ts` (line 67): Already resilient by design. Uses a custom `runCleanupStep` wrapper that catches errors internally and returns `AccountCleanupFailure` objects. `Promise.all` never rejects here.
+- `adminReviewService.ts` (lines 281, 295, 332): Transactional admin writes. Both the verification/claim doc and the owner profile doc must update atomically.
+- `ownerPortalWorkspaceData.ts` (3 sites), `ownerPortalWorkspaceService.ts` (2 sites), `ownerBillingService.ts` (1 site), `profileStateService.ts` (2 sites), `runtimeOpsService.ts` (1 site), `storefrontMediaAccessService.ts` (1 site), `firestoreSeedService.ts` (1 site), `launchProgramService.ts` (1 site), `leaderboardService.ts` (1 site): Deferred to next phase. These are mostly data-loading pairs where both results are needed together, or low-traffic admin/seed operations.
+
+Main files touched:
+
+- `C:\dev\canopytrove\backend\src\services\adminReviewService.ts` (repaired truncation + Agent One's allSettled work preserved)
+- `C:\dev\canopytrove\backend\src\services\adminReviewService.test.ts` (Agent One's new test file, committed)
+- `C:\dev\canopytrove\backend\src\services\ownerPortalAlertService.ts` (2 sites converted)
+- `C:\dev\canopytrove\backend\src\services\opsAlertSubscriptionService.ts` (1 site converted)
+- `C:\dev\canopytrove\backend\src\services\storefrontCommunityService.ts` (4 sites converted)
+- `C:\dev\canopytrove\backend\src\services\ownerPortalLicenseComplianceService.ts` (2 sites converted)
+
+Verification:
+
+- Backend `tsc --noEmit`: 0 errors
+- Frontend `tsc --noEmit`: 0 errors
+- All modified files verified intact (proper line counts, no truncation)
+- Agent One's test file reviewed and committed (cannot run in Linux sandbox due to Windows node_modules)
+
+Committed as `adaf334`: "Repair truncated adminReviewService.ts, harden 5 more backend services"
+
+Updated roadmap status:
+
+- `reviewPhotoModerationService.ts`: DONE (previous session)
+- `adminReviewService.ts`: DONE (Agent One's queue loader + Agent Two's truncation repair)
+- `ownerPortalAlertService.ts`: DONE (2 sites)
+- `opsAlertSubscriptionService.ts`: DONE (1 site)
+- `storefrontCommunityService.ts`: DONE (4 sites)
+- `ownerPortalLicenseComplianceService.ts`: DONE (2 sites)
+- `accountCleanupService.ts`: Already resilient (no conversion needed)
+- Remaining for next phase: `ownerPortalWorkspaceData.ts` (3), `ownerPortalWorkspaceService.ts` (2), `ownerBillingService.ts` (1), `profileStateService.ts` (2), `runtimeOpsService.ts` (1), `storefrontMediaAccessService.ts` (1), `firestoreSeedService.ts` (1), `launchProgramService.ts` (1), `leaderboardService.ts` (1) — 13 sites across 9 files, all lower risk.
+
+Truncation count (cumulative):
+
+1. Frontend `.tsx` (15 files, 2026-04-02) — repaired
+2. Backend `favoriteDealAlertService.ts` + `healthMonitorService.ts` (2026-04-03) — repaired
+3. `CODEX_PROJECT_MEMORY.md` (2026-04-03) — repaired
+4. Backend `adminReviewService.ts` (2026-04-03) — repaired this session
+
+Git history (current):
+
+```
+adaf334 Repair truncated adminReviewService.ts, harden 5 more backend services
+e1c322e Update CODEX_PROJECT_MEMORY.md with reviewPhotoModerationService hardening report
+554a266 Harden reviewPhotoModerationService.ts: convert 4 of 6 Promise.all to allSettled
+d3d30d8 Reorder change log chronologically, repair truncated entries, add work roadmap
+4eba33e Update CODEX_PROJECT_MEMORY.md with git rollback workflow and session report
+257dce2 Verified-clean rollback point: all agent hardening work through 2026-04-03
+```
+
+Rating: 9.5/10 overall — the highest-risk batch operations are now hardened across all major backend services. Remaining Promise.all sites are low-traffic data-loading pairs and admin utilities.
