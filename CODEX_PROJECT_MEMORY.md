@@ -85,7 +85,7 @@ Rating basis:
 - Browse/source hardening is in place.
 - Live coordinate accuracy and silent mock-fallback hardening are in place in the repo.
 - Remaining risk is mostly deployment/build rollout and live data refresh, not core repo instability.
-- Process deductions: memory file still untracked in git, worktree is extremely dirty with hundreds of modified/untracked files, and recurring truncation pattern on saves means files can regress silently. These are not code bugs but they widen the gap between "tests pass" and "fully buttoned up for launch."
+- Process deductions: memory file was untracked in git until commit `18e345c` (now tracked), worktree is extremely dirty with hundreds of modified/untracked files, and recurring truncation pattern on saves means files can regress silently. These are not code bugs but they widen the gap between "tests pass" and "fully buttoned up for launch."
 
 ## Recent Change Log
 
@@ -98,6 +98,7 @@ What changed:
 - Completed the truncation at the end of the file (line 445 cut off mid-word `snapsh`). The file now ends with a complete sentence.
 - Deduplicated two identically-named `Current Compilation Status (Historical Snapshot, Superseded)` headings in the archive. They now have distinct labels: `Compilation Status After 9-File Truncation Repair` and `Compilation Status After Config and Test Repair`.
 - Adjusted the rating snapshot: overall from 9.8 to 9.4, added a `Process/project hygiene` dimension at 8.8, and added a rating basis note explaining the process deductions.
+- Committed `CODEX_PROJECT_MEMORY.md` to git for the first time (commit `18e345c`). The file is now version-controlled and protected from worktree resets.
 
 Main files:
 
@@ -108,17 +109,19 @@ Why:
 - The truncation meant the file itself was broken — the exact problem the memory file is supposed to help catch.
 - Duplicate headings made the archive harder to navigate and could confuse future sessions.
 - The 9.8 rating did not reflect the process realities: untracked memory file, extremely dirty worktree, and recurring truncation pattern on saves.
+- The file had been untracked in git since creation, meaning a `git clean` or reset would have destroyed the entire project memory with no recovery path.
 
 Verification:
 
 - Visual inspection of completed truncation line
 - Confirmed both archive headings now have unique names
+- `git status -- CODEX_PROJECT_MEMORY.md` shows tracked, clean
 - No code files were changed in this pass
 
 Follow-up:
 
-- Commit this file to git to protect it from worktree resets.
 - Continue monitoring for truncation on future saves.
+- Future memory updates should be committed periodically to keep the git copy current.
 
 ### 2026-04-02 - Memory Trust And App Asset Packaging Cleanup
 
@@ -225,7 +228,7 @@ Conflict summary:
 - The worktree is extremely dirty again: hundreds of modified and untracked files are present across app, backend, docs, icons, and config. That does not prove the repo is broken, but it does mean the memory snapshot and the actual current scope are no longer tightly aligned.
 - Large asset replacements are back in the app asset tree, which can conflict with earlier performance/size hardening if those images were not intentionally optimized for mobile bundle size.
 - Owner portal, profile, browse, navigation, and source-selection files are all in the modified set again, so the exact surfaces we previously hardened are now part of the active change wave and could have been re-regressed.
-- `CODEX_PROJECT_MEMORY.md` itself is currently untracked in git, so it persists locally but is not yet protected as a committed project artifact.
+- `CODEX_PROJECT_MEMORY.md` was untracked in git at the time of this entry but has since been committed (see Memory File Hygiene Pass above).
 
 Verification:
 

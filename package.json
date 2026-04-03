@@ -8,20 +8,36 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "test": "vitest run",
+    "test:frontend-core": "vitest run src/services/notificationRoutingService.test.ts src/services/notificationPayloadService.test.ts src/services/analyticsTransport.test.ts src/services/analyticsSessionLifecycle.test.ts src/services/analyticsService.test.ts src/services/storefrontMemberDealAccessService.test.ts src/context/useStorefrontQueryModel.test.tsx src/context/useStorefrontProfileModel.test.tsx src/screens/writeReview/reviewComposerShared.test.ts src/utils/storefrontRatings.test.ts src/screens/ownerPortal/ownerPortalLicenseCompliance.test.ts src/services/ownerPortalProfileToolsMediaService.test.ts src/config/ownerPortalConfig.test.ts src/utils/favoriteDealAlerts.test.ts",
+    "test:frontend-integration": "vitest run App.test.tsx src/services/postVisitPromptService.test.ts",
+    "test:e2e:android:smoke": "powershell -ExecutionPolicy Bypass -File ./scripts/run-android-smoke-e2e.ps1",
+    "test:e2e:android:dry-run": "powershell -ExecutionPolicy Bypass -File ./scripts/run-android-smoke-e2e.ps1 -DryRun",
+    "test:rules": "powershell -ExecutionPolicy Bypass -File ./scripts/run-firebase-rules-tests.ps1",
     "backend": "npm --prefix backend run dev",
     "backend:mock": "powershell -ExecutionPolicy Bypass -File ./scripts/start-backend.ps1 -Source mock",
     "backend:firestore": "powershell -ExecutionPolicy Bypass -File ./scripts/start-backend.ps1 -Source firestore",
     "dev:api": "powershell -ExecutionPolicy Bypass -File ./scripts/start-api-dev.ps1",
     "generate:ocm-verified-seed": "node ./scripts/generate-ocm-verified-seed.mjs",
-    "check:all": "npx tsc --noEmit && npm --prefix backend run check",
-    "release:check": "node ./scripts/check-release-readiness.mjs && npm --prefix backend run release:check"
+    "check:all": "npx tsc --noEmit && npm run test:frontend-core && npm run test:frontend-integration && npm run test:rules && npm --prefix backend test && npm --prefix backend run check",
+    "release:check": "node ./scripts/check-release-readiness.mjs && npm --prefix backend run release:check",
+    "hosting:firebase:serve": "npx firebase-tools emulators:start --only hosting",
+    "hosting:firebase:deploy": "npx firebase-tools deploy --only hosting",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json}\" \"*.{json,md,js,mjs}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json}\" \"*.{json,md,js,mjs}\"",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky",
+    "precheck": "npm run typecheck && npm run lint && npm run format:check"
   },
   "dependencies": {
-    "@expo/vector-icons": "^15.1.1",
+    "@expo-google-fonts/dm-sans": "^0.4.2",
+    "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/bottom-tabs": "^7.15.7",
     "@react-navigation/native": "^7.2.0",
     "@react-navigation/native-stack": "^7.14.7",
+    "@sentry/react-native": "~7.11.0",
     "expo": "~55.0.9",
     "expo-dev-client": "~55.0.19",
     "expo-document-picker": "~55.0.9",
@@ -41,11 +57,31 @@
     "react-native-svg": "15.15.3"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "@testing-library/react-native": "^13.2.0",
     "@types/react": "~19.2.2",
     "@types/react-test-renderer": "^19.1.0",
-    "react-test-renderer": "^19.2.0",
+    "eslint": "^9.27.0",
+    "eslint-config-prettier": "^10.1.0",
+    "eslint-plugin-react": "^7.37.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-native": "^5.0.0",
+    "firebase-tools": "^15.12.0",
+    "husky": "^9.1.0",
+    "lint-staged": "^16.1.0",
+    "prettier": "^3.5.0",
+    "react-test-renderer": "19.2.0",
     "typescript": "~5.9.2",
     "vitest": "^4.1.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --max-warnings 0",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   },
   "private": true
 }
