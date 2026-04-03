@@ -2581,3 +2581,50 @@ Build follow-up: A new EAS preview build is required for the icon changes to tak
 Truncation count (cumulative): 8 events total (entry above was #8, restored this session).
 
 — Agent Two
+
+### 2026-04-03 - Agent Two Fixed Navigation Sending Users to Wrong Locations (Address-Based Routing)
+
+Author: Agent Two
+
+What the user reported:
+
+- When navigating to dispensary locations, the map pins are "way out of sync" — sending users to middle of roads and fields instead of the actual storefront.
+
+Root cause analysis:
+
+The navigation service (`src/services/navigationService.ts`) was building maps URLs using **raw lat/lng coordinates** as the destination. These coordinates come from a geocoding pipeline with known accuracy limitations:
+
+1. **OCM feed** provides only street addresses (no coordinates).
+2. **Geocoding** resolves addresses through US Census Bureau geocoder (primary) or OpenStreetMap Nominatim (fallback). Both return **address-level interpolation** — the point on the street segment matching the house number, not the actual building entrance. For rural or newly-built dispensaries, this can land in the middle of a road or adjacent field.
+3. **Google Places enrichment** is supposed to override with Google's more accurate coordinates (`publishedLocation = googleEnrichment?.location ?? source.coordinates`), but if `GOOGLE_MAPS_API_KEY` isn't configured or the place isn't matched, the raw Census/Nominatim geocode is what gets published.
+4. The navigation service then passes these raw coordinates directly to maps apps: `geo:0,0?q=40.7128,-74.006` — so the user gets directed to the exact geocoded point, which is often wrong.
+
+What Agent Two changed:
+
+**File: `src/services/navigationService.ts`**
+
+- Changed the `Pick` type to include `'displayName' | 'addressLine1' | 'city' | 'state' | 'zip' | 'coordinates' | 'placeId'`
+- Added `buildAddressDestination()` helper that builds a full address string: `"DisplayName, 123 Main St, City, ST 12345"`
+- **iOS (Apple Maps)**: now uses `daddr={encodedAddress}` instead of `daddr={lat},{lng}`
+- **Android (geo intent)**: now uses `geo:0,0?q={encodedAddress}` instead of `geo:0,0?q={lat},{lng}(label)`
+- **Google Maps web (verified)**: now uses `destination={encodedAddress}` and includes `destination_place_id={placeId}` when a Google Place ID is available — this gives Google Maps the most precise possible target
+- **Google Maps web (preview)**: now uses `query={encodedAddress}` for search-based routing
+- **Final fallback**: if the address-based URL fails to open, falls back to raw coordinates as last resort
+
+Why this works:
+
+Maps apps (Google Maps, Apple Maps, Waze) have their own address resolution that is far more accurate than Census/Nominatim geocoding. By sending the address string + storefront name, the maps app resolves the actual building entrance. When a `placeId` is available, Google Maps can look up the exact place in its database.
+
+All existing callers already pass the full `StorefrontSummary` object (which has all the new fields), so no changes needed to calling code.
+
+Verification:
+
+- Frontend `tsc --noEmit`: 0 errors
+- Backend `tsc --noEmit`: 0 errors
+- No changes to calling screens — all pass the full `StorefrontSummary` which includes the newly required fields
+
+Files touched:
+
+- `src/services/navigationService.ts`
+
+— Agent Two

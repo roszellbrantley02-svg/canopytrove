@@ -4,8 +4,29 @@ import { startPostVisitJourney } from './postVisitPromptService';
 
 type RouteMode = 'preview' | 'verified';
 
+/**
+ * Build a human-readable address string for maps apps to resolve.
+ * Maps apps resolve addresses to the actual building entrance, which is
+ * far more accurate than raw geocoded lat/lng coordinates (which often
+ * land in the middle of a road or field).
+ */
+function buildAddressDestination(
+  storefront: Pick<StorefrontSummary, 'displayName' | 'addressLine1' | 'city' | 'state' | 'zip'>
+): string {
+  const parts = [
+    storefront.displayName,
+    storefront.addressLine1,
+    storefront.city,
+    `${storefront.state} ${storefront.zip}`,
+  ].filter(Boolean);
+  return parts.join(', ');
+}
+
 export async function openStorefrontRoute(
-  storefront: Pick<StorefrontSummary, 'displayName' | 'coordinates'>,
+  storefront: Pick<
+    StorefrontSummary,
+    'displayName' | 'addressLine1' | 'city' | 'state' | 'zip' | 'coordinates' | 'placeId'
+  >,
   routeMode: RouteMode,
   trackingOptions?: {
     profileId: string;
@@ -30,16 +51,29 @@ export async function openStorefrontRoute(
     }
   }
 
-  const destination = `${storefront.coordinates.latitude},${storefront.coordinates.longitude}`;
-  const label = encodeURIComponent(storefront.displayName);
+  const addressDestination = buildAddressDestination(storefront);
+  const encodedAddress = encodeURIComponent(addressDestination);
+  const encodedLabel = encodeURIComponent(storefront.displayName);
+  const coordinateFallback = `${storefront.coordinates.latitude},${storefront.coordinates.longitude}`;
+
+  // Prefer address-based destination so the maps app resolves the actual
+  // building location rather than relying on our geocoded coordinates.
   const nativeRouteUrl =
     Platform.OS === 'ios'
-      ? `http://maps.apple.com/?daddr=${destination}&dirflg=d`
-      : `geo:0,0?q=${destination}(${label})`;
-  const webRouteUrl =
-    routeMode === 'verified'
-      ? `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`
-      : `https://www.google.com/maps/search/?api=1&query=${destination}`;
+      ? `http://maps.apple.com/?daddr=${encodedAddress}&dirflg=d`
+      : `geo:0,0?q=${encodedAddress}`;
+
+  // For Google Maps web, use place_id when available for the most precise
+  // result. Fall back to address string, then coordinates as last resort.
+  let webRouteUrl: string;
+  if (routeMode === 'verified' && storefront.placeId) {
+    webRouteUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&destination_place_id=${encodeURIComponent(storefront.placeId)}&travelmode=driving`;
+  } else if (routeMode === 'verified') {
+    webRouteUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
+  } else {
+    webRouteUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+  }
+
   const preferredUrl = routeMode === 'verified' ? nativeRouteUrl : webRouteUrl;
 
   if (await Linking.canOpenURL(preferredUrl)) {
@@ -47,5 +81,8 @@ export async function openStorefrontRoute(
     return;
   }
 
-  await Linking.openURL(webRouteUrl);
+  // Final fallback: use raw coordinates if address-based URL fails to open.
+  await Linking.openURL(
+    `https://www.google.com/maps/dir/?api=1&destination=${coordinateFallback}&travelmode=driving`
+  );
 }
