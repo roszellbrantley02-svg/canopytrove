@@ -96,6 +96,83 @@ Rating basis:
 
 Newest entry here is the current-truth snapshot. Entries in the historical archive below are context only.
 
+### 2026-04-03 - Agent Two Created First Verified-Clean Git Rollback Point
+
+Author: Agent Two
+
+What was discussed with the owner:
+
+- The owner asked Agent Two to review Agent One's assessment of the recurring truncation pattern and whether there is anything we can do to prevent it.
+- Agent Two read Agent One's latest entry ("Explanation Of Truncation Pattern After Agent Two Repair Report") and the full change log history.
+- Agent One's assessment: the pattern is real, the strongest theory is write-pipeline corruption during agent edits, and all other suspects (disk health, VS Code settings, workspace path) have been eliminated by the evidence.
+- Agent Two agrees with Agent One's assessment. The truncation now affects both frontend `.tsx` and backend `.ts` files, has occurred in both the legacy workspace and the canonical `C:\dev\canopytrove` workspace, and has persisted through VS Code editor protections. The only consistent correlation is that truncated files are always the exact files an agent just modified.
+
+What Agent Two proposed to the owner:
+
+- Option A: A lightweight integrity-check script that counts lines and checks for proper file endings on modified files. Faster than tsc but narrower coverage.
+- Option B: Git commits after every verified-clean state, giving instant rollback via `git checkout` instead of manual file reconstruction. This also provides proper change history.
+- The owner chose Option B (git commits).
+
+What Agent Two did:
+
+- Removed a stale `.git/index.lock` file left behind by a previous crashed git process.
+- Ran final verification: frontend tsc 0 errors, backend tsc 0 errors.
+- Staged all 601 changed files (378 modified + 179 new + assorted renames/rewrites).
+- Verified no sensitive files were included — only `.env.example` templates and a blank Apple reviewer credentials template.
+- Created commit `257dce2` with message: "Verified-clean rollback point: all agent hardening work through 2026-04-03".
+- Confirmed working tree is now completely clean (0 uncommitted changes).
+
+What this commit contains (cumulative from all sessions):
+
+- All Promise.allSettled hardening work from both agents (storefrontService, ownerPortalWorkspaceData, favoriteDealAlertService, healthMonitorService, frontend hooks).
+- Agent One's strict lint/format hygiene cleanup (zero warnings, zero errors).
+- Pre-commit hook hardening for large worktree.
+- ESLint policy tuning (disabled react-native/no-color-literals).
+- Dead export removal in ProfileSections.
+- Agent Two's repair of two truncated backend files.
+- VS Code editor protections (.vscode/settings.json).
+- All new services, routes, tests, docs, and assets accumulated since the baseline commit.
+
+Why this matters for the truncation problem:
+
+- Before this commit, the only recovery path for truncated files was: find the legacy copy in `green-routes-3-restored`, read Agent One's memory entry to understand intended changes, manually reconstruct the missing code. This took significant time and introduced reconstruction risk.
+- After this commit, recovery for any future truncation is: `git diff HEAD -- <file>` to see what changed, `git checkout HEAD -- <file>` to restore the last known-good version, then re-apply only the new changes. This is fast, exact, and risk-free.
+- Going forward, both agents should commit after every verified-clean pass so that the rollback point stays current.
+
+New workflow rule for both agents:
+
+1. Read CODEX_PROJECT_MEMORY.md (existing rule).
+2. Do work.
+3. Run frontend + backend tsc as corruption check.
+4. If clean: `git add -A && git commit` with a descriptive message.
+5. Write report into CODEX_PROJECT_MEMORY.md.
+6. This ensures every verified-clean state is preserved as a rollback point.
+
+Git history after this session:
+
+```
+257dce2 Verified-clean rollback point: all agent hardening work through 2026-04-03
+7243738 Record pre-commit hardening in project memory
+f3ebd15 Harden pre-commit workflow for large worktree
+76a74cf Fix package.json truncation and add lint-staged config
+18e345c Add CODEX_PROJECT_MEMORY.md as persistent project memory
+e8d04d1 chore: establish canopy trove baseline
+```
+
+Main files touched:
+
+- All 601 files now committed (see `git show --stat 257dce2` for full list)
+- `C:\dev\canopytrove\.git/index.lock` (removed stale lock)
+- `C:\dev\canopytrove\CODEX_PROJECT_MEMORY.md` (this entry)
+
+Verification:
+
+- Frontend `tsc --noEmit`: 0 errors
+- Backend `tsc --noEmit`: 0 errors
+- `git status`: clean working tree (0 uncommitted changes)
+
+Rating: 9.5/10 overall — the codebase is in its strongest verified state to date, and we now have proper git-based recovery infrastructure for the first time.
+
 ### 2026-04-03 - Agent One Explanation Of Truncation Pattern After Agent Two Repair Report
 
 Author: Agent One
