@@ -1,44 +1,98 @@
 import React from 'react';
 import type { ReactTestRenderer } from 'react-test-renderer';
-import { create } from 'react-test-renderer';
+import { act, create } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Pressable, Text } from 'react-native';
-import { AgeGateScreen } from './AgeGateScreen';
 
+// vi.hoisted runs BEFORE vi.mock so these fns are available inside the factory.
 const backHandlerMocks = vi.hoisted(() => ({
   exitApp: vi.fn(),
-  addEventListener: vi.fn(() => ({ remove: vi.fn() })),
+  addEventListener: vi.fn((_e: string, _h: () => boolean) => ({ remove: vi.fn() })),
 }));
 
-vi.mock('react-native', async () => {
-  const actual = (await vi.importActual('react-native')) as Record<string, unknown>;
-  return {
-    ...actual,
-    BackHandler: {
-      exitApp: backHandlerMocks.exitApp,
-      addEventListener: backHandlerMocks.addEventListener,
+vi.mock('react-native', () => ({
+  View: 'View',
+  Text: 'Text',
+  Pressable: 'Pressable',
+  Image: 'Image',
+  ScrollView: 'ScrollView',
+  StatusBar: 'StatusBar',
+  SafeAreaView: 'SafeAreaView',
+  Platform: {
+    OS: 'android' as const,
+    select: (obj: any) => obj.android ?? obj.default,
+    Version: 33,
+  },
+  StyleSheet: {
+    create: <T,>(styles: T): T => styles,
+    flatten: (style: any) => (Array.isArray(style) ? Object.assign({}, ...style) : (style ?? {})),
+    hairlineWidth: 1,
+  },
+  BackHandler: {
+    exitApp: backHandlerMocks.exitApp,
+    addEventListener: backHandlerMocks.addEventListener,
+  },
+  Animated: {
+    Value: class {
+      _value: number;
+      constructor(val: number) {
+        this._value = val;
+      }
+      setValue(val: number) {
+        this._value = val;
+      }
+      interpolate() {
+        return this;
+      }
+      addListener() {
+        return '';
+      }
+      removeListener() {}
+      removeAllListeners() {}
     },
-  };
-});
+    View: 'Animated.View',
+    Text: 'Animated.Text',
+    timing: () => ({ start: (cb?: () => void) => cb?.() }),
+    spring: () => ({ start: (cb?: () => void) => cb?.() }),
+    parallel: () => ({ start: (cb?: () => void) => cb?.() }),
+    sequence: () => ({ start: (cb?: () => void) => cb?.() }),
+    delay: () => ({ start: (cb?: () => void) => cb?.() }),
+    loop: () => ({ start: (cb?: () => void) => cb?.(), stop: () => {} }),
+    event: () => () => {},
+    createAnimatedComponent: (c: any) => c,
+  },
+  Dimensions: {
+    get: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
+    addEventListener: () => ({ remove: () => {} }),
+  },
+  Appearance: {
+    getColorScheme: () => 'light' as const,
+    addChangeListener: () => ({ remove: () => {} }),
+  },
+  useColorScheme: () => 'light',
+  useWindowDimensions: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
+}));
+
+import { BackHandler, Pressable, Text } from 'react-native';
+import { AgeGateScreen } from './AgeGateScreen';
 
 vi.mock('expo-linear-gradient', () => ({
-  LinearGradient: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  LinearGradient: 'LinearGradient',
 }));
 
 vi.mock('react-native-safe-area-context', () => ({
-  SafeAreaView: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  SafeAreaView: 'SafeAreaView',
 }));
 
 vi.mock('../components/MotionInView', () => ({
-  MotionInView: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  MotionInView: 'MotionInView',
 }));
 
 vi.mock('../components/HapticPressable', () => ({
-  HapticPressable: Pressable,
+  HapticPressable: 'Pressable',
 }));
 
 vi.mock('../icons/BrandMarkIcon', () => ({
-  BrandMarkIcon: () => <></>,
+  BrandMarkIcon: 'BrandMarkIcon',
 }));
 
 vi.mock('../config/brand', () => ({
@@ -47,6 +101,15 @@ vi.mock('../config/brand', () => ({
     storageNamespace: 'canopy-trove',
   },
 }));
+
+// Mirror the render-helper pattern used by SearchField and ShimmerBlock tests.
+function renderAgeGate(onAccept = vi.fn()) {
+  let renderer: ReactTestRenderer;
+  act(() => {
+    renderer = create(<AgeGateScreen onAccept={onAccept} />);
+  });
+  return { renderer: renderer!, root: renderer!.root, onAccept };
+}
 
 describe('AgeGateScreen', () => {
   let renderer: ReactTestRenderer | null = null;
@@ -58,17 +121,16 @@ describe('AgeGateScreen', () => {
   });
 
   it('renders the age gate screen', () => {
-    const onAccept = vi.fn();
-    renderer = create(<AgeGateScreen onAccept={onAccept} />);
-    const instance = renderer.root;
-    expect(instance).toBeDefined();
+    const rendered = renderAgeGate();
+    renderer = rendered.renderer;
+    expect(rendered.root).toBeDefined();
   });
 
   it('displays the age confirmation title', () => {
-    const onAccept = vi.fn();
-    renderer = create(<AgeGateScreen onAccept={onAccept} />);
+    const rendered = renderAgeGate();
+    renderer = rendered.renderer;
 
-    const allText = renderer.root.findAllByType(Text);
+    const allText = rendered.root.findAllByType(Text);
     const titleTexts = allText
       .map((t) => t.props.children)
       .filter((text) => text && typeof text === 'string');
@@ -77,10 +139,10 @@ describe('AgeGateScreen', () => {
   });
 
   it('displays the Canopy Trove branding', () => {
-    const onAccept = vi.fn();
-    renderer = create(<AgeGateScreen onAccept={onAccept} />);
+    const rendered = renderAgeGate();
+    renderer = rendered.renderer;
 
-    const allText = renderer.root.findAllByType(Text);
+    const allText = rendered.root.findAllByType(Text);
     const brandTexts = allText
       .map((t) => t.props.children)
       .filter((text) => text && typeof text === 'string');
@@ -89,35 +151,39 @@ describe('AgeGateScreen', () => {
   });
 
   it('calls onAccept when the accept button is pressed', () => {
-    const onAccept = vi.fn();
-    renderer = create(<AgeGateScreen onAccept={onAccept} />);
+    const rendered = renderAgeGate();
+    renderer = rendered.renderer;
 
-    const allButtons = renderer.root.findAllByType(Pressable);
+    const allButtons = rendered.root.findAllByType(Pressable);
     const acceptButton = allButtons.find((button) => {
       const text = button.findAllByType(Text);
       return text.some((t) => t.props.children === 'Yes, I am 21 or older');
     });
 
     if (acceptButton) {
-      acceptButton.props.onPress();
-      expect(onAccept).toHaveBeenCalledTimes(1);
+      act(() => {
+        acceptButton.props.onPress();
+      });
+      expect(rendered.onAccept).toHaveBeenCalledTimes(1);
     }
   });
 
   it('shows blocked state when deny button is pressed', () => {
-    const onAccept = vi.fn();
-    renderer = create(<AgeGateScreen onAccept={onAccept} />);
+    const rendered = renderAgeGate();
+    renderer = rendered.renderer;
 
-    const allButtons = renderer.root.findAllByType(Pressable);
+    const allButtons = rendered.root.findAllByType(Pressable);
     const denyButton = allButtons.find((button) => {
       const text = button.findAllByType(Text);
       return text.some((t) => t.props.children === 'No');
     });
 
     if (denyButton) {
-      denyButton.props.onPress();
+      act(() => {
+        denyButton.props.onPress();
+      });
 
-      const allText = renderer.root.findAllByType(Text);
+      const allText = rendered.root.findAllByType(Text);
       const textContent = allText
         .map((t) => t.props.children)
         .filter((text) => text && typeof text === 'string');
@@ -127,19 +193,21 @@ describe('AgeGateScreen', () => {
   });
 
   it('shows close app button after blocking access', () => {
-    const onAccept = vi.fn();
-    renderer = create(<AgeGateScreen onAccept={onAccept} />);
+    const rendered = renderAgeGate();
+    renderer = rendered.renderer;
 
-    let allButtons = renderer.root.findAllByType(Pressable);
+    let allButtons = rendered.root.findAllByType(Pressable);
     const denyButton = allButtons.find((button) => {
       const text = button.findAllByType(Text);
       return text.some((t) => t.props.children === 'No');
     });
 
     if (denyButton) {
-      denyButton.props.onPress();
+      act(() => {
+        denyButton.props.onPress();
+      });
 
-      allButtons = renderer.root.findAllByType(Pressable);
+      allButtons = rendered.root.findAllByType(Pressable);
       const closeButton = allButtons.find((button) => {
         const text = button.findAllByType(Text);
         return text.some((t) => t.props.children === 'Close App');
@@ -150,36 +218,40 @@ describe('AgeGateScreen', () => {
   });
 
   it('calls BackHandler.exitApp when close button is pressed', () => {
-    const onAccept = vi.fn();
-    renderer = create(<AgeGateScreen onAccept={onAccept} />);
+    const rendered = renderAgeGate();
+    renderer = rendered.renderer;
 
-    let allButtons = renderer.root.findAllByType(Pressable);
+    let allButtons = rendered.root.findAllByType(Pressable);
     const denyButton = allButtons.find((button) => {
       const text = button.findAllByType(Text);
       return text.some((t) => t.props.children === 'No');
     });
 
     if (denyButton) {
-      denyButton.props.onPress();
+      act(() => {
+        denyButton.props.onPress();
+      });
 
-      allButtons = renderer.root.findAllByType(Pressable);
+      allButtons = rendered.root.findAllByType(Pressable);
       const closeButton = allButtons.find((button) => {
         const text = button.findAllByType(Text);
         return text.some((t) => t.props.children === 'Close App');
       });
 
       if (closeButton) {
-        closeButton.props.onPress();
-        expect(backHandlerMocks.exitApp).toHaveBeenCalledTimes(1);
+        act(() => {
+          closeButton.props.onPress();
+        });
+        expect(BackHandler.exitApp).toHaveBeenCalledTimes(1);
       }
     }
   });
 
   it('displays accessibility labels on buttons', () => {
-    const onAccept = vi.fn();
-    renderer = create(<AgeGateScreen onAccept={onAccept} />);
+    const rendered = renderAgeGate();
+    renderer = rendered.renderer;
 
-    const allButtons = renderer.root.findAllByType(Pressable);
+    const allButtons = rendered.root.findAllByType(Pressable);
     const acceptButton = allButtons.find((button) => {
       return button.props.accessibilityLabel === 'Confirm you are 21 or older';
     });
@@ -188,10 +260,10 @@ describe('AgeGateScreen', () => {
   });
 
   it('displays the trust chips with confidence indicators', () => {
-    const onAccept = vi.fn();
-    renderer = create(<AgeGateScreen onAccept={onAccept} />);
+    const rendered = renderAgeGate();
+    renderer = rendered.renderer;
 
-    const allText = renderer.root.findAllByType(Text);
+    const allText = rendered.root.findAllByType(Text);
     const textContent = allText
       .map((t) => t.props.children)
       .filter((text) => text && typeof text === 'string');
@@ -202,10 +274,10 @@ describe('AgeGateScreen', () => {
   });
 
   it('shows "Before you continue" notice initially', () => {
-    const onAccept = vi.fn();
-    renderer = create(<AgeGateScreen onAccept={onAccept} />);
+    const rendered = renderAgeGate();
+    renderer = rendered.renderer;
 
-    const allText = renderer.root.findAllByType(Text);
+    const allText = rendered.root.findAllByType(Text);
     const textContent = allText
       .map((t) => t.props.children)
       .filter((text) => text && typeof text === 'string');
@@ -214,14 +286,12 @@ describe('AgeGateScreen', () => {
   });
 
   it('hides close button in initial state', () => {
-    const onAccept = vi.fn();
-    renderer = create(<AgeGateScreen onAccept={onAccept} />);
+    const rendered = renderAgeGate();
+    renderer = rendered.renderer;
 
-    const allText = renderer.root.findAllByType(Text);
+    const allText = rendered.root.findAllByType(Text);
     const textContent = allText
       .map((t) => t.props.children)
       .filter((text) => text && typeof text === 'string');
 
-    expect(textContent.filter((text) => text === 'Close App').length).toBe(0);
-  });
-});
+    expect(textContent.filter((

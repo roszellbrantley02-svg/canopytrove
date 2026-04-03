@@ -1,3 +1,4 @@
+import type { Request } from 'express';
 import { RequestHandler } from 'express';
 
 /**
@@ -20,7 +21,7 @@ const blockedIps = new Map<string, number>();
 /**
  * Get client IP from request
  */
-function getClientIp(request: any): string {
+function getClientIp(request: Request): string {
   return request.ip || request.socket.remoteAddress || 'unknown';
 }
 

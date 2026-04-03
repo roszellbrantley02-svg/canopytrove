@@ -78,6 +78,16 @@ export default tseslint.config(
     },
   },
 
+  // Mock files — any types are unavoidable when faking entire libraries
+  {
+    files: ['src/__mocks__/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/consistent-type-imports': 'off',
+    },
+  },
+
   // Prettier must be last to override conflicting rules
   eslintConfigPrettier,
 );

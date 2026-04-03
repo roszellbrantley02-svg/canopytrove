@@ -1,3 +1,4 @@
+import type { Request } from 'express';
 import { RequestHandler } from 'express';
 
 /**
@@ -17,7 +18,7 @@ interface AuditLogEntry {
 /**
  * Extract authenticated user ID from request headers
  */
-function extractUserId(request: any): string | null {
+function extractUserId(request: Request): string | null {
   // Try custom test header first
   const testUserId = request.header('x-canopy-test-account-id');
   if (testUserId) {
@@ -36,7 +37,7 @@ function extractUserId(request: any): string | null {
 /**
  * Get client IP from request
  */
-function getClientIp(request: any): string {
+function getClientIp(request: Request): string {
   return request.ip || request.socket.remoteAddress || 'unknown';
 }
 
