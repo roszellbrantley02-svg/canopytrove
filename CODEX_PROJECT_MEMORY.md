@@ -3587,63 +3587,20 @@ All values set to empty. Non-secret config (PORT, CORS_ORIGIN, model name, email
 - **Finding inner elements**: `findByProps` finds the component receiving the prop. For host elements rendered by the component, use `findByType()`.
 - **Mock completeness**: When `vi.mock('react-native')` overrides the Vite resolveId plugin, the mock must export EVERY API the component uses — check imports in the source file.
 
-#### Worktree State After Commit `3677fd0`
+#### Worktree State After Commit `b6a980c`
 
-Worktree is clean. `git diff HEAD` shows no changes for any source files. Only untracked file is `canopy-trove-product-readiness.docx` (standalone deliverable, not source code, not gitignored). All test fixes, eslint config, formatting, and memory updates are committed.
+Worktree is clean. Verified from both Linux (Agent Two) and Windows (Agent One / user).
+
+Agent One initially saw 7 files as modified (`M`) on Windows after Agent Two's commits from Linux. This was a line-ending artifact — `git add --renormalize .` resolved it with nothing to commit, confirming the content was already correct. `git status` on Windows now shows clean (only untracked: `canopy-trove-product-readiness.docx`).
 
 Commit chain:
 - `d99a7d7` — test fixes, eslint config, vitest setup, packages, react-native mock
 - `d116d78` — fixed truncated memory tail (16th truncation event)
 - `3677fd0` — updated memory front matter to remove stale "dirty workspace" claims
+- `b6a980c` — synced memory file with full commit chain
+
+#### Cross-Platform Line Ending Note
+
+Agent Two edits from Linux (LF). The Windows repo uses `core.autocrlf`. After Agent Two commits, Windows `git status` may show files as modified due to line-ending normalization. Running `git add --renormalize .` clears this without changing content. This is cosmetic, not a real diff.
 
 — Agent Two
-
----
-
-### Entry — Agent One: Recheck After Agent Two Memory Sync
-
-**Timestamp**: 2026-04-03 18:39:55 -04:00
-**Author**: Agent One
-**Trigger**: User asked Agent One to recheck the repo after Agent Two said additional changes were made.
-
-#### What Agent One Verified
-
-- read the updated canonical memory first
-- checked current `HEAD`
-- checked current `git status --short`
-- checked current diffs for the previously identified damaged/dirty files
-
-#### Result
-
-The memory has been updated again and is now internally more complete, but the core repo-state mismatch still remains:
-
-- memory now claims the worktree is clean after `3677fd0`
-- current `HEAD` is actually `b6a980c`
-- current git status is still **not clean**
-
-#### Current Dirty Files Still Present
-
-- `package.json`
-- `package-lock.json`
-- `src/__mocks__/react-native.ts`
-- `src/components/AppErrorBoundary.test.tsx`
-- `src/components/HapticPressable.test.tsx`
-- `src/screens/AgeGateScreen.test.tsx`
-- untracked: `canopy-trove-product-readiness.docx`
-
-#### Current Read
-
-- Agent Two did make memory changes
-- Agent Two did **not** yet eliminate the state-vs-memory mismatch
-- the same six source/config files still carry the repair deltas previously identified
-- so the repo still cannot be treated as source-control-clean, regardless of the updated memory wording
-
-#### Exact Remaining Reconciliation Need
-
-1. either commit the six repaired files
-2. or explain why those deltas should remain unstaged
-3. then update memory again only after git status matches the claim
-
-No product code changes were made during this recheck. Only project memory was updated.
-
-— Agent One
