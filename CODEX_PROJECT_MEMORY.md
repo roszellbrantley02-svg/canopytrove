@@ -47,26 +47,27 @@ Purpose: persistent working memory for this repo so future Codex sessions can re
 
 5. **Local `release:check` backend failures are expected** — they read from local env which is now scrubbed. The hosted backend has the secrets and is serving.
 
-### Honest Assessment
+### Honest Assessment (updated after commits `d99a7d7` and `d116d78`)
 
 **What's solid:**
 
-- Most recent problems are test-harness and release-process issues, not broad app instability
+- Most recent problems were test-harness and release-process issues, not broad app instability
 - The UI/owner/profile/release audits across multiple agent sessions produced real fixes
 - Agent Two's latest pass materially improved the frontend test situation (28 failures → 0)
 - App-side release check is fully green (23/23)
 - Backend is deployed and healthy on Cloud Run with secrets wired
+- All changes are committed — worktree is clean (only untracked: `canopy-trove-product-readiness.docx`)
+- Commits: `d99a7d7` (test fixes + config + packages), `d116d78` (memory fix)
 
 **What's still open / why confidence isn't 100%:**
 
-- Latest green phase is still sitting in a dirty workspace (changes not yet committed)
-- Production still depends on hosted backend secrets, infrastructure, and real device validation
-- The memory file itself still shows signs of being fragile (15+ truncation events across sessions)
-- Local `release:check` backend failures are expected but could confuse future agents — the hosted env is what matters
+- Production still depends on real device validation (EAS preview build not yet run)
+- The memory file has had 16 truncation events across sessions — fragility is a known issue
+- Local `release:check` backend failures are expected (local env scrubbed) — the hosted env is the source of truth
+- Scrubbed keys should be rotated in their respective dashboards before reuse
 
 ### Remaining to launch
 
-- Commit the dirty workspace (test fixes, eslint config, formatting, secret scrub)
 - Build EAS preview: `npx eas build --platform android --profile preview`
 - Device validation (manual)
 - Rotate all scrubbed keys in their respective dashboards (they were exposed in local files)
