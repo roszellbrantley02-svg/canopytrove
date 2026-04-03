@@ -2728,3 +2728,78 @@ Shared understanding:
 **Memory file note**: Agent One placed this entry at line 728 (out of chronological order) and truncated Agent Two's review entry (10th truncation of the memory file). Restored by Agent Two from git and appended here at the correct chronological position.
 
 — Agent One (repositioned by Agent Two)
+
+### 2026-04-03 - Agent One Consolidated UI Audit For Storefront Cards, Member Profile, And Owner Surfaces
+
+Author: Agent One
+
+Reason for entry:
+
+- user requested a broad interface audit with parallel agent research
+- user specifically called out storefront cards that look like content is poking out of the card edges
+- user also called out confusing member/profile/owner wording that still feels placeholder-heavy or internal
+- user directed that `Nearby` and `Browse` should stay fundamentally as-is while the interaction nuance is tightened
+
+Audit method:
+
+- Agent One reviewed the canonical repo at `C:\dev\canopytrove`
+- Agent One deployed three parallel explorer agents: storefront card audit, member/user profile audit, owner/home/owner-profile audit
+- no code changes were made during this audit phase
+
+Consolidated findings:
+
+1. **The storefront-card visual problem is real and centralized**
+   - the shared storefront card does not behave like one contained shell
+   - `StorefrontRouteCard` uses a transparent outer pressable while the preview and body render as separate elevated slabs
+   - the preview is narrower than the body and the body uses a negative top overlap
+   - result: the card reads like stacked pieces that almost fit rather than one clean container
+   - this is why the media/body can feel like it is poking past the card edges
+   - key files:
+     - `src/components/StorefrontRouteCard.tsx`
+     - `src/components/storefrontRouteCard/storefrontRouteCardStyles.ts`
+     - `src/components/storefrontRouteCard/StorefrontRouteCardSections.tsx`
+     - `src/components/MapGridPreview.tsx`
+     - `src/components/mapGridPreview/mapGridPreviewStyles.ts`
+   - this is not primarily a Browse/Nearby list-layout problem; those screens are mainly rendering the shared card
+
+2. **Member profile language is still mixing product copy with internal/system language**
+   - `ProfileIdentitySections.tsx` is the main problem area
+   - the same surface covers: member sign-in/account state, public review/display name, owner/business entry, preview/demo access
+   - strings like `Account and identity`, `Review name`, `Owner tools`, `Managed in owner access.`, and `Owner preview workspace` are not clean customer language
+   - this is the single biggest member-profile UX issue
+
+3. **Owner entry and owner home still expose preview/internal scaffolding too directly**
+   - preview/demo/reviewer paths are still too visible on normal owner-entry surfaces
+   - `useProfileActions.ts` can still route toward preview mode when preview is enabled
+   - `OwnerPortalAccessScreen.tsx` still presents preview as a peer option to live owner access
+   - owner-home labels like `Owner record`, `Runtime and AI`, `Owner AI action plan`, `Plan Access`, and `Continue flow` still read like internal ops tooling rather than merchant-facing product UI
+
+4. **Boundary problem between three concepts that should be separate**
+   - member account management
+   - business-owner portal access/onboarding
+   - preview/demo/App Review/internal pathways
+   - as long as those stay blended together, the app will keep feeling confusing even when individual labels improve
+
+5. **Things that are already stable and should mostly stay**
+   - top-level member profile segmentation is understandable
+   - live owner identity verification copy is mostly usable
+   - live owner profile-tools language is closer to production quality than the rest of the owner stack
+   - per user direction, `Nearby` and `Browse` should stay structurally intact during the next phase
+
+Ranked next phases:
+
+1. **Storefront card containment pass** — make the shared card read like one container, not stacked slabs. Unify outer shell, align preview/body edge geometry, reduce negative overlap, consolidate shadow treatment.
+
+2. **Member profile account-language cleanup** — split the current mixed account card into clearer concerns. Preferred direction: `Account`, `Public review name`, `Business portal`.
+
+3. **Quarantine preview/demo wording from normal paths** — preview/demo/reviewer routes should not appear as ordinary customer-facing product language. Label and gate them explicitly as internal/demo-only.
+
+4. **Owner home wording cleanup** — translate from internal workflow language into merchant-facing language: `Owner record` → `Business account`, `Plan Access` → `Subscription`, `Continue flow` → `Continue setup`, `Owner AI action plan` → `Recommendations`.
+
+Role note: Agent One completed audit/review/diagnosis only. Agent Two should use this as the implementation brief for the next UI cleanup phases.
+
+**Memory file note**: Agent One placed this entry at line 749 (out of chronological order) and truncated the tail of the memory file (everything from Agent Two's navigation fix entry onward was deleted, cut off mid-word "src/servi"). Restored by Agent Two from git and appended here at the correct chronological position. This is the 11th truncation event for the memory file.
+
+No code changes were made during this audit phase.
+
+— Agent One (repositioned by Agent Two)
