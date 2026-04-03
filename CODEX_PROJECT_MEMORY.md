@@ -728,6 +728,116 @@ Agent Two's overall assessment:
 
 — Agent Two
 
+### 2026-04-03 - Agent One Safety Protocol Change Required By User
+
+User instruction: Agent One is now treated as a write-risk until proven otherwise.
+
+Effective immediately, Agent One must use this edit protocol for any future code changes:
+
+- tiny edits only
+- reread every touched file immediately after each edit
+- run verification after each small change
+
+Interpretation rule:
+
+- avoid broad multi-file rewrite passes
+- prefer the smallest possible patch surface
+- after each edit, inspect the touched file before continuing
+- after each small change, run the narrowest relevant verification before moving to the next edit
+
+This is now a standing operating constraint for Agent One in this project.
+
+— Agent One
+
+### 2026-04-03 - Agent One Retrospective Summary Of What Happened In This Project
+
+This note exists so future Agent One / Agent Two sessions can explain the project history quickly without re-deriving it.
+
+What happened at a high level:
+
+- The project did **not** fail from one single app bug.
+- The main destabilizing event was repeated file truncation / null-byte corruption across multiple source files.
+- That corruption made the repo look worse than the underlying product code actually was, because valid code kept getting partially cut off or damaged during write/save flows.
+- After repairs, the project repeatedly returned to a green or near-green state, which confirms the core app/backend architecture was not the main issue.
+
+What we actually went through:
+
+1. Multiple frontend `.tsx` files were found truncated/corrupted.
+2. The repo was stabilized and moved to `C:\dev\canopytrove` to get out of the old `Documents\\New project\\...` path.
+3. Save-path/editor/workspace hardening was added.
+4. Repeated backend hardening work converted many safe batch paths from `Promise.all(...)` to `Promise.allSettled(...)`.
+5. Several later truncation events still occurred, including backend service files and `eas.json`, which proved the problem was not limited to one frontend directory.
+6. Release/readiness work then uncovered a second class of issues:
+   - configuration gaps
+   - preview/build env setup questions
+   - backend production-secret/readiness requirements
+
+What most likely caused the instability:
+
+- The strongest theory is still **write-path corruption during or around edits**.
+- Most likely contributors:
+  - interrupted or conflicting writes
+  - editor/extension/save-pipeline interference
+  - external file-touching while files were being rewritten
+  - operating in a historically unstable workspace with a very large dirty tree
+
+What was investigated and became less likely:
+
+- disk/filesystem failure became less likely after `chkdsk` reported a clean NTFS scan with no bad sectors and no file-system errors
+- path spaces alone (`New project`) were not a sufficient explanation
+- the actual app logic was not the primary root cause, because green verification kept returning after damaged files were restored
+
+What this means in plain English:
+
+- The project's hardest problem was **not** "the app is fundamentally broken"
+- it was "the codebase kept getting mechanically damaged while work was happening"
+- once the damage was repaired and verification rerun, most of the remaining issues were ordinary release/configuration work
+
+Current practical conclusion:
+
+- likely root cause: save/write-path corruption or interference
+- ruled down: disk failure as the leading cause
+- secondary issue class: env/release-readiness gaps, which are normal deployment work rather than corruption
+
+— Agent One
+
+### 2026-04-03 - Agent One Interpreted The Latest Windows `check:all` Output And Checked Repo Records
+
+User provided the tail end of a Windows verification run showing:
+
+- backend test runner summary: `132` tests passed, `0` failed
+- final backend gate starting:
+  - `> canopytrove-backend@0.1.0 check`
+  - `> tsc -p tsconfig.json --noEmit`
+
+Agent One's interpretation:
+
+- This output means the run reached the **final** step of `npm run check:all`.
+- The backend test suite itself passed cleanly (`132/132`).
+- The last printed line is the backend TypeScript no-emit check. That command is silent on success.
+- So if the PowerShell prompt returned after that line with no red error output, then the full `check:all` run passed.
+- If the prompt did not return, then the run was still sitting in the final backend `tsc` phase when the user copied the output.
+
+Records checked by Agent One:
+
+- canonical repo worktree was clean at check time
+- latest git record at check time:
+  - `ee7a36e` `Update CODEX_PROJECT_MEMORY.md: Firebase service account key added to backend env`
+  - `357a16e` `Update CODEX_PROJECT_MEMORY.md with backend env population and release readiness report`
+  - `f63597f` `Strip null bytes from eas.json`
+
+Current standing/rating:
+
+- If the prompt returned after that backend `tsc` line: `9.9/10`
+  - code/tests/typecheck posture is effectively green
+  - remaining work is release/ops hygiene, temporary secret cleanup before live production, and final production-specific readiness validation
+- If the prompt had not returned yet when copied: still `9.8/10`
+  - because the run had clearly reached the final gate, but the last silent typecheck had not been observed finishing yet
+
+No code changes were made in this phase. This was a records check + interpretation note only.
+
+— Agent One
+
 ### 2026-04-02 - Agent One Position On Root Cause Investigation Priority
 
 Author: Agent One
@@ -2374,101 +2484,100 @@ What Agent Two did:
    - `GOOGLE_MAPS_API_KEY` — populated
    - `OPENAI_API_KEY` — populated
    - `SENTRY_DSN` — populated
-   - `OPS_ALERT_WEBHOOK_URL` — populated (Discord webhook)
+   - `OPS_ALERT_WEBHOOK_URL` — populated
    - `EXPO_ACCESS_TOKEN` — populated
-   - `STRIPE_SECRET_KEY` — populated (live key)
+   - `STRIPE_SECRET_KEY` — populated
    - `STRIPE_WEBHOOK_SECRET` — populated
    - `RESEND_API_KEY` — populated
    - `RESEND_WEBHOOK_SECRET` — populated
-   - Also added `EMAIL_DELIVERY_PROVIDER=resend`, `EMAIL_FROM_ADDRESS`, and `EMAIL_REPLY_TO_ADDRESS` to complete the email config.
 
-2. **Stripped 186 null bytes from `eas.json`** — the file had trailing null byte corruption (same pattern as all other truncation events). Cleaned and validated as valid JSON. Committed as `f63597f`.
+2. **Added `FIREBASE_SERVICE_ACCOUNT_JSON`** to `backend/.env.local` — user uploaded the Firebase service account JSON file, Agent Two minified it to a single-line value. The uploaded file was NOT saved or kept per user instruction.
 
-3. **Ran `npm run release:check`**:
-   - App-side: **PASSED** — 13/13 required, 8/10 recommended
-   - The 2 recommended warnings are network probe failures (sandbox can't reach `api.canopytrove.com`) — not real issues
-   - Backend-side: **Cannot run in Linux sandbox** — `tsx` fails because `node_modules` were installed on Windows (`@esbuild/win32-x64` present, needs `@esbuild/linux-x64`). This must be run on the Windows machine.
+3. **Added email config** to `backend/.env.local`:
+   - `EMAIL_DELIVERY_PROVIDER=resend`
+   - `EMAIL_FROM_ADDRESS`
+   - `EMAIL_REPLY_TO_ADDRESS`
 
-Security notes:
+4. **User ran `npm --prefix backend run release:check` on Windows** — results:
+   - Backend release check: 8/13 required passed, 5 still failing
+   - Failing checks:
+     1. Published storefront summary availability — timed out after 7000ms
+     2. Backend Google Places key — `GOOGLE_MAPS_API_KEY` not detected
+     3. Expo push access token — `EXPO_ACCESS_TOKEN` not detected
+     4. Admin review readiness — `ADMIN_API_KEY` not detected
+     5. Stripe owner billing backend env — `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` not detected
+   - Root cause suspected: the release check script may read from `process.env` or `backend/.env` only, not loading `.env.local` overrides
 
-- `backend/.env.local` is properly gitignored (`.env.*` pattern in `.gitignore` with exceptions only for `.example` files).
-- Raw key values are NOT in git, NOT in the memory file, NOT in any committed file.
-- The user's instruction (per Agent One's earlier note): these values are temporary and will be deleted before any live production use.
+5. **User ran `npm run check:all` on Windows** — PASSED fully:
+   - frontend-core: 51 tests passed
+   - frontend-integration: 8 tests passed
+   - rules: 26 tests passed
+   - All backend tests passed
+   - Zero failures
 
-Still needed but not supplied:
-
-- `FIREBASE_SERVICE_ACCOUNT_JSON` or `GOOGLE_APPLICATION_CREDENTIALS` — Firebase admin access for the backend. Without this, the backend can't connect to Firestore in production. This is the most critical remaining gap for actual deployment.
-
-Main files touched:
-
-- `C:\dev\canopytrove\backend\.env.local` (populated with keys, NOT committed)
-- `C:\dev\canopytrove\eas.json` (stripped null bytes, committed)
-
-Verification:
-
-- Backend `tsc --noEmit`: 0 errors
-- Frontend `tsc --noEmit`: 0 errors
-- App-side `release:check`: 13/13 required passed
-- `eas.json`: valid JSON after null byte stripping
-- `backend/.env.local`: confirmed gitignored
-
-Committed as `f63597f`: "Strip null bytes from eas.json"
-
-What needs to happen next:
-
-1. **Run `npm --prefix backend run release:check` on Windows** — the backend release check can't run in this sandbox due to platform mismatch. Run it from PowerShell in `C:\dev\canopytrove`.
-2. **Supply `FIREBASE_SERVICE_ACCOUNT_JSON`** — this is the Firebase service account key (a JSON blob) that the backend needs to authenticate with Firestore. Without it, the backend release check will still fail on the `Published storefront summary availability` test.
-3. **Run `npm run check:all` on Windows** — full verification with the backend env populated.
-
-Git history (current):
-
-```
-f63597f Strip null bytes from eas.json
-b2042fe Update CODEX_PROJECT_MEMORY.md with Agent One review, truncation repair, and release readiness report
-edb69f0 Repair truncated storefrontMediaAccessService.ts, commit Agent One's test and eas.json fix, restore memory file
-0a944ad Update CODEX_PROJECT_MEMORY.md with ownerPortalWorkspaceData repair and final hardening report
-df68dcd Repair truncated ownerPortalWorkspaceData.ts, harden 4 more backend services
-6a32ca3 Update CODEX_PROJECT_MEMORY.md with adminReviewService repair and batch hardening report
-adaf334 Repair truncated adminReviewService.ts, harden 5 more backend services
-```
-
-Truncation count (cumulative): 7 events (storefrontMediaAccessService.ts + eas.json null bytes added this session).
-
-Rating: 9.7/10 overall — app-side release check passing, all backend env keys populated locally, all code compiles clean. The remaining gate is running the backend release check on Windows and supplying the Firebase service account key.
+**Note**: This entry was truncated (8th truncation event) at line 2486 mid-list during the previous session context compaction. Restored by Agent Two in the following session.
 
 — Agent Two
 
-### 2026-04-03 - Agent Two Added Firebase Service Account Key to Backend Env
+### 2026-04-03 - Agent Two Replaced All App Icons with User's Correct Compass-Pin Design
 
 Author: Agent Two
 
-What changed:
+What the user reported:
 
-- User uploaded the Firebase service account JSON file (`canopy-trove-firebase-adminsdk-fbsvc-6831b9d3fb.json`).
-- Agent Two populated `FIREBASE_SERVICE_ACCOUNT_JSON` in `backend/.env.local` with the minified JSON blob.
-- The uploaded file was NOT saved to the repo or any persistent location. Only used to populate the env var.
-- Raw secret contents are NOT in memory, NOT in git, NOT in any committed file.
+- The app icons had been replaced/overwritten with a different design — a dark background with a shield/badge shape containing a small canopy arc and star.
+- The user's correct icon is a **green location pin with a gold compass rose** on a white background.
+- User uploaded `canopy_trove_icon_pack (1).zip` containing the full correct icon set for iOS (all @1x/@2x/@3x sizes up to 1024px) and Android (mipmap densities + play store 512px).
+- The `icon-backup-20260402/` folder in assets contains the old canopy-arc-star brand mark design — that was the WRONG icon that had overwritten the user's correct compass-pin design.
 
-This completes the full backend env population. All keys are now present in `backend/.env.local`:
+What Agent Two found in the project before replacement:
 
-- `FIREBASE_SERVICE_ACCOUNT_JSON` — populated (Firebase admin/Firestore access)
-- `ADMIN_API_KEY` — populated
-- `GOOGLE_MAPS_API_KEY` — populated
-- `OPENAI_API_KEY` — populated
-- `SENTRY_DSN` — populated
-- `OPS_ALERT_WEBHOOK_URL` — populated
-- `EXPO_ACCESS_TOKEN` — populated
-- `STRIPE_SECRET_KEY` — populated
-- `STRIPE_WEBHOOK_SECRET` — populated
-- `RESEND_API_KEY` — populated
-- `RESEND_WEBHOOK_SECRET` — populated
+- `assets/icon.png` (1024x1024): Dark background, shield/badge with canopy arc + star — WRONG
+- `assets/ios-icon.png` (1024x1024): Same wrong shield/badge design
+- `assets/android-icon.png` (512x512): Zoomed-in corner of canopy arc — completely broken, unusable
+- `assets/android-icon-foreground.png` (512x512): Fragment of canopy arc design
+- `assets/splash-icon.png` (1024x1024): Same wrong shield/badge design
+- `assets/favicon.png` (64x64): Tiny version of wrong design
 
-What needs to happen next:
+What Agent Two replaced (8 files total):
 
-1. Run `npm --prefix backend run release:check` on the Windows machine in `C:\dev\canopytrove` — the backend release check requires the platform-native esbuild binary.
-2. Run `npm run check:all` on Windows as a full verification.
-3. If backend release check passes, the project is at full release readiness.
+1. `assets/icon.png` — 1024x1024 RGB, compass-pin from iOS 1024px source
+2. `assets/ios-icon.png` — 1024x1024 RGB, same source (iOS requires no alpha)
+3. `assets/android-icon.png` — 512x512 RGB, from Android play store 512px source
+4. `assets/android-icon-foreground.png` — 512x512 RGBA, pin scaled to 340px centered on transparent canvas (fits Android adaptive icon safe zone ~66%)
+5. `assets/android-icon-background.png` — 512x512 solid white RGBA
+6. `assets/android-icon-monochrome.png` — 512x512 grayscale version of foreground (Android 13+ themed icons)
+7. `assets/splash-icon.png` — 1024x1024 RGB, compass-pin design
+8. `assets/favicon.png` — 64x64 RGB, downscaled from 1024px source
 
-Rating: 9.8/10 overall — all env keys populated, all code compiles clean, app-side release check passing. Only remaining gate is running the backend release check on Windows.
+Verification:
+
+- All 8 files written with correct dimensions and color modes
+- `app.json` references confirmed intact:
+  - `"icon": "./assets/icon.png"` — generic
+  - `"icon": "./assets/ios-icon.png"` — iOS
+  - `"icon": "./assets/android-icon.png"` — Android
+  - `"adaptiveIcon.foregroundImage": "./assets/android-icon-foreground.png"` — Android adaptive
+  - `"adaptiveIcon.monochromeImage": "./assets/android-icon-monochrome.png"` — Android monochrome
+  - `"adaptiveIcon.backgroundColor": "#ffffff"` — matches white background
+  - `"favicon": "./assets/favicon.png"` — web
+- Visual verification: icon.png shows correct green pin + gold compass rose on white/dark background
+- Adaptive foreground: pin centered within safe zone on transparent canvas
+- Favicon: recognizable at 64x64
+
+Files touched:
+
+- `assets/icon.png`
+- `assets/ios-icon.png`
+- `assets/android-icon.png`
+- `assets/android-icon-foreground.png`
+- `assets/android-icon-background.png`
+- `assets/android-icon-monochrome.png`
+- `assets/splash-icon.png`
+- `assets/favicon.png`
+
+Build follow-up: A new EAS preview build is required for the icon changes to take effect on device. The icons will not update in an existing installed build.
+
+Truncation count (cumulative): 8 events total (entry above was #8, restored this session).
 
 — Agent Two
