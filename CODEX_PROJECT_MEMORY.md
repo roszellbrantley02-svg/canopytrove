@@ -2873,8 +2873,7 @@ No code changes were made during this audit phase.
 
 User wants to audit another section of the app. All 4 phases from Agent One's brief are now implemented and committed. Ready for the next audit target.
 
-— Agent Two
----
+## — Agent Two
 
 ### Entry — Agent One: Broad Repo Audit After UI Cleanup
 
@@ -3191,6 +3190,7 @@ All three log `[community] post-write detail refresh failed for {action}:` on fa
 Agent One's finding 2 (Medium) identified no regression test coverage for the post-write failure path. After investigation, the existing test architecture (integration tests via `startTestServer()` with module-level imports) makes it impractical to inject a `getStorefrontDetail` failure without significant test infrastructure changes. The `getStorefrontDetail` function returns `null` for unknown storefronts (doesn't throw), so testing the `throw` path requires a storefront with a summary but no detail record in the mock source, which isn't straightforward to set up.
 
 The code fix is verified by TypeScript compilation and manual code review. A proper failure-injection regression test would require one of:
+
 - dependency injection at the route level (not currently supported)
 - a mock service layer that can be configured to throw on demand
 - a test-only mode that forces `getStorefrontDetail` to reject
@@ -3301,6 +3301,7 @@ Created `RELEASE_GATES.md` at project root. Explains what each command covers, w
 #### Fix 2 — Classify Backend Release Blockers
 
 Added classification section to `RELEASE_GATES.md`:
+
 - **Env-only** (need keys, not code): `GOOGLE_MAPS_API_KEY`, `EXPO_ACCESS_TOKEN`, `ADMIN_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 - **Infrastructure** (need hosted services): storefront summary availability timeout
 - **Code-path blockers**: none currently
@@ -3308,6 +3309,7 @@ Added classification section to `RELEASE_GATES.md`:
 #### Fix 3 — Owner Routing Regression Tests
 
 Created `src/screens/profile/useProfileActions.test.ts` with 3 tests:
+
 1. `openOwnerPortal` always routes to `OwnerPortalAccess`, never preview
 2. `openOwnerPortal` never passes preview params
 3. `openOwnerSignIn` routes to `OwnerPortalAccess`
@@ -3335,12 +3337,14 @@ Agent One's verification review identified that the test file created in commit 
 2. **Mock wiring** — `getOwnerPortalAccessState` was mocked as a static return value instead of using `vi.hoisted()` for proper mock reference sharing.
 
 **Fix applied:**
+
 - Replaced `require()` pattern with standard top-level ESM import (`import { useProfileActions } from './useProfileActions'`)
 - Moved `getOwnerPortalAccessState` mock to `vi.hoisted()` block for proper reference sharing
 - All three tests use `renderHook(() => useProfileActions(args))` with the direct ESM import
 - Preserved all three test cases and all assertions unchanged
 
 **Verification:**
+
 - `npx tsc --noEmit` — clean
 - `npx eslint src/screens/profile/useProfileActions.test.ts --max-warnings 0` — clean
 - `npx prettier --check src/screens/profile/useProfileActions.test.ts` — clean
@@ -3361,6 +3365,7 @@ Agent One's audit item 3 asked to either add backend recovery regression tests f
 4. The try/catch pattern is a standard defensive wrapper — the correctness is self-evident from code review.
 
 **If a future session adds partial-failure injection to the backend test harness**, the following tests should be added:
+
 - `POST /reviews` returns 201 even when `applyGamificationEvent` throws
 - `POST /reviews` returns 201 even when `getStorefrontDetail` throws
 - `POST /reports` returns 201 even when `applyGamificationEvent` throws
@@ -3368,5 +3373,56 @@ Agent One's audit item 3 asked to either add backend recovery regression tests f
 - `POST /reviews/:id/helpful` returns 200 even when `getStorefrontDetail` throws
 
 **Files touched**: `src/screens/profile/useProfileActions.test.ts`
+
+— Agent Two
+
+---
+
+### Entry — Agent Two: Test Runtime Fix and Formatting Debt Clearance
+
+**Date**: 2026-04-03
+
+#### Fix 1 — Vitest Runtime Failure in useProfileActions.test
+
+Agent One's verification review confirmed that the previous test rewrite (commit `6e5559e`) still failed at runtime with `SyntaxError: Unexpected token 'typeof'` and 0 tests. Root cause: `renderHook` from `@testing-library/react-native` tries to import React Native internals which contain TypeScript constructs that vitest's node environment can't parse (RTLN expects a RN renderer).
+
+**Fix applied:**
+
+- Renamed `.test.ts` → `.test.tsx` (needed for `React.createElement`)
+- Replaced `renderHook` from `@testing-library/react-native` with the project's established pattern: `react-test-renderer` (`act` + `create`) with a `HookHarness` component that captures hook output
+- Proper TypeScript types throughout: `UseProfileActionsArgs` extracted from `Parameters<typeof useProfileActions>[0]`, navigation mock cast through `as unknown as`, mock calls accessed via `as ReturnType<typeof vi.fn>`
+- All 3 regression tests preserved with identical assertions
+
+**Verification:**
+
+- `npx tsc --noEmit` — clean
+- `npx eslint . --max-warnings 0` — clean
+- `npx prettier --check` — clean
+- Vitest run still fails with `Cannot find module '@rolldown/binding-linux-x64-gnu'` — this is the known platform mismatch (Windows node_modules on Linux sandbox), not a test code issue. Must run on Windows.
+
+#### Fix 2 — Clear precheck:strict Formatting Debt (8 Files)
+
+Ran `prettier --write` on all 8 files that were failing `format:check`:
+
+1. `src/screens/ownerPortal/OwnerPortalDealOverridePanel.tsx`
+2. `src/screens/ownerPortal/useOwnerPortalHomeScreenModel.ts`
+3. `src/screens/OwnerPortalPromotionsScreen.tsx`
+4. `src/screens/profile/ProfileIdentitySections.tsx`
+5. `src/screens/profile/ProfileSections.tsx`
+6. `src/screens/profile/useProfileActions.ts`
+7. `src/services/navigationService.ts`
+8. `CODEX_PROJECT_MEMORY.md`
+
+These accumulated over the UI audit and subsequent fix sessions. All were whitespace/formatting only — no logic changes.
+
+#### Full precheck:strict Status
+
+- `npm run typecheck` — clean
+- `npm run lint:strict` — clean
+- `npm run format:check` — clean
+
+All three gates pass. The only remaining gate that cannot pass in this sandbox is actual vitest execution (platform binding mismatch).
+
+**Files touched**: `src/screens/profile/useProfileActions.test.tsx` (new, replaced `.test.ts`), plus 8 files formatted
 
 — Agent Two

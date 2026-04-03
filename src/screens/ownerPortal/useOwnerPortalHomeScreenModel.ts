@@ -58,7 +58,7 @@ export function useOwnerPortalHomeScreenModel(preview = false) {
           }
 
           setErrorText(
-              error instanceof Error ? error.message : 'Unable to load preview owner data.',
+            error instanceof Error ? error.message : 'Unable to load preview owner data.',
           );
         } finally {
           if (alive) {

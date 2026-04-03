@@ -11,7 +11,7 @@ type RouteMode = 'preview' | 'verified';
  * land in the middle of a road or field).
  */
 function buildAddressDestination(
-  storefront: Pick<StorefrontSummary, 'displayName' | 'addressLine1' | 'city' | 'state' | 'zip'>
+  storefront: Pick<StorefrontSummary, 'displayName' | 'addressLine1' | 'city' | 'state' | 'zip'>,
 ): string {
   const parts = [
     storefront.displayName,
@@ -101,4 +101,3 @@ export async function openStorefrontRoute(
   // Final fallback: use raw coordinates if address-based URLs fail.
   await Linking.openURL(coordinateFallbackUrl);
 }
- 

@@ -206,8 +206,8 @@ export function OwnerPortalDealOverridePanel({
   return (
     <View style={styles.form}>
       <Text style={styles.helperText}>
-        This is the preview override lab for your test owner storefront set. It does not replace
-        the claimed-store editor above, and it keeps quick hot-deal testing separate from the full
+        This is the preview override lab for your test owner storefront set. It does not replace the
+        claimed-store editor above, and it keeps quick hot-deal testing separate from the full
         promotion planner.
       </Text>
 

@@ -401,7 +401,8 @@ export function ProfileAccountSection({
             ) : null}
           </View>
           <Text style={styles.previewCardBody}>
-            Preview business tools without affecting live data. For internal and App Review use only.
+            Preview business tools without affecting live data. For internal and App Review use
+            only.
           </Text>
           <View style={styles.heroActions}>
             <Pressable

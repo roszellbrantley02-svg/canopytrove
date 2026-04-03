@@ -12,7 +12,6 @@ import type { CanopyTroveAuthSession } from '../../types/identity';
 import type { RootStackParamList } from '../../navigation/RootNavigator';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-
 type UseProfileActionsArgs = {
   authSession: CanopyTroveAuthSession;
   backendHealth: {

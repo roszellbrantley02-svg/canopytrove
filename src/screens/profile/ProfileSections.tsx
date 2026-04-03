@@ -3,9 +3,7 @@ export {
   ProfileAccountSection,
   ProfileStatsSection,
 } from './ProfileIdentitySections';
-export {
-  ProfileRewardsSection,
-} from './ProfileBadgeSections';
+export { ProfileRewardsSection } from './ProfileBadgeSections';
 export {
   StorefrontCollectionSection,
   ProfileEmailUpdatesSection,

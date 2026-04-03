@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderHook } from '@testing-library/react-native';
+import React from 'react';
+import { act, create } from 'react-test-renderer';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const ownerPortalMocks = vi.hoisted(() => ({
   getOwnerPortalAccessState: vi.fn(() => ({
@@ -37,9 +38,8 @@ vi.mock('../../services/ownerPortalService', () => ({
 
 import { useProfileActions } from './useProfileActions';
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+type UseProfileActionsArgs = Parameters<typeof useProfileActions>[0];
+type HookResult = ReturnType<typeof useProfileActions>;
 
 function createMockNavigation() {
   return {
@@ -56,15 +56,17 @@ function createMockNavigation() {
     getState: vi.fn(),
     addListener: vi.fn(),
     removeListener: vi.fn(),
-  } as any;
+  } as unknown as UseProfileActionsArgs['navigation'];
 }
 
-function createDefaultArgs(overrides?: Record<string, unknown>) {
+function createDefaultArgs(): UseProfileActionsArgs {
   return {
     authSession: {
-      status: 'authenticated',
-      email: 'test@canopytrove.test',
-      uid: 'uid-1',
+      status: 'signed-out',
+      uid: null,
+      isAnonymous: false,
+      displayName: null,
+      email: null,
     },
     backendHealth: { status: 'healthy', allowDevSeed: false },
     clearDisplayName: vi.fn(async () => true),
@@ -74,16 +76,47 @@ function createDefaultArgs(overrides?: Record<string, unknown>) {
     signOutSession: vi.fn(async () => true),
     startGuestSession: vi.fn(async () => true),
     updateDisplayName: vi.fn(async () => true),
-    ...overrides,
-  } as any;
+  };
+}
+
+function HookHarness({
+  args,
+  capture,
+}: {
+  args: UseProfileActionsArgs;
+  capture: (value: HookResult) => void;
+}) {
+  const result = useProfileActions(args);
+  capture(result);
+  return null;
 }
 
 describe('useProfileActions owner routing', () => {
+  let latestResult: HookResult | null = null;
+
+  beforeEach(() => {
+    latestResult = null;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('openOwnerPortal always routes to OwnerPortalAccess, never directly to preview', () => {
     const args = createDefaultArgs();
-    const { result } = renderHook(() => useProfileActions(args));
 
-    result.current.openOwnerPortal();
+    act(() => {
+      create(
+        React.createElement(HookHarness, {
+          args,
+          capture: (v: HookResult) => {
+            latestResult = v;
+          },
+        }),
+      );
+    });
+
+    latestResult!.openOwnerPortal();
 
     expect(args.navigation.navigate).toHaveBeenCalledTimes(1);
     expect(args.navigation.navigate).toHaveBeenCalledWith('OwnerPortalAccess');
@@ -91,20 +124,43 @@ describe('useProfileActions owner routing', () => {
 
   it('openOwnerPortal does not pass preview params', () => {
     const args = createDefaultArgs();
-    const { result } = renderHook(() => useProfileActions(args));
 
-    result.current.openOwnerPortal();
+    act(() => {
+      create(
+        React.createElement(HookHarness, {
+          args,
+          capture: (v: HookResult) => {
+            latestResult = v;
+          },
+        }),
+      );
+    });
 
-    const navigateCall = args.navigation.navigate.mock.calls[0];
+    latestResult!.openOwnerPortal();
+
+    const navigateCall = (args.navigation.navigate as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      unknown,
+    ];
     expect(navigateCall[0]).toBe('OwnerPortalAccess');
     expect(navigateCall[1]).toBeUndefined();
   });
 
   it('openOwnerSignIn routes to OwnerPortalAccess', () => {
     const args = createDefaultArgs();
-    const { result } = renderHook(() => useProfileActions(args));
 
-    result.current.openOwnerSignIn();
+    act(() => {
+      create(
+        React.createElement(HookHarness, {
+          args,
+          capture: (v: HookResult) => {
+            latestResult = v;
+          },
+        }),
+      );
+    });
+
+    latestResult!.openOwnerSignIn();
 
     expect(args.navigation.navigate).toHaveBeenCalledWith('OwnerPortalAccess');
   });

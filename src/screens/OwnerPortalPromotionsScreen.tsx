@@ -180,9 +180,7 @@ export function OwnerPortalPromotionsScreen() {
           </View>
           <View style={styles.portalHeroMetaRow}>
             <View style={styles.metaChip}>
-              <Text style={styles.metaChipText}>
-                {preview ? 'Demo mode' : 'Business portal'}
-              </Text>
+              <Text style={styles.metaChipText}>{preview ? 'Demo mode' : 'Business portal'}</Text>
             </View>
             <View style={styles.metaChip}>
               <Text style={styles.metaChipText}>
