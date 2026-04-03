@@ -3087,3 +3087,79 @@ bb9d1ec Append UI audit implementation report to project memory (all 4 fixes doc
 ```
 
 — Agent Two
+
+---
+
+### Entry — Agent One: Focused Follow-Up Audit After Broad Repo Audit Implementation
+
+**Date**: 2026-04-03
+**Author**: Agent One
+**Trigger**: User requested another audit after reading the updated project memory and Agent Two's implementation report.
+
+#### Scope
+
+- review Agent Two's latest fix batch (`15392b4`) directly
+- confirm what was actually fixed cleanly
+- identify the next unresolved code/behavior issue rather than reopening already-fixed items
+- write the result into memory for Agent Two
+
+#### Direct Review Result
+
+- Agent Two's last implementation batch is mostly sound:
+  - `src/screens/profile/useProfileActions.ts` now routes `openOwnerPortal()` to `OwnerPortalAccess` instead of preview mode
+  - `src/screens/profile/ProfileIdentitySections.tsx` no longer falsely says business access is already active and connected
+  - `firebase/security.rules.test.ts` cleanup now guards `testEnv`
+  - `backend/src/routes/communityRoutes.ts` correctly decouples gamification failures from the primary write result
+
+#### New Highest-Signal Remaining Finding
+
+1. **High — review/helpful responses are still coupled to a post-write detail fetch**
+   - in `backend/src/routes/communityRoutes.ts`, the review submission route still does:
+     - primary write first
+     - then `const detail = await getStorefrontDetail(storefrontId)` at line `106`
+   - the helpful-vote route still responds with:
+     - `detail: await getStorefrontDetail(storefrontId)` at line `382`
+   - practical risk:
+     - if detail rehydration fails after the review/helpful write already succeeded, the route can still return a server error after the primary action has persisted
+     - this leaves the same class of user confusion as the original gamification problem, only now the remaining weak point is storefront-detail reloading instead of gamification
+   - audit read:
+     - Agent Two fixed one important post-write coupling
+     - the broader post-write response-coupling problem is not fully eliminated yet
+
+#### Testing-Gap Findings
+
+2. **Medium — no direct regression coverage for the remaining post-write failure path**
+   - `backend/src/app.test.ts` contains happy-path and auth/validation tests for reviews and uploads
+   - this audit did **not** find direct tests that simulate:
+     - a successful review write followed by a failing `getStorefrontDetail()`
+     - a successful helpful vote followed by a failing `getStorefrontDetail()`
+   - practical risk:
+     - the remaining coupling bug is easy to miss in green test runs
+
+3. **Medium — no direct regression coverage for owner-entry/profile gating behavior**
+   - this audit did not find app-side tests covering:
+     - member profile owner portal entry routing
+     - demo/preview gating on owner-access surfaces
+   - practical risk:
+     - future regressions in owner/demo routing can return without being caught by existing tests
+
+#### What Looks Resolved Enough
+
+- the preview-first shortcut from profile into demo mode appears resolved in `useProfileActions.ts`
+- the profile business-portal snapshot is now materially more truthful than before
+- the rules-test cleanup hardening is appropriate
+- the gamification side-effect isolation is a real improvement and should stay
+
+#### Recommended Next Fix Order For Agent Two
+
+1. finish decoupling post-write community responses from `getStorefrontDetail()` failure
+2. add backend regression tests for:
+   - review write succeeds even if response detail refresh fails
+   - helpful vote succeeds even if response detail refresh fails
+3. add app-side regression tests for owner-entry/profile routing and demo gating
+
+No product code changes were made during this follow-up audit phase.
+
+— Agent One
+
+**Memory file note**: Agent One placed this entry at line 730 (out of chronological order) and truncated the tail of the memory file (Agent Two's implementation report cut mid-sentence at Fix 2). Restored by Agent Two from git (commit f81d7b6) and appended here at the correct chronological position. This is the 13th truncation event for the memory file.
