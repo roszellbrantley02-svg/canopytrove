@@ -23,7 +23,7 @@ Rozell (rozell), solo founder building Canopy Trove — a licensed dispensary di
 | Maps        | Google Places API (backend gateway pattern)                  |
 | Build       | EAS Build (development, preview, production profiles)        |
 | Hosting     | Firebase Hosting for legal pages                             |
-| Monitoring  | Sentry (planned), Cloud Logging                              |
+| Monitoring  | Sentry (integrated, needs DSN), Cloud Logging, runtime ops   |
 | GCP Project | `canopy-trove`                                               |
 | Bundle ID   | `com.rezell.canopytrove`                                     |
 
@@ -36,6 +36,10 @@ Rozell (rozell), solo founder building Canopy Trove — a licensed dispensary di
 | `GOOGLE_MAPS_API_KEY`       | Via Secret Manager on Cloud Run                                      |
 | `ADMIN_API_KEY`             | Via Secret Manager on Cloud Run                                      |
 | `EXPO_PUBLIC_*`             | Client-visible env vars (legal URLs, Firebase config, feature flags) |
+| `SENTRY_DSN`                | Backend crash monitoring — Sentry project DSN                        |
+| `EXPO_PUBLIC_SENTRY_DSN`    | Frontend crash monitoring — Sentry project DSN                       |
+| `OPS_HEALTHCHECK_API_URL`   | Runtime uptime monitor target (public API URL)                       |
+| `OPS_ALERT_WEBHOOK_URL`     | Webhook for runtime health failure alerts                            |
 
 ## Design Tokens
 
