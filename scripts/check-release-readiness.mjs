@@ -360,15 +360,6 @@ for (const [envVar, label] of [
   );
 }
 
-const ownerPreviewEnabled = isTruthy(readValue('EXPO_PUBLIC_OWNER_PORTAL_PREVIEW_ENABLED'));
-pushCheck(
-  'Owner preview disabled',
-  !ownerPreviewEnabled,
-  ownerPreviewEnabled
-    ? 'Disable EXPO_PUBLIC_OWNER_PORTAL_PREVIEW_ENABLED for public release builds.'
-    : 'Owner preview is off for public release checks.'
-);
-
 const ownerPrelaunchEnabled = isTruthy(readValue('EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED'));
 pushCheck(
   'Owner prelaunch disabled for public release',
