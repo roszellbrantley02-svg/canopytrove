@@ -67,5 +67,5 @@ Canopy Trove may use infrastructure providers that process data on behalf of the
 
 Support contact:
 
-- `support@canopytrove.com`
+- `askmehere@canopytrove.com`
 

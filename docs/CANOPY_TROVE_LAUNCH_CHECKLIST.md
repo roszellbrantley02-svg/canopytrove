@@ -5,11 +5,11 @@ Updated: April 1, 2026
 ## Public-Site Readiness
 
 - [x] Homepage, support, privacy, terms, community guidelines, and account deletion pages are written for `Canopy Trove`
-- [x] Public support contact is set to `support@canopytrove.com`
+- [x] Public support contact is set to `askmehere@canopytrove.com`
 - [x] Launch-week support owner is recorded as `danielletuper@canopytrove.com`
 - [x] Canonical page URLs point at `https://canopytrove.com`
 - [x] `https://canopytrove.com` is live and serving the current public-release-pages build
-- [ ] `support@canopytrove.com` mailbox is active and monitored
+- [ ] `askmehere@canopytrove.com` mailbox is active and monitored
 - [x] Public homepage CTA paths are verified on the live site
 - [x] Human-only launch checks are documented in `docs/LAUNCH_OPERATIONS_VERIFICATION.md`
 
@@ -29,7 +29,7 @@ Updated: April 1, 2026
 - [ ] App listing name, icon, and splash assets are fully aligned with `Canopy Trove`
 - [x] Public legal/support URLs are wired into release env values
 - [x] `https://canopytrove.com` resolves correctly over live DNS and HTTPS
-- [ ] `support@canopytrove.com` is configured with inbox ownership and a tested reply path
+- [ ] `askmehere@canopytrove.com` is configured with inbox ownership and a tested reply path
 - [x] Production release checks pass with no missing support or legal URLs
 - [ ] Account deletion help page matches the live app behavior end to end
 - [ ] Real-phone QA is complete for launch-critical member flows
@@ -44,7 +44,7 @@ Updated: April 1, 2026
 
 ## Current Known Blockers
 
-- The `support@canopytrove.com` mailbox still needs external setup confirmation
+- The `askmehere@canopytrove.com` mailbox still needs external setup confirmation
 - `danielletuper@canopytrove.com` is the recorded launch-week support owner, but inbox receipt and reply still need a real-world test
 - Account deletion help and real-phone QA still need final human verification
 - Apple organization seller-name setup still depends on the D-U-N-S / organization-enrollment path

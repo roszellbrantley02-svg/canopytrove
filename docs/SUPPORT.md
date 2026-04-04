@@ -6,7 +6,7 @@ Updated: March 29, 2026
 
 Support email:
 
-- `support@canopytrove.com`
+- `askmehere@canopytrove.com`
 
 Launch-week mailbox owner:
 
@@ -32,7 +32,7 @@ Email support with:
 
 ## Launch Verification
 
-Before launch, send a real test email to `support@canopytrove.com` and confirm all of the following:
+Before launch, send a real test email to `askmehere@canopytrove.com` and confirm all of the following:
 
 - the message is received in the mailbox monitored by `danielletuper@canopytrove.com`
 - the reply path works from the real support mailbox identity

@@ -27,11 +27,11 @@ If deletion is blocked or incomplete:
 
 - sign in again and retry the in-app flow
 - keep any error message shown by the app
-- email `support@canopytrove.com` for follow-up
+- email `askmehere@canopytrove.com` for follow-up
 
 ## Support
 
 Support email:
 
-- `support@canopytrove.com`
+- `askmehere@canopytrove.com`
 

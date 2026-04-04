@@ -4,7 +4,7 @@ function normalizeConfiguredValue(value: string | null | undefined) {
 }
 
 const supportEmail =
-  normalizeConfiguredValue(process.env.EXPO_PUBLIC_SUPPORT_EMAIL) || 'support@canopytrove.com';
+  normalizeConfiguredValue(process.env.EXPO_PUBLIC_SUPPORT_EMAIL) || 'askmehere@canopytrove.com';
 
 export const legalConfig = {
   supportEmail,

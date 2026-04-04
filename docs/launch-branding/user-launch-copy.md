@@ -7,7 +7,7 @@ Generated: April 1, 2026
 - App name: `Canopy Trove`
 - Display name: `Canopy Trove™`
 - Tagline: `Dispensaries, deals, reviews`
-- Support email: `support@canopytrove.com`
+- Support email: `askmehere@canopytrove.com`
 - Website: `https://canopytrove.com`
 - Privacy policy: `https://canopytrove.com/privacy`
 - Terms: `https://canopytrove.com/terms`

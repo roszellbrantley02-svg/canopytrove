@@ -53,7 +53,7 @@ test('sends the welcome email only once when resend is configured', async () => 
   process.env.EMAIL_DELIVERY_PROVIDER = 'resend';
   process.env.RESEND_API_KEY = 're_test';
   process.env.EMAIL_FROM_ADDRESS = 'hello@canopytrove.com';
-  process.env.EMAIL_REPLY_TO_ADDRESS = 'support@canopytrove.com';
+  process.env.EMAIL_REPLY_TO_ADDRESS = 'askmehere@canopytrove.com';
   clearBackendModuleCache();
 
   const fetchCalls: Array<{ url: string; init?: RequestInit }> = [];
@@ -109,7 +109,7 @@ test('sends the welcome email only once when resend is configured', async () => 
   assert.equal(payload.from, 'hello@canopytrove.com');
   assert.deepEqual(payload.to, ['member2@example.com']);
   assert.equal(payload.subject, 'Your Canopy Trove account is ready');
-  assert.equal(payload.reply_to, 'support@canopytrove.com');
+  assert.equal(payload.reply_to, 'askmehere@canopytrove.com');
   assert.deepEqual(payload.tags, [
     {
       name: 'email_type',
@@ -141,7 +141,7 @@ test('does not send the welcome email as a side effect of a status read', async 
   process.env.EMAIL_DELIVERY_PROVIDER = 'resend';
   process.env.RESEND_API_KEY = 're_test';
   process.env.EMAIL_FROM_ADDRESS = 'hello@canopytrove.com';
-  process.env.EMAIL_REPLY_TO_ADDRESS = 'support@canopytrove.com';
+  process.env.EMAIL_REPLY_TO_ADDRESS = 'askmehere@canopytrove.com';
 
   const fetchCalls: Array<{ url: string; init?: RequestInit }> = [];
   global.fetch = (async (url: string | URL | Request, init?: RequestInit) => {

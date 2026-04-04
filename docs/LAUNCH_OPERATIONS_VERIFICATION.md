@@ -12,7 +12,7 @@ Owner for launch week: `danielletuper@canopytrove.com`
 
 Run this from an external inbox that is not already logged into the Canopy Trove domain:
 
-1. Send a plain-text test email to `support@canopytrove.com`.
+1. Send a plain-text test email to `askmehere@canopytrove.com`.
 2. Confirm the message lands in the monitored inbox within 5 minutes.
 3. Reply from the real support mailbox identity.
 4. Confirm the reply arrives back at the external inbox and shows the correct sender identity.

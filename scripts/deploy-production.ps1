@@ -110,7 +110,7 @@ function Deploy-Backend {
         "OPS_ALERT_COOLDOWN_MINUTES=30",
         "WELCOME_EMAILS_ENABLED=true",
         "EMAIL_DELIVERY_PROVIDER=resend",
-        "EMAIL_REPLY_TO_ADDRESS=support@canopytrove.com",
+        "EMAIL_REPLY_TO_ADDRESS=askmehere@canopytrove.com",
         "OWNER_BILLING_SUCCESS_URL=https://canopytrove.com/owner/billing/success",
         "OWNER_BILLING_CANCEL_URL=https://canopytrove.com/owner/billing/cancel",
         "OWNER_BILLING_PORTAL_RETURN_URL=https://canopytrove.com/owner/billing"

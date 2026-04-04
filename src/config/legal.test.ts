@@ -32,7 +32,7 @@ describe('legal config', () => {
 
     const config = await import('./legal');
 
-    expect(config.legalConfig.supportEmail).toBe('support@canopytrove.com');
+    expect(config.legalConfig.supportEmail).toBe('askmehere@canopytrove.com');
     expect(config.hasPublishedLegalLinks).toBe(false);
     expect(config.missingPublishedLegalLinks.map((link) => link.key)).toEqual([
       'privacy',

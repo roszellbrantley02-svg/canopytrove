@@ -9,7 +9,7 @@ Updated: April 1, 2026
 - iOS bundle identifier: `com.rezell.canopytrove`
 - Android package: `com.rezell.canopytrove`
 - Public website: `https://canopytrove.com`
-- Support email: `support@canopytrove.com`
+- Support email: `askmehere@canopytrove.com`
 - Privacy policy URL: `https://canopytrove.com/privacy`
 - Terms URL: `https://canopytrove.com/terms`
 - Community guidelines URL: `https://canopytrove.com/community-guidelines`
@@ -68,7 +68,7 @@ Canopy Trove also includes verified operator tools for licensed storefront teams
 
 ## Store Disclosures To Publish
 
-- support email `support@canopytrove.com`
+- support email `askmehere@canopytrove.com`
 - support URL `https://canopytrove.com/support`
 - privacy policy URL `https://canopytrove.com/privacy`
 - terms URL `https://canopytrove.com/terms`
