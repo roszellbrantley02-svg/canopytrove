@@ -17,6 +17,7 @@
       "distribution": "internal",
       "env": {
         "NODE_ENV": "production",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://5087c22e8498363f234884fb5adcca96@o4511130992771072.ingest.us.sentry.io/4511131023507456",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
@@ -25,6 +26,7 @@
       "autoIncrement": true,
       "env": {
         "NODE_ENV": "production",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://5087c22e8498363f234884fb5adcca96@o4511130992771072.ingest.us.sentry.io/4511131023507456",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
