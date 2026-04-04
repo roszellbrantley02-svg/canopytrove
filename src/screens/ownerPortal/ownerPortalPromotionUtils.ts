@@ -179,12 +179,12 @@ export function getPromotionPlannerBody(editingPromotionId: string | null) {
     : 'Lead with a featured special by default, or switch to an owner highlight when the card should feel premium instead of urgent.';
 }
 
-export function getPromotionPlannerModeLabel(editingPromotionId: string | null, preview: boolean) {
+export function getPromotionPlannerModeLabel(editingPromotionId: string | null) {
   if (editingPromotionId) {
     return 'Editing';
   }
 
-  return preview ? 'Preview' : 'Draft';
+  return 'Draft';
 }
 
 export function getPromotionRuntimeMessage(

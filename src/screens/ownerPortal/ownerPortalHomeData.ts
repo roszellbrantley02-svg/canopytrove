@@ -156,7 +156,7 @@ export function getOwnerStatusChips(input: {
   ownerProfile: OwnerProfileDocument | null;
 }) {
   return [
-    input.preview ? 'Preview workspace' : input.allowlisted ? 'Approved owner' : 'Invite flow',
+    input.allowlisted ? 'Approved owner' : 'Invite flow',
     input.ownerProfile?.subscriptionStatus
       ? formatOwnerValue(input.ownerProfile.subscriptionStatus)
       : 'Plan inactive',

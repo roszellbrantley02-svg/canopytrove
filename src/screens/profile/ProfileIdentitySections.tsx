@@ -181,16 +181,12 @@ export function ProfileAccountSection({
   authSessionStatus,
   memberEmail,
   ownerPortalEnabled,
-  ownerPortalPreviewEnabled,
   onSaveDisplayName,
   onClearDisplayName,
   onSignOut,
   onOpenMemberSignIn,
   onOpenMemberSignUp,
   onOpenOwnerSignIn,
-  onOpenOwnerPreviewPortal,
-  showOwnerPreview = false,
-  onDismissOwnerPreview,
 }: {
   displayNameInput: string;
   setDisplayNameInput: (value: string) => void;
@@ -200,16 +196,12 @@ export function ProfileAccountSection({
   authSessionStatus: string;
   memberEmail: string | null;
   ownerPortalEnabled: boolean;
-  ownerPortalPreviewEnabled: boolean;
   onSaveDisplayName: () => void;
   onClearDisplayName: () => void;
   onSignOut: () => void;
   onOpenMemberSignIn: () => void;
   onOpenMemberSignUp: () => void;
   onOpenOwnerSignIn: () => void;
-  onOpenOwnerPreviewPortal: () => void;
-  showOwnerPreview?: boolean;
-  onDismissOwnerPreview?: () => void;
 }) {
   const isMemberAuthenticated = authSessionStatus === 'authenticated';
   const isGuestSession = authSessionStatus === 'anonymous';
@@ -379,39 +371,6 @@ export function ProfileAccountSection({
 
       {profileActionStatus ? (
         <Text style={styles.environmentNote}>{profileActionStatus}</Text>
-      ) : null}
-
-      {ownerPortalEnabled && ownerPortalPreviewEnabled && showOwnerPreview ? (
-        <View style={styles.previewCard}>
-          <View style={styles.previewCardHeader}>
-            <Text style={styles.previewCardTitle}>Preview mode</Text>
-            {onDismissOwnerPreview ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss owner preview workspace"
-                accessibilityHint="Closes the owner preview workspace banner."
-                onPress={onDismissOwnerPreview}
-                style={styles.previewDismissButton}
-              >
-                <AppUiIcon name="close" size={18} color={colors.textSoft} />
-              </Pressable>
-            ) : null}
-          </View>
-          <Text style={styles.previewCardBody}>
-            Preview business tools without affecting live data.
-          </Text>
-          <View style={styles.heroActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open owner preview workspace"
-              accessibilityHint="Opens the preview-only owner workspace."
-              onPress={onOpenOwnerPreviewPortal}
-              style={styles.primaryButton}
-            >
-              <Text style={styles.primaryButtonText}>Open Preview</Text>
-            </Pressable>
-          </View>
-        </View>
       ) : null}
     </SectionCard>
   );

@@ -8,7 +8,7 @@ import { SectionCard } from '../components/SectionCard';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { useSavedSummaries } from '../hooks/useStorefrontSummaryData';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
+
 import { ownerBillingConfig } from '../config/ownerBilling';
 import {
   createOwnerBillingCheckoutSession,
@@ -27,22 +27,17 @@ import {
   OwnerPortalSubscriptionPlanDetails,
   OwnerPortalSubscriptionPlanOptions,
   OwnerPortalSubscriptionReadinessList,
-  OwnerPortalSubscriptionPreview,
   PremiumFeatureList,
   formatPlanValue,
   isVerifiedStatus,
 } from './ownerPortal/ownerPortalSubscriptionSections';
-import {
-  ownerPortalPreviewProfile,
-  ownerPortalPreviewStorefront,
-} from './ownerPortal/ownerPortalPreviewData';
 
 type OwnerPortalSubscriptionRoute = RouteProp<RootStackParamList, 'OwnerPortalSubscription'>;
 
 export function OwnerPortalSubscriptionScreen() {
-  const route = useRoute<OwnerPortalSubscriptionRoute>();
+  const _route = useRoute<OwnerPortalSubscriptionRoute>();
   const { authSession } = useStorefrontProfileController();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+  const preview = false;
   const [ownerProfile, setOwnerProfile] = React.useState<OwnerProfileDocument | null>(null);
   const [subscription, setSubscription] = React.useState<OwnerPortalSubscriptionDocument | null>(
     null,
@@ -96,15 +91,6 @@ export function OwnerPortalSubscriptionScreen() {
   const claimedStorefrontIds = ownerProfile?.dispensaryId ? [ownerProfile.dispensaryId] : [];
   const { data: claimedStorefronts } = useSavedSummaries(claimedStorefrontIds);
   const claimedStorefront = claimedStorefronts?.[0] ?? null;
-
-  if (preview) {
-    return (
-      <OwnerPortalSubscriptionPreview
-        demoStatus={formatPlanValue(ownerPortalPreviewProfile.subscriptionStatus)}
-        storefrontName={ownerPortalPreviewStorefront.displayName}
-      />
-    );
-  }
 
   const effectiveStatus = subscription?.status ?? ownerProfile?.subscriptionStatus ?? 'inactive';
   const hasAccess = effectiveStatus === 'trial' || effectiveStatus === 'active';

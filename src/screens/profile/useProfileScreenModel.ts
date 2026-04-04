@@ -9,7 +9,6 @@ import {
 import {
   ownerPortalAccessAvailable,
   ownerPortalPrelaunchEnabled,
-  ownerPortalPreviewEnabled,
 } from '../../config/ownerPortalConfig';
 import { storefrontSourceMode } from '../../config/storefrontSourceConfig';
 import { useStorefrontBackendHealth } from '../../hooks/useStorefrontBackendHealth';
@@ -74,13 +73,11 @@ export function useProfileScreenModel(navigation: NativeStackNavigationProp<Root
   });
   const {
     canSeed,
-    dismissOwnerPreview,
     isSavingDisplayName,
     isSeeding,
     ownerPortalAccess,
     profileActionStatus,
     seedStatus,
-    showOwnerPreview,
     clearDisplayName: clearProfileDisplayName,
     openLeaderboard,
     openLegalCenter,
@@ -138,7 +135,6 @@ export function useProfileScreenModel(navigation: NativeStackNavigationProp<Root
     authSession,
     backendHealth,
     canSeed,
-    dismissOwnerPreview,
     displayName,
     displayNameInput,
     emailSubscriptionActionStatus: emailSubscription.actionStatus,
@@ -171,7 +167,6 @@ export function useProfileScreenModel(navigation: NativeStackNavigationProp<Root
     ownerPortalAccess,
     ownerPortalAccessAvailable,
     ownerPortalPrelaunchEnabled,
-    ownerPortalPreviewEnabled,
     profileActionStatus,
     profileId,
     profileInitials,
@@ -186,7 +181,6 @@ export function useProfileScreenModel(navigation: NativeStackNavigationProp<Root
     seedCounts,
     seedStatus,
     setDisplayNameInput,
-    showOwnerPreview,
     signOut,
     startGuestSession: startGuestProfileSession,
     storefrontSourceMode,

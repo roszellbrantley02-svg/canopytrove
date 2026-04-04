@@ -7,7 +7,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
+
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { AttentionCard } from '../components/AttentionCard';
 import { QuickActionsRow, type QuickAction } from '../components/QuickActionsRow';
@@ -39,24 +39,20 @@ interface AttentionItem {
 
 /**
  * Compute attention items from workspace data.
- * Only show items that are relevant or in preview mode.
  */
-function getAttentionItems(
-  workspace: OwnerPortalWorkspaceDocument | null,
-  preview: boolean,
-): AttentionItem[] {
+function getAttentionItems(workspace: OwnerPortalWorkspaceDocument | null): AttentionItem[] {
   const items: AttentionItem[] = [];
 
-  if (!workspace && !preview) {
+  if (!workspace) {
     return items;
   }
 
   // Unreplied reviews
   const unrepliedCount = workspace?.recentReviews?.filter((r) => !r.ownerReply).length ?? 0;
-  if (unrepliedCount > 0 || preview) {
+  if (unrepliedCount > 0) {
     items.push({
       key: 'reviews',
-      title: `${preview ? 3 : unrepliedCount} reviews need replies`,
+      title: `${unrepliedCount} reviews need replies`,
       body: 'Respond to keep engagement high.',
       iconName: 'chatbubble-ellipses-outline',
       tone: 'warning',
@@ -65,11 +61,11 @@ function getAttentionItems(
 
   // License compliance
   const renewalStatus = workspace?.licenseCompliance?.renewalStatus;
-  if (renewalStatus === 'urgent' || renewalStatus === 'expired' || preview) {
+  if (renewalStatus === 'urgent' || renewalStatus === 'expired') {
     items.push({
       key: 'license',
       title: 'License needs attention',
-      body: preview ? 'Renewal window opens soon.' : `Status: ${renewalStatus}`,
+      body: `Status: ${renewalStatus}`,
       iconName: 'shield-checkmark-outline',
       tone: 'danger',
     });
@@ -77,10 +73,10 @@ function getAttentionItems(
 
   // Follower milestone
   const followers = workspace?.metrics?.followerCount ?? 0;
-  if (followers > 0 || preview) {
+  if (followers > 0) {
     items.push({
       key: 'followers',
-      title: `${preview ? 214 : followers} followers`,
+      title: `${followers} followers`,
       body: 'Your storefront community is growing.',
       iconName: 'people-outline',
       tone: 'success',
@@ -92,8 +88,8 @@ function getAttentionItems(
 
 export function OwnerPortalHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const route = useRoute<OwnerPortalHomeRoute>();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+  const _route = useRoute<OwnerPortalHomeRoute>();
+  const preview = false;
   const scrollViewRef = React.useRef<ScrollView>(null);
   const roiSectionY = React.useRef(0);
   const {
@@ -113,7 +109,7 @@ export function OwnerPortalHomeScreen() {
     isLoading: isWorkspaceLoading,
   } = useOwnerPortalWorkspace(preview);
   const homeMetrics = getOwnerHomeDerivedMetrics(workspace);
-  const attentionItems = getAttentionItems(workspace, preview);
+  const attentionItems = getAttentionItems(workspace);
 
   // Compute quick actions
   const quickActions: QuickAction[] = [
@@ -122,7 +118,7 @@ export function OwnerPortalHomeScreen() {
       label: 'Reviews',
       iconName: 'chatbubble-ellipses-outline',
       onPress: () => {
-        navigation.navigate('OwnerPortalReviewInbox', preview ? { preview: true } : undefined);
+        navigation.navigate('OwnerPortalReviewInbox', undefined);
       },
       badge: workspace?.recentReviews?.filter((r) => !r.ownerReply).length ?? 0,
     },
@@ -131,7 +127,7 @@ export function OwnerPortalHomeScreen() {
       label: 'Create Special',
       iconName: 'megaphone-outline',
       onPress: () => {
-        navigation.navigate('OwnerPortalPromotions', preview ? { preview: true } : undefined);
+        navigation.navigate('OwnerPortalPromotions', undefined);
       },
     },
     {
@@ -139,7 +135,7 @@ export function OwnerPortalHomeScreen() {
       label: 'Edit Listing',
       iconName: 'storefront-outline',
       onPress: () => {
-        navigation.navigate('OwnerPortalProfileTools', preview ? { preview: true } : undefined);
+        navigation.navigate('OwnerPortalProfileTools', undefined);
       },
     },
     {
@@ -147,7 +143,7 @@ export function OwnerPortalHomeScreen() {
       label: 'Badges',
       iconName: 'ribbon-outline',
       onPress: () => {
-        navigation.navigate('OwnerPortalBadges', preview ? { preview: true } : undefined);
+        navigation.navigate('OwnerPortalBadges', undefined);
       },
     },
     {
@@ -155,7 +151,7 @@ export function OwnerPortalHomeScreen() {
       label: 'Hours',
       iconName: 'time-outline',
       onPress: () => {
-        navigation.navigate('OwnerPortalHours', preview ? { preview: true } : undefined);
+        navigation.navigate('OwnerPortalHours', undefined);
       },
     },
     {
@@ -194,13 +190,9 @@ export function OwnerPortalHomeScreen() {
   return (
     <ScreenShell
       eyebrow="Owner Portal"
-      title={preview ? 'Preview mode' : 'Business dashboard'}
-      subtitle={
-        preview
-          ? 'Explore business tools with example data.'
-          : 'Manage your listing, verification, specials, media, and billing.'
-      }
-      headerPill={preview ? 'Preview' : 'Business'}
+      title="Business dashboard"
+      subtitle="Manage your listing, verification, specials, media, and billing."
+      headerPill="Business"
     >
       <ScrollView
         ref={scrollViewRef}
@@ -213,8 +205,8 @@ export function OwnerPortalHomeScreen() {
             chips={ownerStatusChips}
             managedStorefrontCount={ownerProfile?.dispensaryId ? 1 : 0}
             preview={preview}
-            savedFollowers={workspace?.metrics.followerCount ?? (preview ? 214 : 0)}
-            trackedActions7d={workspace ? homeMetrics.totalActions7d : preview ? 62 : 0}
+            savedFollowers={workspace?.metrics.followerCount ?? 0}
+            trackedActions7d={workspace ? homeMetrics.totalActions7d : 0}
           />
         </MotionInView>
 
@@ -245,14 +237,14 @@ export function OwnerPortalHomeScreen() {
         ) : null}
 
         {/* 4. Metrics Snapshot */}
-        {workspace?.metrics || preview ? (
+        {workspace?.metrics ? (
           <MotionInView delay={160}>
             <SectionCard title="Metrics Snapshot" body="Key performance indicators.">
               <View style={localStyles.metricsGrid}>
                 <View style={localStyles.metricTile}>
                   <Text style={localStyles.metricLabel}>Followers</Text>
                   <Text style={localStyles.metricValue}>
-                    {preview ? 214 : (workspace?.metrics?.followerCount ?? 0)}
+                    {workspace?.metrics?.followerCount ?? 0}
                   </Text>
                 </View>
                 <View style={localStyles.metricTile}>
@@ -297,10 +289,7 @@ export function OwnerPortalHomeScreen() {
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => {
-                      navigation.navigate(
-                        'OwnerPortalPromotions',
-                        preview ? { preview: true } : undefined,
-                      );
+                      navigation.navigate('OwnerPortalPromotions', undefined);
                     }}
                     style={localStyles.primaryButton}
                   >

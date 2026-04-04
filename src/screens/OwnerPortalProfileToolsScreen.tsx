@@ -9,7 +9,7 @@ import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
+
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { uploadOwnerApprovedStorefrontMediaFile } from '../services/ownerPortalStorageService';
 import { mergeUploadedStorefrontMediaIntoProfileTools } from '../services/ownerPortalProfileToolsMediaService';
@@ -143,9 +143,9 @@ function getProfileToolsRuntimeMessage(
 }
 
 export function OwnerPortalProfileToolsScreen() {
-  const route = useRoute<OwnerPortalProfileToolsRoute>();
+  const _route = useRoute<OwnerPortalProfileToolsRoute>();
   const { authSession } = useStorefrontProfileController();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+  const preview = false;
   const {
     workspace,
     runtimeStatus,
@@ -292,7 +292,7 @@ export function OwnerPortalProfileToolsScreen() {
         setFeaturedPhotoPaths([...(nextProfileToolsInput.featuredPhotoPaths ?? [])]);
         setMediaStatusNotice({
           tone: 'success',
-          title: preview ? 'Preview media attached' : 'Storefront media staged',
+          title: 'Storefront media staged',
           body: preview
             ? 'The image is attached to the preview storefront draft and will save locally when you update profile tools.'
             : 'The uploaded image is attached to this draft. Save profile tools to publish it live.',
@@ -315,7 +315,7 @@ export function OwnerPortalProfileToolsScreen() {
       eyebrow="Owner Portal"
       title="Storefront profile tools"
       subtitle="Photos, menu link, badges, and copy for the storefront card."
-      headerPill={preview ? 'Preview' : 'Profile'}
+      headerPill={'Profile'}
     >
       <MotionInView delay={70}>
         <View style={styles.portalHeroCard}>
@@ -629,11 +629,7 @@ export function OwnerPortalProfileToolsScreen() {
                     Publish current edits to the live storefront.
                   </Text>
                 </View>
-                <AppUiIcon
-                  name={preview ? 'eye-outline' : 'save-outline'}
-                  size={20}
-                  color={preview ? '#9CC5B4' : '#F5C86A'}
-                />
+                <AppUiIcon name={'save-outline'} size={20} color={'#F5C86A'} />
               </View>
               <Pressable
                 accessibilityRole="button"

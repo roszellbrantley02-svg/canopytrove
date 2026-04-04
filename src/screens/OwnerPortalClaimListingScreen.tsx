@@ -11,7 +11,7 @@ import {
   useStorefrontProfileController,
   useStorefrontQueryController,
 } from '../context/StorefrontController';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
+
 import { useBrowseSummaries } from '../hooks/useStorefrontSummaryData';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { submitOwnerDispensaryClaim } from '../services/ownerPortalService';
@@ -25,8 +25,8 @@ const ONBOARDING_STEPS = ['Account', 'Business Details', 'Claim Listing', 'Verif
 
 export function OwnerPortalClaimListingScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const route = useRoute<ClaimListingRoute>();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+  const _route = useRoute<ClaimListingRoute>();
+  const preview = false;
   const { authSession } = useStorefrontProfileController();
   const { activeLocation, activeLocationLabel } = useStorefrontQueryController();
   const [draftQuery, setDraftQuery] = React.useState('');
@@ -98,12 +98,8 @@ export function OwnerPortalClaimListingScreen() {
     <ScreenShell
       eyebrow="Owner Portal"
       title="Claim dispensary listing."
-      subtitle={
-        preview
-          ? 'Preview mode shows safe claim search results.'
-          : 'Search the Canopy Trove directory and claim the storefront your team manages.'
-      }
-      headerPill={preview ? 'Preview' : 'Onboarding'}
+      subtitle="Search the Canopy Trove directory and claim the storefront your team manages."
+      headerPill="Onboarding"
     >
       <MotionInView delay={70}>
         <OwnerPortalHeroPanel

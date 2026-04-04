@@ -6,7 +6,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
+
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { OwnerPortalAnalyticsCard } from './ownerPortal/OwnerPortalAnalyticsCard';
 import {
@@ -34,8 +34,8 @@ function getReviewRuntimeMessage(reviewRepliesEnabled: boolean, safeModeEnabled:
 }
 
 export function OwnerPortalReviewInboxScreen() {
-  const route = useRoute<OwnerPortalReviewInboxRoute>();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+  const _route = useRoute<OwnerPortalReviewInboxRoute>();
+  const preview = false;
   const {
     workspace,
     runtimeStatus,
@@ -67,7 +67,7 @@ export function OwnerPortalReviewInboxScreen() {
       eyebrow="Owner Portal"
       title="Review management."
       subtitle="Reply fast, watch low-rating patterns, and keep reports from going stale."
-      headerPill={preview ? 'Preview' : 'Reviews'}
+      headerPill={'Reviews'}
     >
       <MotionInView delay={70}>
         <View style={styles.portalHeroCard}>

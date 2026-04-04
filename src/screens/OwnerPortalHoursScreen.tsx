@@ -7,7 +7,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
+
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { ownerPortalStyles as sharedStyles } from './ownerPortal/ownerPortalStyles';
 import { useOwnerPortalWorkspace } from './ownerPortal/useOwnerPortalWorkspace';
@@ -167,8 +167,8 @@ function TimePicker({
 }
 
 export function OwnerPortalHoursScreen() {
-  const route = useRoute<OwnerPortalHoursRoute>();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+  const _route = useRoute<OwnerPortalHoursRoute>();
+  const preview = false;
   const { workspace, isLoading, isSaving, errorText, saveProfileTools } =
     useOwnerPortalWorkspace(preview);
 

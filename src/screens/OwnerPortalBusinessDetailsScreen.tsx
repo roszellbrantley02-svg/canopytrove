@@ -7,7 +7,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
+
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { saveOwnerBusinessDetails } from '../services/ownerPortalService';
 import { OwnerPortalHeroPanel } from './ownerPortal/OwnerPortalHeroPanel';
@@ -24,7 +24,7 @@ const ONBOARDING_STEPS = ['Account', 'Business Details', 'Claim Listing', 'Verif
 export function OwnerPortalBusinessDetailsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<BusinessDetailsRoute>();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+  const preview = false;
   const ownerUid = route.params?.ownerUid ?? OWNER_PORTAL_PREVIEW_UID;
   const [legalName, setLegalName] = React.useState(
     route.params?.initialLegalName ?? ownerPortalPreviewProfile.legalName,
@@ -69,12 +69,8 @@ export function OwnerPortalBusinessDetailsScreen() {
     <ScreenShell
       eyebrow="Owner Portal"
       title="Business details."
-      subtitle={
-        preview
-          ? 'Preview mode keeps these business details separate from live records.'
-          : 'Set the legal and public business details tied to your owner workspace.'
-      }
-      headerPill={preview ? 'Preview' : 'Onboarding'}
+      subtitle="Set the legal and public business details tied to your owner workspace."
+      headerPill="Onboarding"
     >
       <MotionInView delay={70}>
         <OwnerPortalHeroPanel
@@ -83,7 +79,7 @@ export function OwnerPortalBusinessDetailsScreen() {
           body="Details anchor storefront claim and the account record."
           metrics={[
             {
-              value: preview ? 'Preview' : 'Live',
+              value: 'Live',
               label: 'Mode',
               body: '',
             },
@@ -134,12 +130,6 @@ export function OwnerPortalBusinessDetailsScreen() {
                 />
               </View>
               {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
-              {preview ? (
-                <View style={[styles.onboardingInfoCard, styles.onboardingInfoCardWarm]}>
-                  <Text style={styles.splitHeaderTitle}>Preview mode</Text>
-                  <Text style={styles.splitHeaderBody}>Changes stay local to this screen.</Text>
-                </View>
-              ) : null}
             </View>
 
             <View style={styles.ctaPanel}>

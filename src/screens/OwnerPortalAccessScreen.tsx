@@ -6,7 +6,6 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { useOwnerPortalAccessState } from '../hooks/useOwnerPortalAccessState';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -49,11 +48,6 @@ export function OwnerPortalAccessScreen() {
     {
       label: 'Account',
       value: accountLabel,
-      body: '',
-    },
-    {
-      label: 'Preview',
-      value: ownerPortalPreviewEnabled ? 'Ready' : 'Off',
       body: '',
     },
   ];
@@ -120,11 +114,7 @@ export function OwnerPortalAccessScreen() {
       <MotionInView delay={180}>
         <SectionCard
           title="Owner access options"
-          body={
-            ownerPortalPreviewEnabled
-              ? 'Sign in with your business email or preview the portal.'
-              : 'Sign in with your business email to manage your storefront.'
-          }
+          body="Sign in with your business email to manage your storefront."
         >
           <View style={styles.actionGrid}>
             <View style={styles.ctaPanel}>
@@ -155,24 +145,6 @@ export function OwnerPortalAccessScreen() {
                 Access and storefront claims are confirmed after sign-in.
               </Text>
             </View>
-
-            {ownerPortalPreviewEnabled ? (
-              <View style={[styles.ctaPanel, styles.onboardingInfoCardWarm]}>
-                <View style={styles.splitHeaderRow}>
-                  <View style={styles.splitHeaderCopy}>
-                    <Text style={styles.sectionEyebrow}>Preview mode</Text>
-                    <Text style={styles.splitHeaderTitle}>Explore business tools safely</Text>
-                  </View>
-                  <AppUiIcon name="eye-outline" size={20} color="#9CC5B4" />
-                </View>
-                <Pressable
-                  onPress={() => navigation.navigate('OwnerPortalHome', { preview: true })}
-                  style={styles.secondaryButton}
-                >
-                  <Text style={styles.secondaryButtonText}>Open Preview</Text>
-                </Pressable>
-              </View>
-            ) : null}
           </View>
         </SectionCard>
       </MotionInView>
@@ -223,7 +195,7 @@ export function OwnerPortalAccessScreen() {
       </MotionInView>
 
       {authSession.status === 'authenticated' && accessState.allowlisted && !isCheckingAccess ? (
-        <MotionInView delay={ownerPortalPreviewEnabled ? 340 : 300}>
+        <MotionInView delay={300}>
           <SectionCard title="Owner dashboard" body="Your account is approved.">
             <View style={[styles.ctaPanel, styles.onboardingInfoCardSuccess]}>
               <Text style={styles.splitHeaderTitle}>Owner workspace is ready</Text>

@@ -163,6 +163,29 @@ export async function getLatestStorefrontDiscoveryRun() {
   return runs[0] ?? null;
 }
 
+export async function getStorefrontDiscoveryRunById(
+  runId: string,
+): Promise<StorefrontDiscoveryRunDocument | null> {
+  const cached = discoveryRunStore.get(runId);
+  if (cached) {
+    return cached;
+  }
+
+  const collectionRef = getDiscoveryRunsCollection();
+  if (!collectionRef) {
+    return null;
+  }
+
+  const snapshot = await collectionRef.doc(runId).get();
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  const run = snapshot.data() as StorefrontDiscoveryRunDocument;
+  discoveryRunStore.set(run.id, run);
+  return run;
+}
+
 export async function saveStorefrontDiscoveryRun(run: StorefrontDiscoveryRunDocument) {
   discoveryRunStore.set(run.id, run);
   const collectionRef = getDiscoveryRunsCollection();

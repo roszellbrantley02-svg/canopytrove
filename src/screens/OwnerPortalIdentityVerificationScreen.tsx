@@ -7,7 +7,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
+
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { OwnerPortalStageList } from './ownerPortal/OwnerPortalStageList';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
@@ -173,18 +173,11 @@ function OwnerPortalIdentityVerificationPreview() {
                   <AppUiIcon name="camera-outline" size={20} color="#F5C86A" />
                 </View>
               </View>
-
-              <View style={[styles.onboardingInfoCard, styles.onboardingInfoCardWarm]}>
-                <Text style={styles.splitHeaderTitle}>Preview mode</Text>
-                <Text style={styles.splitHeaderBody}>
-                  No identity files are chosen or uploaded.
-                </Text>
-              </View>
             </View>
 
             <View style={styles.ctaPanel}>
               <Pressable
-                onPress={() => navigation.navigate('OwnerPortalSubscription', { preview: true })}
+                onPress={() => navigation.navigate('OwnerPortalSubscription')}
                 style={styles.primaryButton}
               >
                 <Text style={styles.primaryButtonText}>Continue To Owner Access</Text>
@@ -417,8 +410,8 @@ function OwnerPortalIdentityVerificationLive() {
 }
 
 export function OwnerPortalIdentityVerificationScreen() {
-  const route = useRoute<IdentityVerificationRoute>();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+  const _route = useRoute<IdentityVerificationRoute>();
+  const preview = false;
 
   if (preview) {
     return <OwnerPortalIdentityVerificationPreview />;

@@ -6,7 +6,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
+
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import type {
   OwnerPromotionAudience,
@@ -54,8 +54,8 @@ const ignoreAsyncError = () => undefined;
 const metricGridMinWidthStyle = { minWidth: 920 } as const;
 
 export function OwnerPortalPromotionsScreen() {
-  const route = useRoute<OwnerPortalPromotionsRoute>();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+  const _route = useRoute<OwnerPortalPromotionsRoute>();
+  const preview = false;
   const {
     workspace,
     runtimeStatus,
@@ -128,7 +128,7 @@ export function OwnerPortalPromotionsScreen() {
     promotionWritesEnabled,
     runtimeStatus?.policy.safeModeEnabled === true,
   );
-  const plannerModeLabel = getPromotionPlannerModeLabel(editingPromotionId, preview);
+  const plannerModeLabel = getPromotionPlannerModeLabel(editingPromotionId);
   const saveButtonLabel = getPromotionSaveButtonLabel({
     preview,
     promotionWritesEnabled,
@@ -149,7 +149,7 @@ export function OwnerPortalPromotionsScreen() {
       eyebrow="Owner Portal"
       title="Promotions and results."
       subtitle="Plan the lead specials lane, reserve owner highlights for premium placement, and compare offer performance over time."
-      headerPill={preview ? 'Preview' : 'Specials'}
+      headerPill={'Specials'}
     >
       <MotionInView delay={70}>
         <View style={styles.portalHeroCard}>
@@ -180,7 +180,7 @@ export function OwnerPortalPromotionsScreen() {
           </View>
           <View style={styles.portalHeroMetaRow}>
             <View style={styles.metaChip}>
-              <Text style={styles.metaChipText}>{preview ? 'Preview' : 'Business portal'}</Text>
+              <Text style={styles.metaChipText}>{'Business portal'}</Text>
             </View>
             <View style={styles.metaChip}>
               <Text style={styles.metaChipText}>

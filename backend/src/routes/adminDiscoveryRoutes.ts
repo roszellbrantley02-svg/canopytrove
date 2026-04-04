@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { disableRequestTimeout } from '../http/requestTimeout';
 import {
   getStorefrontDiscoveryCandidates,
+  getStorefrontDiscoveryRunById,
   getStorefrontDiscoveryRuns,
   getStorefrontDiscoveryStatus,
   publishStorefrontDiscoveryCandidate,
   runStorefrontDiscoverySweep,
+  startStorefrontDiscoverySweepAsync,
 } from '../services/storefrontDiscoveryOrchestrationService';
 
 function parseOptionalLimit(value: unknown, fallback: number) {
@@ -74,15 +75,70 @@ adminDiscoveryRoutes.get('/runs', async (request, response) => {
   }
 });
 
-adminDiscoveryRoutes.post('/sweep', disableRequestTimeout(), async (request, response) => {
+adminDiscoveryRoutes.get('/runs/:runId', async (request, response) => {
   try {
-    response.json(
-      await runStorefrontDiscoverySweep({
-        reason: 'manual',
-        limit: parseOptionalLimit(request.query.limit, 0) || null,
-        marketId: parseOptionalMarketId(request.query.marketId),
-      }),
-    );
+    const run = await getStorefrontDiscoveryRunById(request.params.runId);
+    if (!run) {
+      response.status(404).json({ ok: false, error: 'Run not found' });
+      return;
+    }
+    response.json({ ok: true, run });
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown discovery run failure',
+    });
+  }
+});
+
+/**
+ * POST /sweep — fires the sweep in the background and returns 202 immediately.
+ * Poll GET /status or GET /runs for progress.
+ *
+ * Pass ?mode=sync to wait for the full result (legacy behavior).
+ */
+adminDiscoveryRoutes.post('/sweep', async (request, response) => {
+  const mode = typeof request.query.mode === 'string' ? request.query.mode : 'async';
+
+  if (mode === 'sync') {
+    // Legacy synchronous path — waits for the entire sweep to finish.
+    // Clear the global 30 s request timeout so the sweep can run to completion.
+    const timeoutTimer = (response as any).__requestTimeoutTimer;
+    if (timeoutTimer) {
+      clearTimeout(timeoutTimer);
+    }
+    try {
+      response.json(
+        await runStorefrontDiscoverySweep({
+          reason: 'manual',
+          limit: parseOptionalLimit(request.query.limit, 0) || null,
+          marketId: parseOptionalMarketId(request.query.marketId),
+        }),
+      );
+    } catch (error) {
+      response.status(500).json({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Unknown discovery sweep failure',
+      });
+    }
+    return;
+  }
+
+  // Default async path — fire-and-forget.
+  try {
+    const { alreadyRunning } = startStorefrontDiscoverySweepAsync({
+      reason: 'manual',
+      limit: parseOptionalLimit(request.query.limit, 0) || null,
+      marketId: parseOptionalMarketId(request.query.marketId),
+    });
+
+    response.status(202).json({
+      ok: true,
+      message: alreadyRunning
+        ? 'A discovery sweep is already in progress. Poll GET /status for updates.'
+        : 'Discovery sweep started. Poll GET /status or GET /runs for progress.',
+      alreadyRunning,
+    });
   } catch (error) {
     response.status(500).json({
       ok: false,

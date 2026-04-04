@@ -7,7 +7,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
+
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { OWNER_MAX_FEATURED_BADGES } from '../domain/canopyTroveGamification/ownerBadgeDefinitions';
 import {
@@ -25,8 +25,8 @@ import { StyleSheet } from 'react-native';
 type OwnerPortalBadgesRoute = RouteProp<RootStackParamList, 'OwnerPortalBadges'>;
 
 export function OwnerPortalBadgesScreen() {
-  const route = useRoute<OwnerPortalBadgesRoute>();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+  const _route = useRoute<OwnerPortalBadgesRoute>();
+  const preview = false;
   const { workspace, isLoading, isSaving, errorText, saveProfileTools } =
     useOwnerPortalWorkspace(preview);
 
@@ -85,7 +85,7 @@ export function OwnerPortalBadgesScreen() {
       eyebrow="Owner Portal"
       title="Storefront Badges"
       subtitle={`${earnedBadgeIds.length} earned \u2022 ${selectedIds.length}/${OWNER_MAX_FEATURED_BADGES} displayed`}
-      headerPill={preview ? 'Preview' : 'Badges'}
+      headerPill={'Badges'}
     >
       <MotionInView delay={70}>
         <View style={styles.portalHeroCard}>

@@ -7,7 +7,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
+
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { OwnerPortalStageList } from './ownerPortal/OwnerPortalStageList';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
@@ -201,20 +201,11 @@ function OwnerPortalBusinessVerificationPreview() {
                   <AppUiIcon name="document-attach-outline" size={20} color="#F5C86A" />
                 </View>
               </View>
-
-              <View style={[styles.onboardingInfoCard, styles.onboardingInfoCardWarm]}>
-                <Text style={styles.splitHeaderTitle}>Preview mode</Text>
-                <Text style={styles.splitHeaderBody}>
-                  Files stay local in this preview workspace.
-                </Text>
-              </View>
             </View>
 
             <View style={styles.ctaPanel}>
               <Pressable
-                onPress={() =>
-                  navigation.navigate('OwnerPortalIdentityVerification', { preview: true })
-                }
+                onPress={() => navigation.navigate('OwnerPortalIdentityVerification')}
                 style={styles.primaryButton}
               >
                 <Text style={styles.primaryButtonText}>Continue To Identity Review</Text>
@@ -451,8 +442,8 @@ function OwnerPortalBusinessVerificationLive() {
 }
 
 export function OwnerPortalBusinessVerificationScreen() {
-  const route = useRoute<BusinessVerificationRoute>();
-  const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
+  const _route = useRoute<BusinessVerificationRoute>();
+  const preview = false;
 
   if (preview) {
     return <OwnerPortalBusinessVerificationPreview />;

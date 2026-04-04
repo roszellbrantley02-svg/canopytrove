@@ -1223,7 +1223,7 @@ test('accepts analytics event batches', async () => {
 test('runs a discovery sweep through the admin discovery route', async () => {
   process.env.ADMIN_API_KEY = 'admin-secret';
   const { baseUrl } = await startTestServer();
-  const response = await request(baseUrl, '/admin/discovery/sweep?limit=3', {
+  const response = await request(baseUrl, '/admin/discovery/sweep?limit=3&mode=sync', {
     method: 'POST',
     headers: {
       'x-admin-api-key': 'admin-secret',

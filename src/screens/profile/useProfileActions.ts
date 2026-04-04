@@ -42,7 +42,6 @@ export function useProfileActions({
   const [seedStatus, setSeedStatus] = React.useState<string | null>(null);
   const [isSavingDisplayName, setIsSavingDisplayName] = React.useState(false);
   const [profileActionStatus, setProfileActionStatus] = React.useState<string | null>(null);
-  const [showOwnerPreview, setShowOwnerPreview] = React.useState(false);
 
   const fallbackSeedCounts = React.useMemo(() => getMockFirestoreSeedCounts(), []);
   const canSeedViaBackend =
@@ -121,10 +120,6 @@ export function useProfileActions({
     setProfileActionStatus(didSignOut ? 'Session signed out.' : 'No active session to sign out.');
   }, [signOutSession]);
 
-  const handleDismissOwnerPreview = React.useCallback(() => {
-    setShowOwnerPreview(false);
-  }, []);
-
   const handleSeed = React.useCallback(() => {
     if (canSeedViaBackend) {
       void handleSeedBackend();
@@ -138,14 +133,12 @@ export function useProfileActions({
   return {
     canSeed,
     canSeedViaBackend,
-    dismissOwnerPreview: handleDismissOwnerPreview,
     fallbackSeedCounts,
     isSavingDisplayName,
     isSeeding,
     ownerPortalAccess,
     profileActionStatus,
     seedStatus,
-    showOwnerPreview,
     clearDisplayName: () => {
       void handleClearDisplayName();
     },

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ownerPortalPreviewEnabled } from '../../config/ownerPortalConfig';
+
 import { useStorefrontProfileController } from '../../context/StorefrontController';
 import { useOwnerPortalAccessState } from '../../hooks/useOwnerPortalAccessState';
 import { useSavedSummaries } from '../../hooks/useStorefrontSummaryData';
@@ -17,8 +17,8 @@ import {
 } from '../../services/ownerPortalPreviewService';
 import type { StorefrontSummary } from '../../types/storefront';
 
-export function useOwnerPortalHomeScreenModel(preview = false) {
-  const isPreview = ownerPortalPreviewEnabled && preview;
+export function useOwnerPortalHomeScreenModel(_preview = false) {
+  const isPreview = false;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { authSession } = useStorefrontProfileController();
   const liveAccessState = useOwnerPortalAccessState(authSession);

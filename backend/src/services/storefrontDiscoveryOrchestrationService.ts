@@ -16,6 +16,7 @@ import {
   clearStorefrontDiscoveryRepositoryState,
   getLatestStorefrontDiscoveryRun,
   getStorefrontDiscoveryCandidate,
+  getStorefrontDiscoveryRunById,
   listStorefrontDiscoveryCandidates,
   listStorefrontDiscoveryRuns,
   loadStorefrontDiscoveryState,
@@ -528,6 +529,31 @@ export async function runStorefrontDiscoverySweep(input: {
     }
   }
 }
+
+/**
+ * Fire-and-forget sweep — kicks off the sweep in the background and
+ * returns immediately.  If a sweep is already in flight, returns
+ * `alreadyRunning: true`.  Callers should poll GET /discovery/status
+ * or GET /discovery/runs for progress.
+ */
+export function startStorefrontDiscoverySweepAsync(input: {
+  reason: StorefrontDiscoveryRunReason;
+  limit?: number | null;
+  marketId?: string | null;
+}): { alreadyRunning: boolean } {
+  if (discoverySweepInFlight) {
+    return { alreadyRunning: true };
+  }
+
+  // Kick off the sweep without awaiting — fire-and-forget.
+  void runStorefrontDiscoverySweep(input).catch(() => {
+    // Errors are persisted in the run document; nothing to do here.
+  });
+
+  return { alreadyRunning: false };
+}
+
+export { getStorefrontDiscoveryRunById };
 
 export async function publishStorefrontDiscoveryCandidate(candidateId: string) {
   const candidate = await getStorefrontDiscoveryCandidate(candidateId);
