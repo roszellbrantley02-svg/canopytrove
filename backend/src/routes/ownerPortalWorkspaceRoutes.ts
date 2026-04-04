@@ -60,28 +60,27 @@ ownerPortalWorkspaceRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST', 'PUT'],
-  })
+  }),
 );
 
 ownerPortalWorkspaceRoutes.get(
   '/owner-portal/workspace',
   createOwnerPortalJsonRoute('Unknown owner workspace failure', async ({ ownerUid }) =>
-    getOwnerPortalWorkspace(ownerUid)
-  )
+    getOwnerPortalWorkspace(ownerUid),
+  ),
 );
 
 ownerPortalWorkspaceRoutes.post(
   '/owner-portal/auth/sync-claims',
   ownerClaimSyncRateLimiter,
-  createOwnerPortalJsonRoute('Unknown owner auth claim sync failure', async ({
-    ownerUid,
-    ownerEmail,
-  }) =>
-    syncOwnerPortalAuthClaims({
-      ownerUid,
-      ownerEmail,
-    })
-  )
+  createOwnerPortalJsonRoute(
+    'Unknown owner auth claim sync failure',
+    async ({ ownerUid, ownerEmail }) =>
+      syncOwnerPortalAuthClaims({
+        ownerUid,
+        ownerEmail,
+      }),
+  ),
 );
 
 ownerPortalWorkspaceRoutes.get(
@@ -89,89 +88,81 @@ ownerPortalWorkspaceRoutes.get(
   createOwnerPortalJsonRoute('Unknown owner license compliance failure', async ({ ownerUid }) => {
     const workspace = await getOwnerPortalWorkspace(ownerUid);
     return workspace.licenseCompliance;
-  })
+  }),
 );
 
 ownerPortalWorkspaceRoutes.put(
   '/owner-portal/license-compliance',
   ownerComplianceRateLimiter,
-  createOwnerPortalJsonRoute('Unknown owner license compliance failure', async ({
-    ownerUid,
-    request,
-  }) => saveOwnerPortalLicenseCompliance(ownerUid, parseOwnerPortalLicenseComplianceBody(request.body)))
+  createOwnerPortalJsonRoute(
+    'Unknown owner license compliance failure',
+    async ({ ownerUid, request }) =>
+      saveOwnerPortalLicenseCompliance(
+        ownerUid,
+        parseOwnerPortalLicenseComplianceBody(request.body),
+      ),
+  ),
 );
 
 ownerPortalWorkspaceRoutes.put(
   '/owner-portal/profile-tools',
   ownerProfileToolsRateLimiter,
-  createOwnerPortalJsonRoute('Unknown owner profile tools failure', async ({
-    ownerUid,
-    request,
-  }) => {
-    await assertRuntimePolicyAllowsOwnerAction('profile_tools');
-    return saveOwnerPortalProfileTools(
-      ownerUid,
-      parseOwnerPortalProfileToolsBody(request.body)
-    );
-  })
+  createOwnerPortalJsonRoute(
+    'Unknown owner profile tools failure',
+    async ({ ownerUid, request }) => {
+      await assertRuntimePolicyAllowsOwnerAction('profile_tools');
+      return saveOwnerPortalProfileTools(ownerUid, parseOwnerPortalProfileToolsBody(request.body));
+    },
+  ),
 );
 
 ownerPortalWorkspaceRoutes.post(
   '/owner-portal/promotions',
   ownerPromotionRateLimiter,
-  createOwnerPortalJsonRoute('Unknown owner promotion failure', async ({
-    ownerUid,
-    request,
-  }) => {
+  createOwnerPortalJsonRoute('Unknown owner promotion failure', async ({ ownerUid, request }) => {
     await assertRuntimePolicyAllowsOwnerAction('promotion');
-    return createOwnerPortalPromotion(
-      ownerUid,
-      parseOwnerPortalPromotionBody(request.body)
-    );
-  })
+    return createOwnerPortalPromotion(ownerUid, parseOwnerPortalPromotionBody(request.body));
+  }),
 );
 
 ownerPortalWorkspaceRoutes.put(
   '/owner-portal/promotions/:promotionId',
   ownerPromotionRateLimiter,
-  createOwnerPortalJsonRoute('Unknown owner promotion update failure', async ({
-    ownerUid,
-    request,
-  }) => {
+  createOwnerPortalJsonRoute(
+    'Unknown owner promotion update failure',
+    async ({ ownerUid, request }) => {
       await assertRuntimePolicyAllowsOwnerAction('promotion');
       return updateOwnerPortalPromotion(
         ownerUid,
         parseOwnerPortalPromotionIdParam(request.params.promotionId),
-        parseOwnerPortalPromotionBody(request.body)
+        parseOwnerPortalPromotionBody(request.body),
       );
-    })
+    },
+  ),
 );
 
 ownerPortalWorkspaceRoutes.post(
   '/owner-portal/reviews/:reviewId/reply',
   ownerReviewReplyRateLimiter,
-  createOwnerPortalJsonRoute('Unknown owner review reply failure', async ({
-    ownerUid,
-    request,
-  }) => {
+  createOwnerPortalJsonRoute(
+    'Unknown owner review reply failure',
+    async ({ ownerUid, request }) => {
       await assertRuntimePolicyAllowsOwnerAction('review_reply');
       return replyToOwnerPortalReview(
         ownerUid,
         parseReviewIdParam(request.params.reviewId),
-        parseOwnerPortalReviewReplyBody(request.body).text
+        parseOwnerPortalReviewReplyBody(request.body).text,
       );
-    })
+    },
+  ),
 );
 
 ownerPortalWorkspaceRoutes.post(
   '/owner-portal/alerts/sync',
-  createOwnerPortalJsonRoute('Unknown owner alert sync failure', async ({
-    ownerUid,
-    request,
-  }) =>
+  createOwnerPortalJsonRoute('Unknown owner alert sync failure', async ({ ownerUid, request }) =>
     syncOwnerPortalAlerts({
       ownerUid,
       ...parseOwnerPortalAlertSyncBody(request.body),
-    })
-  )
+    }),
+  ),
 );

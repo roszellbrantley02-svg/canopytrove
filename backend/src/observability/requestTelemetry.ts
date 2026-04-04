@@ -13,9 +13,11 @@ function getClientIpHeaderValue(ip: string | undefined) {
 export const requestTelemetryMiddleware: RequestHandler = (request, response, next) => {
   const startedAt = process.hrtime.bigint();
   const requestId = createRequestId();
+  const correlationId = request.header('X-Correlation-ID') || requestId;
   const originalEnd = response.end.bind(response);
 
   response.setHeader('X-CanopyTrove-Request-Id', requestId);
+  response.setHeader('X-Correlation-ID', correlationId);
 
   response.end = ((...args: Parameters<typeof response.end>) => {
     const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
@@ -33,14 +35,15 @@ export const requestTelemetryMiddleware: RequestHandler = (request, response, ne
       JSON.stringify({
         type: 'http_request',
         requestId,
+        correlationId,
         method: request.method,
         path: request.originalUrl,
         statusCode: response.statusCode,
         responseTimeMs:
-          typeof responseTimeMs === 'string' ? Number(responseTimeMs) : responseTimeMs ?? null,
+          typeof responseTimeMs === 'string' ? Number(responseTimeMs) : (responseTimeMs ?? null),
         ip: getClientIpHeaderValue(request.ip),
         sourceMode: backendStorefrontSourceStatus.activeMode,
-      })
+      }),
     );
   });
 

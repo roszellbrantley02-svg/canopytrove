@@ -1,0 +1,75 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "storefront_app_reviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "storefrontId", "order": "ASCENDING" },
+        { "fieldPath": "profileId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "storefront_summaries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "marketId", "order": "ASCENDING" },
+        { "fieldPath": "latitude", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "storefront_summaries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "latitude", "order": "ASCENDING" },
+        { "fieldPath": "zip", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "storefront_summaries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "latitude", "order": "ASCENDING" },
+        { "fieldPath": "city", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "storefront_summaries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "marketId", "order": "ASCENDING" },
+        { "fieldPath": "latitude", "order": "ASCENDING" },
+        { "fieldPath": "zip", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "storefront_summaries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "marketId", "order": "ASCENDING" },
+        { "fieldPath": "latitude", "order": "ASCENDING" },
+        { "fieldPath": "city", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "storefront_review_photos",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "createdAt", "order": "DESCENDING" }]
+    },
+    {
+      "collectionGroup": "storefront_discovery_candidates",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "updatedAt", "order": "DESCENDING" }]
+    },
+    {
+      "collectionGroup": "storefront_discovery_runs",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "startedAt", "order": "DESCENDING" }]
+    },
+    {
+      "collectionGroup": "ops_runtime_incidents",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "occurredAt", "order": "DESCENDING" }]
+    }
+  ],
+  "fieldOverrides": []
+}

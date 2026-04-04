@@ -1,6 +1,10 @@
 import { OwnerUserDocument } from '../../../src/types/ownerPortal';
 import { hasConfiguredOwnerPortalClaimSync, serverConfig } from '../config';
-import { getBackendFirebaseAuth, getBackendFirebaseDb, hasBackendFirebaseConfig } from '../firebase';
+import {
+  getBackendFirebaseAuth,
+  getBackendFirebaseDb,
+  hasBackendFirebaseConfig,
+} from '../firebase';
 
 const USERS_COLLECTION = 'users';
 
@@ -9,7 +13,7 @@ export type OwnerPortalAuthClaimRole = 'owner' | 'admin';
 export class OwnerPortalAuthClaimsError extends Error {
   constructor(
     message: string,
-    public readonly statusCode: number
+    public readonly statusCode: number,
   ) {
     super(message);
   }
@@ -41,7 +45,7 @@ export function isOwnerPortalEmailAllowlisted(email: string | null | undefined) 
 }
 
 export function resolveOwnerPortalClaimRole(
-  claims: Record<string, unknown> | undefined
+  claims: Record<string, unknown> | undefined,
 ): OwnerPortalAuthClaimRole {
   return hasAdminClaim(claims) ? 'admin' : 'owner';
 }
@@ -73,7 +77,7 @@ export async function syncOwnerPortalAuthClaims(input: {
   if (!hasConfiguredOwnerPortalClaimSync()) {
     throw new OwnerPortalAuthClaimsError(
       'Owner auth claim sync is not configured on the backend.',
-      503
+      503,
     );
   }
 
@@ -98,8 +102,9 @@ export async function syncOwnerPortalAuthClaims(input: {
   const now = createNow();
   const userRef = db.collection(USERS_COLLECTION).doc(input.ownerUid);
   const existingUserSnapshot = await userRef.get();
-  const existingUser =
-    existingUserSnapshot.exists ? (existingUserSnapshot.data() as Partial<OwnerUserDocument>) : null;
+  const existingUser = existingUserSnapshot.exists
+    ? (existingUserSnapshot.data() as Partial<OwnerUserDocument>)
+    : null;
 
   await auth.setCustomUserClaims(input.ownerUid, nextClaims);
   await userRef.set(
@@ -113,7 +118,7 @@ export async function syncOwnerPortalAuthClaims(input: {
       lastLoginAt: now,
       updatedAt: now,
     },
-    { merge: true }
+    { merge: true },
   );
 
   return {

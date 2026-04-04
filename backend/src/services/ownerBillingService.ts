@@ -1,7 +1,11 @@
 import crypto from 'node:crypto';
 import { Request } from 'express';
 import { getMissingOwnerBillingBackendEnvVars, serverConfig } from '../config';
-import { getBackendFirebaseAuth, getBackendFirebaseDb, hasBackendFirebaseConfig } from '../firebase';
+import {
+  getBackendFirebaseAuth,
+  getBackendFirebaseDb,
+  hasBackendFirebaseConfig,
+} from '../firebase';
 import {
   getOwnerAuthorizationState,
   isVerifiedOwnerStatus,
@@ -102,7 +106,7 @@ const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
 export class OwnerBillingError extends Error {
   constructor(
     message: string,
-    public readonly statusCode = 400
+    public readonly statusCode = 400,
   ) {
     super(message);
   }
@@ -162,7 +166,7 @@ function getStripeBillingConfig(options?: { includeWebhook?: boolean }) {
   if (missingEnvVars.length) {
     throw new OwnerBillingError(
       `Stripe billing is not fully configured on the backend. Missing env: ${missingEnvVars.join(', ')}.`,
-      503
+      503,
     );
   }
 
@@ -220,32 +224,25 @@ function assertOwnerBillingEligibility(input: {
   identityVerificationStatus: string | null | undefined;
 }) {
   if (!input.storefrontId) {
-    throw new OwnerBillingError(
-      'Claim your storefront before opening owner billing.',
-      409
-    );
+    throw new OwnerBillingError('Claim your storefront before opening owner billing.', 409);
   }
 
   if (!isVerifiedStatus(input.businessVerificationStatus)) {
     throw new OwnerBillingError(
       'Business verification must be approved before billing can start.',
-      409
+      409,
     );
   }
 
   if (!isVerifiedStatus(input.identityVerificationStatus)) {
     throw new OwnerBillingError(
       'Identity verification must be approved before billing can start.',
-      409
+      409,
     );
   }
 }
 
-function buildStripeHeaders(
-  stripeSecretKey: string,
-  hasBody: boolean,
-  idempotencyKey?: string
-) {
+function buildStripeHeaders(stripeSecretKey: string, hasBody: boolean, idempotencyKey?: string) {
   const headers = new Headers({
     Authorization: `Bearer ${stripeSecretKey}`,
   });
@@ -278,7 +275,7 @@ async function stripePostForm<T>(
   stripeSecretKey: string,
   path: string,
   params: URLSearchParams,
-  idempotencyKey?: string
+  idempotencyKey?: string,
 ) {
   const response = await fetch(`${STRIPE_API_BASE_URL}${path}`, {
     method: 'POST',
@@ -394,8 +391,7 @@ async function persistStripeSubscriptionUpdate(subscription: StripeSubscription)
   const ownerUid = await resolveOwnerUidFromStripePointers({
     ownerUid: subscription.metadata?.ownerUid ?? null,
     externalSubscriptionId: subscription.id ?? null,
-    externalCustomerId:
-      typeof subscription.customer === 'string' ? subscription.customer : null,
+    externalCustomerId: typeof subscription.customer === 'string' ? subscription.customer : null,
   });
 
   if (!ownerUid) {
@@ -416,7 +412,7 @@ async function persistStripeSubscriptionUpdate(subscription: StripeSubscription)
   if (!dispensaryId) {
     throw new OwnerBillingError(
       'Stripe subscription update is missing the storefront mapping.',
-      400
+      400,
     );
   }
 
@@ -427,18 +423,18 @@ async function persistStripeSubscriptionUpdate(subscription: StripeSubscription)
     externalCustomerId:
       typeof subscription.customer === 'string'
         ? subscription.customer
-        : existingSubscription?.externalCustomerId ?? null,
+        : (existingSubscription?.externalCustomerId ?? null),
     externalSubscriptionId: subscription.id,
     planId: getStripePlanId(subscription),
     status: subscriptionStatus,
     billingCycle,
     currentPeriodStart: toIsoFromUnixSeconds(
       subscription.current_period_start,
-      existingSubscription?.currentPeriodStart ?? now
+      existingSubscription?.currentPeriodStart ?? now,
     ),
     currentPeriodEnd: toIsoFromUnixSeconds(
       subscription.current_period_end,
-      existingSubscription?.currentPeriodEnd ?? now
+      existingSubscription?.currentPeriodEnd ?? now,
     ),
     cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
     createdAt: existingSubscription?.createdAt ?? now,
@@ -449,17 +445,20 @@ async function persistStripeSubscriptionUpdate(subscription: StripeSubscription)
 
   await Promise.all([
     db.collection(SUBSCRIPTIONS_COLLECTION).doc(ownerUid).set(nextSubscription, { merge: true }),
-    db.collection(OWNER_PROFILES_COLLECTION).doc(ownerUid).set(
-      {
-        subscriptionStatus,
-        onboardingStep:
-          subscriptionStatus === 'active' || subscriptionStatus === 'trial'
-            ? 'completed'
-            : 'subscription',
-        updatedAt: now,
-      },
-      { merge: true }
-    ),
+    db
+      .collection(OWNER_PROFILES_COLLECTION)
+      .doc(ownerUid)
+      .set(
+        {
+          subscriptionStatus,
+          onboardingStep:
+            subscriptionStatus === 'active' || subscriptionStatus === 'trial'
+              ? 'completed'
+              : 'subscription',
+          updatedAt: now,
+        },
+        { merge: true },
+      ),
   ]);
 
   return {
@@ -499,7 +498,7 @@ function parseStripeSignatureHeader(signatureHeader: string | null | undefined) 
 function verifyStripeWebhookSignature(
   payloadBuffer: Buffer,
   signatureHeader: string | null | undefined,
-  webhookSecret: string
+  webhookSecret: string,
 ) {
   const { timestamp, signatures } = parseStripeSignatureHeader(signatureHeader);
   const ageSeconds = Math.abs(Date.now() / 1000 - timestamp);
@@ -520,7 +519,7 @@ function verifyStripeWebhookSignature(
 
     return crypto.timingSafeEqual(
       Buffer.from(signature, 'utf8'),
-      Buffer.from(expectedSignature, 'utf8')
+      Buffer.from(expectedSignature, 'utf8'),
     );
   });
 
@@ -531,7 +530,7 @@ function verifyStripeWebhookSignature(
 
 async function handleCheckoutSessionCompleted(
   stripeSecretKey: string,
-  session: StripeCheckoutSession
+  session: StripeCheckoutSession,
 ) {
   if (session.mode !== 'subscription') {
     return {
@@ -541,40 +540,38 @@ async function handleCheckoutSessionCompleted(
     };
   }
 
-  const ownerUid =
-    session.metadata?.ownerUid ?? session.client_reference_id ?? null;
+  const ownerUid = session.metadata?.ownerUid ?? session.client_reference_id ?? null;
   const db = getOwnerBillingDb();
   const now = createNow();
 
   if (ownerUid) {
-    await db.collection(SUBSCRIPTIONS_COLLECTION).doc(ownerUid).set(
-      {
-        provider: 'stripe',
-        externalCustomerId:
-          typeof session.customer === 'string' ? session.customer : null,
-        externalSubscriptionId:
-          typeof session.subscription === 'string' ? session.subscription : null,
-        lastCheckoutSessionId: session.id,
-        lastCheckoutOpenedAt: now,
-        updatedAt: now,
-      },
-      { merge: true }
-    );
+    await db
+      .collection(SUBSCRIPTIONS_COLLECTION)
+      .doc(ownerUid)
+      .set(
+        {
+          provider: 'stripe',
+          externalCustomerId: typeof session.customer === 'string' ? session.customer : null,
+          externalSubscriptionId:
+            typeof session.subscription === 'string' ? session.subscription : null,
+          lastCheckoutSessionId: session.id,
+          lastCheckoutOpenedAt: now,
+          updatedAt: now,
+        },
+        { merge: true },
+      );
   }
 
   if (typeof session.subscription === 'string') {
     const subscription = await stripeGetJson<StripeSubscription>(
       stripeSecretKey,
-      `/subscriptions/${encodeURIComponent(session.subscription)}`
+      `/subscriptions/${encodeURIComponent(session.subscription)}`,
     );
     if (ownerUid) {
       subscription.metadata = {
         ...(subscription.metadata ?? {}),
         ownerUid,
-        dispensaryId:
-          subscription.metadata?.dispensaryId ??
-          session.metadata?.dispensaryId ??
-          '',
+        dispensaryId: subscription.metadata?.dispensaryId ?? session.metadata?.dispensaryId ?? '',
       };
     }
 
@@ -588,10 +585,7 @@ async function handleCheckoutSessionCompleted(
   };
 }
 
-async function handleInvoicePaymentFailed(
-  stripeSecretKey: string,
-  invoice: StripeInvoice
-) {
+async function handleInvoicePaymentFailed(stripeSecretKey: string, invoice: StripeInvoice) {
   if (typeof invoice.subscription !== 'string') {
     return {
       ok: true,
@@ -602,15 +596,12 @@ async function handleInvoicePaymentFailed(
 
   const subscription = await stripeGetJson<StripeSubscription>(
     stripeSecretKey,
-    `/subscriptions/${encodeURIComponent(invoice.subscription)}`
+    `/subscriptions/${encodeURIComponent(invoice.subscription)}`,
   );
   return persistStripeSubscriptionUpdate(subscription);
 }
 
-export async function createOwnerBillingCheckoutSession(
-  request: Request,
-  cycleInput: unknown
-) {
+export async function createOwnerBillingCheckoutSession(request: Request, cycleInput: unknown) {
   const cycle = parseOwnerBillingCycle(cycleInput);
   const {
     stripeSecretKey,
@@ -635,8 +626,7 @@ export async function createOwnerBillingCheckoutSession(
   });
 
   const currentSubscription = await getOwnerSubscription(ownerUid);
-  const priceId =
-    cycle === 'annual' ? stripeOwnerAnnualPriceId : stripeOwnerMonthlyPriceId;
+  const priceId = cycle === 'annual' ? stripeOwnerAnnualPriceId : stripeOwnerMonthlyPriceId;
   const now = createNow();
   const launchTrialOffer = await resolveOwnerLaunchTrialOffer({
     ownerUid,
@@ -661,10 +651,7 @@ export async function createOwnerBillingCheckoutSession(
   if (launchTrialOffer.trialDays > 0) {
     params.set('subscription_data[trial_period_days]', String(launchTrialOffer.trialDays));
     params.set('metadata[launchTrialDays]', String(launchTrialOffer.trialDays));
-    params.set(
-      'subscription_data[metadata][launchTrialDays]',
-      String(launchTrialOffer.trialDays)
-    );
+    params.set('subscription_data[metadata][launchTrialDays]', String(launchTrialOffer.trialDays));
   }
 
   if (currentSubscription?.externalCustomerId) {
@@ -677,7 +664,7 @@ export async function createOwnerBillingCheckoutSession(
     stripeSecretKey,
     '/checkout/sessions',
     params,
-    `owner-billing:${ownerUid}:${cycle}`
+    `owner-billing:${ownerUid}:${cycle}`,
   );
 
   if (!session.url) {
@@ -710,20 +697,15 @@ export async function createOwnerBillingCheckoutSession(
         updatedAt: now,
         lastCheckoutSessionId: session.id,
         lastCheckoutOpenedAt: now,
-        launchTrialDays:
-          launchTrialOffer.trialDays ||
-          currentSubscription?.launchTrialDays ||
-          null,
+        launchTrialDays: launchTrialOffer.trialDays || currentSubscription?.launchTrialDays || null,
         launchTrialClaimedAt:
-          launchTrialOffer.claim?.claimedAt ??
-          currentSubscription?.launchTrialClaimedAt ??
-          null,
+          launchTrialOffer.claim?.claimedAt ?? currentSubscription?.launchTrialClaimedAt ?? null,
         launchProgramWindowEndsAt:
           launchTrialOffer.claim?.windowEndsAt ??
           currentSubscription?.launchProgramWindowEndsAt ??
           null,
       },
-      { merge: true }
+      { merge: true },
     );
 
   return {
@@ -737,18 +719,12 @@ export async function createOwnerBillingCheckoutSession(
 }
 
 export async function createOwnerBillingPortalSession(request: Request) {
-  const {
-    stripeOwnerPortalReturnUrl,
-    stripeSecretKey,
-  } = getStripeBillingConfig();
+  const { stripeOwnerPortalReturnUrl, stripeSecretKey } = getStripeBillingConfig();
   const { ownerUid } = await getVerifiedOwnerContext(request);
   const currentSubscription = await getOwnerSubscription(ownerUid);
 
   if (!currentSubscription?.externalCustomerId) {
-    throw new OwnerBillingError(
-      'No Stripe customer is linked to this owner account yet.',
-      409
-    );
+    throw new OwnerBillingError('No Stripe customer is linked to this owner account yet.', 409);
   }
 
   const params = new URLSearchParams();
@@ -759,7 +735,7 @@ export async function createOwnerBillingPortalSession(request: Request) {
     stripeSecretKey,
     '/billing_portal/sessions',
     params,
-    `owner-billing-portal:${ownerUid}`
+    `owner-billing-portal:${ownerUid}`,
   );
 
   if (!session.url) {
@@ -776,7 +752,7 @@ export async function createOwnerBillingPortalSession(request: Request) {
 
 export async function handleOwnerBillingWebhook(
   payloadBuffer: Buffer,
-  signatureHeader: string | null | undefined
+  signatureHeader: string | null | undefined,
 ) {
   const { stripeSecretKey, stripeWebhookSecret } = getStripeBillingConfig({
     includeWebhook: true,
@@ -790,17 +766,14 @@ export async function handleOwnerBillingWebhook(
     case 'checkout.session.completed':
       return handleCheckoutSessionCompleted(
         stripeSecretKey,
-        event.data.object as StripeCheckoutSession
+        event.data.object as StripeCheckoutSession,
       );
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted':
       return persistStripeSubscriptionUpdate(event.data.object as StripeSubscription);
     case 'invoice.payment_failed':
-      return handleInvoicePaymentFailed(
-        stripeSecretKey,
-        event.data.object as StripeInvoice
-      );
+      return handleInvoicePaymentFailed(stripeSecretKey, event.data.object as StripeInvoice);
     default:
       return {
         ok: true,

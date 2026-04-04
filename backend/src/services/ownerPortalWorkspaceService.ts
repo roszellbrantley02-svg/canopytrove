@@ -34,6 +34,8 @@ import {
   storefrontSummaryEnhancementCache,
   storefrontDetailEnhancementCache,
 } from './ownerPortalWorkspaceData';
+import type { ViewerContext } from './ownerPortalWorkspaceData';
+import { isFollowingStorefront, isFrequentVisitor } from './routeStateService';
 import {
   buildEmptyOwnerPortalWorkspace,
   buildOwnerWorkspaceMetrics,
@@ -53,67 +55,173 @@ import {
   maybeDispatchPromotionStartAlert,
   preparePromotionForSave,
 } from './ownerPortalPromotionSchedulerService';
-import { assertAuthorizedOwnerStorefront, getOwnerAuthorizationState } from './ownerPortalAuthorizationService';
+import {
+  assertAuthorizedOwnerStorefront,
+  getOwnerAuthorizationState,
+} from './ownerPortalAuthorizationService';
 import {
   getOwnerLicenseCompliance,
   saveOwnerLicenseCompliance,
 } from './ownerPortalLicenseComplianceService';
 import { hydrateOwnerStorefrontProfileToolsMedia } from './storefrontMediaAccessService';
+import {
+  computeOpenNowFromOwnerHours,
+  ownerHoursToDisplayStrings,
+} from './ownerHoursService';
+import { isActiveOwnerSubscriptionStatus } from './ownerPortalAuthorizationService';
+import { getOwnerProfile } from './ownerPortalWorkspaceData';
+
+async function pickVisiblePromotion(
+  promotions: OwnerStorefrontPromotionDocument[],
+  storefrontId: string,
+  viewerContext?: ViewerContext,
+): Promise<OwnerStorefrontPromotionDocument | null> {
+  if (!viewerContext) {
+    // Owner workspace or no viewer — return the top promotion unfiltered
+    return promotions[0] ?? null;
+  }
+
+  for (const promotion of promotions) {
+    switch (promotion.audience) {
+      case 'all_followers':
+        if (await isFollowingStorefront(viewerContext.profileId, storefrontId)) {
+          return promotion;
+        }
+        break;
+
+      case 'frequent_visitors':
+        // Show to users who have recently viewed or routed to this storefront
+        if (await isFrequentVisitor(viewerContext.profileId, storefrontId)) {
+          return promotion;
+        }
+        break;
+
+      case 'new_customers':
+        // Show to users who have NOT saved the storefront (discovering it)
+        if (!(await isFollowingStorefront(viewerContext.profileId, storefrontId))) {
+          return promotion;
+        }
+        break;
+
+      default:
+        // Unrecognised audience — show to everyone
+        return promotion;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check whether the owner behind a profile-tools document still has an
+ * active subscription. Returns true when unknown (no ownerUid, lookup
+ * fails) so that content is shown by default and only stripped when we
+ * are *certain* the subscription lapsed.
+ */
+async function isOwnerSubscriptionActive(
+  profileTools: OwnerStorefrontProfileToolsDocument | null,
+): Promise<boolean> {
+  if (!profileTools?.ownerUid) return true;
+  try {
+    const profile = await getOwnerProfile(profileTools.ownerUid);
+    if (!profile) return true;
+    return isActiveOwnerSubscriptionStatus(profile.subscriptionStatus);
+  } catch {
+    return true;
+  }
+}
 
 export async function applyOwnerWorkspaceSummaryEnhancements(
-  summary: StorefrontSummaryApiDocument
+  summary: StorefrontSummaryApiDocument,
+  viewerContext?: ViewerContext,
 ) {
-  const cached = storefrontSummaryEnhancementCache.get(summary.id);
-  if (cached && cached.expiresAt > Date.now()) {
-    return {
-      ...summary,
-      ...cached.value,
-    };
+  // When a viewer context is present the result is viewer-specific,
+  // so skip the shared storefront-level cache.
+  if (!viewerContext) {
+    const cached = storefrontSummaryEnhancementCache.get(summary.id);
+    if (cached && cached.expiresAt > Date.now()) {
+      return {
+        ...summary,
+        ...cached.value,
+      };
+    }
   }
 
   const [rawProfileToolsResult, activePromotionsResult] = await Promise.allSettled([
     getOwnerStorefrontProfileTools(summary.id),
     listActiveOwnerStorefrontPromotions(summary.id),
   ]);
-  const rawProfileTools = rawProfileToolsResult.status === 'fulfilled' ? rawProfileToolsResult.value : null;
-  const activePromotions = activePromotionsResult.status === 'fulfilled' ? activePromotionsResult.value : [];
+  const rawProfileTools =
+    rawProfileToolsResult.status === 'fulfilled' ? rawProfileToolsResult.value : null;
+  const activePromotions =
+    activePromotionsResult.status === 'fulfilled' ? activePromotionsResult.value : [];
   if (rawProfileToolsResult.status === 'rejected') {
-    console.warn(`[owner-workspace-service] summary enhancement: profileTools failed for ${summary.id}:`, rawProfileToolsResult.reason);
+    console.warn(
+      `[owner-workspace-service] summary enhancement: profileTools failed for ${summary.id}:`,
+      rawProfileToolsResult.reason,
+    );
   }
   if (activePromotionsResult.status === 'rejected') {
-    console.warn(`[owner-workspace-service] summary enhancement: activePromotions failed for ${summary.id}:`, activePromotionsResult.reason);
+    console.warn(
+      `[owner-workspace-service] summary enhancement: activePromotions failed for ${summary.id}:`,
+      activePromotionsResult.reason,
+    );
   }
   const profileTools = await hydrateOwnerStorefrontProfileToolsMedia(rawProfileTools);
-  const activePromotion = activePromotions[0] ?? null;
+  const subscriptionActive = await isOwnerSubscriptionActive(rawProfileTools);
+
+  // Owner hours persist even after subscription lapse — always apply when present.
+  const ownerHoursOpenNow =
+    rawProfileTools?.ownerHours?.length
+      ? computeOpenNowFromOwnerHours(rawProfileTools.ownerHours)
+      : null;
+
+  // When subscription has lapsed, strip all owner-added content except hours.
+  const activePromotion = subscriptionActive
+    ? await pickVisiblePromotion(activePromotions, summary.id, viewerContext)
+    : null;
+  const liveProfileTools = subscriptionActive ? profileTools : null;
+  const liveActivePromotions = subscriptionActive ? activePromotions : [];
 
   const enhancement: Partial<StorefrontSummaryApiDocument> = {
-    menuUrl: profileTools?.menuUrl ?? summary.menuUrl ?? null,
-    verifiedOwnerBadgeLabel: profileTools?.verifiedBadgeLabel ?? summary.verifiedOwnerBadgeLabel ?? null,
-    ownerFeaturedBadges: profileTools?.featuredBadges ?? summary.ownerFeaturedBadges ?? [],
-    ownerCardSummary: profileTools?.cardSummary ?? summary.ownerCardSummary ?? null,
-    activePromotionCount: activePromotions.length,
+    menuUrl: liveProfileTools?.menuUrl ?? summary.menuUrl ?? null,
+    verifiedOwnerBadgeLabel:
+      liveProfileTools?.verifiedBadgeLabel ?? summary.verifiedOwnerBadgeLabel ?? null,
+    ownerFeaturedBadges: liveProfileTools?.featuredBadges ?? summary.ownerFeaturedBadges ?? [],
+    ownerCardSummary: liveProfileTools?.cardSummary ?? summary.ownerCardSummary ?? null,
+    activePromotionCount: liveActivePromotions.length,
     premiumCardVariant:
       activePromotion?.cardTone ??
-      (profileTools?.featuredBadges?.length ? 'owner_featured' : 'standard'),
-    promotionPlacementSurfaces: activePromotion?.placementSurfaces ?? summary.promotionPlacementSurfaces ?? [],
-    promotionPlacementScope: activePromotion?.placementScope ?? summary.promotionPlacementScope ?? null,
-    thumbnailUrl: collectProfileAttachmentUrls(profileTools)[0] ?? summary.thumbnailUrl ?? null,
+      (liveProfileTools?.featuredBadges?.length ? 'owner_featured' : 'standard'),
+    promotionPlacementSurfaces:
+      activePromotion?.placementSurfaces ?? summary.promotionPlacementSurfaces ?? [],
+    promotionPlacementScope:
+      activePromotion?.placementScope ?? summary.promotionPlacementScope ?? null,
+    thumbnailUrl:
+      collectProfileAttachmentUrls(liveProfileTools)[0] ?? summary.thumbnailUrl ?? null,
   };
+
+  // Owner hours override openNow regardless of subscription status.
+  if (ownerHoursOpenNow !== null) {
+    enhancement.openNow = ownerHoursOpenNow;
+  }
 
   if (activePromotion) {
     enhancement.promotionText = activePromotion.description || activePromotion.title;
-    enhancement.promotionBadges = normalizeBadges(activePromotion.badges.length
-      ? activePromotion.badges
-      : [activePromotion.title]);
+    enhancement.promotionBadges = normalizeBadges(
+      activePromotion.badges.length ? activePromotion.badges : [activePromotion.title],
+    );
     enhancement.promotionExpiresAt = activePromotion.endsAt;
     enhancement.activePromotionId = activePromotion.id;
     enhancement.premiumCardVariant = activePromotion.cardTone;
   }
 
-  storefrontSummaryEnhancementCache.set(summary.id, {
-    value: enhancement,
-    expiresAt: Date.now() + 20_000,
-  });
+  if (!viewerContext) {
+    storefrontSummaryEnhancementCache.set(summary.id, {
+      value: enhancement,
+      expiresAt: Date.now() + 20_000,
+    });
+  }
 
   return {
     ...summary,
@@ -122,41 +230,84 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
 }
 
 export async function applyOwnerWorkspaceDetailEnhancements(
-  detail: StorefrontDetailApiDocument
+  detail: StorefrontDetailApiDocument,
+  viewerContext?: ViewerContext,
 ) {
-  const cached = storefrontDetailEnhancementCache.get(detail.storefrontId);
-  if (cached && cached.expiresAt > Date.now()) {
-    return {
-      ...detail,
-      ...cached.value,
-    };
+  if (!viewerContext) {
+    const cached = storefrontDetailEnhancementCache.get(detail.storefrontId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return {
+        ...detail,
+        ...cached.value,
+      };
+    }
   }
 
-  const [rawProfileToolsResult, followerCountResult, activePromotionsResult] = await Promise.allSettled([
-    getOwnerStorefrontProfileTools(detail.storefrontId),
-    sumStorefrontFollowers(detail.storefrontId),
-    listActiveOwnerStorefrontPromotions(detail.storefrontId),
-  ]);
-  const rawProfileTools = rawProfileToolsResult.status === 'fulfilled' ? rawProfileToolsResult.value : null;
-  const followerCount = followerCountResult.status === 'fulfilled' ? followerCountResult.value : detail.favoriteFollowerCount ?? 0;
-  const activePromotions = activePromotionsResult.status === 'fulfilled' ? activePromotionsResult.value : [];
+  const [rawProfileToolsResult, followerCountResult, activePromotionsResult] =
+    await Promise.allSettled([
+      getOwnerStorefrontProfileTools(detail.storefrontId),
+      sumStorefrontFollowers(detail.storefrontId),
+      listActiveOwnerStorefrontPromotions(detail.storefrontId),
+    ]);
+  const rawProfileTools =
+    rawProfileToolsResult.status === 'fulfilled' ? rawProfileToolsResult.value : null;
+  const followerCount =
+    followerCountResult.status === 'fulfilled'
+      ? followerCountResult.value
+      : (detail.favoriteFollowerCount ?? 0);
+  const allActivePromotions =
+    activePromotionsResult.status === 'fulfilled' ? activePromotionsResult.value : [];
   if (rawProfileToolsResult.status === 'rejected') {
-    console.warn(`[owner-workspace-service] detail enhancement: profileTools failed for ${detail.storefrontId}:`, rawProfileToolsResult.reason);
+    console.warn(
+      `[owner-workspace-service] detail enhancement: profileTools failed for ${detail.storefrontId}:`,
+      rawProfileToolsResult.reason,
+    );
   }
   if (followerCountResult.status === 'rejected') {
-    console.warn(`[owner-workspace-service] detail enhancement: followerCount failed for ${detail.storefrontId}:`, followerCountResult.reason);
+    console.warn(
+      `[owner-workspace-service] detail enhancement: followerCount failed for ${detail.storefrontId}:`,
+      followerCountResult.reason,
+    );
   }
   if (activePromotionsResult.status === 'rejected') {
-    console.warn(`[owner-workspace-service] detail enhancement: activePromotions failed for ${detail.storefrontId}:`, activePromotionsResult.reason);
+    console.warn(
+      `[owner-workspace-service] detail enhancement: activePromotions failed for ${detail.storefrontId}:`,
+      activePromotionsResult.reason,
+    );
   }
   const profileTools = await hydrateOwnerStorefrontProfileToolsMedia(rawProfileTools);
+  const subscriptionActive = await isOwnerSubscriptionActive(rawProfileTools);
+
+  // Owner hours persist even after subscription lapse.
+  const ownerHoursEntries = rawProfileTools?.ownerHours?.length
+    ? rawProfileTools.ownerHours
+    : null;
+  const ownerHoursOpenNow = ownerHoursEntries
+    ? computeOpenNowFromOwnerHours(ownerHoursEntries)
+    : null;
+
+  // When subscription has lapsed, strip all owner-added content except hours.
+  const liveProfileTools = subscriptionActive ? profileTools : null;
+
+  // Filter promotions by audience when a viewer is present
+  let visiblePromotions = subscriptionActive ? allActivePromotions : [];
+  if (viewerContext && subscriptionActive) {
+    const filtered: OwnerStorefrontPromotionDocument[] = [];
+    for (const promo of allActivePromotions) {
+      const visible = await pickVisiblePromotion([promo], detail.storefrontId, viewerContext);
+      if (visible) filtered.push(promo);
+    }
+    visiblePromotions = filtered;
+  }
 
   const enhancement: Partial<StorefrontDetailApiDocument> = {
-    menuUrl: profileTools?.menuUrl ?? detail.menuUrl ?? null,
-    verifiedOwnerBadgeLabel: profileTools?.verifiedBadgeLabel ?? detail.verifiedOwnerBadgeLabel ?? null,
-    favoriteFollowerCount: followerCount,
-    ownerFeaturedBadges: profileTools?.featuredBadges ?? detail.ownerFeaturedBadges ?? [],
-    activePromotions: activePromotions.slice(0, 5).map((promotion) => ({
+    menuUrl: liveProfileTools?.menuUrl ?? detail.menuUrl ?? null,
+    verifiedOwnerBadgeLabel:
+      liveProfileTools?.verifiedBadgeLabel ?? detail.verifiedOwnerBadgeLabel ?? null,
+    favoriteFollowerCount: subscriptionActive ? followerCount : (detail.favoriteFollowerCount ?? 0),
+    ownerFeaturedBadges:
+      liveProfileTools?.featuredBadges ?? detail.ownerFeaturedBadges ?? [],
+    activePromotions: visiblePromotions.slice(0, 5).map((promotion) => ({
       id: promotion.id,
       title: promotion.title,
       description: promotion.description || promotion.title,
@@ -165,17 +316,27 @@ export async function applyOwnerWorkspaceDetailEnhancements(
       endsAt: promotion.endsAt,
       cardTone: promotion.cardTone,
     })),
-    photoUrls: collectProfileAttachmentUrls(profileTools).length
+    photoUrls: collectProfileAttachmentUrls(liveProfileTools).length
       ? Array.from(
-          new Set([...collectProfileAttachmentUrls(profileTools), ...detail.photoUrls])
+          new Set([...collectProfileAttachmentUrls(liveProfileTools), ...detail.photoUrls]),
         ).slice(0, 12)
       : detail.photoUrls,
   };
 
-  storefrontDetailEnhancementCache.set(detail.storefrontId, {
-    value: enhancement,
-    expiresAt: Date.now() + 20_000,
-  });
+  // Owner hours override the source/Google hours regardless of subscription.
+  if (ownerHoursEntries) {
+    enhancement.hours = ownerHoursToDisplayStrings(ownerHoursEntries);
+  }
+  if (ownerHoursOpenNow !== null) {
+    enhancement.openNow = ownerHoursOpenNow;
+  }
+
+  if (!viewerContext) {
+    storefrontDetailEnhancementCache.set(detail.storefrontId, {
+      value: enhancement,
+      expiresAt: Date.now() + 20_000,
+    });
+  }
 
   return {
     ...detail,
@@ -183,7 +344,9 @@ export async function applyOwnerWorkspaceDetailEnhancements(
   };
 }
 
-export async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPortalWorkspaceDocument> {
+export async function getOwnerPortalWorkspace(
+  ownerUid: string,
+): Promise<OwnerPortalWorkspaceDocument> {
   const runtimeStatus = await getRuntimeOpsStatus();
   const ownerState = await getOwnerAuthorizationState(ownerUid);
   const ownerProfile = ownerState.ownerProfile
@@ -191,9 +354,11 @@ export async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPo
         ...ownerState.ownerProfile,
         dispensaryId: ownerState.storefrontId ?? ownerState.ownerProfile.dispensaryId,
         businessVerificationStatus:
-          ownerState.businessVerificationStatus ?? ownerState.ownerProfile.businessVerificationStatus,
+          ownerState.businessVerificationStatus ??
+          ownerState.ownerProfile.businessVerificationStatus,
         identityVerificationStatus:
-          ownerState.identityVerificationStatus ?? ownerState.ownerProfile.identityVerificationStatus,
+          ownerState.identityVerificationStatus ??
+          ownerState.ownerProfile.identityVerificationStatus,
         subscriptionStatus:
           ownerState.subscription?.status ?? ownerState.ownerProfile.subscriptionStatus,
       }
@@ -203,8 +368,14 @@ export async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPo
   }
 
   const storefrontId = ownerState.storefrontId;
-  const [ownerClaimResult, baseSummaryResult, rawProfileToolsResult, promotionsResult, ownerAlertStatusResult, licenseComplianceResult] =
-    await Promise.allSettled([
+  const [
+    ownerClaimResult,
+    baseSummaryResult,
+    rawProfileToolsResult,
+    promotionsResult,
+    ownerAlertStatusResult,
+    licenseComplianceResult,
+  ] = await Promise.allSettled([
     Promise.resolve(ownerState.ownerClaim),
     storefrontId
       ? backendStorefrontSource.getSummariesByIds([storefrontId]).then((items) => items[0] ?? null)
@@ -214,28 +385,34 @@ export async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPo
     getOwnerPortalAlertStatus(ownerUid),
     getOwnerLicenseCompliance(ownerUid, storefrontId),
   ]);
-  const ownerClaim = ownerClaimResult.status === 'fulfilled' ? ownerClaimResult.value : ownerState.ownerClaim;
+  const ownerClaim =
+    ownerClaimResult.status === 'fulfilled' ? ownerClaimResult.value : ownerState.ownerClaim;
   const baseSummary = baseSummaryResult.status === 'fulfilled' ? baseSummaryResult.value : null;
-  const rawProfileTools = rawProfileToolsResult.status === 'fulfilled' ? rawProfileToolsResult.value : null;
+  const rawProfileTools =
+    rawProfileToolsResult.status === 'fulfilled' ? rawProfileToolsResult.value : null;
   const promotions = promotionsResult.status === 'fulfilled' ? promotionsResult.value : [];
-  const ownerAlertStatus = ownerAlertStatusResult.status === 'fulfilled' ? ownerAlertStatusResult.value : { pushEnabled: false, updatedAt: null };
-  const licenseCompliance = licenseComplianceResult.status === 'fulfilled' ? licenseComplianceResult.value : null;
+  const ownerAlertStatus =
+    ownerAlertStatusResult.status === 'fulfilled'
+      ? ownerAlertStatusResult.value
+      : { pushEnabled: false, updatedAt: null };
+  const licenseCompliance =
+    licenseComplianceResult.status === 'fulfilled' ? licenseComplianceResult.value : null;
   const profileTools = await hydrateOwnerStorefrontProfileToolsMedia(rawProfileTools);
 
   const recentReviews = storefrontId ? await listStorefrontAppReviews(storefrontId) : [];
   const recentReports = storefrontId ? await listStorefrontReports(storefrontId) : [];
   const followerCount = storefrontId ? await sumStorefrontFollowers(storefrontId) : 0;
   const storefrontMetrics = storefrontId
-      ? await aggregateStorefrontMetrics(storefrontId)
-      : {
-          impressions7d: 0,
-          opens7d: 0,
-          routes7d: 0,
-          websiteTaps7d: 0,
-          phoneTaps7d: 0,
-          menuTaps7d: 0,
-          reviews30d: 0,
-        };
+    ? await aggregateStorefrontMetrics(storefrontId)
+    : {
+        impressions7d: 0,
+        opens7d: 0,
+        routes7d: 0,
+        websiteTaps7d: 0,
+        phoneTaps7d: 0,
+        menuTaps7d: 0,
+        reviews30d: 0,
+      };
 
   const metrics = buildOwnerWorkspaceMetrics({
     followerCount,
@@ -261,14 +438,16 @@ export async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPo
       startsAt: promotion.startsAt,
       endsAt: promotion.endsAt,
       metrics: await aggregateDealMetrics(promotion.id),
-    }))
+    })),
   );
   const promotionPerformance = promotionResults.flatMap((r) =>
-    r.status === 'fulfilled' ? [r.value] : []
+    r.status === 'fulfilled' ? [r.value] : [],
   );
 
   const activePromotion = storefrontId ? await getActivePromotion(storefrontId) : null;
-  const storefrontSummary = baseSummary ? await applyOwnerWorkspaceSummaryEnhancements(baseSummary) : null;
+  const storefrontSummary = baseSummary
+    ? await applyOwnerWorkspaceSummaryEnhancements(baseSummary)
+    : null;
   const patternFlags = buildPatternFlags({
     followerCount,
     reviews: ownerWorkspaceReviews,
@@ -280,7 +459,9 @@ export async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPo
   return {
     ownerProfile: ownerProfile as OwnerPortalWorkspaceDocument['ownerProfile'],
     ownerClaim: ownerClaim as OwnerPortalWorkspaceDocument['ownerClaim'],
-    storefrontSummary: storefrontSummary ? buildOwnerWorkspaceSummarySnapshot(storefrontSummary) : null,
+    storefrontSummary: storefrontSummary
+      ? buildOwnerWorkspaceSummarySnapshot(storefrontSummary)
+      : null,
     metrics,
     patternFlags,
     recentReviews: ownerWorkspaceReviews,
@@ -296,7 +477,7 @@ export async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPo
 
 export async function saveOwnerPortalLicenseCompliance(
   ownerUid: string,
-  input: OwnerPortalLicenseComplianceInput
+  input: OwnerPortalLicenseComplianceInput,
 ) {
   const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
     missingStorefrontMessage:
@@ -313,7 +494,7 @@ export async function saveOwnerPortalLicenseCompliance(
 
 export async function saveOwnerPortalProfileTools(
   ownerUid: string,
-  input: OwnerPortalProfileToolsInput
+  input: OwnerPortalProfileToolsInput,
 ) {
   await assertRuntimePolicyAllowsOwnerAction('profile_tools');
   const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
@@ -323,13 +504,13 @@ export async function saveOwnerPortalProfileTools(
 
   const nextRecord = normalizeProfileTools(ownerState.storefrontId!, ownerUid, input);
   return hydrateOwnerStorefrontProfileToolsMedia(
-    await saveOwnerStorefrontProfileToolsDocument(nextRecord)
+    await saveOwnerStorefrontProfileToolsDocument(nextRecord),
   );
 }
 
 export async function createOwnerPortalPromotion(
   ownerUid: string,
-  input: OwnerPortalPromotionInput
+  input: OwnerPortalPromotionInput,
 ) {
   await assertRuntimePolicyAllowsOwnerAction('promotion');
   const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
@@ -355,7 +536,7 @@ export async function createOwnerPortalPromotion(
 export async function updateOwnerPortalPromotion(
   ownerUid: string,
   promotionId: string,
-  input: OwnerPortalPromotionInput
+  input: OwnerPortalPromotionInput,
 ) {
   await assertRuntimePolicyAllowsOwnerAction('promotion');
   const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
@@ -372,11 +553,11 @@ export async function updateOwnerPortalPromotion(
   const nextPromotion = preparePromotionForSave({
     existingPromotion,
     nextPromotion: normalizePromotion(ownerUid, ownerState.storefrontId!, {
-    ...existingPromotion,
-    ...input,
-    id: promotionId,
-    createdAt: existingPromotion.createdAt,
-  }),
+      ...existingPromotion,
+      ...input,
+      id: promotionId,
+      createdAt: existingPromotion.createdAt,
+    }),
   });
 
   assertOwnerPromotionConstraints({

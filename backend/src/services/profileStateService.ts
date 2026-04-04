@@ -3,10 +3,7 @@ import {
   StorefrontGamificationStateApiDocument,
   StorefrontRouteStateApiDocument,
 } from '../types';
-import {
-  getGamificationState,
-  saveGamificationState,
-} from './gamificationPersistenceService';
+import { getGamificationState, saveGamificationState } from './gamificationPersistenceService';
 import { applyEarlyAdopterLaunchProgramToGamificationState } from './launchProgramService';
 import { getProfile, saveProfile } from './profileService';
 import { getRouteState, saveRouteState } from './routeStateService';
@@ -32,7 +29,7 @@ export async function getProfileState(profileId: string) {
 
 function buildProfileDocument(
   profileId: string,
-  profile: Partial<AppProfileApiDocument> | undefined
+  profile: Partial<AppProfileApiDocument> | undefined,
 ): AppProfileApiDocument {
   const now = new Date().toISOString();
   return {
@@ -47,7 +44,7 @@ function buildProfileDocument(
 
 function buildRouteStateDocument(
   profileId: string,
-  routeState: Partial<StorefrontRouteStateApiDocument> | undefined
+  routeState: Partial<StorefrontRouteStateApiDocument> | undefined,
 ): StorefrontRouteStateApiDocument {
   return {
     profileId,
@@ -67,7 +64,7 @@ function buildRouteStateDocument(
 
 export async function saveProfileState(
   profileId: string,
-  profileState: SaveProfileStateInput | undefined
+  profileState: SaveProfileStateInput | undefined,
 ) {
   const profileDocument = buildProfileDocument(profileId, profileState?.profile);
   const currentGamificationState = await getGamificationState(profileId, profileDocument.createdAt);

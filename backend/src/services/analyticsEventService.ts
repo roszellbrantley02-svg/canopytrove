@@ -45,7 +45,7 @@ function normalizeMetadata(metadata: AnalyticsMetadata | undefined) {
 
 function stripUndefinedProperties<T extends Record<string, unknown>>(value: T) {
   return Object.fromEntries(
-    Object.entries(value).filter(([, entryValue]) => entryValue !== undefined)
+    Object.entries(value).filter(([, entryValue]) => entryValue !== undefined),
   ) as T;
 }
 
@@ -55,7 +55,7 @@ function createEventDocument(
   requestContext: {
     ipAddress: string | null;
     userAgent: string | null;
-  }
+  },
 ): AnalyticsEventDocument {
   return stripUndefinedProperties({
     ...event,
@@ -72,7 +72,7 @@ function createEventDocument(
 function setMerged(
   writeBatch: WriteBatch,
   documentRef: DocumentReference,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ) {
   writeBatch.set(documentRef, data, { merge: true });
 }
@@ -81,7 +81,7 @@ function incrementIfNeeded(
   target: Record<string, unknown>,
   field: string,
   shouldIncrement: boolean,
-  amount = 1
+  amount = 1,
 ) {
   if (shouldIncrement) {
     target[field] = FieldValue.increment(amount);
@@ -90,9 +90,7 @@ function incrementIfNeeded(
 
 function applyDailyAppMetrics(writeBatch: WriteBatch, event: AnalyticsEventDocument) {
   const dateKey = createDateKey(event.occurredAt);
-  const documentRef = getBackendFirebaseDb()!
-    .collection(DAILY_APP_METRICS_COLLECTION)
-    .doc(dateKey);
+  const documentRef = getBackendFirebaseDb()!.collection(DAILY_APP_METRICS_COLLECTION).doc(dateKey);
   const payload: Record<string, unknown> = {
     date: dateKey,
     updatedAt: event.receivedAt,
@@ -109,15 +107,16 @@ function applyDailyAppMetrics(writeBatch: WriteBatch, event: AnalyticsEventDocum
   incrementIfNeeded(
     payload,
     'passwordResetRequestCount',
-    event.eventType === 'password_reset_requested'
+    event.eventType === 'password_reset_requested',
   );
   incrementIfNeeded(payload, 'reviewStartedCount', event.eventType === 'review_started');
   incrementIfNeeded(payload, 'reviewSubmittedCount', event.eventType === 'review_submitted');
 
   if (event.eventType === 'session_end') {
-    const durationSeconds = typeof event.metadata?.durationSeconds === 'number'
-      ? Math.max(0, event.metadata.durationSeconds)
-      : 0;
+    const durationSeconds =
+      typeof event.metadata?.durationSeconds === 'number'
+        ? Math.max(0, event.metadata.durationSeconds)
+        : 0;
     if (durationSeconds > 0) {
       payload.totalSessionDurationSeconds = FieldValue.increment(durationSeconds);
     }
@@ -138,7 +137,11 @@ function applyDailySearchMetrics(writeBatch: WriteBatch, event: AnalyticsEventDo
 
   incrementIfNeeded(payload, 'searchSubmittedCount', event.eventType === 'search_submitted');
   incrementIfNeeded(payload, 'searchClearedCount', event.eventType === 'search_cleared');
-  incrementIfNeeded(payload, 'locationPromptShownCount', event.eventType === 'location_prompt_shown');
+  incrementIfNeeded(
+    payload,
+    'locationPromptShownCount',
+    event.eventType === 'location_prompt_shown',
+  );
   incrementIfNeeded(payload, 'locationGrantedCount', event.eventType === 'location_granted');
   incrementIfNeeded(payload, 'locationDeniedCount', event.eventType === 'location_denied');
   incrementIfNeeded(payload, 'locationChangedCount', event.eventType === 'location_changed');
@@ -151,9 +154,8 @@ function applyDailySearchMetrics(writeBatch: WriteBatch, event: AnalyticsEventDo
     return;
   }
 
-  const normalizedQuery = typeof event.metadata?.query === 'string'
-    ? event.metadata.query.trim().toLowerCase()
-    : '';
+  const normalizedQuery =
+    typeof event.metadata?.query === 'string' ? event.metadata.query.trim().toLowerCase() : '';
   if (!normalizedQuery) {
     return;
   }
@@ -191,7 +193,11 @@ function applyDailyStorefrontMetrics(writeBatch: WriteBatch, event: AnalyticsEve
   incrementIfNeeded(payload, 'phoneTapCount', event.eventType === 'phone_tapped');
   incrementIfNeeded(payload, 'menuTapCount', event.eventType === 'menu_tapped');
   incrementIfNeeded(payload, 'reviewPromptShownCount', event.eventType === 'review_prompt_shown');
-  incrementIfNeeded(payload, 'reviewPromptDismissedCount', event.eventType === 'review_prompt_dismissed');
+  incrementIfNeeded(
+    payload,
+    'reviewPromptDismissedCount',
+    event.eventType === 'review_prompt_dismissed',
+  );
   incrementIfNeeded(payload, 'reviewStartedCount', event.eventType === 'review_started');
   incrementIfNeeded(payload, 'reviewSubmittedCount', event.eventType === 'review_submitted');
 
@@ -279,11 +285,11 @@ export async function recordAnalyticsEvents(
   requestContext: {
     ipAddress: string | null;
     userAgent: string | null;
-  }
+  },
 ) {
   const db = getBackendFirebaseDb();
   const incomingDocuments = batch.events.map((event) =>
-    createEventDocument(event, batch, requestContext)
+    createEventDocument(event, batch, requestContext),
   );
   const { dedupedDocuments, duplicateCount: inBatchDuplicateCount } =
     dedupeIncomingDocuments(incomingDocuments);
@@ -293,7 +299,9 @@ export async function recordAnalyticsEvents(
     let acceptedCount = 0;
 
     dedupedDocuments.forEach((document) => {
-      if (memoryAnalyticsEvents.some((existingEvent) => existingEvent.eventId === document.eventId)) {
+      if (
+        memoryAnalyticsEvents.some((existingEvent) => existingEvent.eventId === document.eventId)
+      ) {
         duplicateCount += 1;
         return;
       }
@@ -311,14 +319,14 @@ export async function recordAnalyticsEvents(
 
   const writeBatch = db.batch();
   const rawEventRefs = dedupedDocuments.map((document) =>
-    db.collection(EVENTS_COLLECTION).doc(document.eventId)
+    db.collection(EVENTS_COLLECTION).doc(document.eventId),
   );
   const existingSnapshots = rawEventRefs.length ? await db.getAll(...rawEventRefs) : [];
   const existingEventIds = new Set(
-    existingSnapshots.filter((snapshot) => snapshot.exists).map((snapshot) => snapshot.id)
+    existingSnapshots.filter((snapshot) => snapshot.exists).map((snapshot) => snapshot.id),
   );
   const acceptedDocuments = dedupedDocuments.filter(
-    (document) => !existingEventIds.has(document.eventId)
+    (document) => !existingEventIds.has(document.eventId),
   );
 
   acceptedDocuments.forEach((document) => {

@@ -4,7 +4,7 @@ import { getBackendFirebaseAuth, hasBackendFirebaseConfig } from '../firebase';
 export class OwnerPortalAccessError extends Error {
   constructor(
     message: string,
-    public readonly statusCode: number
+    public readonly statusCode: number,
   ) {
     super(message);
   }

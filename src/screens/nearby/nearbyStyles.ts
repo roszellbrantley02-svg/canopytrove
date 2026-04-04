@@ -23,7 +23,7 @@ export const styles = StyleSheet.create({
     color: colors.text,
   },
   locationPanel: {
-    gap: spacing.md,
+    gap: spacing.lg,
     padding: spacing.xl,
     borderRadius: radii.xl,
     borderWidth: 1,
@@ -41,7 +41,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0, 245, 140, 0.18)',
     backgroundColor: 'rgba(0, 245, 140, 0.10)',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -63,7 +63,7 @@ export const styles = StyleSheet.create({
   locationPanelHeaderActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   locationPanelHeaderActionsCompact: {
     width: '100%',
@@ -83,14 +83,14 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
   },
   closeButton: {
-    minHeight: 40,
+    minHeight: 44,
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     backgroundColor: 'rgba(8, 14, 19, 0.72)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   closeButtonText: {
     ...textStyles.labelCaps,
@@ -98,7 +98,7 @@ export const styles = StyleSheet.create({
   },
   locationActionRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   locationActionRowCompact: {
     flexDirection: 'column',
@@ -109,7 +109,7 @@ export const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingTop: spacing.md,
   },
   emptyTitle: {
@@ -144,12 +144,12 @@ export const styles = StyleSheet.create({
   },
   primaryButton: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 52,
     borderRadius: radii.md,
     backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     shadowColor: colors.gold,
     shadowOpacity: 0.14,
     shadowRadius: 10,
@@ -161,7 +161,7 @@ export const styles = StyleSheet.create({
   },
   secondaryButton: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 52,
     borderRadius: radii.md,
     backgroundColor: colors.surfaceGlass,
     borderWidth: 1,
@@ -169,8 +169,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
   primaryButtonText: {
     ...textStyles.button,

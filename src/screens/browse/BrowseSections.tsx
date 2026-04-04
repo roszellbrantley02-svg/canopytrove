@@ -124,17 +124,17 @@ export function BrowseEmptyState({
   const activeSearchQuery = searchQuery.trim();
   const title = activeSearchQuery
     ? hotDealsOnly
-      ? `No hot deals match "${activeSearchQuery}".`
+      ? `No specials match "${activeSearchQuery}".`
       : `No results for "${activeSearchQuery}".`
     : hotDealsOnly
-      ? 'No hot deals right now.'
+      ? 'No specials right now.'
       : 'No storefronts found.';
   const body = activeSearchQuery
     ? hotDealsOnly
-      ? 'Try a broader search or turn off Hot Deals to widen the result set.'
+      ? 'Try a broader search or turn off Specials to widen the result set.'
       : 'Try a broader term, a different location, or clear the search to widen the result set.'
     : hotDealsOnly
-      ? 'No dispensaries in this result set are showing a live deal right now.'
+      ? 'No dispensaries in this result set are showing a live special right now.'
       : `Try another location near ${locationLabel}.`;
 
   return (
@@ -155,7 +155,7 @@ export function BrowseEmptyState({
         errorText
           ? 'Browse issue'
           : showClearHotDeals
-            ? 'Hot deals'
+            ? 'Specials'
             : activeSearchQuery
               ? 'Search results'
               : 'Browse state'
@@ -186,7 +186,7 @@ export function BrowseEmptyState({
             style={styles.emptyActionButton}
             accessibilityRole="button"
             accessibilityLabel="Show all storefronts"
-            accessibilityHint="Removes the hot deals filter to show all storefronts"
+            accessibilityHint="Removes the specials filter to show all storefronts"
           >
             <Text style={styles.emptyActionButtonText}>Show All Storefronts</Text>
           </Pressable>
@@ -227,7 +227,7 @@ export function BrowseStoreList({
             storefront={item}
             variant="feature"
             primaryActionLabel="Directions"
-            secondaryActionLabel="View Storefront"
+            secondaryActionLabel="Details"
             isSaved={isSavedStorefront(item.id)}
             isVisited={visitedStorefrontIds.includes(item.id)}
             showPromotionText={Boolean(item.promotionText?.trim())}

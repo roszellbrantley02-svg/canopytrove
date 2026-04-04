@@ -148,18 +148,18 @@ export function OwnerPortalPromotionsScreen() {
     <ScreenShell
       eyebrow="Owner Portal"
       title="Promotions and results."
-      subtitle="Plan the lead hot-deal lane, reserve owner highlights for premium placement, and compare offer performance over time."
-      headerPill={preview ? 'Preview' : 'Deals'}
+      subtitle="Plan the lead specials lane, reserve owner highlights for premium placement, and compare offer performance over time."
+      headerPill={preview ? 'Preview' : 'Specials'}
     >
       <MotionInView delay={70}>
         <View style={styles.portalHeroCard}>
           <View style={styles.portalHeroGlow} />
           <Text style={styles.portalHeroKicker}>Offer studio</Text>
           <Text style={styles.portalHeroTitle}>
-            Lead with hot deals. Save owner highlights for premium placement.
+            Lead with specials. Save owner highlights for premium placement.
           </Text>
           <Text style={styles.portalHeroBody}>
-            The planner now treats hot deals as the primary urgency lane while keeping
+            The planner now treats specials as the primary urgency lane while keeping
             owner-highlight cards reserved for curated premium storytelling.
           </Text>
           <View style={styles.portalHeroMetricRow}>
@@ -180,7 +180,7 @@ export function OwnerPortalPromotionsScreen() {
           </View>
           <View style={styles.portalHeroMetaRow}>
             <View style={styles.metaChip}>
-              <Text style={styles.metaChipText}>{preview ? 'Demo mode' : 'Business portal'}</Text>
+              <Text style={styles.metaChipText}>{preview ? 'Preview' : 'Business portal'}</Text>
             </View>
             <View style={styles.metaChip}>
               <Text style={styles.metaChipText}>
@@ -194,7 +194,7 @@ export function OwnerPortalPromotionsScreen() {
       <MotionInView delay={120}>
         <SectionCard
           title="Promotion planner"
-          body="Use ISO-style dates for exact scheduling. Default to a hot deal when the card should drive urgency, then switch to owner highlight only when the message should read as a premium curated feature. Each storefront can keep up to five scheduled or active offers at once."
+          body="Use ISO-style dates for exact scheduling. Default to a featured special when the card should drive urgency, then switch to owner highlight only when the message should read as a premium curated feature. Each storefront can keep up to five scheduled or active offers at once."
         >
           <View style={styles.sectionStack}>
             {runtimeMessage ? (
@@ -296,8 +296,8 @@ export function OwnerPortalPromotionsScreen() {
                     Offer headline and storefront card copy
                   </Text>
                   <Text style={styles.splitHeaderBody}>
-                    Keep the message tight enough to scan in one pass whether it lands as a hot deal
-                    or an owner highlight.
+                    Keep the message tight enough to scan in one pass whether it lands as a featured
+                    special or an owner highlight.
                   </Text>
                 </View>
                 <AppUiIcon name="megaphone-outline" size={20} color="#F5C86A" />
@@ -439,7 +439,7 @@ export function OwnerPortalPromotionsScreen() {
                 </View>
                 <Text style={styles.fieldHint}>
                   {cardTone === 'hot_deal'
-                    ? 'Use Hot Deal when this offer should own the urgency lane and feel time-sensitive.'
+                    ? 'Use Featured Special when this offer should own the urgency lane and feel time-sensitive.'
                     : cardTone === 'owner_featured'
                       ? 'Use Owner Highlight when the card should feel premium, curated, and less discount-driven.'
                       : 'Standard Card keeps the offer visible without special urgency or premium framing.'}
@@ -480,8 +480,8 @@ export function OwnerPortalPromotionsScreen() {
                   })}
                 </View>
                 <Text style={styles.fieldHint}>
-                  Hot Deals is the primary deal lane. Nearby and Browse keep the campaign visible in
-                  the standard discovery feeds.
+                  Specials is the primary promotions lane. Nearby and Browse keep the campaign
+                  visible in the standard discovery feeds.
                 </Text>
               </View>
 
@@ -626,7 +626,7 @@ export function OwnerPortalPromotionsScreen() {
       <MotionInView delay={220}>
         <SectionCard
           title="Live and scheduled promotions"
-          body="Load any promotion into the planner to edit timing, placement, badge mix, or move it between the lead hot-deal lane and the owner-highlight lane."
+          body="Load any promotion into the planner to edit timing, placement, badge mix, or move it between the featured specials lane and the owner-highlight lane."
         >
           {promotions.length ? (
             <View style={styles.cardStack}>
@@ -701,7 +701,7 @@ export function OwnerPortalPromotionsScreen() {
       <MotionInView delay={300}>
         <SectionCard
           title="Offer performance"
-          body="These results use the live promotion analytics tied to promotion IDs, so you can compare hot deals against owner highlights by visibility, taps, and route intent."
+          body="These results use the live promotion analytics tied to promotion IDs, so you can compare featured specials against owner highlights by visibility, taps, and route intent."
         >
           {promotionPerformance.length ? (
             <View style={styles.sectionStack}>

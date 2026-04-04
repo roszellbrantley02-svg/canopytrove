@@ -18,7 +18,7 @@ const OWNER_WORKSPACE_FEATURES = [
   'Claim and manage your dispensary listing',
   'Submit business and identity verification',
   'Reply to reviews and monitor reports fast',
-  'Schedule live deals with follower alerts and performance results',
+  'Schedule live specials with follower alerts and performance results',
   'Control premium card treatments, menu links, and photo upgrades',
   'Manage owner-only plan access and listing tools',
 ];
@@ -120,7 +120,11 @@ export function OwnerPortalAccessScreen() {
       <MotionInView delay={180}>
         <SectionCard
           title="Owner access options"
-          body="Sign in with your business email or explore demo mode."
+          body={
+            ownerPortalPreviewEnabled
+              ? 'Sign in with your business email or preview the portal.'
+              : 'Sign in with your business email to manage your storefront.'
+          }
         >
           <View style={styles.actionGrid}>
             <View style={styles.ctaPanel}>
@@ -156,7 +160,7 @@ export function OwnerPortalAccessScreen() {
               <View style={[styles.ctaPanel, styles.onboardingInfoCardWarm]}>
                 <View style={styles.splitHeaderRow}>
                   <View style={styles.splitHeaderCopy}>
-                    <Text style={styles.sectionEyebrow}>Demo mode (internal)</Text>
+                    <Text style={styles.sectionEyebrow}>Preview mode</Text>
                     <Text style={styles.splitHeaderTitle}>Explore business tools safely</Text>
                   </View>
                   <AppUiIcon name="eye-outline" size={20} color="#9CC5B4" />
@@ -165,7 +169,7 @@ export function OwnerPortalAccessScreen() {
                   onPress={() => navigation.navigate('OwnerPortalHome', { preview: true })}
                   style={styles.secondaryButton}
                 >
-                  <Text style={styles.secondaryButtonText}>Open Demo Mode</Text>
+                  <Text style={styles.secondaryButtonText}>Open Preview</Text>
                 </Pressable>
               </View>
             ) : null}

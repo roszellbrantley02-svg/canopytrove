@@ -36,7 +36,7 @@ const sentryEnvironment =
   'development';
 const sentryTracesSampleRate = parseSampleRate(
   readConfiguredValue(process.env.SENTRY_TRACES_SAMPLE_RATE),
-  process.env.NODE_ENV === 'production' ? 0.15 : 1
+  process.env.NODE_ENV === 'production' ? 0.15 : 1,
 );
 const sentryLogsEnabled = readConfiguredValue(process.env.SENTRY_ENABLE_LOGS) === 'true';
 

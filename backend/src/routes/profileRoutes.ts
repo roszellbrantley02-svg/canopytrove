@@ -17,7 +17,7 @@ profileRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['PUT'],
-  })
+  }),
 );
 
 profileRoutes.get('/profiles/:profileId', async (request, response) => {
@@ -35,8 +35,7 @@ profileRoutes.put('/profiles/:profileId', async (request, response) => {
     id: profileId,
     kind: accountId ? 'authenticated' : 'anonymous',
     accountId: accountId ?? null,
-    displayName:
-      body.displayName !== undefined ? body.displayName : profile.displayName ?? null,
+    displayName: body.displayName !== undefined ? body.displayName : (profile.displayName ?? null),
     createdAt: profile.createdAt ?? body.createdAt ?? now,
     updatedAt: now,
   };

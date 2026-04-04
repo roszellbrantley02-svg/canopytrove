@@ -1,0 +1,326 @@
+import React from 'react';
+import { StyleSheet, Text, View, Switch } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { AppUiIcon } from '../icons/AppUiIcon';
+import { HapticPressable } from '../components/HapticPressable';
+import { MotionInView } from '../components/MotionInView';
+import { ScreenShell } from '../components/ScreenShell';
+import { colors, radii, spacing, textStyles, motion } from '../theme/tokens';
+import { useStorefrontProfileController } from '../context/StorefrontController';
+import { useMemberEmailSubscription } from '../hooks/useMemberEmailSubscription';
+import { getCommunitySafetyState } from '../services/communitySafetyService';
+import { legalConfig } from '../config/legal';
+import Constants from 'expo-constants';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { AppUiIconName } from '../icons/AppUiIcon';
+
+type SettingsRowProps = {
+  icon: AppUiIconName;
+  title: string;
+  subtitle?: string;
+  value?: string | boolean;
+  onPress?: () => void;
+  onToggle?: (value: boolean) => void;
+  isLoading?: boolean;
+  isDanger?: boolean;
+};
+
+function SettingsRow({
+  icon,
+  title,
+  subtitle,
+  value,
+  onPress,
+  onToggle,
+  isLoading = false,
+  isDanger = false,
+}: SettingsRowProps) {
+  const isToggle = typeof value === 'boolean';
+
+  const content = (
+    <>
+      <View style={styles.rowIconWrap}>
+        <AppUiIcon name={icon} size={18} color={isDanger ? colors.danger : colors.textSoft} />
+      </View>
+
+      <View style={styles.rowContent}>
+        <Text style={[styles.rowTitle, isDanger && styles.rowTitleDanger]}>{title}</Text>
+        {subtitle ? <Text style={styles.rowSubtitle}>{subtitle}</Text> : null}
+      </View>
+
+      {isToggle ? (
+        <Switch
+          value={value as boolean}
+          onValueChange={onToggle}
+          disabled={isLoading}
+          trackColor={{ false: colors.borderSoft, true: colors.primary }}
+          thumbColor={value ? colors.accent : colors.textSoft}
+        />
+      ) : value ? (
+        <View style={styles.rowAccessory}>
+          <Text
+            style={[styles.rowValue, isDanger && styles.rowValueDanger]}
+            numberOfLines={1}
+            ellipsizeMode="middle"
+          >
+            {String(value)}
+          </Text>
+          {onPress ? <AppUiIcon name="chevron-forward" size={14} color={colors.textSoft} /> : null}
+        </View>
+      ) : onPress ? (
+        <AppUiIcon name="chevron-forward" size={14} color={colors.textSoft} />
+      ) : null}
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <HapticPressable
+        hapticType="selection"
+        onPress={onPress}
+        disabled={isLoading}
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      >
+        {content}
+      </HapticPressable>
+    );
+  }
+
+  return <View style={styles.row}>{content}</View>;
+}
+
+export function SettingsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { appProfile, authSession, signOutSession } = useStorefrontProfileController();
+  const emailSubscription = useMemberEmailSubscription(authSession);
+  const [communitySafetyState, setCommunitySafetyState] = React.useState(() =>
+    getCommunitySafetyState(),
+  );
+
+  // Refresh community safety state on screen focus
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      setCommunitySafetyState(getCommunitySafetyState());
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [navigation]);
+
+  const isAuthenticated = authSession.status === 'authenticated';
+  const displayName = appProfile?.displayName || 'Anonymous';
+  const memberEmail = authSession.email;
+  const emailSubscribed = emailSubscription.status.subscribed;
+  const isLoadingEmailSubscription = emailSubscription.isLoading;
+  const hasAcceptedGuidelines = Boolean(communitySafetyState.acceptedGuidelinesVersion);
+  const blockedAuthorCount = communitySafetyState.blockedAuthorProfileIds.length;
+  const supportEmail = legalConfig.supportEmail;
+  const appVersion = Constants.expoConfig?.version || '1.0.0';
+
+  const handleSignOut = React.useCallback(() => {
+    void signOutSession();
+  }, [signOutSession]);
+
+  const handleSubscribeEmail = React.useCallback(() => {
+    void emailSubscription.subscribe();
+  }, [emailSubscription]);
+
+  const handleUnsubscribeEmail = React.useCallback(() => {
+    void emailSubscription.unsubscribe();
+  }, [emailSubscription]);
+
+  return (
+    <ScreenShell
+      eyebrow="Account"
+      title="Settings"
+      subtitle="Manage your preferences and account information."
+      showHero
+      showTopBar
+    >
+      <MotionInView
+        delay={motion.sectionStagger}
+        distance={motion.revealDistance}
+        duration={motion.standard}
+      >
+        {/* Account Group */}
+        <View style={styles.sectionGroup}>
+          <Text style={styles.sectionHeader}>Account</Text>
+
+          <View style={styles.rowsContainer}>
+            <SettingsRow icon="person-circle-outline" title="Display name" value={displayName} />
+
+            <SettingsRow
+              icon="mail-open-outline"
+              title="Email"
+              value={memberEmail || 'Not signed in'}
+            />
+
+            <SettingsRow
+              icon={isAuthenticated ? 'log-out-outline' : 'person-circle-outline'}
+              title={isAuthenticated ? 'Sign out' : 'Sign in'}
+              onPress={
+                isAuthenticated ? handleSignOut : () => navigation.navigate('CanopyTroveSignIn')
+              }
+              isDanger={isAuthenticated}
+            />
+          </View>
+        </View>
+      </MotionInView>
+
+      {isAuthenticated && (
+        <MotionInView
+          delay={motion.sectionStagger + 40}
+          distance={motion.revealDistance}
+          duration={motion.standard}
+        >
+          {/* Notifications Group */}
+          <View style={styles.sectionGroup}>
+            <Text style={styles.sectionHeader}>Notifications</Text>
+
+            <View style={styles.rowsContainer}>
+              <SettingsRow
+                icon="notifications-outline"
+                title="Email updates"
+                subtitle="Welcome notes and product news"
+                value={emailSubscribed}
+                onToggle={emailSubscribed ? handleUnsubscribeEmail : handleSubscribeEmail}
+                isLoading={isLoadingEmailSubscription}
+              />
+            </View>
+          </View>
+        </MotionInView>
+      )}
+
+      <MotionInView
+        delay={motion.sectionStagger + 80}
+        distance={motion.revealDistance}
+        duration={motion.standard}
+      >
+        {/* Safety & Privacy Group */}
+        <View style={styles.sectionGroup}>
+          <Text style={styles.sectionHeader}>Safety & Privacy</Text>
+
+          <View style={styles.rowsContainer}>
+            <SettingsRow
+              icon="shield-checkmark-outline"
+              title="Community guidelines"
+              value={hasAcceptedGuidelines ? 'Accepted' : 'Review required'}
+            />
+
+            <SettingsRow
+              icon="close-circle-outline"
+              title="Blocked authors"
+              value={String(blockedAuthorCount)}
+            />
+
+            <SettingsRow icon="information-circle-outline" title="Support" value={supportEmail} />
+          </View>
+        </View>
+      </MotionInView>
+
+      <MotionInView
+        delay={motion.sectionStagger + 120}
+        distance={motion.revealDistance}
+        duration={motion.standard}
+      >
+        {/* About Group */}
+        <View style={styles.sectionGroup}>
+          <Text style={styles.sectionHeader}>About</Text>
+
+          <View style={styles.rowsContainer}>
+            <SettingsRow
+              icon="document-text-outline"
+              title="Legal Center"
+              onPress={() => navigation.navigate('LegalCenter')}
+            />
+
+            <SettingsRow
+              icon="close-circle-outline"
+              title="Delete account"
+              onPress={() => navigation.navigate('DeleteAccount')}
+              isDanger
+            />
+
+            <SettingsRow icon="information-circle-outline" title="App version" value={appVersion} />
+          </View>
+        </View>
+      </MotionInView>
+    </ScreenShell>
+  );
+}
+
+const styles = StyleSheet.create({
+  sectionGroup: {
+    gap: spacing.sm,
+  },
+  sectionHeader: {
+    ...textStyles.labelCaps,
+    color: colors.goldSoft,
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  rowsContainer: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    overflow: 'hidden',
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
+    gap: spacing.md,
+  },
+  rowPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  rowIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  rowContent: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  rowTitle: {
+    ...textStyles.bodyStrong,
+    color: colors.text,
+  },
+  rowTitleDanger: {
+    color: colors.danger,
+  },
+  rowSubtitle: {
+    ...textStyles.caption,
+    color: colors.textMuted,
+  },
+  rowAccessory: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  rowValue: {
+    ...textStyles.caption,
+    color: colors.textSoft,
+    textAlign: 'right',
+    maxWidth: 120,
+  },
+  rowValueDanger: {
+    color: colors.danger,
+  },
+});

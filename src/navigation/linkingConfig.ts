@@ -9,11 +9,11 @@ export const linkingConfig: LinkingOptions<RootStackParamList> = {
         screens: {
           Nearby: 'nearby',
           Browse: 'browse',
+          HotDeals: 'hot-deals',
           Profile: 'profile',
         },
       },
       StorefrontDetail: 'storefronts/:storefrontId',
-      HotDeals: 'hot-deals',
       Leaderboard: 'leaderboard',
       LegalCenter: 'legal',
       DeleteAccount: 'account-deletion',

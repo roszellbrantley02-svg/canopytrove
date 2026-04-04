@@ -1,4 +1,11 @@
-import { OwnerPortalWorkspaceDocument, OwnerWorkspaceMetrics, OwnerWorkspacePatternFlag, OwnerWorkspaceReviewRecord, OwnerStorefrontProfileToolsDocument, OwnerStorefrontPromotionDocument } from '../../../src/types/ownerPortal';
+import {
+  OwnerPortalWorkspaceDocument,
+  OwnerWorkspaceMetrics,
+  OwnerWorkspacePatternFlag,
+  OwnerWorkspaceReviewRecord,
+  OwnerStorefrontProfileToolsDocument,
+  OwnerStorefrontPromotionDocument,
+} from '../../../src/types/ownerPortal';
 import { StorefrontDetailApiDocument, StorefrontSummaryApiDocument } from '../types';
 import { backendStorefrontSourceStatus, backendStorefrontSource } from '../sources';
 import { getBackendFirebaseDb } from '../firebase';
@@ -7,7 +14,7 @@ import {
   listStorefrontReports,
   StoredStorefrontReportRecord,
 } from './storefrontCommunityService';
-import { getRouteState } from './routeStateService';
+import { getRouteState, isFollowingStorefront, isFrequentVisitor } from './routeStateService';
 import { getOwnerPortalAlertStatus } from './ownerPortalAlertService';
 import { dispatchFavoriteDealAlertsForStorefront } from './favoriteDealAlertService';
 import { assertRuntimePolicyAllowsOwnerAction, getRuntimeOpsStatus } from './runtimeOpsService';
@@ -59,12 +66,19 @@ const storefrontDetailEnhancementCache = new Map<
   { expiresAt: number; value: Partial<StorefrontDetailApiDocument> }
 >();
 
+type ViewerContext = {
+  profileId: string;
+} | null;
+
 type OwnerWorkspaceEnhancementDeps = {
   getProfileTools: (storefrontId: string) => Promise<OwnerStorefrontProfileToolsDocument | null>;
-  getActivePromotion: (storefrontId: string) => Promise<OwnerStorefrontPromotionDocument | null>;
+  getActivePromotion: (
+    storefrontId: string,
+    viewerContext?: ViewerContext,
+  ) => Promise<OwnerStorefrontPromotionDocument | null>;
   getFollowerCount: (storefrontId: string) => Promise<number>;
   hydrateProfileTools: (
-    profileTools: OwnerStorefrontProfileToolsDocument | null
+    profileTools: OwnerStorefrontProfileToolsDocument | null,
   ) => Promise<OwnerStorefrontProfileToolsDocument | null>;
 };
 
@@ -79,11 +93,11 @@ function logOwnerWorkspaceEnhancementWarning(
   scope: 'summary' | 'detail',
   storefrontId: string,
   dependency: string,
-  error: unknown
+  error: unknown,
 ) {
   const message = error instanceof Error ? error.message : String(error);
   console.warn(
-    `[owner-workspace-${scope}] failed to load ${dependency} for ${storefrontId}: ${message}`
+    `[owner-workspace-${scope}] failed to load ${dependency} for ${storefrontId}: ${message}`,
   );
 }
 
@@ -132,7 +146,9 @@ async function getOwnerStorefrontProfileTools(storefrontId: string) {
   if (collectionRef) {
     const snapshot = await collectionRef.doc(storefrontId).get();
     if (snapshot.exists) {
-      profileTools = sanitizeProfileToolsRecord(snapshot.data() as OwnerStorefrontProfileToolsDocument);
+      profileTools = sanitizeProfileToolsRecord(
+        snapshot.data() as OwnerStorefrontProfileToolsDocument,
+      );
     }
   } else {
     profileTools = ownerStorefrontProfileToolsStore.get(storefrontId) ?? null;
@@ -164,8 +180,8 @@ async function listOwnerStorefrontPromotions(storefrontId: string) {
         normalizePromotion(
           (documentSnapshot.data() as OwnerStorefrontPromotionDocument).ownerUid,
           storefrontId,
-          documentSnapshot.data() as OwnerStorefrontPromotionDocument
-        )
+          documentSnapshot.data() as OwnerStorefrontPromotionDocument,
+        ),
       )
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   } else {
@@ -184,7 +200,7 @@ async function listOwnerStorefrontPromotions(storefrontId: string) {
 
 function compareActivePromotions(
   left: OwnerStorefrontPromotionDocument,
-  right: OwnerStorefrontPromotionDocument
+  right: OwnerStorefrontPromotionDocument,
 ) {
   const startDelta = parseIsoDate(right.startsAt) - parseIsoDate(left.startsAt);
   if (startDelta !== 0) {
@@ -199,22 +215,64 @@ function compareActivePromotions(
   return right.id.localeCompare(left.id);
 }
 
-async function listActiveOwnerStorefrontPromotions(
-  storefrontId: string,
-  nowIso = getNowIso()
-) {
+async function listActiveOwnerStorefrontPromotions(storefrontId: string, nowIso = getNowIso()) {
   const promotions = await listOwnerStorefrontPromotions(storefrontId);
   return promotions
     .filter((promotion) => isPromotionActive(promotion, nowIso))
     .sort(compareActivePromotions);
 }
 
-async function getActivePromotion(storefrontId: string) {
-  const promotions = await listActiveOwnerStorefrontPromotions(storefrontId);
-  return promotions[0] ?? null;
+async function isPromotionVisibleToViewer(
+  promotion: OwnerStorefrontPromotionDocument,
+  viewerContext: ViewerContext,
+): Promise<boolean> {
+  if (!viewerContext) {
+    // Unauthenticated viewers only see promotions with no audience restriction
+    return !promotion.audience || promotion.audience === 'all_followers';
+  }
+
+  switch (promotion.audience) {
+    case 'all_followers':
+      // Show to users who saved/follow this storefront
+      return isFollowingStorefront(viewerContext.profileId, promotion.storefrontId);
+
+    case 'frequent_visitors':
+      // Show to users who have recently viewed or routed to this storefront
+      return isFrequentVisitor(viewerContext.profileId, promotion.storefrontId);
+
+    case 'new_customers':
+      // No purchase-history tracking yet — show to authenticated users who
+      // have NOT saved the storefront (i.e. they're likely discovering it)
+      return !(await isFollowingStorefront(viewerContext.profileId, promotion.storefrontId));
+
+    default:
+      // Unrecognised audience value — show to everyone as a safe default
+      return true;
+  }
 }
 
-async function saveOwnerStorefrontProfileToolsDocument(record: OwnerStorefrontProfileToolsDocument) {
+async function getActivePromotion(storefrontId: string, viewerContext?: ViewerContext) {
+  const promotions = await listActiveOwnerStorefrontPromotions(storefrontId);
+
+  if (!viewerContext) {
+    // No viewer context means we're in the owner workspace view — return the
+    // top promotion without audience filtering so the owner always sees it.
+    return promotions[0] ?? null;
+  }
+
+  // Walk the ranked list and return the first promotion visible to this viewer
+  for (const promotion of promotions) {
+    if (await isPromotionVisibleToViewer(promotion, viewerContext)) {
+      return promotion;
+    }
+  }
+
+  return null;
+}
+
+async function saveOwnerStorefrontProfileToolsDocument(
+  record: OwnerStorefrontProfileToolsDocument,
+) {
   storefrontSummaryEnhancementCache.delete(record.storefrontId);
   storefrontDetailEnhancementCache.delete(record.storefrontId);
   ownerStorefrontProfileToolsCache.delete(record.storefrontId);
@@ -255,7 +313,7 @@ async function sumStorefrontFollowers(storefrontId: string) {
       Array.from(ownerProfileStore.keys()).map(async (profileId) => {
         const routeState = await getRouteState(profileId);
         return routeState.savedStorefrontIds.includes(storefrontId);
-      })
+      }),
     );
     for (const result of results) {
       if (result.status === 'fulfilled' && result.value) {
@@ -429,19 +487,24 @@ function buildPatternFlags(options: {
 
 export async function applyOwnerWorkspaceSummaryEnhancements(
   summary: StorefrontSummaryApiDocument,
-  deps: OwnerWorkspaceEnhancementDeps = defaultOwnerWorkspaceEnhancementDeps
+  deps: OwnerWorkspaceEnhancementDeps = defaultOwnerWorkspaceEnhancementDeps,
+  viewerContext?: ViewerContext,
 ) {
-  const cached = storefrontSummaryEnhancementCache.get(summary.id);
-  if (cached && cached.expiresAt > Date.now()) {
-    return {
-      ...summary,
-      ...cached.value,
-    };
+  // When a viewer context is present the result is viewer-specific, so skip
+  // the storefront-level cache (which is shared across all viewers).
+  if (!viewerContext) {
+    const cached = storefrontSummaryEnhancementCache.get(summary.id);
+    if (cached && cached.expiresAt > Date.now()) {
+      return {
+        ...summary,
+        ...cached.value,
+      };
+    }
   }
 
   const [rawProfileToolsResult, activePromotionResult] = await Promise.allSettled([
     deps.getProfileTools(summary.id),
-    deps.getActivePromotion(summary.id),
+    deps.getActivePromotion(summary.id, viewerContext),
   ]);
   let profileToolsResolved = false;
   let profileTools: OwnerStorefrontProfileToolsDocument | null = null;
@@ -453,7 +516,12 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
       logOwnerWorkspaceEnhancementWarning('summary', summary.id, 'profileToolsMedia', error);
     }
   } else {
-    logOwnerWorkspaceEnhancementWarning('summary', summary.id, 'profileTools', rawProfileToolsResult.reason);
+    logOwnerWorkspaceEnhancementWarning(
+      'summary',
+      summary.id,
+      'profileTools',
+      rawProfileToolsResult.reason,
+    );
   }
 
   const activePromotionResolved = activePromotionResult.status === 'fulfilled';
@@ -463,54 +531,56 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
       'summary',
       summary.id,
       'activePromotion',
-      activePromotionResult.reason
+      activePromotionResult.reason,
     );
   }
   const profileAttachmentUrls = collectProfileAttachmentUrls(profileTools);
 
   const enhancement: Partial<StorefrontSummaryApiDocument> = {
-    menuUrl: profileToolsResolved ? profileTools?.menuUrl ?? null : summary.menuUrl ?? null,
+    menuUrl: profileToolsResolved ? (profileTools?.menuUrl ?? null) : (summary.menuUrl ?? null),
     verifiedOwnerBadgeLabel: profileToolsResolved
-      ? profileTools?.verifiedBadgeLabel ?? null
-      : summary.verifiedOwnerBadgeLabel ?? null,
+      ? (profileTools?.verifiedBadgeLabel ?? null)
+      : (summary.verifiedOwnerBadgeLabel ?? null),
     ownerFeaturedBadges: profileToolsResolved
-      ? profileTools?.featuredBadges ?? []
-      : summary.ownerFeaturedBadges ?? [],
+      ? (profileTools?.featuredBadges ?? [])
+      : (summary.ownerFeaturedBadges ?? []),
     ownerCardSummary: profileToolsResolved
-      ? profileTools?.cardSummary ?? null
-      : summary.ownerCardSummary ?? null,
+      ? (profileTools?.cardSummary ?? null)
+      : (summary.ownerCardSummary ?? null),
     premiumCardVariant:
       activePromotion?.cardTone ??
       (profileToolsResolved
         ? profileTools?.featuredBadges?.length
           ? 'owner_featured'
           : 'standard'
-        : summary.premiumCardVariant ?? 'standard'),
+        : (summary.premiumCardVariant ?? 'standard')),
     promotionPlacementSurfaces: activePromotionResolved
-      ? activePromotion?.placementSurfaces ?? []
-      : summary.promotionPlacementSurfaces ?? [],
+      ? (activePromotion?.placementSurfaces ?? [])
+      : (summary.promotionPlacementSurfaces ?? []),
     promotionPlacementScope: activePromotionResolved
-      ? activePromotion?.placementScope ?? null
-      : summary.promotionPlacementScope ?? null,
+      ? (activePromotion?.placementScope ?? null)
+      : (summary.promotionPlacementScope ?? null),
     thumbnailUrl: profileToolsResolved
-      ? profileAttachmentUrls[0] ?? summary.thumbnailUrl ?? null
-      : summary.thumbnailUrl ?? null,
+      ? (profileAttachmentUrls[0] ?? summary.thumbnailUrl ?? null)
+      : (summary.thumbnailUrl ?? null),
   };
 
   if (activePromotion) {
     enhancement.promotionText = activePromotion.description || activePromotion.title;
     enhancement.promotionBadges = normalizeBadges(
-      activePromotion.badges.length ? activePromotion.badges : [activePromotion.title]
+      activePromotion.badges.length ? activePromotion.badges : [activePromotion.title],
     );
     enhancement.promotionExpiresAt = activePromotion.endsAt;
     enhancement.activePromotionId = activePromotion.id;
     enhancement.premiumCardVariant = activePromotion.cardTone;
   }
 
-  storefrontSummaryEnhancementCache.set(summary.id, {
-    value: enhancement,
-    expiresAt: Date.now() + 20_000,
-  });
+  if (!viewerContext) {
+    storefrontSummaryEnhancementCache.set(summary.id, {
+      value: enhancement,
+      expiresAt: Date.now() + 20_000,
+    });
+  }
 
   return {
     ...summary,
@@ -520,7 +590,7 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
 
 export async function applyOwnerWorkspaceDetailEnhancements(
   detail: StorefrontDetailApiDocument,
-  deps: OwnerWorkspaceEnhancementDeps = defaultOwnerWorkspaceEnhancementDeps
+  deps: OwnerWorkspaceEnhancementDeps = defaultOwnerWorkspaceEnhancementDeps,
 ) {
   const cached = storefrontDetailEnhancementCache.get(detail.storefrontId);
   if (cached && cached.expiresAt > Date.now()) {
@@ -541,10 +611,20 @@ export async function applyOwnerWorkspaceDetailEnhancements(
       profileTools = await deps.hydrateProfileTools(rawProfileToolsResult.value);
       profileToolsResolved = true;
     } catch (error) {
-      logOwnerWorkspaceEnhancementWarning('detail', detail.storefrontId, 'profileToolsMedia', error);
+      logOwnerWorkspaceEnhancementWarning(
+        'detail',
+        detail.storefrontId,
+        'profileToolsMedia',
+        error,
+      );
     }
   } else {
-    logOwnerWorkspaceEnhancementWarning('detail', detail.storefrontId, 'profileTools', rawProfileToolsResult.reason);
+    logOwnerWorkspaceEnhancementWarning(
+      'detail',
+      detail.storefrontId,
+      'profileTools',
+      rawProfileToolsResult.reason,
+    );
   }
 
   const followerCountResolved = followerCountResult.status === 'fulfilled';
@@ -553,27 +633,26 @@ export async function applyOwnerWorkspaceDetailEnhancements(
       'detail',
       detail.storefrontId,
       'followerCount',
-      followerCountResult.reason
+      followerCountResult.reason,
     );
   }
   const profileAttachmentUrls = collectProfileAttachmentUrls(profileTools);
 
   const enhancement: Partial<StorefrontDetailApiDocument> = {
-    menuUrl: profileToolsResolved ? profileTools?.menuUrl ?? null : detail.menuUrl ?? null,
+    menuUrl: profileToolsResolved ? (profileTools?.menuUrl ?? null) : (detail.menuUrl ?? null),
     verifiedOwnerBadgeLabel: profileToolsResolved
-      ? profileTools?.verifiedBadgeLabel ?? null
-      : detail.verifiedOwnerBadgeLabel ?? null,
+      ? (profileTools?.verifiedBadgeLabel ?? null)
+      : (detail.verifiedOwnerBadgeLabel ?? null),
     favoriteFollowerCount: followerCountResolved
       ? followerCountResult.value
-      : detail.favoriteFollowerCount ?? null,
+      : (detail.favoriteFollowerCount ?? null),
     ownerFeaturedBadges: profileToolsResolved
-      ? profileTools?.featuredBadges ?? []
-      : detail.ownerFeaturedBadges ?? [],
-    photoUrls: profileToolsResolved && profileAttachmentUrls.length
-      ? Array.from(
-          new Set([...profileAttachmentUrls, ...detail.photoUrls])
-        ).slice(0, 12)
-      : detail.photoUrls,
+      ? (profileTools?.featuredBadges ?? [])
+      : (detail.ownerFeaturedBadges ?? []),
+    photoUrls:
+      profileToolsResolved && profileAttachmentUrls.length
+        ? Array.from(new Set([...profileAttachmentUrls, ...detail.photoUrls])).slice(0, 12)
+        : detail.photoUrls,
   };
 
   storefrontDetailEnhancementCache.set(detail.storefrontId, {
@@ -586,6 +665,8 @@ export async function applyOwnerWorkspaceDetailEnhancements(
     ...enhancement,
   };
 }
+
+export type { ViewerContext };
 
 export {
   ownerProfileStore,
@@ -652,7 +733,13 @@ async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPortalWor
   }
 
   const storefrontId = ownerProfile.dispensaryId;
-  const [ownerClaimResult, baseSummaryResult, profileToolsResult, promotionsResult, ownerAlertStatusResult] = await Promise.allSettled([
+  const [
+    ownerClaimResult,
+    baseSummaryResult,
+    profileToolsResult,
+    promotionsResult,
+    ownerAlertStatusResult,
+  ] = await Promise.allSettled([
     getOwnerClaim(ownerUid, storefrontId),
     storefrontId
       ? backendStorefrontSource.getSummariesByIds([storefrontId]).then((items) => items[0] ?? null)
@@ -665,7 +752,10 @@ async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPortalWor
   const baseSummary = baseSummaryResult.status === 'fulfilled' ? baseSummaryResult.value : null;
   const profileTools = profileToolsResult.status === 'fulfilled' ? profileToolsResult.value : null;
   const promotions = promotionsResult.status === 'fulfilled' ? promotionsResult.value : [];
-  const ownerAlertStatus = ownerAlertStatusResult.status === 'fulfilled' ? ownerAlertStatusResult.value : { pushEnabled: false, updatedAt: null };
+  const ownerAlertStatus =
+    ownerAlertStatusResult.status === 'fulfilled'
+      ? ownerAlertStatusResult.value
+      : { pushEnabled: false, updatedAt: null };
   const licenseCompliance = storefrontId
     ? await getOwnerLicenseCompliance(ownerUid, storefrontId)
     : null;
@@ -700,11 +790,14 @@ async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPortalWor
     averageRating: recentReviews.length
       ? Math.round(
           (recentReviews.reduce((sum, review) => sum + review.rating, 0) / recentReviews.length) *
-            10
+            10,
         ) / 10
       : null,
-    replyRate: recentReviews.length ? Math.round((replyCount / recentReviews.length) * 100) / 100 : 0,
-    openToRouteRate: openBase > 0 ? Math.round((storefrontMetrics.routes7d / openBase) * 1000) / 10 : 0,
+    replyRate: recentReviews.length
+      ? Math.round((replyCount / recentReviews.length) * 100) / 100
+      : 0,
+    openToRouteRate:
+      openBase > 0 ? Math.round((storefrontMetrics.routes7d / openBase) * 1000) / 10 : 0,
     openToWebsiteRate:
       openBase > 0 ? Math.round((storefrontMetrics.websiteTaps7d / openBase) * 1000) / 10 : 0,
     openToPhoneRate:
@@ -742,7 +835,7 @@ async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPortalWor
       startsAt: promotion.startsAt,
       endsAt: promotion.endsAt,
       metrics: await aggregateDealMetrics(promotion.id),
-    }))
+    })),
   );
   const promotionPerformance = settledPromotionPerformance.flatMap((result, index) => {
     if (result.status === 'fulfilled') {
@@ -750,14 +843,16 @@ async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPortalWor
     }
     console.warn(
       `[owner-workspace] failed to aggregate metrics for promotion ${promotions[index]?.id ?? 'unknown'}:`,
-      result.reason
+      result.reason,
     );
     return [];
   });
 
   const activePromotion =
     promotions.find((promotion) => derivePromotionStatus(promotion) === 'active') ?? null;
-  const storefrontSummary = baseSummary ? await applyOwnerWorkspaceSummaryEnhancements(baseSummary) : null;
+  const storefrontSummary = baseSummary
+    ? await applyOwnerWorkspaceSummaryEnhancements(baseSummary)
+    : null;
   const patternFlags = buildPatternFlags({
     followerCount,
     reviews: ownerWorkspaceReviews,

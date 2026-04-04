@@ -6,6 +6,10 @@ import {
   getStorefrontRouteCardState,
   StorefrontRouteCardBody,
 } from './storefrontRouteCard/StorefrontRouteCardSections';
+import {
+  StorefrontHeatGlow,
+  routeStartsToHeatLevel,
+} from './storefrontRouteCard/StorefrontHeatGlow';
 import { styles } from './storefrontRouteCard/storefrontRouteCardStyles';
 import type { StorefrontCardVisualLane } from './storefrontRouteCard/storefrontRouteCardVisualState';
 import { hasStorefrontPromotion } from '../utils/storefrontPromotions';
@@ -74,7 +78,8 @@ function StorefrontRouteCardComponent({
     openNow,
     isOperationalStatusPending,
   });
-  const accessibilityLabel = `${storefront.displayName}, ${storefront.city}, ${storefront.state}. ${previewStatusLabel}. ${hasPromotion ? 'Live deal available.' : 'No live deal highlighted.'}`;
+  const heatLevel = routeStartsToHeatLevel(storefront.routeStartsPerHour ?? 0);
+  const accessibilityLabel = `${storefront.displayName}, ${storefront.city}, ${storefront.state}. ${previewStatusLabel}. ${hasPromotion ? 'Live special available.' : 'No live special highlighted.'}`;
 
   return (
     <Pressable
@@ -90,6 +95,7 @@ function StorefrontRouteCardComponent({
         pressed && styles.cardPressed,
       ]}
     >
+      <StorefrontHeatGlow heatLevel={heatLevel} />
       <StorefrontRouteCardBody
         storefront={storefront}
         compact={compact}
@@ -145,6 +151,7 @@ function areStorefrontCardsEqual(
     previous.storefront.ownerCardSummary === next.storefront.ownerCardSummary &&
     previous.storefront.premiumCardVariant === next.storefront.premiumCardVariant &&
     previous.storefront.thumbnailUrl === next.storefront.thumbnailUrl &&
+    previous.storefront.routeStartsPerHour === next.storefront.routeStartsPerHour &&
     previous.onPress === next.onPress &&
     previous.onPressIn === next.onPressIn &&
     previous.onPrimaryActionPress === next.onPrimaryActionPress &&

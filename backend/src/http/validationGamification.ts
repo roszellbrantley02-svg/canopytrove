@@ -11,7 +11,7 @@ import {
 
 function parseOptionalOccurredAtPayload(
   value: unknown,
-  field: string
+  field: string,
 ): { occurredAt?: string } | undefined {
   if (value === undefined) {
     return undefined;
@@ -90,7 +90,8 @@ export function parseGamificationEventBody(value: unknown): GamificationEventReq
       };
     case 'helpful_vote_received':
     case 'friend_invited': {
-      const payload = body.payload === undefined ? undefined : asObject(body.payload, 'body.payload');
+      const payload =
+        body.payload === undefined ? undefined : asObject(body.payload, 'body.payload');
       return {
         activityType,
         payload: payload

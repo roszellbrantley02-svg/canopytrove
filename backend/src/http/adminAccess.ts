@@ -30,14 +30,17 @@ function createSecretDigest(value: string) {
   return createHash('sha256').update(value, 'utf8').digest();
 }
 
-function matchesAdminApiKey(providedApiKey: string | null | undefined, expectedApiKey: string | null) {
+function matchesAdminApiKey(
+  providedApiKey: string | null | undefined,
+  expectedApiKey: string | null,
+) {
   if (!providedApiKey || !expectedApiKey) {
     return false;
   }
 
   return timingSafeEqual(
     createSecretDigest(providedApiKey.trim()),
-    createSecretDigest(expectedApiKey.trim())
+    createSecretDigest(expectedApiKey.trim()),
   );
 }
 

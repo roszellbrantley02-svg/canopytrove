@@ -12,7 +12,7 @@ gamificationRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],
-  })
+  }),
 );
 
 gamificationRoutes.post('/gamification/:profileId/events', async (request, response) => {

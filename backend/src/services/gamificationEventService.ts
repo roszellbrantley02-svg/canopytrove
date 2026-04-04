@@ -19,7 +19,7 @@ import { getProfile } from './profileService';
 
 function buildNoRewardResult(
   activityType: GamificationActivityType,
-  currentState: StorefrontGamificationState
+  currentState: StorefrontGamificationState,
 ): GamificationRewardResult {
   return {
     activityType,
@@ -33,13 +33,13 @@ function buildNoRewardResult(
 
 export async function applyGamificationEvent(
   profileId: string,
-  event: GamificationEventRequest
+  event: GamificationEventRequest,
 ): Promise<GamificationRewardResult> {
   const profile = await getProfile(profileId);
   const currentState = normalizeGamificationState(
     profileId,
     await getGamificationState(profileId, profile.createdAt),
-    profile.createdAt
+    profile.createdAt,
   );
 
   let rewardResult: GamificationRewardResult;
@@ -77,7 +77,7 @@ export async function applyGamificationEvent(
   const updatedState = normalizeGamificationState(
     profileId,
     rewardResult.updatedState,
-    profile.createdAt
+    profile.createdAt,
   );
 
   await saveGamificationState(profileId, updatedState, profile.createdAt);

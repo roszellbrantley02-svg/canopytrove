@@ -27,6 +27,7 @@ import {
   applyOwnerWorkspaceDetailEnhancements,
   applyOwnerWorkspaceSummaryEnhancements,
 } from './services/ownerPortalWorkspaceService';
+import type { ViewerContext } from './services/ownerPortalWorkspaceData';
 import { listStorefrontAppReviews } from './services/storefrontCommunityService';
 
 const SUMMARY_GOOGLE_ENRICHMENT_TIMEOUT_MS = 1_500;
@@ -78,8 +79,7 @@ async function withTimeoutFallback<T>(promise: Promise<T>, fallbackValue: T, tim
 
 function paginateSummaryItems<T>(items: T[], limit?: number, offset = 0) {
   const safeOffset = Math.max(0, offset);
-  const safeLimit =
-    typeof limit === 'number' && Number.isFinite(limit) ? Math.max(0, limit) : null;
+  const safeLimit = typeof limit === 'number' && Number.isFinite(limit) ? Math.max(0, limit) : null;
 
   return {
     items:
@@ -93,13 +93,11 @@ function paginateSummaryItems<T>(items: T[], limit?: number, offset = 0) {
 }
 
 function stripMemberOnlySummaryPromotionFields(summary: StorefrontSummaryApiDocument) {
+  // Keep the promotion teaser (id, text, badges, count) visible to guests as a
+  // discovery hook. Only strip: thumbnailUrl (owner profile media) and
+  // placement routing data (internal).
   return {
     ...summary,
-    promotionText: summary.promotionText,
-    promotionBadges: summary.promotionBadges,
-    promotionExpiresAt: summary.promotionExpiresAt,
-    activePromotionId: summary.activePromotionId,
-    activePromotionCount: summary.activePromotionCount ?? 0,
     promotionPlacementSurfaces: [],
     promotionPlacementScope: null,
     thumbnailUrl: null,
@@ -123,21 +121,27 @@ function stripMemberOnlyDetailPromotionFields(detail: StorefrontDetailApiDocumen
 
 async function enhanceSummary(
   summary: StorefrontSummaryApiDocument,
-  includeMemberDeals: boolean
+  includeMemberDeals: boolean,
+  viewerContext?: ViewerContext,
 ) {
-  const enhanced = await applyOwnerWorkspaceSummaryEnhancements(summary);
+  const enhanced = await applyOwnerWorkspaceSummaryEnhancements(summary, viewerContext);
   const googleEnrichment = hasGooglePlacesConfig()
     ? await withTimeoutFallback(
         getGooglePlacesEnrichment(enhanced),
         getCachedGooglePlacesEnrichment(enhanced.id),
-        SUMMARY_GOOGLE_ENRICHMENT_TIMEOUT_MS
+        SUMMARY_GOOGLE_ENRICHMENT_TIMEOUT_MS,
       )
     : null;
+  // Owner-set hours take precedence over Google's live openNow signal.
+  // The enhancement layer already computed openNow from owner hours when present,
+  // so only fall back to Google when the enhancement didn't set an owner override.
+  const ownerHoursOverrodeOpenNow = enhanced.openNow !== summary.openNow;
   const runtimeEnhanced = googleEnrichment
     ? {
         ...enhanced,
-        openNow:
-          typeof googleEnrichment.openNow === 'boolean'
+        openNow: ownerHoursOverrodeOpenNow
+          ? enhanced.openNow
+          : typeof googleEnrichment.openNow === 'boolean'
             ? googleEnrichment.openNow
             : enhanced.openNow,
         menuUrl: enhanced.menuUrl ?? normalizeDetailString(googleEnrichment.website) ?? null,
@@ -151,27 +155,31 @@ async function enhanceSummary(
 
 async function enhanceDetail(
   detail: StorefrontDetailApiDocument,
-  includeMemberDeals: boolean
+  includeMemberDeals: boolean,
+  viewerContext?: ViewerContext,
 ) {
-  const enhanced = await applyOwnerWorkspaceDetailEnhancements(detail);
-  return includeMemberDeals
-    ? enhanced
-    : stripMemberOnlyDetailPromotionFields(enhanced);
+  const enhanced = await applyOwnerWorkspaceDetailEnhancements(detail, viewerContext);
+  return includeMemberDeals ? enhanced : stripMemberOnlyDetailPromotionFields(enhanced);
 }
 
-export async function getStorefrontSummaries(query: {
-  areaId?: string;
-  searchQuery?: string;
-  origin?: Coordinates;
-  radiusMiles?: number;
-  sortKey?: StorefrontSummarySortKey;
-  limit?: number;
-  offset?: number;
-  prioritySurface?: OwnerPromotionPlacementSurface;
-}, options?: {
-  includeMemberDeals?: boolean;
-}) {
+export async function getStorefrontSummaries(
+  query: {
+    areaId?: string;
+    searchQuery?: string;
+    origin?: Coordinates;
+    radiusMiles?: number;
+    sortKey?: StorefrontSummarySortKey;
+    limit?: number;
+    offset?: number;
+    prioritySurface?: OwnerPromotionPlacementSurface;
+  },
+  options?: {
+    includeMemberDeals?: boolean;
+    viewerContext?: ViewerContext;
+  },
+) {
   const includeMemberDeals = options?.includeMemberDeals === true;
+  const viewerContext = options?.viewerContext;
   const prioritySurface = includeMemberDeals ? query.prioritySurface : undefined;
   const baseQuery = {
     areaId: query.areaId,
@@ -191,13 +199,16 @@ export async function getStorefrontSummaries(query: {
           offset: undefined,
         };
         const fullPayload = await getCachedStorefrontSummaryPage(fullQuery, () =>
-          backendStorefrontSource.getSummaryPage(fullQuery)
+          backendStorefrontSource.getSummaryPage(fullQuery),
         );
         const enhancedResults = await Promise.allSettled(
-          fullPayload.items.map((item) => enhanceSummary(item, includeMemberDeals))
+          fullPayload.items.map((item) => enhanceSummary(item, includeMemberDeals, viewerContext)),
         );
         const enhancedItems = enhancedResults
-          .filter((r): r is PromiseFulfilledResult<typeof fullPayload.items[number]> => r.status === 'fulfilled')
+          .filter(
+            (r): r is PromiseFulfilledResult<(typeof fullPayload.items)[number]> =>
+              r.status === 'fulfilled',
+          )
           .map((r) => r.value);
         const rankedItems = sortSummariesByPriorityPlacement(enhancedItems, {
           surface: prioritySurface,
@@ -207,15 +218,22 @@ export async function getStorefrontSummaries(query: {
       })()
     : await (async () => {
         const basePayload = await getCachedStorefrontSummaryPage(baseQuery, () =>
-          backendStorefrontSource.getSummaryPage(baseQuery)
+          backendStorefrontSource.getSummaryPage(baseQuery),
         );
 
         return {
           ...basePayload,
-          items: (await Promise.allSettled(
-            basePayload.items.map((item) => enhanceSummary(item, includeMemberDeals))
-          ))
-            .filter((r): r is PromiseFulfilledResult<typeof basePayload.items[number]> => r.status === 'fulfilled')
+          items: (
+            await Promise.allSettled(
+              basePayload.items.map((item) =>
+                enhanceSummary(item, includeMemberDeals, viewerContext),
+              ),
+            )
+          )
+            .filter(
+              (r): r is PromiseFulfilledResult<(typeof basePayload.items)[number]> =>
+                r.status === 'fulfilled',
+            )
             .map((r) => r.value),
         };
       })();
@@ -233,35 +251,48 @@ export async function getStorefrontSummaries(query: {
   };
 }
 
-export async function getStorefrontSummariesByIds(ids: string[], options?: {
-  includeMemberDeals?: boolean;
-}) {
+export async function getStorefrontSummariesByIds(
+  ids: string[],
+  options?: {
+    includeMemberDeals?: boolean;
+    viewerContext?: ViewerContext;
+  },
+) {
   const includeMemberDeals = options?.includeMemberDeals === true;
+  const viewerContext = options?.viewerContext;
   const cached = await getCachedStorefrontSummariesByIds(ids, () =>
-    backendStorefrontSource.getSummariesByIds(ids)
+    backendStorefrontSource.getSummariesByIds(ids),
   );
   const enhancedResults = await Promise.allSettled(
-    cached.map((item) => enhanceSummary(item, includeMemberDeals))
+    cached.map((item) => enhanceSummary(item, includeMemberDeals, viewerContext)),
   );
   return enhancedResults
-    .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof enhanceSummary>>> => r.status === 'fulfilled')
+    .filter(
+      (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof enhanceSummary>>> =>
+        r.status === 'fulfilled',
+    )
     .map((r) => r.value);
 }
 
-export async function getStorefrontDetail(storefrontId: string, options?: {
-  includeMemberDeals?: boolean;
-}) {
+export async function getStorefrontDetail(
+  storefrontId: string,
+  options?: {
+    includeMemberDeals?: boolean;
+    viewerContext?: ViewerContext;
+  },
+) {
   const includeMemberDeals = options?.includeMemberDeals === true;
+  const viewerContext = options?.viewerContext;
   const summary = await backendStorefrontSource
     .getSummariesByIds([storefrontId])
     .then((items) => items[0] ?? null);
-  const cachedGoogleEnrichment = summary
-    ? getCachedGooglePlacesEnrichment(summary.id)
-    : null;
+  const cachedGoogleEnrichment = summary ? getCachedGooglePlacesEnrichment(summary.id) : null;
   const shouldAwaitGoogleEnrichment = Boolean(
     summary &&
-      hasGooglePlacesConfig() &&
-      (cachedGoogleEnrichment || summary.placeId?.trim() || hasInFlightGooglePlacesEnrichment(summary.id))
+    hasGooglePlacesConfig() &&
+    (cachedGoogleEnrichment ||
+      summary.placeId?.trim() ||
+      hasInFlightGooglePlacesEnrichment(summary.id)),
   );
 
   const loadDetail = async (googleEnrichmentMode: 'await' | 'background') => {
@@ -269,16 +300,16 @@ export async function getStorefrontDetail(storefrontId: string, options?: {
       withTimeoutFallback(
         backendStorefrontSource.getDetailsById(storefrontId),
         null,
-        DETAIL_BASE_TIMEOUT_MS
+        DETAIL_BASE_TIMEOUT_MS,
       ),
       withTimeoutFallback(listStorefrontAppReviews(storefrontId), [], DETAIL_QUERY_TIMEOUT_MS),
       googleEnrichmentMode === 'await'
         ? withTimeoutFallback(
             Promise.resolve(cachedGoogleEnrichment).then(
-              (value) => value ?? (summary ? getGooglePlacesEnrichment(summary) : null)
+              (value) => value ?? (summary ? getGooglePlacesEnrichment(summary) : null),
             ),
             cachedGoogleEnrichment,
-            DETAIL_QUERY_TIMEOUT_MS
+            DETAIL_QUERY_TIMEOUT_MS,
           )
         : Promise.resolve(cachedGoogleEnrichment),
       withTimeoutFallback(hasStorefrontOwnerClaim(storefrontId), false, DETAIL_QUERY_TIMEOUT_MS),
@@ -287,7 +318,7 @@ export async function getStorefrontDetail(storefrontId: string, options?: {
     if (!baseDetail) {
       if (summary) {
         throw new StorefrontDataUnavailableError(
-          `Storefront detail is unavailable for published storefront ${storefrontId}.`
+          `Storefront detail is unavailable for published storefront ${storefrontId}.`,
         );
       }
 
@@ -295,13 +326,12 @@ export async function getStorefrontDetail(storefrontId: string, options?: {
     }
 
     if (googleEnrichmentMode === 'background' && summary && hasGooglePlacesConfig()) {
-      void withTimeoutFallback(
-        getGooglePlacesEnrichment(summary),
-        null,
-        DETAIL_BASE_TIMEOUT_MS
-      )
+      void withTimeoutFallback(getGooglePlacesEnrichment(summary), null, DETAIL_BASE_TIMEOUT_MS)
         .catch((error) => {
-          console.warn(`[storefrontService] background Google enrichment failed for ${storefrontId}:`, error);
+          console.warn(
+            `[storefrontService] background Google enrichment failed for ${storefrontId}:`,
+            error,
+          );
         })
         .finally(() => {
           invalidateCachedStorefrontDetail(storefrontId);
@@ -310,7 +340,10 @@ export async function getStorefrontDetail(storefrontId: string, options?: {
 
     const detail = {
       ...baseDetail,
-      phone: normalizeDetailString(baseDetail.phone) ?? normalizeDetailString(googleEnrichment?.phone) ?? null,
+      phone:
+        normalizeDetailString(baseDetail.phone) ??
+        normalizeDetailString(googleEnrichment?.phone) ??
+        null,
       website:
         normalizeDetailString(baseDetail.website) ??
         normalizeDetailString(googleEnrichment?.website) ??
@@ -332,9 +365,9 @@ export async function getStorefrontDetail(storefrontId: string, options?: {
     };
 
     return withTimeoutFallback(
-      enhanceDetail(detail, includeMemberDeals),
+      enhanceDetail(detail, includeMemberDeals, viewerContext),
       includeMemberDeals ? detail : stripMemberOnlyDetailPromotionFields(detail),
-      DETAIL_ENHANCEMENT_TIMEOUT_MS
+      DETAIL_ENHANCEMENT_TIMEOUT_MS,
     );
   };
 
@@ -342,12 +375,16 @@ export async function getStorefrontDetail(storefrontId: string, options?: {
     return loadDetail('background');
   }
 
-  return getCachedStorefrontDetail(storefrontId, async () => {
-    const detail = await loadDetail(shouldAwaitGoogleEnrichment ? 'await' : 'background');
-    if (!detail || !hasGooglePlacesConfig()) {
-      return detail;
-    }
+  return getCachedStorefrontDetail(
+    storefrontId,
+    async () => {
+      const detail = await loadDetail(shouldAwaitGoogleEnrichment ? 'await' : 'background');
+      if (!detail || !hasGooglePlacesConfig()) {
+        return detail;
+      }
 
-    return detail;
-  }, shouldAwaitGoogleEnrichment ? undefined : 500);
+      return detail;
+    },
+    shouldAwaitGoogleEnrichment ? undefined : 500,
+  );
 }

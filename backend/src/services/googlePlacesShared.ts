@@ -144,7 +144,7 @@ export function setCache<T>(
   key: string,
   value: T,
   ttlMs: number,
-  maxSize: number
+  maxSize: number,
 ) {
   cache.delete(key);
   cache.set(key, {
@@ -160,7 +160,7 @@ export async function resolveCached<T>(
   inFlight: Map<string, InFlightEntry<T>>,
   ttlMs: number,
   maxSize: number,
-  loader: () => Promise<T>
+  loader: () => Promise<T>,
 ) {
   pruneCache(cache, maxSize);
   const cached = cache.get(key);
@@ -204,14 +204,14 @@ export function normalizeHours(value: string[] | undefined) {
     return [];
   }
 
-  return value
-    .map((entry) => entry.trim())
-    .filter(Boolean);
+  return value.map((entry) => entry.trim()).filter(Boolean);
 }
 
 export async function persistPlaceId(storefrontId: string, placeId: string) {
   const db =
-    process.env.NODE_ENV === 'test' && googlePlacesDbForTests ? googlePlacesDbForTests : getBackendFirebaseDb();
+    process.env.NODE_ENV === 'test' && googlePlacesDbForTests
+      ? googlePlacesDbForTests
+      : getBackendFirebaseDb();
   if (!db) {
     return;
   }
@@ -229,7 +229,7 @@ export async function persistPlaceId(storefrontId: string, placeId: string) {
       },
       {
         merge: true,
-      }
+      },
     );
     clearFirestoreStorefrontSourceCache();
     clearStorefrontBackendCache();

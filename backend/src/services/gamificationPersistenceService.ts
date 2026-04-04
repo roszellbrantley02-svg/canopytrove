@@ -11,7 +11,7 @@ const gamificationStateStore = new Map<string, StorefrontGamificationStateApiDoc
 
 function getGamificationStateCollection() {
   return getOptionalFirestoreCollection<StorefrontGamificationStateApiDocument>(
-    GAMIFICATION_STATE_COLLECTION
+    GAMIFICATION_STATE_COLLECTION,
   );
 }
 
@@ -26,7 +26,7 @@ export async function getGamificationState(profileId: string, joinedDate?: strin
     return normalizeGamificationStateDocument(
       profileId,
       snapshot.data() as StorefrontGamificationStateApiDocument,
-      joinedDate
+      joinedDate,
     );
   }
 
@@ -39,9 +39,13 @@ export async function getGamificationState(profileId: string, joinedDate?: strin
 export async function saveGamificationState(
   profileId: string,
   gamificationState: Partial<StorefrontGamificationStateApiDocument> | undefined,
-  joinedDate?: string | null
+  joinedDate?: string | null,
 ) {
-  const normalizedState = normalizeGamificationStateDocument(profileId, gamificationState, joinedDate);
+  const normalizedState = normalizeGamificationStateDocument(
+    profileId,
+    gamificationState,
+    joinedDate,
+  );
   const collectionRef = getGamificationStateCollection();
 
   if (collectionRef) {
@@ -70,12 +74,12 @@ export async function listGamificationStates() {
     return snapshot.docs.map((documentSnapshot) =>
       normalizeGamificationStateDocument(
         documentSnapshot.id,
-        documentSnapshot.data() as StorefrontGamificationStateApiDocument
-      )
+        documentSnapshot.data() as StorefrontGamificationStateApiDocument,
+      ),
     );
   }
 
   return Array.from(gamificationStateStore.values()).map((state) =>
-    normalizeGamificationStateDocument(state.profileId, state)
+    normalizeGamificationStateDocument(state.profileId, state),
   );
 }

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { disableRequestTimeout } from '../http/requestTimeout';
 import {
   getStorefrontDiscoveryCandidates,
   getStorefrontDiscoveryRuns,
@@ -73,14 +74,14 @@ adminDiscoveryRoutes.get('/runs', async (request, response) => {
   }
 });
 
-adminDiscoveryRoutes.post('/sweep', async (request, response) => {
+adminDiscoveryRoutes.post('/sweep', disableRequestTimeout(), async (request, response) => {
   try {
     response.json(
       await runStorefrontDiscoverySweep({
         reason: 'manual',
         limit: parseOptionalLimit(request.query.limit, 0) || null,
         marketId: parseOptionalMarketId(request.query.marketId),
-      })
+      }),
     );
   } catch (error) {
     response.status(500).json({

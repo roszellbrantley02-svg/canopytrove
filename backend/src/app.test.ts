@@ -46,32 +46,26 @@ afterEach(async () => {
   clearStorefrontBackendCache();
   const { clearAnalyticsEventState } = await import('./services/analyticsEventService');
   clearAnalyticsEventState();
-  const { clearStorefrontCommunityMemoryStateForTests } = await import(
-    './services/storefrontCommunityService'
-  );
+  const { clearStorefrontCommunityMemoryStateForTests } =
+    await import('./services/storefrontCommunityService');
   clearStorefrontCommunityMemoryStateForTests();
-  const { clearMemberEmailSubscriptionMemoryStateForTests } = await import(
-    './services/memberEmailSubscriptionService'
-  );
+  const { clearMemberEmailSubscriptionMemoryStateForTests } =
+    await import('./services/memberEmailSubscriptionService');
   clearMemberEmailSubscriptionMemoryStateForTests();
-  const { clearOwnerWelcomeEmailMemoryStateForTests } = await import(
-    './services/ownerWelcomeEmailService'
-  );
+  const { clearOwnerWelcomeEmailMemoryStateForTests } =
+    await import('./services/ownerWelcomeEmailService');
   clearOwnerWelcomeEmailMemoryStateForTests();
   const { clearResendWebhookMemoryStateForTests } = await import('./services/resendWebhookService');
   clearResendWebhookMemoryStateForTests();
-  const { clearReviewPhotoModerationMemoryStateForTests } = await import(
-    './services/reviewPhotoModerationService'
-  );
+  const { clearReviewPhotoModerationMemoryStateForTests } =
+    await import('./services/reviewPhotoModerationService');
   clearReviewPhotoModerationMemoryStateForTests();
   const { clearBackendFirebaseTestStateForTests } = await import('./firebase');
   clearBackendFirebaseTestStateForTests();
   const { clearLaunchProgramMemoryStateForTests } = await import('./services/launchProgramService');
   clearLaunchProgramMemoryStateForTests();
-  const {
-    clearStorefrontDiscoveryRepositoryState,
-    stopStorefrontDiscoveryScheduler,
-  } = await import('./services/storefrontDiscoveryOrchestrationService');
+  const { clearStorefrontDiscoveryRepositoryState, stopStorefrontDiscoveryScheduler } =
+    await import('./services/storefrontDiscoveryOrchestrationService');
   clearStorefrontDiscoveryRepositoryState();
   stopStorefrontDiscoveryScheduler();
   const {
@@ -124,7 +118,12 @@ async function request(baseUrl: string, path: string, init?: RequestInit) {
   };
 }
 
-function createSignedWebhookHeaders(secret: string, webhookId: string, occurredAt: Date, payload: string) {
+function createSignedWebhookHeaders(
+  secret: string,
+  webhookId: string,
+  occurredAt: Date,
+  payload: string,
+) {
   const webhook = new Webhook(secret);
   return {
     'svix-id': webhookId,
@@ -145,7 +144,7 @@ function createReviewPayload(profileId: string, overrides?: Record<string, unkno
 }
 
 function createPromotionRecord(
-  overrides?: Partial<OwnerStorefrontPromotionDocument>
+  overrides?: Partial<OwnerStorefrontPromotionDocument>,
 ): OwnerStorefrontPromotionDocument {
   const now = Date.now();
   const startsAt = new Date(now - 60 * 60 * 1000).toISOString();
@@ -161,7 +160,7 @@ function createPromotionRecord(
     startsAt,
     endsAt,
     status: 'active',
-    audience: 'all_followers',
+    audience: 'new_customers',
     alertFollowersOnStart: true,
     cardTone: 'hot_deal',
     placementSurfaces: ['browse', 'nearby', 'hot_deals'],
@@ -201,9 +200,7 @@ test('rejects malformed community review payloads', async () => {
 
 test('exports subscribed member emails through the admin route', async () => {
   process.env.ADMIN_API_KEY = 'admin-test-key';
-  const {
-    syncMemberEmailSubscription,
-  } = await import('./services/memberEmailSubscriptionService');
+  const { syncMemberEmailSubscription } = await import('./services/memberEmailSubscriptionService');
   await syncMemberEmailSubscription({
     accountId: 'member-1',
     email: 'member-1@example.com',
@@ -234,7 +231,10 @@ test('exports subscribed member emails through the admin route', async () => {
 
   assert.equal(response.status, 200);
   assert.equal(response.json?.count, 1);
-  assert.equal((response.json?.items as Array<{ email?: string }>)?.[0]?.email, 'member-1@example.com');
+  assert.equal(
+    (response.json?.items as Array<{ email?: string }>)?.[0]?.email,
+    'member-1@example.com',
+  );
   assert.equal(csvResponse.status, 200);
   assert.match(csvBody, /member-1@example\.com/);
   assert.doesNotMatch(csvBody, /member-2@example\.com/);
@@ -257,7 +257,8 @@ test('accepts signed resend webhook events and exposes them through the admin ro
     })) as typeof fetch;
 
   try {
-    const { syncMemberEmailSubscription } = await import('./services/memberEmailSubscriptionService');
+    const { syncMemberEmailSubscription } =
+      await import('./services/memberEmailSubscriptionService');
     await syncMemberEmailSubscription({
       accountId: 'member-admin-webhook',
       email: 'member-admin-webhook@example.com',
@@ -286,12 +287,7 @@ test('accepts signed resend webhook events and exposes them through the admin ro
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...createSignedWebhookHeaders(
-          testWebhookSecret,
-          'msg_admin_webhook_1',
-          now,
-          payload
-        ),
+        ...createSignedWebhookHeaders(testWebhookSecret, 'msg_admin_webhook_1', now, payload),
       },
       body: payload,
     });
@@ -307,7 +303,7 @@ test('accepts signed resend webhook events and exposes them through the admin ro
     assert.equal(adminResponse.json?.count, 1);
     assert.equal(
       (adminResponse.json?.items as Array<{ eventType?: string }>)?.[0]?.eventType,
-      'email.bounced'
+      'email.bounced',
     );
   } finally {
     global.fetch = originalFetch;
@@ -351,21 +347,27 @@ test('blocks duplicate reviews from the same profile on one storefront', async (
     },
     body: JSON.stringify(createReviewPayload('profile-1')),
   });
-  const duplicateResponse = await request(baseUrl, `/storefront-details/${testStorefrontId}/reviews`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  const duplicateResponse = await request(
+    baseUrl,
+    `/storefront-details/${testStorefrontId}/reviews`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(
+        createReviewPayload('profile-1', {
+          text: 'Trying to leave another review on the same storefront.',
+        }),
+      ),
     },
-    body: JSON.stringify(createReviewPayload('profile-1', {
-      text: 'Trying to leave another review on the same storefront.',
-    })),
-  });
+  );
 
   assert.equal(firstResponse.status, 200);
   assert.equal(duplicateResponse.status, 409);
   assert.equal(
     duplicateResponse.json?.error,
-    'You already reviewed this storefront. Edit your existing review instead of posting a second one.'
+    'You already reviewed this storefront. Edit your existing review instead of posting a second one.',
   );
 });
 
@@ -379,11 +381,13 @@ test('allows a review author to edit their existing review', async () => {
     body: JSON.stringify(createReviewPayload('profile-1')),
   });
 
-  const createdDetail = createResponse.json?.detail as {
-    appReviews?: Array<{ id?: string; authorProfileId?: string | null }>;
-  } | undefined;
+  const createdDetail = createResponse.json?.detail as
+    | {
+        appReviews?: Array<{ id?: string; authorProfileId?: string | null }>;
+      }
+    | undefined;
   const reviewId = createdDetail?.appReviews?.find(
-    (review) => review.authorProfileId === 'profile-1'
+    (review) => review.authorProfileId === 'profile-1',
   )?.id;
   assert.ok(reviewId);
 
@@ -399,20 +403,22 @@ test('allows a review author to edit their existing review', async () => {
         createReviewPayload('profile-1', {
           rating: 4,
           text: 'Updated review copy after another visit to the same storefront.',
-        })
+        }),
       ),
-    }
+    },
   );
 
   assert.equal(updateResponse.status, 200);
-  const updatedDetail = updateResponse.json?.detail as {
-    appReviews?: Array<{ id?: string; rating?: number; text?: string }>;
-  } | undefined;
+  const updatedDetail = updateResponse.json?.detail as
+    | {
+        appReviews?: Array<{ id?: string; rating?: number; text?: string }>;
+      }
+    | undefined;
   assert.equal(updatedDetail?.appReviews?.[0]?.id, reviewId);
   assert.equal(updatedDetail?.appReviews?.[0]?.rating, 4);
   assert.equal(
     updatedDetail?.appReviews?.[0]?.text,
-    'Updated review copy after another visit to the same storefront.'
+    'Updated review copy after another visit to the same storefront.',
   );
 });
 
@@ -426,11 +432,13 @@ test('rejects review edits from a different profile', async () => {
     body: JSON.stringify(createReviewPayload('profile-1')),
   });
 
-  const createdDetail = createResponse.json?.detail as {
-    appReviews?: Array<{ id?: string; authorProfileId?: string | null }>;
-  } | undefined;
+  const createdDetail = createResponse.json?.detail as
+    | {
+        appReviews?: Array<{ id?: string; authorProfileId?: string | null }>;
+      }
+    | undefined;
   const reviewId = createdDetail?.appReviews?.find(
-    (review) => review.authorProfileId === 'profile-1'
+    (review) => review.authorProfileId === 'profile-1',
   )?.id;
   assert.ok(reviewId);
 
@@ -445,9 +453,9 @@ test('rejects review edits from a different profile', async () => {
       body: JSON.stringify(
         createReviewPayload('profile-2', {
           text: 'Trying to overwrite someone else review.',
-        })
+        }),
       ),
-    }
+    },
   );
 
   assert.equal(updateResponse.status, 403);
@@ -456,24 +464,25 @@ test('rejects review edits from a different profile', async () => {
 
 test('requires signed-in access for review photo uploads', async () => {
   const { baseUrl } = await startTestServer();
-  const response = await request(baseUrl, `/storefront-details/${testStorefrontId}/reviews/photo-uploads`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  const response = await request(
+    baseUrl,
+    `/storefront-details/${testStorefrontId}/reviews/photo-uploads`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        profileId: 'profile-1',
+        fileName: 'photo.jpg',
+        contentType: 'image/jpeg',
+        sizeBytes: 1024,
+      }),
     },
-    body: JSON.stringify({
-      profileId: 'profile-1',
-      fileName: 'photo.jpg',
-      contentType: 'image/jpeg',
-      sizeBytes: 1024,
-    }),
-  });
+  );
 
   assert.equal(response.status, 403);
-  assert.equal(
-    response.json?.error,
-    'Signed-in access is required to upload review photos.'
-  );
+  assert.equal(response.json?.error, 'Signed-in access is required to upload review photos.');
 });
 
 test('applies stricter rate limits to admin routes', async () => {
@@ -535,7 +544,7 @@ test('keeps one featured live deal visible while hiding signed-out storefront ca
   const { baseUrl } = await startTestServer();
   const response = await request(
     baseUrl,
-    `/storefront-summaries/by-ids?ids=${encodeURIComponent(testStorefrontId)}`
+    `/storefront-summaries/by-ids?ids=${encodeURIComponent(testStorefrontId)}`,
   );
 
   assert.equal(response.status, 200);
@@ -585,7 +594,7 @@ test('publishes live owner promotions onto member storefront card payloads', asy
       headers: {
         'x-canopy-test-account-id': 'member-1',
       },
-    }
+    },
   );
 
   assert.equal(response.status, 200);
@@ -781,16 +790,15 @@ test('publishes the full active promotion stack onto member storefront detail pa
   assert.ok(
     detail?.activePromotions?.some(
       (promotion) =>
-        promotion.id === 'promotion-latest' &&
-        promotion.description === 'Buy one get one gummies'
-    )
+        promotion.id === 'promotion-latest' && promotion.description === 'Buy one get one gummies',
+    ),
   );
   assert.ok(
     detail?.activePromotions?.some(
       (promotion) =>
         promotion.id === 'promotion-earlier' &&
-        JSON.stringify(promotion.badges) === JSON.stringify(['20% off'])
-    )
+        JSON.stringify(promotion.badges) === JSON.stringify(['20% off']),
+    ),
   );
 });
 
@@ -905,10 +913,19 @@ test('exempts /health from the shared public read limiter', async () => {
   assert.equal(secondHealth.status, 200);
   assert.equal(firstHealth.json?.ok, true);
   const firstSource = firstHealth.json?.source as { activeMode?: unknown } | undefined;
-  assert.deepEqual(
-    Object.keys(firstHealth.json ?? {}).sort(),
-    ['allowDevSeed', 'authVerification', 'environment', 'gamificationStorage', 'memoryUsageMb', 'nodeVersion', 'ok', 'profileStorage', 'routeStateStorage', 'source', 'uptime']
-  );
+  assert.deepEqual(Object.keys(firstHealth.json ?? {}).sort(), [
+    'allowDevSeed',
+    'authVerification',
+    'environment',
+    'gamificationStorage',
+    'memoryUsageMb',
+    'nodeVersion',
+    'ok',
+    'profileStorage',
+    'routeStateStorage',
+    'source',
+    'uptime',
+  ]);
   assert.equal(typeof firstHealth.json?.source, 'object');
   assert.equal(typeof firstSource?.activeMode, 'string');
   assert.equal(typeof firstHealth.json?.profileStorage, 'string');
@@ -950,7 +967,7 @@ test('assertSecureServerConfig rejects wildcard cors origins', async () => {
     (serverConfig as { corsOrigin: string | string[] }).corsOrigin = '*';
     assert.throws(
       () => assertSecureServerConfig(),
-      /CORS_ORIGIN must be an explicit origin list\./
+      /CORS_ORIGIN must be an explicit origin list\./,
     );
   } finally {
     (serverConfig as { corsOrigin: string | string[] }).corsOrigin = originalCorsOrigin;
@@ -1029,7 +1046,7 @@ test('blocks admin runtime routes when neither admin auth path is configured', a
   assert.equal(response.status, 503);
   assert.equal(
     response.json?.error,
-    'Admin runtime routes are not configured. Missing Firebase admin auth or ADMIN_API_KEY.'
+    'Admin runtime routes are not configured. Missing Firebase admin auth or ADMIN_API_KEY.',
   );
 });
 
@@ -1069,16 +1086,16 @@ test('reports storefront readiness failures through the admin runtime readiness 
       (check) =>
         check.name === 'Storefront source mode' &&
         check.ok === false &&
-        check.severity === 'required'
-    )
+        check.severity === 'required',
+    ),
   );
   assert.ok(
     checks?.some(
       (check) =>
         check.name === 'Published storefront summary availability' &&
         check.ok === false &&
-        check.severity === 'required'
-    )
+        check.severity === 'required',
+    ),
   );
 });
 
@@ -1134,7 +1151,7 @@ test('reports missing admin firebase config after admin auth succeeds', async ()
   assert.equal(response.status, 503);
   assert.equal(
     response.json?.error,
-    'Admin review is not fully configured. Missing: FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS.'
+    'Admin review is not fully configured. Missing: FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS.',
   );
 });
 
@@ -1222,7 +1239,7 @@ test('runs a discovery sweep through the admin discovery route', async () => {
       (response.json?.readyForPublishCount as number) +
       (response.json?.publishedCount as number) +
       (response.json?.suppressedCount as number),
-    3
+    3,
   );
 });
 

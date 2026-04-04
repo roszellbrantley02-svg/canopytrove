@@ -13,7 +13,7 @@ type DeleteOperation = {
 
 export async function writeSeedOperationsInBatches(
   db: FirebaseFirestore.Firestore,
-  operations: SeedOperation[]
+  operations: SeedOperation[],
 ) {
   for (let index = 0; index < operations.length; index += MAX_BATCH_WRITES) {
     const batch = db.batch();
@@ -22,7 +22,7 @@ export async function writeSeedOperationsInBatches(
     batchOperations.forEach((operation) => {
       batch.set(
         db.collection(operation.collectionName).doc(operation.storefrontId),
-        operation.documentData
+        operation.documentData,
       );
     });
 
@@ -32,7 +32,7 @@ export async function writeSeedOperationsInBatches(
 
 export async function deleteSeedOperationsInBatches(
   db: FirebaseFirestore.Firestore,
-  operations: DeleteOperation[]
+  operations: DeleteOperation[],
 ) {
   for (let index = 0; index < operations.length; index += MAX_BATCH_WRITES) {
     const batch = db.batch();

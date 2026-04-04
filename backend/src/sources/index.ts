@@ -16,7 +16,7 @@ function readSourceMode(): BackendSourceMode {
 
 function createMissingFirestoreConfigError() {
   return new Error(
-    'Storefront backend source is set to firestore, but backend Firebase environment config is missing.'
+    'Storefront backend source is set to firestore, but backend Firebase environment config is missing.',
   );
 }
 

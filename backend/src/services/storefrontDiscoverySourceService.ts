@@ -52,18 +52,19 @@ const fallbackByNameZip = new Map<string, StorefrontRecord>();
 const fallbackByAddressZip = new Map<string, StorefrontRecord>();
 
 for (const record of fallbackStorefrontRecords) {
-  fallbackByStrongKey.set(createStrongLookupKey(record.displayName, record.addressLine1, record.city, record.zip), record);
+  fallbackByStrongKey.set(
+    createStrongLookupKey(record.displayName, record.addressLine1, record.city, record.zip),
+    record,
+  );
   fallbackByNameZip.set(createNameZipLookupKey(record.displayName, record.zip), record);
   fallbackByAddressZip.set(createAddressZipLookupKey(record.addressLine1, record.zip), record);
 }
 
-let discoverySourceCache:
-  | {
-      expiresAt: number;
-      records: StorefrontRecord[];
-      source: 'live' | 'seed';
-    }
-  | null = null;
+let discoverySourceCache: {
+  expiresAt: number;
+  records: StorefrontRecord[];
+  source: 'live' | 'seed';
+} | null = null;
 
 function toRadians(value: number) {
   return (value * Math.PI) / 180;
@@ -107,7 +108,7 @@ function decodeHtmlEntities(value: string) {
       .replace(/&#39;|&apos;/g, "'")
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
-      .replace(/&#(\d+);/g, (_, codePoint) => String.fromCodePoint(Number(codePoint)))
+      .replace(/&#(\d+);/g, (_, codePoint) => String.fromCodePoint(Number(codePoint))),
   );
 }
 
@@ -117,8 +118,8 @@ function stripTags(value: string) {
       value
         .replace(/<br\s*\/?>/gi, ' ')
         .replace(/<\/p>/gi, ' ')
-        .replace(/<[^>]+>/g, ' ')
-    )
+        .replace(/<[^>]+>/g, ' '),
+    ),
   );
 }
 
@@ -141,7 +142,12 @@ function cleanStoreName(rawName: string) {
   return cleaned.replace(/\s+\(\s*dba\s+/i, ' (dba ').trim();
 }
 
-function createStrongLookupKey(displayName: string, addressLine1: string, city: string, zip: string) {
+function createStrongLookupKey(
+  displayName: string,
+  addressLine1: string,
+  city: string,
+  zip: string,
+) {
   return [
     normalizeLookupValue(displayName),
     normalizeLookupValue(addressLine1),
@@ -161,9 +167,9 @@ function createAddressZipLookupKey(addressLine1: string, zip: string) {
 function isProductionLikeEnvironment() {
   return Boolean(
     process.env.K_SERVICE ||
-      process.env.CLOUD_RUN_JOB ||
-      process.env.STOREFRONT_DISCOVERY_SCHEDULER_ENABLED === 'true' ||
-      process.env.NODE_ENV === 'production'
+    process.env.CLOUD_RUN_JOB ||
+    process.env.STOREFRONT_DISCOVERY_SCHEDULER_ENABLED === 'true' ||
+    process.env.NODE_ENV === 'production',
   );
 }
 
@@ -203,7 +209,9 @@ function buildNominatimUrl(row: OcmVerificationRow) {
 }
 
 function extractCensusCoordinates(payload: unknown): Coordinates | null {
-  const addressMatches = (payload as { result?: { addressMatches?: Array<{ coordinates?: { x?: number; y?: number } }> } })?.result?.addressMatches;
+  const addressMatches = (
+    payload as { result?: { addressMatches?: Array<{ coordinates?: { x?: number; y?: number } }> } }
+  )?.result?.addressMatches;
   const coordinates = addressMatches?.[0]?.coordinates;
   if (!coordinates || typeof coordinates.x !== 'number' || typeof coordinates.y !== 'number') {
     return null;
@@ -326,7 +334,7 @@ function parseVerificationRows(html: string) {
   const rowMatches = tableMatch[1].matchAll(/<tr>([\s\S]*?)<\/tr>/gi);
   for (const rowMatch of rowMatches) {
     const cells = Array.from(rowMatch[1]!.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)).map(
-      (cellMatch) => cellMatch[1]!
+      (cellMatch) => cellMatch[1]!,
     );
     if (cells.length !== 5) {
       continue;
@@ -357,7 +365,7 @@ function parseVerificationRows(html: string) {
       zip,
       website:
         websiteText && !/^website coming soon$/i.test(websiteText)
-          ? websiteHref ?? `https://${websiteText.replace(/^https?:\/\//i, '')}`
+          ? (websiteHref ?? `https://${websiteText.replace(/^https?:\/\//i, '')}`)
           : null,
     });
   }
@@ -368,7 +376,7 @@ function parseVerificationRows(html: string) {
 function findFallbackRecord(row: OcmVerificationRow) {
   return (
     fallbackByStrongKey.get(
-      createStrongLookupKey(row.displayName, row.addressLine1, row.city, row.zip)
+      createStrongLookupKey(row.displayName, row.addressLine1, row.city, row.zip),
     ) ??
     fallbackByNameZip.get(createNameZipLookupKey(row.displayName, row.zip)) ??
     fallbackByAddressZip.get(createAddressZipLookupKey(row.addressLine1, row.zip)) ??
@@ -379,7 +387,7 @@ function findFallbackRecord(row: OcmVerificationRow) {
 function buildLiveSourceRecord(
   row: OcmVerificationRow,
   fallbackRecord: StorefrontRecord | null,
-  coordinates: Coordinates
+  coordinates: Coordinates,
 ): StorefrontRecord {
   const generatedStorefrontId =
     slugify(`${row.displayName}-${row.city}-${row.zip}`) || slugify(row.displayName);
@@ -404,10 +412,9 @@ function buildLiveSourceRecord(
     reviewCount: fallbackRecord?.reviewCount ?? 0,
     openNow: hasTrustedFallbackHours ? (fallbackRecord?.openNow ?? null) : null,
     isVerified: true,
-    mapPreviewLabel:
-      hasTrustedFallbackHours
-        ? (fallbackRecord?.mapPreviewLabel ?? LIVE_DISCOVERY_PENDING_HOURS_LABEL)
-        : LIVE_DISCOVERY_PENDING_HOURS_LABEL,
+    mapPreviewLabel: hasTrustedFallbackHours
+      ? (fallbackRecord?.mapPreviewLabel ?? LIVE_DISCOVERY_PENDING_HOURS_LABEL)
+      : LIVE_DISCOVERY_PENDING_HOURS_LABEL,
     promotionText: null,
     promotionBadges: [],
     promotionExpiresAt: null,
@@ -452,7 +459,7 @@ async function buildLiveSourceRecords() {
   }
 
   return Array.from(nextRecords.values()).sort((left, right) =>
-    left.displayName.localeCompare(right.displayName)
+    left.displayName.localeCompare(right.displayName),
   );
 }
 
@@ -471,7 +478,9 @@ async function loadStorefrontDiscoverySourceRecords() {
       };
       return liveRecords;
     }
-    throw new Error('Storefront discovery source fetch returned no live verified storefront records.');
+    throw new Error(
+      'Storefront discovery source fetch returned no live verified storefront records.',
+    );
   } catch (error) {
     if (!allowCheckedInSeedFallback()) {
       if (discoverySourceCache?.source === 'live') {

@@ -79,7 +79,7 @@ const storefrontReportStore = new Map<string, StoredStorefrontReportRecord[]>();
 export class StorefrontCommunityError extends Error {
   constructor(
     message: string,
-    public readonly statusCode: number
+    public readonly statusCode: number,
   ) {
     super(message);
   }
@@ -122,7 +122,7 @@ function normalizeOwnerReply(
         respondedAt: string;
       }
     | null
-    | undefined
+    | undefined,
 ) {
   if (!value || typeof value !== 'object') {
     return null;
@@ -151,7 +151,7 @@ function normalizeOwnerReply(
 }
 
 async function mapStoredReviewToAppReview(
-  review: StoredAppReviewRecord
+  review: StoredAppReviewRecord,
 ): Promise<StorefrontAppReviewRecord> {
   return {
     id: review.id,
@@ -175,7 +175,7 @@ function getAppReviewCollection() {
 
 function getStorefrontReportCollection() {
   return getOptionalFirestoreCollection<StoredStorefrontReportRecord>(
-    STOREFRONT_REPORTS_COLLECTION
+    STOREFRONT_REPORTS_COLLECTION,
   );
 }
 
@@ -185,8 +185,8 @@ function normalizeTags(tags: string[]) {
       tags
         .map((tag) => tag.trim())
         .filter(Boolean)
-        .slice(0, 6)
-    )
+        .slice(0, 6),
+    ),
   );
 }
 
@@ -217,8 +217,8 @@ function normalizeStoredReviewRecord(review: StoredAppReviewRecord): StoredAppRe
       new Set(
         Array.isArray(review.photoIds)
           ? review.photoIds.filter((photoId): photoId is string => typeof photoId === 'string')
-          : []
-      )
+          : [],
+      ),
     ).slice(0, 4),
     helpfulVoterIds: normalizeHelpfulVoterIds(review.helpfulVoterIds),
     ownerReply: normalizeOwnerReply(review.ownerReply),
@@ -226,7 +226,7 @@ function normalizeStoredReviewRecord(review: StoredAppReviewRecord): StoredAppRe
 }
 
 function normalizeStoredReportRecord(
-  report: StoredStorefrontReportRecord
+  report: StoredStorefrontReportRecord,
 ): StoredStorefrontReportRecord {
   return {
     ...report,
@@ -268,10 +268,10 @@ export async function listStorefrontAppReviews(storefrontId: string) {
     const settledReviews = await Promise.allSettled(
       snapshot.docs
         .map((documentSnapshot) =>
-          normalizeStoredReviewRecord(documentSnapshot.data() as StoredAppReviewRecord)
+          normalizeStoredReviewRecord(documentSnapshot.data() as StoredAppReviewRecord),
         )
         .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-        .map(mapStoredReviewToAppReview)
+        .map(mapStoredReviewToAppReview),
     );
     return settledReviews.flatMap((result) => {
       if (result.status === 'fulfilled') {
@@ -287,7 +287,7 @@ export async function listStorefrontAppReviews(storefrontId: string) {
       .slice()
       .map(normalizeStoredReviewRecord)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-      .map(mapStoredReviewToAppReview)
+      .map(mapStoredReviewToAppReview),
   );
   return settledMemoryReviews.flatMap((result) => {
     if (result.status === 'fulfilled') {
@@ -345,7 +345,7 @@ export async function listStorefrontReports(storefrontId: string) {
     const snapshot = await collectionRef.where('storefrontId', '==', storefrontId).get();
     return snapshot.docs
       .map((documentSnapshot) =>
-        normalizeStoredReportRecord(documentSnapshot.data() as StoredStorefrontReportRecord)
+        normalizeStoredReportRecord(documentSnapshot.data() as StoredStorefrontReportRecord),
       )
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
@@ -357,16 +357,16 @@ export async function listStorefrontReports(storefrontId: string) {
 }
 
 export async function submitStorefrontAppReview(
-  input: StorefrontReviewSubmissionInput & { photoUploadIds?: string[] }
+  input: StorefrontReviewSubmissionInput & { photoUploadIds?: string[] },
 ): Promise<StorefrontReviewSubmissionResult> {
   const existingReview = await getStoredStorefrontAppReviewByProfile(
     input.storefrontId,
-    input.profileId
+    input.profileId,
   );
   if (existingReview) {
     throw new StorefrontCommunityError(
       'You already reviewed this storefront. Edit your existing review instead of posting a second one.',
-      409
+      409,
     );
   }
 
@@ -374,8 +374,8 @@ export async function submitStorefrontAppReview(
     new Set(
       Array.isArray(input.photoUploadIds)
         ? input.photoUploadIds.filter((photoId): photoId is string => typeof photoId === 'string')
-        : []
-    )
+        : [],
+    ),
   ).slice(0, 4);
   const reviewRecord: StoredAppReviewRecord = {
     id: createId('review'),
@@ -426,7 +426,7 @@ export async function submitStorefrontAppReview(
 }
 
 export async function updateStorefrontAppReview(
-  input: StorefrontReviewUpdateInput & { photoUploadIds?: string[] }
+  input: StorefrontReviewUpdateInput & { photoUploadIds?: string[] },
 ): Promise<StorefrontReviewSubmissionResult> {
   const currentReview = await getStoredStorefrontAppReviewById(input.reviewId);
   if (!currentReview) {
@@ -445,8 +445,8 @@ export async function updateStorefrontAppReview(
     new Set(
       Array.isArray(input.photoUploadIds)
         ? input.photoUploadIds.filter((photoId): photoId is string => typeof photoId === 'string')
-        : []
-    )
+        : [],
+    ),
   ).slice(0, 4);
 
   const nextReview: StoredAppReviewRecord = {
@@ -517,7 +517,7 @@ export async function appendPhotoIdToStorefrontAppReview(reviewId: string, photo
         photoIds: nextPhotoIds,
         photoCount: nextPhotoIds.length,
       },
-      { merge: true }
+      { merge: true },
     );
     return true;
   }
@@ -716,10 +716,15 @@ export async function deleteCommunityContentForProfile(profileId: string) {
 
   if (reviewCollectionRef) {
     const reviewSnapshot = await reviewCollectionRef.where('profileId', '==', profileId).get();
-    const reviewDeleteResults = await Promise.allSettled(reviewSnapshot.docs.map((documentSnapshot) => documentSnapshot.ref.delete()));
+    const reviewDeleteResults = await Promise.allSettled(
+      reviewSnapshot.docs.map((documentSnapshot) => documentSnapshot.ref.delete()),
+    );
     for (const result of reviewDeleteResults) {
       if (result.status === 'rejected') {
-        console.warn('[storefrontCommunityService] failed to delete a review during profile cleanup:', result.reason);
+        console.warn(
+          '[storefrontCommunityService] failed to delete a review during profile cleanup:',
+          result.reason,
+        );
       }
     }
   } else {
@@ -736,10 +741,15 @@ export async function deleteCommunityContentForProfile(profileId: string) {
 
   if (reportCollectionRef) {
     const reportSnapshot = await reportCollectionRef.where('profileId', '==', profileId).get();
-    const reportDeleteResults = await Promise.allSettled(reportSnapshot.docs.map((documentSnapshot) => documentSnapshot.ref.delete()));
+    const reportDeleteResults = await Promise.allSettled(
+      reportSnapshot.docs.map((documentSnapshot) => documentSnapshot.ref.delete()),
+    );
     for (const result of reportDeleteResults) {
       if (result.status === 'rejected') {
-        console.warn('[storefrontCommunityService] failed to delete a report during profile cleanup:', result.reason);
+        console.warn(
+          '[storefrontCommunityService] failed to delete a report during profile cleanup:',
+          result.reason,
+        );
       }
     }
   } else {

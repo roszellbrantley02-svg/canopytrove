@@ -116,11 +116,11 @@ export function DetailHoursSection({ hours }: { hours: string[] }) {
 function getPromotionToneLabel(cardTone: StorefrontActivePromotion['cardTone']) {
   switch (cardTone) {
     case 'hot_deal':
-      return 'Hot deal';
+      return 'Featured special';
     case 'owner_featured':
       return 'Owner featured';
     default:
-      return 'Live deal';
+      return 'Live special';
   }
 }
 
@@ -166,7 +166,7 @@ export function DetailLiveDealsSection({
       : `${promotions.length} owner-posted promotions are live on this storefront right now.`;
 
   return (
-    <SectionCard title="Live deals" body={body}>
+    <SectionCard title="Live specials" body={body}>
       <View style={styles.liveDealsList}>
         {promotions.map((promotion) => {
           const expiryLabel = formatStorefrontPromotionExpiry(promotion.endsAt);
@@ -233,18 +233,18 @@ export function DetailLockedLiveDealsSection({
       : `This storefront has ${liveDealCount} live owner-posted promotions, but the offer details are reserved for members.`;
 
   return (
-    <SectionCard title="Live deals" body={body}>
+    <SectionCard title="Live specials" body={body}>
       <CustomerStateCard
         title={
           liveDealCount === 1
-            ? 'One live deal is waiting.'
-            : `${liveDealCount} live deals are waiting.`
+            ? 'One live special is waiting.'
+            : `${liveDealCount} live specials are waiting.`
         }
-        body="Sign in to see deal details, timing, and stacked promotions."
+        body="Sign in to see promotion details, timing, and stacked specials."
         tone="warm"
         iconName="lock-closed-outline"
         eyebrow="Members only"
-        note="Guests can browse. Deal details unlock with a member account."
+        note="Guests can browse. Promotion details unlock with a member account."
       >
         <DetailLockedMemberActions
           onOpenMemberSignIn={onOpenMemberSignIn}

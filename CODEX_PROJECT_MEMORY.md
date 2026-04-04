@@ -20,17 +20,17 @@ Purpose: persistent working memory for this repo so future Codex sessions can re
 
 **Launch readiness is nearly complete.** Here is the verified state:
 
-| Gate | Status |
-|------|--------|
-| Vitest (39/39 suites) | PASS |
-| Precheck strict (typecheck + lint zero-warnings + prettier) | PASS |
-| Expo doctor | PASS |
-| App-side release check (23/23) | PASS |
-| Backend Cloud Run deploy with secrets | PASS |
-| Backend health (`{"ok":true}`, HTTP 200) | PASS |
-| Local secrets scrubbed from `backend/.env.local` | DONE |
-| EAS preview build | NOT STARTED |
-| Device validation | NOT STARTED |
+| Gate                                                        | Status      |
+| ----------------------------------------------------------- | ----------- |
+| Vitest (39/39 suites)                                       | PASS        |
+| Precheck strict (typecheck + lint zero-warnings + prettier) | PASS        |
+| Expo doctor                                                 | PASS        |
+| App-side release check (23/23)                              | PASS        |
+| Backend Cloud Run deploy with secrets                       | PASS        |
+| Backend health (`{"ok":true}`, HTTP 200)                    | PASS        |
+| Local secrets scrubbed from `backend/.env.local`            | DONE        |
+| EAS preview build                                           | NOT STARTED |
+| Device validation                                           | NOT STARTED |
 
 ### What was done this session (Agent Two)
 
@@ -3594,6 +3594,7 @@ Worktree is clean. Verified from both Linux (Agent Two) and Windows (Agent One /
 Agent One initially saw 7 files as modified (`M`) on Windows after Agent Two's commits from Linux. This was a line-ending artifact — `git add --renormalize .` resolved it with nothing to commit, confirming the content was already correct. `git status` on Windows now shows clean (only untracked: `canopy-trove-product-readiness.docx`).
 
 Commit chain:
+
 - `d99a7d7` — test fixes, eslint config, vitest setup, packages, react-native mock
 - `d116d78` — fixed truncated memory tail (16th truncation event)
 - `3677fd0` — updated memory front matter to remove stale "dirty workspace" claims

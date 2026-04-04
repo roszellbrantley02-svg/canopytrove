@@ -1,9 +1,7 @@
 import { OwnerStorefrontPromotionDocument } from '../../../src/types/ownerPortal';
 import { serverConfig } from '../config';
 import { dispatchFavoriteDealAlertsForStorefront } from './favoriteDealAlertService';
-import {
-  getOwnerStorefrontPromotionsCollection,
-} from './ownerPortalWorkspaceCollections';
+import { getOwnerStorefrontPromotionsCollection } from './ownerPortalWorkspaceCollections';
 import {
   ownerStorefrontPromotionStore,
   saveOwnerStorefrontPromotionDocument,
@@ -37,7 +35,7 @@ export type OwnerPromotionSweepResult = {
 export class OwnerPromotionValidationError extends Error {
   constructor(
     message: string,
-    public readonly statusCode = 400
+    public readonly statusCode = 400,
   ) {
     super(message);
   }
@@ -49,7 +47,7 @@ function getNowIso() {
 
 function shouldCountAgainstPromotionLimit(
   promotion: OwnerStorefrontPromotionDocument,
-  nowIso = getNowIso()
+  nowIso = getNowIso(),
 ) {
   return derivePromotionStatus(promotion, nowIso) !== 'expired';
 }
@@ -69,7 +67,9 @@ async function listAllOwnerPromotions() {
     .map((promotion) => normalizePromotion(promotion.ownerUid, promotion.storefrontId, promotion));
 }
 
-function getPromotionDurationMs(promotion: Pick<OwnerStorefrontPromotionDocument, 'startsAt' | 'endsAt'>) {
+function getPromotionDurationMs(
+  promotion: Pick<OwnerStorefrontPromotionDocument, 'startsAt' | 'endsAt'>,
+) {
   return parseIsoDate(promotion.endsAt) - parseIsoDate(promotion.startsAt);
 }
 
@@ -100,7 +100,7 @@ export function assertOwnerPromotionConstraints(options: {
 
   if (livePromotionCount >= MAX_OWNER_PROMOTIONS_PER_STOREFRONT) {
     throw new OwnerPromotionValidationError(
-      `You can keep at most ${MAX_OWNER_PROMOTIONS_PER_STOREFRONT} scheduled or active promotions at once.`
+      `You can keep at most ${MAX_OWNER_PROMOTIONS_PER_STOREFRONT} scheduled or active promotions at once.`,
     );
   }
 }
@@ -128,20 +128,17 @@ export function preparePromotionForSave(options: {
   const schedulingChanged =
     existingPromotion.startsAt !== nextPromotion.startsAt ||
     existingPromotion.endsAt !== nextPromotion.endsAt;
-  const shouldResetAlert =
-    schedulingChanged || !existingPromotion.alertFollowersOnStart;
+  const shouldResetAlert = schedulingChanged || !existingPromotion.alertFollowersOnStart;
 
   return {
     ...nextPromotion,
-    followersAlertedAt: shouldResetAlert
-      ? null
-      : existingPromotion.followersAlertedAt ?? null,
+    followersAlertedAt: shouldResetAlert ? null : (existingPromotion.followersAlertedAt ?? null),
   };
 }
 
 async function markPromotionAlerted(
   promotion: OwnerStorefrontPromotionDocument,
-  alertedAt: string
+  alertedAt: string,
 ) {
   return saveOwnerStorefrontPromotionDocument({
     ...promotion,
@@ -152,7 +149,7 @@ async function markPromotionAlerted(
 
 export async function maybeDispatchPromotionStartAlert(
   promotion: OwnerStorefrontPromotionDocument,
-  nowIso = getNowIso()
+  nowIso = getNowIso(),
 ) {
   if (!promotion.alertFollowersOnStart) {
     return {
@@ -187,7 +184,9 @@ export async function maybeDispatchPromotionStartAlert(
   };
 }
 
-export async function runOwnerPromotionStartSweep(nowIso = getNowIso()): Promise<OwnerPromotionSweepResult> {
+export async function runOwnerPromotionStartSweep(
+  nowIso = getNowIso(),
+): Promise<OwnerPromotionSweepResult> {
   if (promotionSweepInFlight) {
     return promotionSweepInFlight;
   }
@@ -198,7 +197,7 @@ export async function runOwnerPromotionStartSweep(nowIso = getNowIso()): Promise
       (promotion) =>
         promotion.alertFollowersOnStart &&
         !promotion.followersAlertedAt &&
-        derivePromotionStatus(promotion, nowIso) === 'active'
+        derivePromotionStatus(promotion, nowIso) === 'active',
     );
 
     let alertedCount = 0;
@@ -233,7 +232,7 @@ export async function runOwnerPromotionStartSweep(nowIso = getNowIso()): Promise
 }
 
 export function startOwnerPromotionScheduler(
-  intervalMinutes = serverConfig.ownerPromotionSweepIntervalMinutes
+  intervalMinutes = serverConfig.ownerPromotionSweepIntervalMinutes,
 ) {
   if (!serverConfig.ownerPromotionSchedulerEnabled || promotionSchedulerStarted) {
     return false;
@@ -257,7 +256,7 @@ export function stopOwnerPromotionScheduler() {
 }
 
 export function setOwnerPromotionAlertDispatcherForTests(
-  dispatcher: typeof dispatchFavoriteDealAlertsForStorefront | null
+  dispatcher: typeof dispatchFavoriteDealAlertsForStorefront | null,
 ) {
   promotionAlertDispatcher = dispatcher ?? dispatchFavoriteDealAlertsForStorefront;
 }

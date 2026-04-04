@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { Storage } from 'firebase-admin/storage';
 import type { OwnerStorefrontProfileToolsDocument } from '../../../src/types/ownerPortal';
-import { getBackendFirebaseDb, getBackendFirebaseStorage, hasBackendFirebaseConfig } from '../firebase';
+import {
+  getBackendFirebaseDb,
+  getBackendFirebaseStorage,
+  hasBackendFirebaseConfig,
+} from '../firebase';
 
 const PROFILE_TOOLS_COLLECTION = 'owner_storefront_profile_tools';
 
@@ -49,11 +53,7 @@ export type LegacyStorefrontMediaMigrationResult = {
 
 function uniqueStrings(values: Array<string | null | undefined>) {
   return Array.from(
-    new Set(
-      values
-        .map((value) => (typeof value === 'string' ? value.trim() : ''))
-        .filter(Boolean)
-    )
+    new Set(values.map((value) => (typeof value === 'string' ? value.trim() : '')).filter(Boolean)),
   );
 }
 
@@ -111,9 +111,7 @@ function parseLegacyFirebaseDownloadUrl(value: string | null | undefined): Parse
         ? url.pathname.match(/^\/(?:v0|download\/storage\/v1)\/b\/([^/]+)\/o\/(.+)$/i)
         : null;
     const bucketFromStoragePath =
-      url.hostname === 'storage.googleapis.com'
-        ? url.pathname.match(/^\/([^/]+)\/(.+)$/)
-        : null;
+      url.hostname === 'storage.googleapis.com' ? url.pathname.match(/^\/([^/]+)\/(.+)$/) : null;
 
     const bucket = bucketFromV0Path?.[1] ?? bucketFromStoragePath?.[1] ?? null;
     const encodedPath = bucketFromV0Path?.[2] ?? bucketFromStoragePath?.[2] ?? null;
@@ -168,12 +166,10 @@ function valuesEqual(left: unknown, right: unknown) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function buildMigrationPlan(
-  record: OwnerStorefrontProfileToolsDocument
-): MigrationPlan | null {
+function buildMigrationPlan(record: OwnerStorefrontProfileToolsDocument): MigrationPlan | null {
   const cardPhotoPath = normalizeOptionalStorefrontMediaPath(record.cardPhotoPath);
   const featuredPhotoPaths = uniqueStrings(
-    (record.featuredPhotoPaths ?? []).map((value) => normalizeOptionalStorefrontMediaPath(value))
+    (record.featuredPhotoPaths ?? []).map((value) => normalizeOptionalStorefrontMediaPath(value)),
   ).slice(0, 8);
 
   const cardUrlAnalysis = analyzeLegacyUrls([record.cardPhotoUrl]);
@@ -187,7 +183,7 @@ function buildMigrationPlan(
     ...cardUrlAnalysis.resolvedPaths,
   ]).slice(0, 8);
 
-  const nextCardPhotoUrl = cardPhotoPath ? null : cardUrlAnalysis.preservedUrls[0] ?? null;
+  const nextCardPhotoUrl = cardPhotoPath ? null : (cardUrlAnalysis.preservedUrls[0] ?? null);
   const nextFeaturedPhotoUrls = uniqueStrings([
     ...galleryUrlAnalysis.preservedUrls,
     ...(nextCardPhotoUrl ? [nextCardPhotoUrl] : []),
@@ -199,7 +195,7 @@ function buildMigrationPlan(
     featuredPhotoPaths: nextFeaturedPhotoPaths,
     cardPhotoUrl: normalizeOptionalHttpUrl(record.cardPhotoUrl),
     featuredPhotoUrls: uniqueStrings(
-      (record.featuredPhotoUrls ?? []).map((value) => normalizeOptionalHttpUrl(value))
+      (record.featuredPhotoUrls ?? []).map((value) => normalizeOptionalHttpUrl(value)),
     ).slice(0, 8),
     updatedAt: new Date().toISOString(),
   };
@@ -222,8 +218,8 @@ function buildMigrationPlan(
 
   const migratedRefs = uniqueStrings(
     [...cardUrlAnalysis.migratedRefs, ...galleryUrlAnalysis.migratedRefs].map(
-      (ref) => `${ref.bucket}::${ref.path}`
-    )
+      (ref) => `${ref.bucket}::${ref.path}`,
+    ),
   ).map((value) => {
     const separatorIndex = value.indexOf('::');
     return {
@@ -282,7 +278,7 @@ async function rotateLegacyDownloadTokens(storage: Storage, refs: ParsedLegacyUr
 }
 
 export async function runLegacyStorefrontMediaMigration(
-  options: LegacyStorefrontMediaMigrationOptions = {}
+  options: LegacyStorefrontMediaMigrationOptions = {},
 ): Promise<LegacyStorefrontMediaMigrationResult> {
   if (!hasBackendFirebaseConfig) {
     throw new Error('Backend Firebase config is not available in this environment.');
@@ -294,33 +290,28 @@ export async function runLegacyStorefrontMediaMigration(
     throw new Error('Firestore or Storage admin access is not configured.');
   }
 
-  const collectionRef =
-    db.collection(
-      PROFILE_TOOLS_COLLECTION
-    ) as FirebaseFirestore.CollectionReference<OwnerStorefrontProfileToolsDocument>;
+  const collectionRef = db.collection(
+    PROFILE_TOOLS_COLLECTION,
+  ) as FirebaseFirestore.CollectionReference<OwnerStorefrontProfileToolsDocument>;
   let query: FirebaseFirestore.Query<OwnerStorefrontProfileToolsDocument> = collectionRef;
 
   if (options.storefrontId?.trim()) {
     query = query.where('storefrontId', '==', options.storefrontId.trim());
   }
-  if (
-    typeof options.limit === 'number' &&
-    Number.isFinite(options.limit) &&
-    options.limit > 0
-  ) {
+  if (typeof options.limit === 'number' && Number.isFinite(options.limit) && options.limit > 0) {
     query = query.limit(Math.floor(options.limit));
   }
 
   const snapshot = await query.get();
   const originalRecordsById = new Map(
-    snapshot.docs.map((documentSnapshot) => [documentSnapshot.id, documentSnapshot.data()])
+    snapshot.docs.map((documentSnapshot) => [documentSnapshot.id, documentSnapshot.data()]),
   );
   const plans = snapshot.docs
     .map((documentSnapshot) => buildMigrationPlan(documentSnapshot.data()))
     .filter((plan): plan is MigrationPlan => Boolean(plan));
 
   const tokenRotationTargets = uniqueStrings(
-    plans.flatMap((plan) => plan.migratedRefs.map((ref) => `${ref.bucket}::${ref.path}`))
+    plans.flatMap((plan) => plan.migratedRefs.map((ref) => `${ref.bucket}::${ref.path}`)),
   ).map((value) => {
     const separatorIndex = value.indexOf('::');
     return {
@@ -358,12 +349,12 @@ export async function runLegacyStorefrontMediaMigration(
   const rotationResults = await rotateLegacyDownloadTokens(storage, tokenRotationTargets);
   const failedRotations = rotationResults.filter((result) => result.rotated !== true);
   const failedRotationKeys = new Set(
-    failedRotations.map((result) => `${result.bucket}::${result.path}`)
+    failedRotations.map((result) => `${result.bucket}::${result.path}`),
   );
 
   for (const plan of plans) {
     const hasFailedRotation = plan.migratedRefs.some((ref) =>
-      failedRotationKeys.has(`${ref.bucket}::${ref.path}`)
+      failedRotationKeys.has(`${ref.bucket}::${ref.path}`),
     );
 
     if (hasFailedRotation || valuesEqual(plan.stageRecord, plan.cleanRecord)) {

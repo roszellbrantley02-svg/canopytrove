@@ -12,7 +12,7 @@ analyticsRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],
-  })
+  }),
 );
 
 analyticsRoutes.post('/analytics/events', async (request, response) => {

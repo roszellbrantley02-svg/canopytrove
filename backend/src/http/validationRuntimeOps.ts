@@ -1,8 +1,4 @@
-import {
-  asObject,
-  parseOptionalTrimmedString,
-  parseTrimmedString,
-} from './validationCore';
+import { asObject, parseOptionalTrimmedString, parseTrimmedString } from './validationCore';
 import { RequestValidationError } from './errors';
 
 const runtimePolicyTriggerValues = ['automatic', 'manual', 'normal'] as const;
@@ -27,9 +23,13 @@ function parseOptionalTrigger(value: unknown, field: string) {
     return undefined;
   }
 
-  if (!runtimePolicyTriggerValues.includes(normalizedValue as (typeof runtimePolicyTriggerValues)[number])) {
+  if (
+    !runtimePolicyTriggerValues.includes(
+      normalizedValue as (typeof runtimePolicyTriggerValues)[number],
+    )
+  ) {
     throw new RequestValidationError(
-      `${field} must be one of: ${runtimePolicyTriggerValues.join(', ')}.`
+      `${field} must be one of: ${runtimePolicyTriggerValues.join(', ')}.`,
     );
   }
 
@@ -42,19 +42,19 @@ export function parseRuntimePolicyBody(value: unknown) {
     safeModeEnabled: parseOptionalBoolean(body.safeModeEnabled, 'body.safeModeEnabled'),
     ownerPortalWritesEnabled: parseOptionalBoolean(
       body.ownerPortalWritesEnabled,
-      'body.ownerPortalWritesEnabled'
+      'body.ownerPortalWritesEnabled',
     ),
     promotionWritesEnabled: parseOptionalBoolean(
       body.promotionWritesEnabled,
-      'body.promotionWritesEnabled'
+      'body.promotionWritesEnabled',
     ),
     reviewRepliesEnabled: parseOptionalBoolean(
       body.reviewRepliesEnabled,
-      'body.reviewRepliesEnabled'
+      'body.reviewRepliesEnabled',
     ),
     profileToolsWritesEnabled: parseOptionalBoolean(
       body.profileToolsWritesEnabled,
-      'body.profileToolsWritesEnabled'
+      'body.profileToolsWritesEnabled',
     ),
     reason: parseOptionalTrimmedString(body.reason, 'body.reason', {
       maxLength: 240,

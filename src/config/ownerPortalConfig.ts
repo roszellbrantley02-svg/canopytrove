@@ -9,7 +9,8 @@ export const ownerPortalPrelaunchEnabled =
 export const ownerPortalPreviewEnabled =
   rawPreviewEnabled.toLowerCase() === 'true' || rawPreviewEnabled === '1';
 
-export const ownerPortalAccessAvailable = true;
+export const ownerPortalAccessAvailable =
+  ownerPortalPrelaunchEnabled || ownerPortalPreviewEnabled || isDeveloperBuild;
 
 export const ownerPortalAllowlist = rawAllowlist
   .split(',')

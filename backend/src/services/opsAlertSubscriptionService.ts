@@ -50,12 +50,13 @@ function createOwnerSubscriptionId(ownerUid: string) {
 }
 
 function normalizeRuntimeAlertSubscriptionRecord(
-  record: RuntimeAlertSubscriptionRecord
+  record: RuntimeAlertSubscriptionRecord,
 ): RuntimeAlertSubscriptionRecord {
   return {
     id: record.id,
     source: record.source === 'admin_runtime' ? 'admin_runtime' : 'owner_portal',
-    ownerUid: typeof record.ownerUid === 'string' && record.ownerUid.trim() ? record.ownerUid.trim() : null,
+    ownerUid:
+      typeof record.ownerUid === 'string' && record.ownerUid.trim() ? record.ownerUid.trim() : null,
     devicePushToken: normalizePushToken(record.devicePushToken),
     updatedAt: normalizeUpdatedAt(record.updatedAt),
   };
@@ -63,19 +64,18 @@ function normalizeRuntimeAlertSubscriptionRecord(
 
 function toRuntimeAlertSubscriptionStatus(
   record: RuntimeAlertSubscriptionRecord,
-  source: RuntimeAlertSubscriptionSource
+  source: RuntimeAlertSubscriptionSource,
 ): RuntimeAlertSubscriptionStatus {
   return {
     source,
     pushEnabled: Boolean(record.devicePushToken),
-    updatedAt:
-      record.updatedAt === new Date(0).toISOString() ? null : record.updatedAt,
+    updatedAt: record.updatedAt === new Date(0).toISOString() ? null : record.updatedAt,
   };
 }
 
 function getRuntimeAlertSubscriptionCollection() {
   return getOptionalFirestoreCollection<RuntimeAlertSubscriptionRecord>(
-    OPS_ALERT_SUBSCRIPTIONS_COLLECTION
+    OPS_ALERT_SUBSCRIPTIONS_COLLECTION,
   );
 }
 
@@ -88,7 +88,7 @@ async function getSubscriptionRecordById(subscriptionId: string) {
     }
 
     return normalizeRuntimeAlertSubscriptionRecord(
-      snapshot.data() as RuntimeAlertSubscriptionRecord
+      snapshot.data() as RuntimeAlertSubscriptionRecord,
     );
   }
 
@@ -101,13 +101,13 @@ async function listRuntimeAlertSubscriptionRecords() {
     const snapshot = await collectionRef.get();
     return snapshot.docs.map((documentSnapshot) =>
       normalizeRuntimeAlertSubscriptionRecord(
-        documentSnapshot.data() as RuntimeAlertSubscriptionRecord
-      )
+        documentSnapshot.data() as RuntimeAlertSubscriptionRecord,
+      ),
     );
   }
 
   return Array.from(alertSubscriptionStore.values()).map((record) =>
-    normalizeRuntimeAlertSubscriptionRecord(record)
+    normalizeRuntimeAlertSubscriptionRecord(record),
   );
 }
 
@@ -159,14 +159,13 @@ export async function syncOwnerRuntimeAlertSubscription(options: {
   devicePushToken?: string | null;
 }) {
   const subscriptionId = createOwnerSubscriptionId(options.ownerUid);
-  const previousRecord =
-    (await getSubscriptionRecordById(subscriptionId)) ?? {
-      id: subscriptionId,
-      source: 'owner_portal' as const,
-      ownerUid: options.ownerUid.trim(),
-      devicePushToken: null,
-      updatedAt: new Date(0).toISOString(),
-    };
+  const previousRecord = (await getSubscriptionRecordById(subscriptionId)) ?? {
+    id: subscriptionId,
+    source: 'owner_portal' as const,
+    ownerUid: options.ownerUid.trim(),
+    devicePushToken: null,
+    updatedAt: new Date(0).toISOString(),
+  };
 
   const nextRecord = await saveRuntimeAlertSubscriptionRecord({
     ...previousRecord,
@@ -195,14 +194,13 @@ export async function syncAdminRuntimeAlertSubscription(options: {
   }
 
   const subscriptionId = createAdminSubscriptionId(normalizedPushToken);
-  const previousRecord =
-    (await getSubscriptionRecordById(subscriptionId)) ?? {
-      id: subscriptionId,
-      source: 'admin_runtime' as const,
-      ownerUid: null,
-      devicePushToken: normalizedPushToken,
-      updatedAt: new Date(0).toISOString(),
-    };
+  const previousRecord = (await getSubscriptionRecordById(subscriptionId)) ?? {
+    id: subscriptionId,
+    source: 'admin_runtime' as const,
+    ownerUid: null,
+    devicePushToken: normalizedPushToken,
+    updatedAt: new Date(0).toISOString(),
+  };
 
   const nextRecord = await saveRuntimeAlertSubscriptionRecord({
     ...previousRecord,
@@ -249,8 +247,7 @@ export async function notifyRuntimeAlertSubscribers(options: {
     return {
       notifiedSubscriberCount: 0,
       throttled: true,
-      storage:
-        backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+      storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
     };
   }
 
@@ -261,8 +258,7 @@ export async function notifyRuntimeAlertSubscribers(options: {
     return {
       notifiedSubscriberCount: 0,
       throttled: false,
-      storage:
-        backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+      storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
     };
   }
 
@@ -279,7 +275,7 @@ export async function notifyRuntimeAlertSubscribers(options: {
         source: record.source,
         ...(options.data ?? {}),
       },
-    }))
+    })),
   );
 
   const tokenCleanupResults = await Promise.allSettled(
@@ -287,11 +283,14 @@ export async function notifyRuntimeAlertSubscribers(options: {
       if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
         await clearRuntimeAlertSubscriptionToken(recordsWithTokens[index]);
       }
-    })
+    }),
   );
   for (const result of tokenCleanupResults) {
     if (result.status === 'rejected') {
-      console.warn('[opsAlertSubscriptionService] failed to clear stale subscription token:', result.reason);
+      console.warn(
+        '[opsAlertSubscriptionService] failed to clear stale subscription token:',
+        result.reason,
+      );
     }
   }
 
@@ -302,7 +301,6 @@ export async function notifyRuntimeAlertSubscribers(options: {
   return {
     notifiedSubscriberCount: tickets.filter((ticket) => ticket.status === 'ok').length,
     throttled: false,
-    storage:
-      backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+    storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
   };
 }

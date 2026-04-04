@@ -16,7 +16,7 @@ memberEmailRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['PUT'],
-  })
+  }),
 );
 
 function parseMemberEmailSubscriptionBody(value: unknown) {
@@ -66,7 +66,8 @@ function getTestAuthenticatedMember(request: Request) {
   return {
     accountId,
     email:
-      request.header('x-canopy-test-email')?.trim() || `${accountId.replaceAll(/[^a-z0-9_-]/gi, '')}@example.com`,
+      request.header('x-canopy-test-email')?.trim() ||
+      `${accountId.replaceAll(/[^a-z0-9_-]/gi, '')}@example.com`,
     displayName: request.header('x-canopy-test-display-name')?.trim() || null,
   };
 }
@@ -85,7 +86,7 @@ async function getAuthenticatedMember(request: Request) {
   if (!hasBackendFirebaseConfig) {
     throw new MemberEmailSubscriptionAccessError(
       'Member email subscription auth is not configured.',
-      503
+      503,
     );
   }
 
@@ -93,7 +94,7 @@ async function getAuthenticatedMember(request: Request) {
   if (!auth) {
     throw new MemberEmailSubscriptionAccessError(
       'Member email subscription auth is not configured.',
-      503
+      503,
     );
   }
 
@@ -144,7 +145,7 @@ memberEmailRoutes.put('/member-email-subscription', async (request, response) =>
         ...member,
         subscribed: body.subscribed,
         source: body.source,
-      })
+      }),
     );
   } catch (error) {
     const statusCode =
@@ -162,7 +163,7 @@ memberEmailRoutes.put('/member-email-subscription', async (request, response) =>
 class MemberEmailSubscriptionAccessError extends Error {
   constructor(
     message: string,
-    public readonly statusCode: number
+    public readonly statusCode: number,
   ) {
     super(message);
   }

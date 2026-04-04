@@ -71,7 +71,7 @@ function setCache<T>(
   key: string,
   value: T,
   ttlMs: number,
-  maxSize: number
+  maxSize: number,
 ) {
   cache.delete(key);
   cache.set(key, {
@@ -87,7 +87,7 @@ async function resolveCached<T>(
   inFlight: Map<string, InFlightEntry<T>>,
   ttlMs: number,
   maxSize: number,
-  loader: () => Promise<T>
+  loader: () => Promise<T>,
 ) {
   pruneCache(cache, maxSize);
   const cached = cache.get(key);
@@ -164,7 +164,7 @@ export function clearStorefrontBackendCache() {
 
 export function getCachedStorefrontSummaryPage(
   query: StorefrontSummaryQueryKey,
-  loader: () => Promise<StorefrontSummariesApiResponse>
+  loader: () => Promise<StorefrontSummariesApiResponse>,
 ) {
   return resolveCached(
     createSummaryQueryCacheKey(query),
@@ -172,13 +172,13 @@ export function getCachedStorefrontSummaryPage(
     summaryPageInFlight,
     SUMMARY_TTL_MS,
     SUMMARY_PAGE_CACHE_LIMIT,
-    loader
+    loader,
   );
 }
 
 export function getCachedStorefrontSummariesByIds(
   ids: string[],
-  loader: () => Promise<StorefrontSummaryApiDocument[]>
+  loader: () => Promise<StorefrontSummaryApiDocument[]>,
 ) {
   return resolveCached(
     createIdsCacheKey(ids),
@@ -186,16 +186,23 @@ export function getCachedStorefrontSummariesByIds(
     summariesByIdsInFlight,
     SUMMARY_TTL_MS,
     SUMMARIES_BY_IDS_CACHE_LIMIT,
-    loader
+    loader,
   );
 }
 
 export function getCachedStorefrontDetail(
   storefrontId: string,
   loader: () => Promise<StorefrontDetailApiDocument | null>,
-  ttlMs = DETAIL_TTL_MS
+  ttlMs = DETAIL_TTL_MS,
 ) {
-  return resolveCached(storefrontId, detailCache, detailInFlight, ttlMs, DETAIL_CACHE_LIMIT, loader);
+  return resolveCached(
+    storefrontId,
+    detailCache,
+    detailInFlight,
+    ttlMs,
+    DETAIL_CACHE_LIMIT,
+    loader,
+  );
 }
 
 export function invalidateCachedStorefrontDetail(storefrontId: string) {
@@ -205,7 +212,7 @@ export function invalidateCachedStorefrontDetail(storefrontId: string) {
 
 export function getCachedLocationResolution(
   query: string,
-  loader: () => Promise<LocationResolutionApiResponse>
+  loader: () => Promise<LocationResolutionApiResponse>,
 ) {
   return resolveCached(
     normalizeQueryValue(query),
@@ -213,6 +220,6 @@ export function getCachedLocationResolution(
     locationInFlight,
     LOCATION_TTL_MS,
     LOCATION_CACHE_LIMIT,
-    loader
+    loader,
   );
 }

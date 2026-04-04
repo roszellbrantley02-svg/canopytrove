@@ -88,7 +88,7 @@ async function consumePersistentBucket(bucketKey: string, windowMs: number) {
         count,
         resetAt,
       },
-      { merge: true }
+      { merge: true },
     );
 
     return {
@@ -138,7 +138,10 @@ export function createRateLimitMiddleware(options: RateLimitOptions): RequestHan
           const persistentResult = await consumePersistentBucket(bucketKey, windowMs);
           bucket = persistentResult ?? consumeMemoryBucket(bucketKey, windowMs);
         } catch (persistentError) {
-          console.warn(`[rateLimit] persistent bucket failed for "${name}", falling back to memory:`, persistentError);
+          console.warn(
+            `[rateLimit] persistent bucket failed for "${name}", falling back to memory:`,
+            persistentError,
+          );
           bucket = consumeMemoryBucket(bucketKey, windowMs);
         }
       } else {
@@ -159,7 +162,10 @@ export function createRateLimitMiddleware(options: RateLimitOptions): RequestHan
           error: 'Too many requests. Please retry shortly.',
         };
 
-        if (typeof (response as Response).status === 'function' && typeof (response as Response).json === 'function') {
+        if (
+          typeof (response as Response).status === 'function' &&
+          typeof (response as Response).json === 'function'
+        ) {
           (response as Response).status(429).json(payload);
           return;
         }

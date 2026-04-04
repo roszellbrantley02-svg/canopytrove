@@ -57,7 +57,10 @@ test('keeps partial admin review queue data when one loader fails', async () => 
     assert.deepEqual(result.businessVerifications, []);
     assert.deepEqual(result.identityVerifications, [{ id: 'identity-1', ownerUid: 'owner-2' }]);
     assert.deepEqual(result.storefrontReports, [{ id: 'report-1', storefrontId: 'storefront-1' }]);
-    assert.deepEqual(result.reviewPhotos.map((photo) => photo.id), ['photo-1']);
+    assert.deepEqual(
+      result.reviewPhotos.map((photo) => photo.id),
+      ['photo-1'],
+    );
     assert.deepEqual(result.warnings, ['businessVerifications']);
     assert.equal(loggedWarnings.length, 1);
     assert.match(String(loggedWarnings[0]?.[0] ?? ''), /businessVerifications/);
@@ -80,5 +83,8 @@ test('returns a clean admin review queue result when every loader succeeds', asy
   assert.deepEqual(result.businessVerifications, [{ id: 'business-1' }]);
   assert.deepEqual(result.identityVerifications, [{ id: 'identity-1' }]);
   assert.deepEqual(result.storefrontReports, [{ id: 'report-1' }]);
-  assert.deepEqual(result.reviewPhotos.map((photo) => photo.id), ['photo-1']);
+  assert.deepEqual(
+    result.reviewPhotos.map((photo) => photo.id),
+    ['photo-1'],
+  );
 });

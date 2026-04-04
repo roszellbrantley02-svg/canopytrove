@@ -94,7 +94,7 @@ let reviewPhotoModerationFetch: typeof fetch = fetch;
 export class ReviewPhotoModerationError extends Error {
   constructor(
     message: string,
-    public readonly statusCode: number
+    public readonly statusCode: number,
   ) {
     super(message);
   }
@@ -117,9 +117,7 @@ function normalizeTrimmedString(value: unknown, fallback = '') {
 }
 
 function normalizeContentType(value: unknown) {
-  return typeof value === 'string' && ALLOWED_CONTENT_TYPES.has(value.trim())
-    ? value.trim()
-    : null;
+  return typeof value === 'string' && ALLOWED_CONTENT_TYPES.has(value.trim()) ? value.trim() : null;
 }
 
 function normalizeSizeBytes(value: unknown) {
@@ -163,8 +161,8 @@ function normalizeCategories(value: unknown) {
     new Set(
       value
         .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-        .map((entry) => entry.trim())
-    )
+        .map((entry) => entry.trim()),
+    ),
   ).slice(0, 12);
 }
 
@@ -176,7 +174,9 @@ function normalizeScore(value: unknown) {
   return Math.max(0, Math.min(1, value));
 }
 
-function normalizeStoredRecord(record: Partial<StoredReviewPhotoUploadSession>): StoredReviewPhotoUploadSession {
+function normalizeStoredRecord(
+  record: Partial<StoredReviewPhotoUploadSession>,
+): StoredReviewPhotoUploadSession {
   const createdAt = normalizeTrimmedString(record.createdAt, getNowIso());
   const updatedAt = normalizeTrimmedString(record.updatedAt, getNowIso());
 
@@ -192,18 +192,28 @@ function normalizeStoredRecord(record: Partial<StoredReviewPhotoUploadSession>):
     approvedStoragePath: normalizeTrimmedString(record.approvedStoragePath),
     moderationStatus: normalizeStatus(record.moderationStatus),
     moderationDecision: normalizeDecision(record.moderationDecision),
-    moderationModel: record.moderationModel === null ? null : normalizeTrimmedString(record.moderationModel) || null,
+    moderationModel:
+      record.moderationModel === null
+        ? null
+        : normalizeTrimmedString(record.moderationModel) || null,
     moderationReason:
-      record.moderationReason === null ? null : normalizeTrimmedString(record.moderationReason) || null,
+      record.moderationReason === null
+        ? null
+        : normalizeTrimmedString(record.moderationReason) || null,
     moderationCategories: normalizeCategories(record.moderationCategories),
     moderationScore: normalizeScore(record.moderationScore),
     uploadMode: record.uploadMode === 'memory' ? 'memory' : 'signed_url',
     uploadUrl: record.uploadUrl === null ? null : normalizeTrimmedString(record.uploadUrl) || null,
     uploadExpiresAt:
-      record.uploadExpiresAt === null ? null : normalizeTrimmedString(record.uploadExpiresAt) || null,
-    approvedAt: record.approvedAt === null ? null : normalizeTrimmedString(record.approvedAt) || null,
-    reviewedAt: record.reviewedAt === null ? null : normalizeTrimmedString(record.reviewedAt) || null,
-    attachedAt: record.attachedAt === null ? null : normalizeTrimmedString(record.attachedAt) || null,
+      record.uploadExpiresAt === null
+        ? null
+        : normalizeTrimmedString(record.uploadExpiresAt) || null,
+    approvedAt:
+      record.approvedAt === null ? null : normalizeTrimmedString(record.approvedAt) || null,
+    reviewedAt:
+      record.reviewedAt === null ? null : normalizeTrimmedString(record.reviewedAt) || null,
+    attachedAt:
+      record.attachedAt === null ? null : normalizeTrimmedString(record.attachedAt) || null,
     deletedAt: record.deletedAt === null ? null : normalizeTrimmedString(record.deletedAt) || null,
     createdAt,
     updatedAt,
@@ -236,7 +246,14 @@ function buildApprovedStoragePath(input: {
   photoId: string;
   fileName: string;
 }) {
-  return ['community-review-media', 'approved', input.storefrontId, input.reviewId, input.photoId, input.fileName].join('/');
+  return [
+    'community-review-media',
+    'approved',
+    input.storefrontId,
+    input.reviewId,
+    input.photoId,
+    input.fileName,
+  ].join('/');
 }
 
 function sanitizeFileName(fileName: string) {
@@ -251,7 +268,9 @@ function sanitizeFileName(fileName: string) {
 }
 
 function isEligibleForAutoModeration(contentType: string, sizeBytes: number) {
-  return ALLOWED_CONTENT_TYPES.has(contentType) && sizeBytes > 0 && sizeBytes <= MAX_REVIEW_PHOTO_BYTES;
+  return (
+    ALLOWED_CONTENT_TYPES.has(contentType) && sizeBytes > 0 && sizeBytes <= MAX_REVIEW_PHOTO_BYTES
+  );
 }
 
 function buildModerationFallbackReason() {
@@ -366,7 +385,7 @@ async function uploadPhotoToApprovedPath(photo: StoredReviewPhotoUploadSession, 
 
 async function moveApprovedPhotoToReviewPath(
   photo: StoredReviewPhotoUploadSession,
-  reviewId: string
+  reviewId: string,
 ) {
   const nextApprovedPath = buildApprovedStoragePath({
     storefrontId: photo.storefrontId,
@@ -448,7 +467,7 @@ async function promoteUploadedPhoto(
     score: number | null;
     model: string | null;
   },
-  reviewedAt = getNowIso()
+  reviewedAt = getNowIso(),
 ) {
   if (photo.moderationStatus === 'approved' && photo.approvedStoragePath) {
     const updated = await saveStoredPhotoRecord({
@@ -523,47 +542,50 @@ async function runStrictPhotoModeration(photo: StoredReviewPhotoUploadSession, i
   }
 
   try {
-    const response = await reviewPhotoModerationFetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${moderationConfig.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: moderationConfig.model,
-        temperature: 0,
-        response_format: {
-          type: 'json_object',
+    const response = await reviewPhotoModerationFetch(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${moderationConfig.apiKey}`,
         },
-        messages: [
-          {
-            role: 'system',
-            content: `${buildPhotoModerationPrompt()}\nDo not mention policy text in the output beyond the concise reason.`,
+        body: JSON.stringify({
+          model: moderationConfig.model,
+          temperature: 0,
+          response_format: {
+            type: 'json_object',
           },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify({
-                  storefrontId: photo.storefrontId,
-                  profileId: photo.profileId,
-                  fileName: photo.originalFileName,
-                  contentType: photo.contentType,
-                  sizeBytes: photo.sizeBytes,
-                }),
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${photo.contentType};base64,${imageBytes.toString('base64')}`,
+          messages: [
+            {
+              role: 'system',
+              content: `${buildPhotoModerationPrompt()}\nDo not mention policy text in the output beyond the concise reason.`,
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({
+                    storefrontId: photo.storefrontId,
+                    profileId: photo.profileId,
+                    fileName: photo.originalFileName,
+                    contentType: photo.contentType,
+                    sizeBytes: photo.sizeBytes,
+                  }),
                 },
-              },
-            ],
-          },
-        ],
-      }),
-    });
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${photo.contentType};base64,${imageBytes.toString('base64')}`,
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      },
+    );
 
     if (!response.ok) {
       throw new Error(`OpenAI moderation request failed with ${response.status}`);
@@ -631,7 +653,7 @@ export async function createReviewPhotoUploadSession(input: {
   if (!contentType) {
     throw new ReviewPhotoModerationError(
       'Only JPEG, PNG, and WEBP review photos are supported.',
-      400
+      400,
     );
   }
 
@@ -639,7 +661,7 @@ export async function createReviewPhotoUploadSession(input: {
   if (!sizeBytes || sizeBytes > MAX_REVIEW_PHOTO_BYTES) {
     throw new ReviewPhotoModerationError(
       `Review photos must be smaller than ${Math.floor(MAX_REVIEW_PHOTO_BYTES / (1024 * 1024))}MB.`,
-      400
+      400,
     );
   }
 
@@ -686,7 +708,9 @@ export async function createReviewPhotoUploadSession(input: {
   });
 
   session.uploadUrl = await createSignedUploadUrl(session);
-  session.uploadExpiresAt = session.uploadUrl ? new Date(Date.now() + UPLOAD_URL_TTL_MS).toISOString() : null;
+  session.uploadExpiresAt = session.uploadUrl
+    ? new Date(Date.now() + UPLOAD_URL_TTL_MS).toISOString()
+    : null;
   await saveStoredPhotoRecord(session);
 
   return {
@@ -705,7 +729,7 @@ export async function completeReviewPhotoUpload(photoId: string) {
     return {
       session: current,
       publicUrl: current.approvedStoragePath
-        ? (await createSignedReadUrl(current.approvedStoragePath)) ?? null
+        ? ((await createSignedReadUrl(current.approvedStoragePath)) ?? null)
         : null,
     };
   }
@@ -828,18 +852,15 @@ export async function attachReviewPhotosToReview(options: {
   if (requestedPhotoIds.length > MAX_REVIEW_PHOTOS_PER_REVIEW) {
     throw new ReviewPhotoModerationError(
       `Reviews can include at most ${MAX_REVIEW_PHOTOS_PER_REVIEW} photos.`,
-      400
+      400,
     );
   }
 
   const photos = await Promise.all(
-    requestedPhotoIds.map((photoId) => getStoredPhotoRecord(photoId))
+    requestedPhotoIds.map((photoId) => getStoredPhotoRecord(photoId)),
   );
   if (photos.some((photo) => !photo)) {
-    throw new ReviewPhotoModerationError(
-      'One or more review photo uploads were not found.',
-      404
-    );
+    throw new ReviewPhotoModerationError('One or more review photo uploads were not found.', 404);
   }
 
   const readyPhotos = photos as StoredReviewPhotoUploadSession[];
@@ -847,15 +868,14 @@ export async function attachReviewPhotosToReview(options: {
     return (
       photo.storefrontId !== options.storefrontId ||
       photo.profileId !== options.profileId ||
-      (photo.moderationStatus !== 'approved' &&
-        photo.moderationStatus !== 'needs_manual_review')
+      (photo.moderationStatus !== 'approved' && photo.moderationStatus !== 'needs_manual_review')
     );
   });
 
   if (invalidPhoto) {
     throw new ReviewPhotoModerationError(
       'Attached review photos must finish moderation for this storefront and profile before review submission.',
-      409
+      409,
     );
   }
 
@@ -884,20 +904,22 @@ export async function attachReviewPhotosToReview(options: {
         session,
         publicUrl:
           session.moderationStatus === 'approved'
-            ? (await createSignedReadUrl(session.approvedStoragePath)) ?? null
+            ? ((await createSignedReadUrl(session.approvedStoragePath)) ?? null)
             : null,
       };
-    })
+    }),
   );
 
   const approvedPhotos = attachedPhotos.filter(
-    (entry): entry is {
+    (
+      entry,
+    ): entry is {
       session: StoredReviewPhotoUploadSession & { moderationStatus: 'approved' };
       publicUrl: string | null;
-    } => entry.session.moderationStatus === 'approved'
+    } => entry.session.moderationStatus === 'approved',
   );
   const pendingPhotos = attachedPhotos.filter(
-    (entry) => entry.session.moderationStatus === 'needs_manual_review'
+    (entry) => entry.session.moderationStatus === 'needs_manual_review',
   );
   const moderationSummary: ReviewPhotoAttachmentSummary = {
     submittedCount: requestedPhotoIds.length,
@@ -933,7 +955,7 @@ export async function listReviewPhotoModerationQueue(limit = 50) {
       .get();
     records = snapshot.docs
       .map((documentSnapshot) =>
-        normalizeStoredRecord(documentSnapshot.data() as Partial<StoredReviewPhotoUploadSession>)
+        normalizeStoredRecord(documentSnapshot.data() as Partial<StoredReviewPhotoUploadSession>),
       )
       .filter((record) => record.moderationStatus === 'needs_manual_review')
       .slice(0, normalizedLimit);
@@ -956,7 +978,7 @@ export async function listReviewPhotoModerationQueue(limit = 50) {
         record.moderationStatus === 'approved'
           ? await createSignedReadUrl(record.approvedStoragePath)
           : await createSignedReadUrl(record.pendingStoragePath),
-    }))
+    })),
   );
   const queue = settledQueue.flatMap((result, index) => {
     if (result.status === 'fulfilled') {
@@ -964,7 +986,7 @@ export async function listReviewPhotoModerationQueue(limit = 50) {
     }
     console.warn(
       `[reviewPhotoModerationService] failed to build queue entry for record ${records[index]?.id ?? 'unknown'}:`,
-      result.reason
+      result.reason,
     );
     return [];
   });
@@ -977,7 +999,7 @@ export async function reviewReviewPhotoUpload(
   input: {
     decision: ReviewPhotoModerationDecision;
     reviewNotes: string | null;
-  }
+  },
 ) {
   const current = await getStoredPhotoRecord(photoId);
   if (!current) {
@@ -986,12 +1008,16 @@ export async function reviewReviewPhotoUpload(
 
   const nowIso = getNowIso();
   if (input.decision === 'approved') {
-    const promoted = await promoteUploadedPhoto(current, {
-      reason: input.reviewNotes ?? current.moderationReason ?? 'Approved by admin moderation.',
-      categories: current.moderationCategories,
-      score: current.moderationScore,
-      model: current.moderationModel,
-    }, nowIso);
+    const promoted = await promoteUploadedPhoto(
+      current,
+      {
+        reason: input.reviewNotes ?? current.moderationReason ?? 'Approved by admin moderation.',
+        categories: current.moderationCategories,
+        score: current.moderationScore,
+        model: current.moderationModel,
+      },
+      nowIso,
+    );
     return {
       ok: true,
       photoId,
@@ -1045,16 +1071,18 @@ export async function deleteReviewPhotoUploadsForProfile(profileId: string) {
     const snapshot = await collectionRef.where('profileId', '==', profileId).get();
     const deleteResults = await Promise.allSettled(
       snapshot.docs.map(async (documentSnapshot) => {
-        const record = normalizeStoredRecord(documentSnapshot.data() as Partial<StoredReviewPhotoUploadSession>);
+        const record = normalizeStoredRecord(
+          documentSnapshot.data() as Partial<StoredReviewPhotoUploadSession>,
+        );
         await deletePhotoStorage(record);
         await documentSnapshot.ref.delete();
-      })
+      }),
     );
     for (const result of deleteResults) {
       if (result.status === 'rejected') {
         console.warn(
           '[reviewPhotoModerationService] failed to delete a photo upload during profile cleanup:',
-          result.reason
+          result.reason,
         );
       }
     }
@@ -1082,26 +1110,28 @@ export async function discardReviewPhotoUpload(photoId: string) {
 }
 
 export async function getApprovedReviewPhotoUrls(photoIds: string[]) {
-  const settledRecords = await Promise.allSettled(photoIds.map((photoId) => getStoredPhotoRecord(photoId)));
+  const settledRecords = await Promise.allSettled(
+    photoIds.map((photoId) => getStoredPhotoRecord(photoId)),
+  );
   const photoRecords = settledRecords.flatMap((result, index) => {
     if (result.status === 'fulfilled') {
       return result.value ? [result.value] : [];
     }
     console.warn(
       `[reviewPhotoModerationService] failed to fetch photo record ${photoIds[index] ?? 'unknown'}:`,
-      result.reason
+      result.reason,
     );
     return [];
   });
   const approvedRecords = photoRecords.filter(
-    (photo): photo is StoredReviewPhotoUploadSession => photo.moderationStatus === 'approved'
+    (photo): photo is StoredReviewPhotoUploadSession => photo.moderationStatus === 'approved',
   );
 
   const settledUrls = await Promise.allSettled(
     approvedRecords.map(async (photo) => ({
       id: photo.id,
       url: (await createSignedReadUrl(photo.approvedStoragePath)) ?? null,
-    }))
+    })),
   );
   return settledUrls.flatMap((result, index) => {
     if (result.status === 'fulfilled' && result.value.url) {
@@ -1110,7 +1140,7 @@ export async function getApprovedReviewPhotoUrls(photoIds: string[]) {
     if (result.status === 'rejected') {
       console.warn(
         `[reviewPhotoModerationService] failed to generate signed URL for photo ${approvedRecords[index]?.id ?? 'unknown'}:`,
-        result.reason
+        result.reason,
       );
     }
     return [];

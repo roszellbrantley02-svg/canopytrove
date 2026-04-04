@@ -38,7 +38,7 @@ export class AccountCleanupError extends Error {
 
   constructor(
     message: string,
-    public readonly failures: AccountCleanupFailure[]
+    public readonly failures: AccountCleanupFailure[],
   ) {
     super(message);
   }
@@ -46,7 +46,7 @@ export class AccountCleanupError extends Error {
 
 async function runCleanupStep(
   step: string,
-  task: () => Promise<unknown>
+  task: () => Promise<unknown>,
 ): Promise<AccountCleanupFailure | null> {
   try {
     await task();
@@ -61,23 +61,23 @@ async function runCleanupStep(
 
 export async function deleteProfileAccountData(
   profileId: string,
-  dependencies: AccountCleanupDependencies = defaultDependencies
+  dependencies: AccountCleanupDependencies = defaultDependencies,
 ) {
   const preProfileFailures = (
     await Promise.all([
       runCleanupStep('route_state', () => dependencies.deleteRouteState(profileId)),
       runCleanupStep('gamification_state', () => dependencies.deleteGamificationState(profileId)),
       runCleanupStep('favorite_deal_alerts', () =>
-        dependencies.deleteFavoriteDealAlertRecord(profileId)
+        dependencies.deleteFavoriteDealAlertRecord(profileId),
       ),
       runCleanupStep('community_content', () =>
-        dependencies.deleteCommunityContentForProfile(profileId)
+        dependencies.deleteCommunityContentForProfile(profileId),
       ),
       runCleanupStep('owner_license_compliance', () =>
-        dependencies.deleteOwnerLicenseComplianceRecordsForOwner(profileId)
+        dependencies.deleteOwnerLicenseComplianceRecordsForOwner(profileId),
       ),
       runCleanupStep('owner_business_verification', () =>
-        dependencies.deleteOwnerBusinessVerificationRecord(profileId)
+        dependencies.deleteOwnerBusinessVerificationRecord(profileId),
       ),
     ])
   ).filter((failure): failure is AccountCleanupFailure => Boolean(failure));
@@ -85,18 +85,17 @@ export async function deleteProfileAccountData(
   if (preProfileFailures.length) {
     throw new AccountCleanupError(
       'Profile deletion could not complete cleanly before removing the profile record.',
-      preProfileFailures
+      preProfileFailures,
     );
   }
 
   const profileDeletionFailure = await runCleanupStep('profile_record', () =>
-    dependencies.deleteProfile(profileId)
+    dependencies.deleteProfile(profileId),
   );
   if (profileDeletionFailure) {
-    throw new AccountCleanupError(
-      'Profile deletion could not remove the profile record cleanly.',
-      [profileDeletionFailure]
-    );
+    throw new AccountCleanupError('Profile deletion could not remove the profile record cleanly.', [
+      profileDeletionFailure,
+    ]);
   }
 
   return {

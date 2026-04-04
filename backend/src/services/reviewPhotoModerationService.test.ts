@@ -61,7 +61,7 @@ test('promotes a clean photo when moderation approves it', async () => {
         headers: {
           'Content-Type': 'application/json',
         },
-      }
+      },
     )) as unknown as typeof fetch;
 
   try {
@@ -151,7 +151,7 @@ test('keeps approved review photos approved when completion is retried', async (
         headers: {
           'Content-Type': 'application/json',
         },
-      }
+      },
     )) as unknown as typeof fetch;
 
   try {

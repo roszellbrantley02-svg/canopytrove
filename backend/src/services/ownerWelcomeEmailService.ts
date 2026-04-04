@@ -116,7 +116,7 @@ function getCollection() {
 
 async function getRecord(
   ownerUid: string,
-  options?: { email?: string | null; displayName?: string | null; companyName?: string | null }
+  options?: { email?: string | null; displayName?: string | null; companyName?: string | null },
 ) {
   const collectionRef = getCollection();
   if (collectionRef) {
@@ -158,7 +158,9 @@ async function saveRecord(record: OwnerWelcomeEmailRecord) {
   return normalized;
 }
 
-function getWelcomeEmailState(record: OwnerWelcomeEmailRecord): OwnerWelcomeEmailStatus['welcomeEmailState'] {
+function getWelcomeEmailState(
+  record: OwnerWelcomeEmailRecord,
+): OwnerWelcomeEmailStatus['welcomeEmailState'] {
   const deliveryState = getDeliveryStateForResendEventType(record.lastDeliveryEventType);
   if (deliveryState) {
     return deliveryState;
@@ -213,7 +215,7 @@ async function findRecordByProviderMessageId(providerMessageId: string) {
   }
 
   const record = Array.from(ownerWelcomeEmailStore.values()).find(
-    (candidate) => normalizeProviderMessageId(candidate.providerMessageId) === normalizedMessageId
+    (candidate) => normalizeProviderMessageId(candidate.providerMessageId) === normalizedMessageId,
   );
   return record ? normalizeRecord(record) : null;
 }
@@ -276,7 +278,7 @@ export async function sendOwnerWelcomeEmailIfNeeded(input: {
           ...nextRecord,
           updatedAt: now,
           lastWelcomeEmailError: 'not_configured',
-        })
+        }),
       );
     }
 
@@ -286,7 +288,7 @@ export async function sendOwnerWelcomeEmailIfNeeded(input: {
         updatedAt: now,
         lastWelcomeEmailAttemptAt: now,
         lastWelcomeEmailError: result.message,
-      })
+      }),
     );
   }
 
@@ -298,7 +300,7 @@ export async function sendOwnerWelcomeEmailIfNeeded(input: {
       lastWelcomeEmailAttemptAt: now,
       lastWelcomeEmailError: null,
       providerMessageId: result.id,
-    })
+    }),
   );
 }
 
@@ -322,7 +324,7 @@ export async function recordOwnerWelcomeEmailDeliveryEvent(input: {
       lastDeliveryEventType: normalizeDeliveryEventType(input.eventType),
       lastDeliveryEventAt: normalizeIsoDate(input.occurredAt) ?? getNowIso(),
       lastDeliveryEventSummary: normalizeDeliveryEventSummary(input.summary),
-    })
+    }),
   );
 }
 

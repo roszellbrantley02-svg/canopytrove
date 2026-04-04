@@ -24,8 +24,12 @@ export function ErrorRecoveryCard({
           <Text style={styles.icon}>⚠</Text>
         </View>
 
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.message}>{message}</Text>
+        <Text style={styles.title} maxFontSizeMultiplier={1.2}>
+          {title}
+        </Text>
+        <Text style={styles.message} maxFontSizeMultiplier={1.3}>
+          {message}
+        </Text>
 
         <HapticPressable
           onPress={onRetry}
@@ -35,7 +39,9 @@ export function ErrorRecoveryCard({
           accessibilityRole="button"
           accessibilityLabel={retryLabel}
         >
-          <Text style={styles.buttonText}>{retryLabel}</Text>
+          <Text style={styles.buttonText} maxFontSizeMultiplier={1.2}>
+            {retryLabel}
+          </Text>
         </HapticPressable>
       </View>
     </MotionInView>

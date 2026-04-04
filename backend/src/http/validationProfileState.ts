@@ -18,10 +18,7 @@ import {
 } from './validationCore';
 import { RequestValidationError } from './errors';
 
-function parseActiveRouteSession(
-  value: unknown,
-  field: string
-): ActiveRouteSessionApiDocument {
+function parseActiveRouteSession(value: unknown, field: string): ActiveRouteSessionApiDocument {
   const body = asObject(value, field);
   return {
     storefrontId: parseId(body.storefrontId, `${field}.storefrontId`),
@@ -32,7 +29,7 @@ function parseActiveRouteSession(
 
 function parseOptionalActiveRouteSession(
   value: unknown,
-  field: string
+  field: string,
 ): ActiveRouteSessionApiDocument | null | undefined {
   if (value === undefined) {
     return undefined;
@@ -48,7 +45,7 @@ function parseOptionalActiveRouteSession(
 function parsePartialProfileDocument(
   value: unknown,
   field: string,
-  profileId: string
+  profileId: string,
 ): Partial<AppProfileApiDocument> {
   const body = asObject(value, field);
   const nextProfile: Partial<AppProfileApiDocument> = {
@@ -56,11 +53,9 @@ function parsePartialProfileDocument(
   };
 
   if ('displayName' in body) {
-    nextProfile.displayName = parseNullableTrimmedString(
-      body.displayName,
-      `${field}.displayName`,
-      { maxLength: MAX_DISPLAY_NAME_LENGTH }
-    );
+    nextProfile.displayName = parseNullableTrimmedString(body.displayName, `${field}.displayName`, {
+      maxLength: MAX_DISPLAY_NAME_LENGTH,
+    });
   }
 
   if ('createdAt' in body) {
@@ -73,7 +68,7 @@ function parsePartialProfileDocument(
 function parsePartialGamificationState(
   value: unknown,
   field: string,
-  profileId: string
+  profileId: string,
 ): Partial<StorefrontGamificationStateApiDocument> {
   const body = asObject(value, field);
   const nextState: Partial<StorefrontGamificationStateApiDocument> = {
@@ -114,7 +109,7 @@ function parsePartialGamificationState(
     nextState.visitedStorefrontIds = parseOptionalIdArray(
       body.visitedStorefrontIds,
       `${field}.visitedStorefrontIds`,
-      256
+      256,
     );
   }
 
@@ -132,14 +127,14 @@ function parsePartialGamificationState(
   if ('lastReviewDate' in body) {
     nextState.lastReviewDate = parseNullableIsoDateString(
       body.lastReviewDate,
-      `${field}.lastReviewDate`
+      `${field}.lastReviewDate`,
     );
   }
 
   if ('lastActiveDate' in body) {
     nextState.lastActiveDate = parseNullableIsoDateString(
       body.lastActiveDate,
-      `${field}.lastActiveDate`
+      `${field}.lastActiveDate`,
     );
   }
 
@@ -152,13 +147,13 @@ export function parseProfileUpdateBody(value: unknown, profileId: string) {
 
 export function parseRouteStateBody(
   value: unknown,
-  profileId: string
+  profileId: string,
 ): StorefrontRouteStateApiDocument {
   const body = asObject(value, 'body');
 
   const activeRouteSession = parseOptionalActiveRouteSession(
     body.activeRouteSession,
-    'body.activeRouteSession'
+    'body.activeRouteSession',
   );
 
   const routeSessionsValue = body.routeSessions;
@@ -169,7 +164,7 @@ export function parseRouteStateBody(
     }
 
     routeSessions = routeSessionsValue.map((session, index) =>
-      parseActiveRouteSession(session, `body.routeSessions[${index}]`)
+      parseActiveRouteSession(session, `body.routeSessions[${index}]`),
     );
 
     if (routeSessions.length > 12) {
@@ -198,9 +193,7 @@ export function parseProfileStateBody(value: unknown, profileId: string) {
     profile: body.profile
       ? parsePartialProfileDocument(body.profile, 'body.profile', profileId)
       : undefined,
-    routeState: body.routeState
-      ? parseRouteStateBody(body.routeState, profileId)
-      : undefined,
+    routeState: body.routeState ? parseRouteStateBody(body.routeState, profileId) : undefined,
     gamificationState: body.gamificationState
       ? parsePartialGamificationState(body.gamificationState, 'body.gamificationState', profileId)
       : undefined,

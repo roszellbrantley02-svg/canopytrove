@@ -35,7 +35,9 @@ function getFavoriteDealAlertCollection() {
   return getOptionalFirestoreCollection<FavoriteDealAlertRecord>(FAVORITE_DEAL_ALERTS_COLLECTION);
 }
 
-function normalizeFavoriteDealAlertRecord(record: FavoriteDealAlertRecord): FavoriteDealAlertRecord {
+function normalizeFavoriteDealAlertRecord(
+  record: FavoriteDealAlertRecord,
+): FavoriteDealAlertRecord {
   return {
     profileId: record.profileId,
     activeDealFingerprintsByStorefrontId:
@@ -48,9 +50,9 @@ function normalizeFavoriteDealAlertRecord(record: FavoriteDealAlertRecord): Favo
                   typeof storefrontId === 'string' &&
                   typeof fingerprint === 'string' &&
                   storefrontId.trim() &&
-                  fingerprint.trim()
+                  fingerprint.trim(),
               )
-              .slice(0, 64)
+              .slice(0, 64),
           )
         : {},
     devicePushToken:
@@ -112,19 +114,14 @@ export async function syncFavoriteDealAlerts(options: {
   devicePushToken?: string;
 }) {
   const dedupedSavedStorefrontIds = Array.from(
-    new Set(
-      options.savedStorefrontIds
-        .map((storefrontId) => storefrontId.trim())
-        .filter(Boolean)
-    )
+    new Set(options.savedStorefrontIds.map((storefrontId) => storefrontId.trim()).filter(Boolean)),
   ).slice(0, 64);
 
   const [previousRecordResult, savedSummariesResult] = await Promise.allSettled([
     getFavoriteDealAlertRecord(options.profileId),
     dedupedSavedStorefrontIds.length ? getStorefrontSummariesByIds(dedupedSavedStorefrontIds) : [],
   ]);
-  const storage =
-    backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory';
+  const storage = backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory';
   const previousRecord =
     previousRecordResult.status === 'fulfilled'
       ? previousRecordResult.value
@@ -132,13 +129,13 @@ export async function syncFavoriteDealAlerts(options: {
   if (previousRecordResult.status === 'rejected') {
     console.warn(
       `[favoriteDealAlertService] failed to load previous alert state for ${options.profileId}:`,
-      previousRecordResult.reason
+      previousRecordResult.reason,
     );
   }
   if (savedSummariesResult.status !== 'fulfilled') {
     console.warn(
       `[favoriteDealAlertService] failed to load saved storefront summaries for ${options.profileId}:`,
-      savedSummariesResult.reason
+      savedSummariesResult.reason,
     );
     return {
       notifications: [],
@@ -199,12 +196,11 @@ export async function syncFavoriteDealAlerts(options: {
           kind: 'favorite_store_deal',
           storefrontId: notification.storefrontId,
         },
-      }))
+      })),
     );
 
     const deviceNotRegistered = tickets.some(
-      (ticket) =>
-        ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered'
+      (ticket) => ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered',
     );
 
     if (deviceNotRegistered) {
@@ -238,13 +234,10 @@ export async function dispatchFavoriteDealAlertsForAllProfiles() {
 
       return {
         profileId: profile.id,
-        notifiedCount:
-          result.deliveryMode === 'none'
-            ? 0
-            : result.notifications.length,
+        notifiedCount: result.deliveryMode === 'none' ? 0 : result.notifications.length,
         deliveryMode: result.deliveryMode,
       };
-    })
+    }),
   );
   const results = settledResults.flatMap((result, index) => {
     if (result.status === 'fulfilled') {
@@ -253,7 +246,7 @@ export async function dispatchFavoriteDealAlertsForAllProfiles() {
 
     console.warn(
       `[favoriteDealAlertService] failed to dispatch alerts for profile ${profiles[index]?.id ?? 'unknown'}:`,
-      result.reason
+      result.reason,
     );
     return [];
   });
@@ -287,11 +280,11 @@ export async function dispatchFavoriteDealAlertsForStorefront(storefrontId: stri
           result.deliveryMode === 'none'
             ? 0
             : result.notifications.filter(
-                (notification) => notification.storefrontId === storefrontId
+                (notification) => notification.storefrontId === storefrontId,
               ).length,
         deliveryMode: result.deliveryMode,
       };
-    })
+    }),
   );
   const matchingProfiles = settledMatchingProfiles.flatMap((result, index) => {
     if (result.status === 'fulfilled') {
@@ -300,7 +293,7 @@ export async function dispatchFavoriteDealAlertsForStorefront(storefrontId: stri
 
     console.warn(
       `[favoriteDealAlertService] failed to dispatch storefront alerts for profile ${profiles[index]?.id ?? 'unknown'}:`,
-      result.reason
+      result.reason,
     );
     return [];
   });

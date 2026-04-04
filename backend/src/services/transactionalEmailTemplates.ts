@@ -37,7 +37,7 @@ function renderEmailShell(input: EmailShellInput) {
   const paragraphHtml = input.paragraphs
     .map(
       (paragraph) =>
-        `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#a9b9b4;">${escapeHtml(paragraph)}</p>`
+        `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#a9b9b4;">${escapeHtml(paragraph)}</p>`,
     )
     .join('');
   const highlightsHtml =
@@ -50,7 +50,7 @@ function renderEmailShell(input: EmailShellInput) {
           ${input.highlights
             .map(
               (highlight) =>
-                `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#d8e5e0;">&bull; ${escapeHtml(highlight)}</p>`
+                `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#d8e5e0;">&bull; ${escapeHtml(highlight)}</p>`,
             )
             .join('')}
         </div>
@@ -199,8 +199,7 @@ export function buildOwnerWelcomeEmail(input: {
     },
     signoff:
       'If you want help with verification, deal setup, photos, or getting your storefront ready, reply directly and we will help.',
-    footer:
-      'This email was sent because you created or accessed a Canopy Trove owner account.',
+    footer: 'This email was sent because you created or accessed a Canopy Trove owner account.',
   };
 
   return {

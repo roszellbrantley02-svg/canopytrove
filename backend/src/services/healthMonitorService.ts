@@ -157,7 +157,11 @@ function delay(ms: number) {
   });
 }
 
-async function withTimeoutOrThrow<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+async function withTimeoutOrThrow<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  label: string,
+): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   const timeoutPromise = new Promise<never>((_resolve, reject) => {
@@ -229,7 +233,7 @@ function roundCoverageRatio(numerator: number, denominator: number) {
 
 function toStorefrontSummaryApiDocument(
   storefrontId: string,
-  document: StorefrontSummaryDocument
+  document: StorefrontSummaryDocument,
 ): StorefrontSummaryApiDocument {
   return {
     id: storefrontId,
@@ -310,7 +314,10 @@ export function assessStorefrontDiscoveryFreshness(input: {
     } satisfies StorefrontDiscoveryFreshnessAssessment;
   }
 
-  const staleThresholdHours = Math.max(input.intervalHours * STOREFRONT_DISCOVERY_STALE_MULTIPLIER, 1);
+  const staleThresholdHours = Math.max(
+    input.intervalHours * STOREFRONT_DISCOVERY_STALE_MULTIPLIER,
+    1,
+  );
   if (ageHours > staleThresholdHours) {
     return {
       ok: false,
@@ -353,7 +360,8 @@ export function assessStorefrontGooglePlacesReadiness(input: {
     return {
       ok: false,
       state: 'unknown',
-      detail: 'No published storefront summaries were available for a Google Places readiness sample.',
+      detail:
+        'No published storefront summaries were available for a Google Places readiness sample.',
     } satisfies StorefrontGooglePlacesAssessment;
   }
 
@@ -371,15 +379,14 @@ export function assessStorefrontGooglePlacesReadiness(input: {
   return {
     ok: false,
     state: 'degraded',
-    detail:
-      input.probeAttempted
-        ? `Only ${(input.placeIdCoverage * 100).toFixed(0)}% of sampled storefront summaries have place IDs, and no live Google Places probe succeeded. Summary open/closed state may be stale.`
-        : `Only ${(input.placeIdCoverage * 100).toFixed(0)}% of sampled storefront summaries have place IDs. Summary open/closed state may be stale.`,
+    detail: input.probeAttempted
+      ? `Only ${(input.placeIdCoverage * 100).toFixed(0)}% of sampled storefront summaries have place IDs, and no live Google Places probe succeeded. Summary open/closed state may be stale.`
+      : `Only ${(input.placeIdCoverage * 100).toFixed(0)}% of sampled storefront summaries have place IDs. Summary open/closed state may be stale.`,
   } satisfies StorefrontGooglePlacesAssessment;
 }
 
 export function classifyStorefrontReadinessState(
-  checks: Array<Pick<StorefrontReadinessCheck, 'ok' | 'severity'>>
+  checks: Array<Pick<StorefrontReadinessCheck, 'ok' | 'severity'>>,
 ): StorefrontReadinessState {
   if (checks.some((check) => check.severity === 'required' && !check.ok)) {
     return 'not_ready';
@@ -393,25 +400,25 @@ export function classifyStorefrontReadinessState(
 }
 
 export async function getStorefrontReadinessStatus(
-  options?: StorefrontReadinessOptions
+  options?: StorefrontReadinessOptions,
 ): Promise<StorefrontReadinessStatus> {
   const sampleSize = Math.max(options?.sampleSize ?? STOREFRONT_READINESS_SAMPLE_SIZE, 1);
   const minimumSummaryCount = Math.max(
     options?.minimumSummaryCount ?? STOREFRONT_READINESS_MIN_SUMMARY_COUNT,
-    1
+    1,
   );
   const timeoutMs = Math.max(options?.timeoutMs ?? STOREFRONT_READINESS_TIMEOUT_MS, 250);
   const probeGooglePlaces = options?.probeGooglePlaces !== false;
   const googleProbeCount = Math.max(
     options?.googleProbeCount ?? STOREFRONT_READINESS_GOOGLE_PROBE_COUNT,
-    0
+    0,
   );
   const checks: StorefrontReadinessCheck[] = [];
   const pushCheck = (
     name: string,
     ok: boolean,
     detail: string,
-    severity: StorefrontReadinessSeverity = 'required'
+    severity: StorefrontReadinessSeverity = 'required',
   ) => {
     checks.push({
       name,
@@ -422,7 +429,7 @@ export async function getStorefrontReadinessStatus(
   };
 
   const summaryCollection = getOptionalFirestoreCollection<StorefrontSummaryDocument>(
-    STOREFRONT_SUMMARY_COLLECTION
+    STOREFRONT_SUMMARY_COLLECTION,
   );
   let summaryDocuments: Array<{ id: string; data: StorefrontSummaryDocument }> = [];
   let summaryError: string | null = null;
@@ -432,14 +439,15 @@ export async function getStorefrontReadinessStatus(
       const snapshot = await withTimeoutOrThrow(
         summaryCollection.limit(sampleSize).get(),
         timeoutMs,
-        'Published storefront summary sample'
+        'Published storefront summary sample',
       );
       summaryDocuments = snapshot.docs.map((documentSnapshot) => ({
         id: documentSnapshot.id,
         data: documentSnapshot.data(),
       }));
     } catch (error) {
-      summaryError = error instanceof Error ? error.message : 'Unable to read storefront summaries.';
+      summaryError =
+        error instanceof Error ? error.message : 'Unable to read storefront summaries.';
     }
   } else {
     summaryError =
@@ -452,9 +460,13 @@ export async function getStorefrontReadinessStatus(
   const sampleIds = summaryDocuments.map((item) => item.id);
   const placeIdCount = summaryDocuments.filter((item) => Boolean(item.data.placeId?.trim())).length;
   const menuUrlCount = summaryDocuments.filter((item) => Boolean(item.data.menuUrl?.trim())).length;
-  const thumbnailCount = summaryDocuments.filter((item) => Boolean(item.data.thumbnailUrl?.trim())).length;
+  const thumbnailCount = summaryDocuments.filter((item) =>
+    Boolean(item.data.thumbnailUrl?.trim()),
+  ).length;
   const openNowTrueCount = summaryDocuments.filter((item) => item.data.openNow === true).length;
-  const zeroReviewCountCount = summaryDocuments.filter((item) => item.data.reviewCount === 0).length;
+  const zeroReviewCountCount = summaryDocuments.filter(
+    (item) => item.data.reviewCount === 0,
+  ).length;
   const placeIdCoverage = roundCoverageRatio(placeIdCount, availableCount);
   const menuUrlCoverage = roundCoverageRatio(menuUrlCount, availableCount);
   const thumbnailCoverage = roundCoverageRatio(thumbnailCount, availableCount);
@@ -464,7 +476,7 @@ export async function getStorefrontReadinessStatus(
     backendStorefrontSourceStatus.activeMode === 'firestore',
     backendStorefrontSourceStatus.activeMode === 'firestore'
       ? 'Firestore is the active storefront backend source.'
-      : `Storefront backend is currently serving ${backendStorefrontSourceStatus.activeMode} data. ${backendStorefrontSourceStatus.fallbackReason ?? 'Check backend Firebase config.'}`
+      : `Storefront backend is currently serving ${backendStorefrontSourceStatus.activeMode} data. ${backendStorefrontSourceStatus.fallbackReason ?? 'Check backend Firebase config.'}`,
   );
   pushCheck(
     'Published storefront summary availability',
@@ -473,7 +485,7 @@ export async function getStorefrontReadinessStatus(
       ? `Published storefront summary sample returned ${availableCount} document${availableCount === 1 ? '' : 's'}.`
       : summaryError
         ? summaryError
-        : `Only ${availableCount} published storefront summary document${availableCount === 1 ? '' : 's'} were available; need at least ${minimumSummaryCount}.`
+        : `Only ${availableCount} published storefront summary document${availableCount === 1 ? '' : 's'} were available; need at least ${minimumSummaryCount}.`,
   );
 
   let discoveryConfigured = false;
@@ -491,7 +503,7 @@ export async function getStorefrontReadinessStatus(
     const discoveryStatus = await withTimeoutOrThrow(
       getStorefrontDiscoveryStatus(),
       timeoutMs,
-      'Storefront discovery status'
+      'Storefront discovery status',
     );
     discoveryConfigured = discoveryStatus.configured;
     discoverySchedulerEnabled = discoveryStatus.schedulerEnabled;
@@ -499,12 +511,15 @@ export async function getStorefrontReadinessStatus(
     discoveryLastRunAt = discoveryStatus.state.lastRunAt;
     discoveryLastSuccessfulRunAt = discoveryStatus.state.lastSuccessfulRunAt;
     discoveryNextRunAt = discoveryStatus.nextRunAt;
-    discoveryLatestRunStatus = discoveryStatus.latestRun?.status ?? discoveryStatus.state.lastRunStatus;
+    discoveryLatestRunStatus =
+      discoveryStatus.latestRun?.status ?? discoveryStatus.state.lastRunStatus;
     discoveryPublishedCount = discoveryStatus.state.publishedCount;
     discoveryReadyForPublishCount = discoveryStatus.state.readyForPublishCount;
   } catch (error) {
     discoveryError =
-      error instanceof Error ? error.message : 'Storefront discovery readiness could not be loaded.';
+      error instanceof Error
+        ? error.message
+        : 'Storefront discovery readiness could not be loaded.';
   }
 
   const discoveryFreshness = assessStorefrontDiscoveryFreshness({
@@ -518,13 +533,18 @@ export async function getStorefrontReadinessStatus(
     'Storefront discovery freshness',
     discoveryFreshness.ok,
     discoveryError ?? discoveryFreshness.detail,
-    'recommended'
+    'recommended',
   );
 
   let probeAttempted = false;
   let successfulProbeCount = 0;
   const googleConfigured = hasGooglePlacesConfig();
-  if (googleConfigured && probeGooglePlaces && summaryDocuments.length > 0 && googleProbeCount > 0) {
+  if (
+    googleConfigured &&
+    probeGooglePlaces &&
+    summaryDocuments.length > 0 &&
+    googleProbeCount > 0
+  ) {
     const probeCandidates = summaryDocuments
       .slice(0, Math.min(summaryDocuments.length, googleProbeCount))
       .map(({ id, data }) => toStorefrontSummaryApiDocument(id, data));
@@ -534,12 +554,12 @@ export async function getStorefrontReadinessStatus(
         withTimeoutOrThrow(
           getGooglePlacesEnrichment(summary),
           timeoutMs,
-          `Google Places readiness probe for ${summary.id}`
-        )
-      )
+          `Google Places readiness probe for ${summary.id}`,
+        ),
+      ),
     );
     successfulProbeCount = probeResults.filter(
-      (result) => result.status === 'fulfilled' && Boolean(result.value)
+      (result) => result.status === 'fulfilled' && Boolean(result.value),
     ).length;
   }
 
@@ -554,7 +574,7 @@ export async function getStorefrontReadinessStatus(
     'Storefront Google Places enrichment',
     googlePlacesAssessment.ok,
     googlePlacesAssessment.detail,
-    'recommended'
+    'recommended',
   );
 
   const state = classifyStorefrontReadinessState(checks);
@@ -691,7 +711,7 @@ function formatAlertWebhookText(payload: Record<string, unknown>) {
 
 function createAlertWebhookRequest(
   webhookUrl: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
 ): { headers: Record<string, string>; body: string } {
   let host = '';
   try {
@@ -762,7 +782,7 @@ function createFailureFingerprint(targets: RuntimeMonitoringTargetStatus[]) {
 
 export function getUpdatedTargetFailureCounts(
   previousCounts: Record<string, number>,
-  targets: RuntimeMonitoringTargetStatus[]
+  targets: RuntimeMonitoringTargetStatus[],
 ) {
   const nextCounts: Record<string, number> = {};
 
@@ -775,7 +795,7 @@ export function getUpdatedTargetFailureCounts(
 
 export function applyFailureConfirmationThreshold(
   targets: RuntimeMonitoringTargetStatus[],
-  targetFailureCounts: Record<string, number>
+  targetFailureCounts: Record<string, number>,
 ) {
   const requiredSweeps = Math.max(serverConfig.opsHealthcheckFailureConfirmationSweeps, 1);
 
@@ -802,7 +822,7 @@ function getApiTargets(targets: RuntimeMonitoringTargetStatus[]) {
 }
 
 export function classifyApiTargetHealthState(
-  targets: RuntimeMonitoringTargetStatus[]
+  targets: RuntimeMonitoringTargetStatus[],
 ): ApiTargetHealthAssessment {
   const apiTargets = getApiTargets(targets);
   const failingTargets = apiTargets.filter((target) => !target.ok);
@@ -856,7 +876,7 @@ export function getAlertingFailureTargets(targets: RuntimeMonitoringTargetStatus
 
 function getApiTransitionMessage(
   previousAssessment: ApiTargetHealthAssessment,
-  nextAssessment: ApiTargetHealthAssessment
+  nextAssessment: ApiTargetHealthAssessment,
 ) {
   if (nextAssessment.state === 'down') {
     return {
@@ -894,7 +914,7 @@ function getApiTransitionMessage(
 
 function createFailedTargetStatus(
   target: ConfiguredMonitoringTarget,
-  error: unknown
+  error: unknown,
 ): RuntimeMonitoringTargetStatus {
   return {
     id: target.id,
@@ -911,14 +931,17 @@ function createFailedTargetStatus(
 
 function shouldSendFailureAlert(
   previousState: PersistedMonitoringState,
-  nextAlertingTargets: RuntimeMonitoringTargetStatus[]
+  nextAlertingTargets: RuntimeMonitoringTargetStatus[],
 ) {
   if (!serverConfig.opsAlertWebhookUrl || nextAlertingTargets.length === 0) {
     return false;
   }
 
   const nextFingerprint = createFailureFingerprint(nextAlertingTargets);
-  if (!previousState.lastAlertFingerprint || previousState.lastAlertFingerprint !== nextFingerprint) {
+  if (
+    !previousState.lastAlertFingerprint ||
+    previousState.lastAlertFingerprint !== nextFingerprint
+  ) {
     return true;
   }
 
@@ -932,7 +955,7 @@ function shouldSendFailureAlert(
 
 function shouldSendRecoveryAlert(
   previousState: PersistedMonitoringState,
-  nextAlertingTargets: RuntimeMonitoringTargetStatus[]
+  nextAlertingTargets: RuntimeMonitoringTargetStatus[],
 ) {
   return (
     Boolean(serverConfig.opsAlertWebhookUrl) &&
@@ -942,7 +965,7 @@ function shouldSendRecoveryAlert(
 }
 
 async function evaluateTargetOnce(
-  target: ConfiguredMonitoringTarget
+  target: ConfiguredMonitoringTarget,
 ): Promise<RuntimeMonitoringTargetStatus> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
@@ -1008,7 +1031,9 @@ async function evaluateTargetOnce(
   }
 }
 
-async function evaluateTarget(target: ConfiguredMonitoringTarget): Promise<RuntimeMonitoringTargetStatus> {
+async function evaluateTarget(
+  target: ConfiguredMonitoringTarget,
+): Promise<RuntimeMonitoringTargetStatus> {
   const retryCount = Math.max(serverConfig.opsHealthcheckFailureRetryCount, 0);
   const retryDelayMs = Math.max(serverConfig.opsHealthcheckFailureRetryDelayMs, 0);
   let lastResult = await evaluateTargetOnce(target);
@@ -1027,13 +1052,16 @@ async function evaluateTarget(target: ConfiguredMonitoringTarget): Promise<Runti
 async function emitTransitionIncidents(
   previousState: PersistedMonitoringState,
   nextTargets: RuntimeMonitoringTargetStatus[],
-  nextTargetFailureCounts: Record<string, number>
+  nextTargetFailureCounts: Record<string, number>,
 ) {
   const previousTargets = applyFailureConfirmationThreshold(
     previousState.targets,
-    previousState.targetFailureCounts
+    previousState.targetFailureCounts,
   );
-  const confirmedNextTargets = applyFailureConfirmationThreshold(nextTargets, nextTargetFailureCounts);
+  const confirmedNextTargets = applyFailureConfirmationThreshold(
+    nextTargets,
+    nextTargetFailureCounts,
+  );
   const previousTargetsById = new Map(previousTargets.map((target) => [target.id, target]));
   const previousApiAssessment = classifyApiTargetHealthState(previousTargets);
   const nextApiAssessment = classifyApiTargetHealthState(confirmedNextTargets);
@@ -1080,13 +1108,13 @@ async function emitTransitionIncidents(
           },
         });
       }
-    })
+    }),
   );
   incidentResults.forEach((result, index) => {
     if (result.status === 'rejected') {
       console.warn(
         `[healthMonitorService] failed to emit transition incident for ${confirmedNextTargets[index]?.id ?? 'unknown'}:`,
-        result.reason
+        result.reason,
       );
     }
   });
@@ -1149,7 +1177,7 @@ export async function runRuntimeHealthSweep(options?: { reason?: string }) {
     }
 
     const settledTargetStatuses = await Promise.allSettled(
-      targets.map((target) => evaluateTarget(target))
+      targets.map((target) => evaluateTarget(target)),
     );
     const targetStatuses = settledTargetStatuses.map((result, index) => {
       if (result.status === 'fulfilled') {
@@ -1159,17 +1187,17 @@ export async function runRuntimeHealthSweep(options?: { reason?: string }) {
       const target = targets[index];
       console.warn(
         `[healthMonitorService] failed to evaluate target ${target?.id ?? 'unknown'}:`,
-        result.reason
+        result.reason,
       );
       return createFailedTargetStatus(target, result.reason);
     });
     const nextTargetFailureCounts = getUpdatedTargetFailureCounts(
       previousState.targetFailureCounts,
-      targetStatuses
+      targetStatuses,
     );
     const confirmedTargetStatuses = applyFailureConfirmationThreshold(
       targetStatuses,
-      nextTargetFailureCounts
+      nextTargetFailureCounts,
     );
     const failingTargets = confirmedTargetStatuses.filter((target) => !target.ok);
     const alertingTargets = getAlertingFailureTargets(confirmedTargetStatuses);
@@ -1217,9 +1245,9 @@ export async function runRuntimeHealthSweep(options?: { reason?: string }) {
         data: {
           alertType: 'health_failure',
           failingTargetCount: String(alertingTargets.length),
-        apiState: apiAssessment.state,
-      },
-      fingerprint: `runtime-health-failure:${fingerprint}`,
+          apiState: apiAssessment.state,
+        },
+        fingerprint: `runtime-health-failure:${fingerprint}`,
       });
       if (didSendAlert) {
         nextState = {

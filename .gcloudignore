@@ -1,0 +1,37 @@
+# Cloud Run deploy: only backend/ and shared src/ are needed.
+# .dockerignore further constrains the Docker build context.
+
+.git
+.expo
+.firebase
+.netlify
+
+# Frontend native builds (not needed for backend deploy)
+android
+ios
+
+# Frontend node_modules (backend has its own)
+node_modules
+
+# Backend build artifacts (rebuilt in Docker)
+backend/node_modules
+backend/dist
+
+# Design & asset dumps
+_design_extract
+_design_extract_2
+build-artifacts
+artifact-dumps
+artifact-extract
+recovery-artifacts
+assets
+public-release-pages
+
+# Env files (secrets come from Secret Manager)
+.env
+.env.*
+backend/.env
+backend/.env.*
+
+# Logs
+*.log

@@ -7,6 +7,7 @@ import {
   OwnerStorefrontPromotionDocument,
 } from '../../../src/types/ownerPortal';
 import { normalizeOwnerPromotionPlacementSurfaces } from '../../../src/utils/ownerPromotionPlacement';
+import { normalizeOwnerHours } from './ownerHoursService';
 
 export function getNowIso() {
   return new Date().toISOString();
@@ -23,15 +24,17 @@ export function parseIsoDate(value: string) {
 
 export function isPromotionActive(
   promotion: OwnerStorefrontPromotionDocument,
-  nowIso = getNowIso()
+  nowIso = getNowIso(),
 ) {
-  return parseIsoDate(promotion.startsAt) <= parseIsoDate(nowIso) &&
-    parseIsoDate(promotion.endsAt) > parseIsoDate(nowIso);
+  return (
+    parseIsoDate(promotion.startsAt) <= parseIsoDate(nowIso) &&
+    parseIsoDate(promotion.endsAt) > parseIsoDate(nowIso)
+  );
 }
 
 export function derivePromotionStatus(
   promotion: OwnerStorefrontPromotionDocument,
-  nowIso = getNowIso()
+  nowIso = getNowIso(),
 ): OwnerStorefrontPromotionDocument['status'] {
   if (parseIsoDate(promotion.endsAt) <= parseIsoDate(nowIso)) {
     return 'expired';
@@ -49,13 +52,10 @@ export function derivePromotionStatus(
 }
 
 export function normalizeBadges(badges: string[] | undefined, maxItems = 5) {
-  return Array.from(
-    new Set(
-      (badges ?? [])
-        .map((badge) => badge.trim())
-        .filter(Boolean)
-    )
-  ).slice(0, maxItems);
+  return Array.from(new Set((badges ?? []).map((badge) => badge.trim()).filter(Boolean))).slice(
+    0,
+    maxItems,
+  );
 }
 
 function isHttpUrl(value: string) {
@@ -68,10 +68,12 @@ function isHttpUrl(value: string) {
 }
 
 function isStorefrontMediaPath(value: string) {
-  return value.startsWith('dispensary-media/') &&
+  return (
+    value.startsWith('dispensary-media/') &&
     !value.includes('..') &&
     !value.includes('?') &&
-    !value.startsWith('/');
+    !value.startsWith('/')
+  );
 }
 
 export function normalizeOptionalHttpUrl(value: string | null | undefined) {
@@ -110,23 +112,21 @@ export function normalizeStorefrontMediaPathList(values: string[] | undefined | 
     new Set(
       (values ?? [])
         .map((value) => value.trim())
-        .filter((value) => value && isStorefrontMediaPath(value))
-    )
+        .filter((value) => value && isStorefrontMediaPath(value)),
+    ),
   ).slice(0, 8);
 }
 
 export function normalizeHttpUrlList(values: string[] | undefined | null) {
   return Array.from(
     new Set(
-      (values ?? [])
-        .map((value) => value.trim())
-        .filter((value) => value && isHttpUrl(value))
-    )
+      (values ?? []).map((value) => value.trim()).filter((value) => value && isHttpUrl(value)),
+    ),
   ).slice(0, 8);
 }
 
 export function collectProfileAttachmentUrls(
-  profileTools: OwnerStorefrontProfileToolsDocument | null
+  profileTools: OwnerStorefrontProfileToolsDocument | null,
 ) {
   if (!profileTools) {
     return [];
@@ -136,7 +136,7 @@ export function collectProfileAttachmentUrls(
     new Set([
       ...normalizeHttpUrlList(profileTools.cardPhotoUrl ? [profileTools.cardPhotoUrl] : []),
       ...normalizeHttpUrlList(profileTools.featuredPhotoUrls),
-    ])
+    ]),
   );
 }
 
@@ -171,7 +171,7 @@ export function sanitizeProfileToolsRecord(record: OwnerStorefrontProfileToolsDo
 export function normalizeProfileTools(
   storefrontId: string,
   ownerUid: string,
-  input: OwnerPortalProfileToolsInput & Partial<OwnerStorefrontProfileToolsDocument>
+  input: OwnerPortalProfileToolsInput & Partial<OwnerStorefrontProfileToolsDocument>,
 ): OwnerStorefrontProfileToolsDocument {
   const cardPhotoPath = normalizeOptionalStorefrontMediaPath(input.cardPhotoPath);
   return {
@@ -194,13 +194,14 @@ export function normalizeProfileTools(
       typeof input.cardSummary === 'string' && input.cardSummary.trim()
         ? input.cardSummary.trim()
         : null,
+    ownerHours: normalizeOwnerHours(input.ownerHours),
     updatedAt:
       typeof input.updatedAt === 'string' && input.updatedAt.trim() ? input.updatedAt : getNowIso(),
   };
 }
 
 function normalizePlacementScope(
-  value: OwnerPromotionPlacementScope | null | undefined
+  value: OwnerPromotionPlacementScope | null | undefined,
 ): OwnerPromotionPlacementScope {
   return value === 'statewide' ? 'statewide' : 'storefront_area';
 }
@@ -208,7 +209,7 @@ function normalizePlacementScope(
 export function normalizePromotion(
   ownerUid: string,
   storefrontId: string,
-  input: OwnerPortalPromotionInput & Partial<OwnerStorefrontPromotionDocument>
+  input: OwnerPortalPromotionInput & Partial<OwnerStorefrontPromotionDocument>,
 ): OwnerStorefrontPromotionDocument {
   const now = getNowIso();
   const normalized: OwnerStorefrontPromotionDocument = {

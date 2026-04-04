@@ -85,7 +85,7 @@ export function BrowseScreen() {
 
   const handleToggleHotDeals = React.useCallback(() => {
     if (!isMemberAuthenticated) {
-      navigation.navigate('HotDeals');
+      navigation.navigate('Tabs', { screen: 'HotDeals' });
       return;
     }
 

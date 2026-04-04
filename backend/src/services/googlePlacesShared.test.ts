@@ -8,10 +8,10 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  const { clearGooglePlacesCaches, setGooglePlacesDbForTests } = await import('./googlePlacesShared');
-  const {
-    clearFirestoreStorefrontSourceCache,
-  } = await import('../sources/firestoreStorefrontSource');
+  const { clearGooglePlacesCaches, setGooglePlacesDbForTests } =
+    await import('./googlePlacesShared');
+  const { clearFirestoreStorefrontSourceCache } =
+    await import('../sources/firestoreStorefrontSource');
   setGooglePlacesDbForTests(null);
   clearGooglePlacesCaches();
   clearFirestoreStorefrontSourceCache();

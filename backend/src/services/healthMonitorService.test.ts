@@ -12,7 +12,7 @@ import {
 } from './healthMonitorService';
 
 function createTarget(
-  overrides: Partial<RuntimeMonitoringTargetStatus>
+  overrides: Partial<RuntimeMonitoringTargetStatus>,
 ): RuntimeMonitoringTargetStatus {
   return {
     id: overrides.id ?? 'target-1',
@@ -20,14 +20,12 @@ function createTarget(
     url: overrides.url ?? 'https://example.com/health',
     kind: overrides.kind ?? 'api',
     ok: overrides.ok ?? true,
-    statusCode:
-      Object.prototype.hasOwnProperty.call(overrides, 'statusCode')
-        ? overrides.statusCode ?? null
-        : 200,
-    latencyMs:
-      Object.prototype.hasOwnProperty.call(overrides, 'latencyMs')
-        ? overrides.latencyMs ?? null
-        : 120,
+    statusCode: Object.prototype.hasOwnProperty.call(overrides, 'statusCode')
+      ? (overrides.statusCode ?? null)
+      : 200,
+    latencyMs: Object.prototype.hasOwnProperty.call(overrides, 'latencyMs')
+      ? (overrides.latencyMs ?? null)
+      : 120,
     checkedAt: overrides.checkedAt ?? new Date().toISOString(),
     message: overrides.message ?? (overrides.ok === false ? 'Unavailable.' : 'Healthy.'),
   };
@@ -110,7 +108,7 @@ test('getAlertingFailureTargets suppresses alerts for partial API degradation bu
 
   assert.deepEqual(
     getAlertingFailureTargets(siteFailureTargets).map((target) => target.id),
-    ['site-homepage']
+    ['site-homepage'],
   );
 });
 
@@ -132,7 +130,7 @@ test('getUpdatedTargetFailureCounts increments failing targets and resets recove
         kind: 'website',
         ok: true,
       }),
-    ]
+    ],
   );
 
   assert.deepEqual(result, {
@@ -150,17 +148,15 @@ test('applyFailureConfirmationThreshold suppresses a first-time timeout until it
     message: 'Request timed out.',
   });
 
-  const firstSweepResult = applyFailureConfirmationThreshold(
-    [firstSweepFailure],
-    { 'api-health-public': 1 }
-  );
+  const firstSweepResult = applyFailureConfirmationThreshold([firstSweepFailure], {
+    'api-health-public': 1,
+  });
   assert.equal(firstSweepResult[0].ok, true);
   assert.match(firstSweepResult[0].message, /Pending confirmation/);
 
-  const secondSweepResult = applyFailureConfirmationThreshold(
-    [firstSweepFailure],
-    { 'api-health-public': 2 }
-  );
+  const secondSweepResult = applyFailureConfirmationThreshold([firstSweepFailure], {
+    'api-health-public': 2,
+  });
   assert.equal(secondSweepResult[0].ok, false);
   assert.equal(secondSweepResult[0].message, 'Request timed out.');
 });

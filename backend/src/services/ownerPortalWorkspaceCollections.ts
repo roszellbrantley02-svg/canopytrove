@@ -73,40 +73,30 @@ export function getOwnerClaimCollection(): CollectionReference<OwnerClaimRecord>
   return getOptionalFirestoreCollection<OwnerClaimRecord>(DISPENSARY_CLAIMS_COLLECTION);
 }
 
-export function getOwnerStorefrontProfileToolsCollection():
-  | CollectionReference<OwnerStorefrontProfileToolsDocument>
-  | null {
+export function getOwnerStorefrontProfileToolsCollection(): CollectionReference<OwnerStorefrontProfileToolsDocument> | null {
   return getOptionalFirestoreCollection<OwnerStorefrontProfileToolsDocument>(
-    OWNER_STOREFRONT_PROFILE_TOOLS_COLLECTION
+    OWNER_STOREFRONT_PROFILE_TOOLS_COLLECTION,
   );
 }
 
-export function getOwnerStorefrontPromotionsCollection():
-  | CollectionReference<OwnerStorefrontPromotionDocument>
-  | null {
+export function getOwnerStorefrontPromotionsCollection(): CollectionReference<OwnerStorefrontPromotionDocument> | null {
   return getOptionalFirestoreCollection<OwnerStorefrontPromotionDocument>(
-    OWNER_STOREFRONT_PROMOTIONS_COLLECTION
+    OWNER_STOREFRONT_PROMOTIONS_COLLECTION,
   );
 }
 
-export function getOwnerLicenseComplianceCollection():
-  | CollectionReference<OwnerLicenseComplianceDocument>
-  | null {
+export function getOwnerLicenseComplianceCollection(): CollectionReference<OwnerLicenseComplianceDocument> | null {
   return getOptionalFirestoreCollection<OwnerLicenseComplianceDocument>(
-    OWNER_LICENSE_COMPLIANCE_COLLECTION
+    OWNER_LICENSE_COMPLIANCE_COLLECTION,
   );
 }
 
-export function getDailyStorefrontMetricsCollection():
-  | CollectionReference<DailyStorefrontMetricRecord>
-  | null {
+export function getDailyStorefrontMetricsCollection(): CollectionReference<DailyStorefrontMetricRecord> | null {
   return getOptionalFirestoreCollection<DailyStorefrontMetricRecord>(
-    DAILY_STOREFRONT_METRICS_COLLECTION
+    DAILY_STOREFRONT_METRICS_COLLECTION,
   );
 }
 
-export function getDailyDealMetricsCollection():
-  | CollectionReference<DailyDealMetricRecord>
-  | null {
+export function getDailyDealMetricsCollection(): CollectionReference<DailyDealMetricRecord> | null {
   return getOptionalFirestoreCollection<DailyDealMetricRecord>(DAILY_DEAL_METRICS_COLLECTION);
 }

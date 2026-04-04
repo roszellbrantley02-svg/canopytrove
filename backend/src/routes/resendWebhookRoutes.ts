@@ -41,7 +41,7 @@ export async function resendWebhookHandler(request: Request, response: Response)
     const message = error instanceof Error ? error.message : 'Unknown Resend webhook failure.';
     const statusCode =
       /verification|signature|missing resend webhook|missing resend webhook verification|raw request body|required email event fields/i.test(
-        message
+        message,
       )
         ? 400
         : /not configured/i.test(message)

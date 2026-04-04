@@ -50,3 +50,7 @@ firestore-debug.log
 # local generated artifacts
 .firebase/
 build-artifacts/
+
+# stray / generated files
+dy
+*.docx

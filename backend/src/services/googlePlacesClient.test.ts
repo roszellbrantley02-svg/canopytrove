@@ -13,7 +13,10 @@ async function loadGooglePlacesModules() {
     }
   }
 
-  const [client, shared] = await Promise.all([import('./googlePlacesClient'), import('./googlePlacesShared')]);
+  const [client, shared] = await Promise.all([
+    import('./googlePlacesClient'),
+    import('./googlePlacesShared'),
+  ]);
   return {
     ...client,
     ...shared,
@@ -43,7 +46,7 @@ test('requestGoogleJson does not send the Google Maps key to non-Google hosts', 
     {
       method: 'GET',
     },
-    '*'
+    '*',
   );
 
   assert.equal(result, null);
@@ -78,7 +81,7 @@ test('requestGoogleJson includes auth headers only for Google Places URLs', asyn
         'X-Custom-Header': 'present',
       },
     },
-    'places.id'
+    'places.id',
   );
 
   assert.deepEqual(result, { ok: true });
@@ -104,7 +107,7 @@ test('requestGoogleJson keeps Google Places available after a 400 response', asy
     {
       method: 'POST',
     },
-    'places.id'
+    'places.id',
   );
 
   assert.equal(result, null);
@@ -122,17 +125,14 @@ test('requestGoogleJson temporarily degrades Google Places after a 403 and recov
       },
     })) as typeof fetch;
 
-  const {
-    getGooglePlacesRuntimeStateForTests,
-    hasGooglePlacesConfig,
-    requestGoogleJson,
-  } = await loadGooglePlacesModules();
+  const { getGooglePlacesRuntimeStateForTests, hasGooglePlacesConfig, requestGoogleJson } =
+    await loadGooglePlacesModules();
   const result = await requestGoogleJson(
     'https://places.googleapis.com/v1/places:searchText',
     {
       method: 'POST',
     },
-    'places.id'
+    'places.id',
   );
 
   assert.equal(result, null);

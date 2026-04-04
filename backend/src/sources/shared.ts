@@ -30,7 +30,7 @@ export function estimateTravelMinutes(distanceMiles: number) {
 
 export function applyOriginMetrics(
   items: StorefrontSummaryApiDocument[],
-  origin?: Coordinates
+  origin?: Coordinates,
 ): StorefrontSummaryApiDocument[] {
   if (!origin) {
     return items;
@@ -41,7 +41,7 @@ export function applyOriginMetrics(
       calculateDistanceMiles(origin, {
         latitude: item.latitude,
         longitude: item.longitude,
-      }).toFixed(1)
+      }).toFixed(1),
     );
 
     return {
@@ -56,7 +56,7 @@ export function applyOriginMetrics(
 export function filterByRadius(
   items: StorefrontSummaryApiDocument[],
   origin?: Coordinates,
-  radiusMiles?: number
+  radiusMiles?: number,
 ) {
   if (!origin || !radiusMiles) {
     return items;
@@ -71,7 +71,7 @@ export function sortByDistance(items: StorefrontSummaryApiDocument[]) {
 
 export function sortSummaries(
   items: StorefrontSummaryApiDocument[],
-  sortKey: StorefrontSummarySortKey = 'distance'
+  sortKey: StorefrontSummarySortKey = 'distance',
 ) {
   const sorted = [...items];
 
@@ -89,13 +89,16 @@ export function sortSummaries(
 export function paginateSummaries(
   items: StorefrontSummaryApiDocument[],
   limit?: number,
-  offset = 0
+  offset = 0,
 ): StorefrontSummaryPage {
   const safeOffset = Math.max(0, offset);
   const safeLimit = typeof limit === 'number' && Number.isFinite(limit) ? Math.max(0, limit) : null;
 
   return {
-    items: safeLimit === null ? items.slice(safeOffset) : items.slice(safeOffset, safeOffset + safeLimit),
+    items:
+      safeLimit === null
+        ? items.slice(safeOffset)
+        : items.slice(safeOffset, safeOffset + safeLimit),
     total: items.length,
     limit: safeLimit,
     offset: safeOffset,
@@ -104,7 +107,7 @@ export function paginateSummaries(
 
 function withDistanceMetrics(
   item: StorefrontSummaryApiDocument,
-  distanceMiles: number
+  distanceMiles: number,
 ): StorefrontSummaryApiDocument {
   const roundedDistanceMiles = Number(distanceMiles.toFixed(1));
 
@@ -171,7 +174,7 @@ export function selectNearestSummaryPage(
   items: StorefrontSummaryApiDocument[],
   origin: Coordinates,
   radiusMiles: number,
-  limit: number
+  limit: number,
 ): StorefrontSummaryPage {
   const safeLimit = Math.max(1, limit);
   const nearestItems: StorefrontSummaryApiDocument[] = [];
@@ -191,7 +194,7 @@ export function selectNearestSummaryPage(
     const candidate = withDistanceMetrics(item, distanceMiles);
 
     let insertAt = nearestItems.findIndex(
-      (current) => current.distanceMiles > candidate.distanceMiles
+      (current) => current.distanceMiles > candidate.distanceMiles,
     );
     if (insertAt === -1) {
       insertAt = nearestItems.length;

@@ -7,7 +7,7 @@ test('isCompleteStorefrontSummaryDocument rejects sparse ghost summaries', () =>
     isCompleteStorefrontSummaryDocument({
       placeId: 'ChIJTcHmhGdZwokRwnIFhap40EQ',
     }),
-    false
+    false,
   );
 });
 
@@ -32,7 +32,7 @@ test('isCompleteStorefrontSummaryDocument accepts published storefront summaries
       isVerified: true,
       mapPreviewLabel: '1.4 mi route preview',
     }),
-    true
+    true,
   );
 });
 
@@ -56,6 +56,6 @@ test('isCompleteStorefrontSummaryDocument rejects malformed partial summaries mi
       isVerified: true,
       mapPreviewLabel: '1.4 mi route preview',
     }),
-    false
+    false,
   );
 });

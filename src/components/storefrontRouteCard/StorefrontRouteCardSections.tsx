@@ -11,6 +11,12 @@ import {
   formatStorefrontPromotionExpiry,
   getStorefrontPromotionBadges,
 } from '../../utils/storefrontPromotions';
+import {
+  getHeatColor,
+  getHeatLabel,
+  routeStartsToHeatLevel,
+  type HeatLevel,
+} from './StorefrontHeatGlow';
 import { styles } from './storefrontRouteCardStyles';
 import type { StorefrontCardVisualLane } from './storefrontRouteCardVisualState';
 import {
@@ -18,6 +24,15 @@ import {
   getStorefrontCardPreviewTone,
   getStorefrontCardVisualLane,
 } from './storefrontRouteCardVisualState';
+
+const heatChipTextStyleMap: Record<HeatLevel, typeof styles.heatChipText1 | null> = {
+  0: null,
+  1: styles.heatChipText1,
+  2: styles.heatChipText2,
+  3: styles.heatChipText3,
+  4: styles.heatChipText4,
+  5: styles.heatChipText5,
+};
 
 type StorefrontRouteCardBodyProps = {
   storefront: StorefrontSummary;
@@ -104,6 +119,9 @@ export function StorefrontRouteCardBody({
     storefront.activePromotionCount ?? (promotionBadges.length || promotionText ? 1 : 0);
   const hasLiveDeals = activePromotionCount > 0;
   const ownerFeaturedBadges = (storefront.ownerFeaturedBadges ?? []).slice(0, 4);
+  const heatLevel = routeStartsToHeatLevel(storefront.routeStartsPerHour ?? 0);
+  const heatLabel = getHeatLabel(heatLevel);
+  const heatColor = getHeatColor(heatLevel);
   const ratingDisplay = getStorefrontRatingDisplay({
     publishedRating: storefront.rating,
     publishedReviewCount: storefront.reviewCount,
@@ -179,6 +197,17 @@ export function StorefrontRouteCardBody({
               style={styles.kickerMetricText}
             >{`${storefront.city}, ${storefront.state}`}</Text>
           </View>
+          {heatLabel ? (
+            <View style={styles.heatChip}>
+              <AppUiIcon name="flame" size={13} color={heatColor} />
+              <Text
+                numberOfLines={1}
+                style={[styles.kickerMetricText, heatChipTextStyleMap[heatLevel]]}
+              >
+                {heatLabel}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.titleRow}>
@@ -230,6 +259,7 @@ export function StorefrontRouteCardBody({
           <View style={styles.ownerBadgeWrap}>
             {ownerFeaturedBadges.map((badge) => (
               <View key={badge} style={styles.ownerBadge}>
+                <AppUiIcon name="ribbon-outline" size={11} color={colors.primary} />
                 <Text numberOfLines={1} style={styles.ownerBadgeText}>
                   {badge}
                 </Text>
@@ -276,8 +306,8 @@ export function StorefrontRouteCardBody({
             <AppUiIcon name="lock-closed-outline" size={14} color={colors.text} />
             <Text numberOfLines={2} style={styles.promotionTeaserText}>
               {activePromotionCount > 1
-                ? `Members unlock ${activePromotionCount} live deals`
-                : 'Members unlock this live deal'}
+                ? `Members unlock ${activePromotionCount} live specials`
+                : 'Members unlock this live special'}
             </Text>
           </View>
         ) : null}
@@ -298,7 +328,7 @@ export function StorefrontRouteCardBody({
               }}
               style={styles.secondaryCta}
             >
-              <AppUiIcon name="storefront-outline" size={14} color={colors.text} />
+              <AppUiIcon name="eye-outline" size={14} color={colors.text} />
               <Text style={styles.secondaryCtaText}>{secondaryActionLabel}</Text>
             </Pressable>
           ) : null}

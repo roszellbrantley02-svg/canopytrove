@@ -50,13 +50,14 @@ test('does not fall back to checked-in seed records in production when the live 
 
   await assert.rejects(
     () => listStorefrontDiscoverySources({ limit: 1 }),
-    /live discovery unavailable/
+    /live discovery unavailable/,
   );
 });
 
 test('marks unmatched live OCM rows as hours-pending instead of defaulting them closed', async () => {
   globalThis.fetch = (async (input) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const url =
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
 
     if (url.startsWith('https://cannabis.ny.gov/dispensary-location-verification')) {
       return new Response(
@@ -78,7 +79,7 @@ test('marks unmatched live OCM rows as hours-pending instead of defaulting them 
           headers: {
             'Content-Type': 'text/html',
           },
-        }
+        },
       );
     }
 
@@ -101,7 +102,7 @@ test('marks unmatched live OCM rows as hours-pending instead of defaulting them 
           headers: {
             'Content-Type': 'application/json',
           },
-        }
+        },
       );
     }
 

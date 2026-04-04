@@ -116,11 +116,11 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
       setExpiresAt(override?.expiresAt ?? null);
       setStatusText(
         override
-          ? 'Live hot-deal badges saved. Nearby, Browse, and the Hot Deals lane will refresh with this storefront update.'
-          : 'All live deal badges were cleared from this storefront.',
+          ? 'Live special badges saved. Nearby, Browse, and the Specials lane will refresh with this storefront update.'
+          : 'All live special badges were cleared from this storefront.',
       );
     } catch (error) {
-      setStatusText(error instanceof Error ? error.message : 'Unable to save live deal badges.');
+      setStatusText(error instanceof Error ? error.message : 'Unable to save live special badges.');
     } finally {
       setIsSaving(false);
     }
@@ -134,9 +134,11 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
       await clearStorefrontPromotionOverride(storefront.id);
       setBadges([]);
       setExpiresAt(null);
-      setStatusText('Live deal badges cleared from this storefront.');
+      setStatusText('Live special badges cleared from this storefront.');
     } catch (error) {
-      setStatusText(error instanceof Error ? error.message : 'Unable to clear live deal badges.');
+      setStatusText(
+        error instanceof Error ? error.message : 'Unable to clear live special badges.',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -291,7 +293,7 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
             isSaving && styles.buttonDisabled,
           ]}
         >
-          <Text style={styles.primaryButtonText}>{isSaving ? 'Saving...' : 'Save Hot Deal'}</Text>
+          <Text style={styles.primaryButtonText}>{isSaving ? 'Saving...' : 'Save Special'}</Text>
         </Pressable>
         <Pressable
           disabled={isSaving || normalizedBadges.length === 0}

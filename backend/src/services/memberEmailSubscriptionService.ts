@@ -131,13 +131,13 @@ function createDefaultRecord(input: {
 
 function getCollection() {
   return getOptionalFirestoreCollection<MemberEmailSubscriptionRecord>(
-    MEMBER_EMAIL_SUBSCRIPTIONS_COLLECTION
+    MEMBER_EMAIL_SUBSCRIPTIONS_COLLECTION,
   );
 }
 
 async function getRecord(
   accountId: string,
-  options?: { email?: string | null; displayName?: string | null }
+  options?: { email?: string | null; displayName?: string | null },
 ) {
   const collectionRef = getCollection();
   if (collectionRef) {
@@ -178,7 +178,7 @@ async function saveRecord(record: MemberEmailSubscriptionRecord) {
 }
 
 function getWelcomeEmailState(
-  record: MemberEmailSubscriptionRecord
+  record: MemberEmailSubscriptionRecord,
 ): MemberEmailSubscriptionStatus['welcomeEmailState'] {
   const deliveryState = getDeliveryStateForResendEventType(record.lastDeliveryEventType);
   if (deliveryState) {
@@ -242,7 +242,7 @@ async function findRecordByProviderMessageId(providerMessageId: string) {
   }
 
   const record = Array.from(memberEmailSubscriptionStore.values()).find(
-    (candidate) => normalizeProviderMessageId(candidate.providerMessageId) === normalizedMessageId
+    (candidate) => normalizeProviderMessageId(candidate.providerMessageId) === normalizedMessageId,
   );
   return record ? normalizeRecord(record) : null;
 }
@@ -321,7 +321,7 @@ export async function recordMemberWelcomeEmailDeliveryEvent(input: {
       lastDeliveryEventType: normalizeDeliveryEventType(input.eventType),
       lastDeliveryEventAt: normalizeIsoDate(input.occurredAt) ?? getNowIso(),
       lastDeliveryEventSummary: normalizeDeliveryEventSummary(input.summary),
-    })
+    }),
   );
 }
 
@@ -374,7 +374,7 @@ export async function syncMemberEmailSubscription(input: {
     consentedAt: input.subscribed
       ? !previousRecord.subscribed
         ? now
-        : previousRecord.consentedAt ?? now
+        : (previousRecord.consentedAt ?? now)
       : previousRecord.consentedAt,
     unsubscribedAt: input.subscribed ? null : now,
   });
@@ -387,13 +387,11 @@ export async function syncMemberEmailSubscription(input: {
   return toStatus(finalRecord);
 }
 
-export async function listMemberEmailSubscriptions(options?: {
-  includeUnsubscribed?: boolean;
-}) {
+export async function listMemberEmailSubscriptions(options?: { includeUnsubscribed?: boolean }) {
   const collectionRef = getCollection();
   const records = collectionRef
     ? (await collectionRef.get()).docs.map((documentSnapshot) =>
-        normalizeRecord(documentSnapshot.data() as MemberEmailSubscriptionRecord)
+        normalizeRecord(documentSnapshot.data() as MemberEmailSubscriptionRecord),
       )
     : Array.from(memberEmailSubscriptionStore.values()).map(normalizeRecord);
 

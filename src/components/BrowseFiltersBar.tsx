@@ -183,8 +183,8 @@ function BrowseFiltersBarComponent({
           onPress={onToggleHotDeals}
           style={[styles.sortChip, hotDealsOnly && styles.hotDealsChipActive]}
           accessibilityRole="button"
-          accessibilityLabel="Toggle hot deals"
-          accessibilityHint="Shows only storefronts with live offers."
+          accessibilityLabel="Toggle specials"
+          accessibilityHint="Shows only storefronts with live specials."
           accessibilityState={{ selected: hotDealsOnly }}
         >
           <AppUiIcon
@@ -193,7 +193,7 @@ function BrowseFiltersBarComponent({
             color={hotDealsOnly ? colors.backgroundDeep : colors.danger}
           />
           <Text style={[styles.sortChipText, hotDealsOnly && styles.hotDealsChipTextActive]}>
-            Hot Deals
+            Specials
           </Text>
         </Pressable>
       </View>

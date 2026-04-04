@@ -37,9 +37,8 @@ beforeEach(() => {
 afterEach(async () => {
   global.fetch = originalFetch;
   clearBackendModuleCache();
-  const { clearMemberEmailSubscriptionMemoryStateForTests } = await import(
-    './memberEmailSubscriptionService'
-  );
+  const { clearMemberEmailSubscriptionMemoryStateForTests } =
+    await import('./memberEmailSubscriptionService');
   clearMemberEmailSubscriptionMemoryStateForTests();
   const { clearResendWebhookMemoryStateForTests } = await import('./resendWebhookService');
   clearResendWebhookMemoryStateForTests();
@@ -60,9 +59,8 @@ test('stores resend webhook events once and applies them to member welcome email
       },
     })) as typeof fetch;
 
-  const { syncMemberEmailSubscription, getMemberEmailSubscriptionStatus } = await import(
-    './memberEmailSubscriptionService'
-  );
+  const { syncMemberEmailSubscription, getMemberEmailSubscriptionStatus } =
+    await import('./memberEmailSubscriptionService');
   const { listResendWebhookEvents, processResendWebhook } = await import('./resendWebhookService');
   const now = new Date();
 
@@ -85,12 +83,7 @@ test('stores resend webhook events once and applies them to member welcome email
       subject: 'Your Canopy Trove account is ready',
     },
   });
-  const headers = createSignedHeaders(
-    testWebhookSecret,
-    'msg_member_webhook_1',
-    now,
-    payload
-  );
+  const headers = createSignedHeaders(testWebhookSecret, 'msg_member_webhook_1', now, payload);
 
   const firstResult = await processResendWebhook({
     rawBody: payload,

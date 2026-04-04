@@ -74,7 +74,7 @@ export function getStorefrontCardHeroLabel({
 }) {
   switch (lane) {
     case 'hotDeal':
-      return activePromotionCount > 1 ? `${activePromotionCount} Live Deals` : 'Live deal';
+      return activePromotionCount > 1 ? `${activePromotionCount} Live Specials` : 'Live special';
     case 'ownerFeatured':
       return 'Owner featured';
     case 'newToYou':

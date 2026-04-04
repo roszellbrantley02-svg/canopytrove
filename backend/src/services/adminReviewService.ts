@@ -119,7 +119,7 @@ function unwrapAdminReviewQueueSection<T>(
   section: AdminReviewQueueSectionWarning,
   result: PromiseSettledResult<T>,
   fallback: T,
-  warnings: AdminReviewQueueSectionWarning[]
+  warnings: AdminReviewQueueSectionWarning[],
 ) {
   if (result.status === 'fulfilled') {
     return result.value;
@@ -131,7 +131,7 @@ function unwrapAdminReviewQueueSection<T>(
 }
 
 export async function loadAdminReviewQueueSections(
-  loaders: AdminReviewQueueLoaders
+  loaders: AdminReviewQueueLoaders,
 ): Promise<AdminReviewQueueResult> {
   const [
     claimsResult,
@@ -155,19 +155,19 @@ export async function loadAdminReviewQueueSections(
       'businessVerifications',
       businessVerificationsResult,
       [],
-      warnings
+      warnings,
     ),
     identityVerifications: unwrapAdminReviewQueueSection(
       'identityVerifications',
       identityVerificationsResult,
       [],
-      warnings
+      warnings,
     ),
     storefrontReports: unwrapAdminReviewQueueSection(
       'storefrontReports',
       storefrontReportsResult,
       [],
-      warnings
+      warnings,
     ),
     reviewPhotos: unwrapAdminReviewQueueSection('reviewPhotos', reviewPhotosResult, [], warnings),
     warnings,
@@ -232,7 +232,10 @@ export async function getAdminReviewPhotoQueue(limitInput?: unknown) {
   return listReviewPhotoModerationQueue(limit);
 }
 
-export async function reviewOwnerClaim(claimId: string, body: { status: ReviewDecision; reviewNotes: string | null }) {
+export async function reviewOwnerClaim(
+  claimId: string,
+  body: { status: ReviewDecision; reviewNotes: string | null },
+) {
   const db = getAdminReviewDb();
   const now = createNow();
   const claimRef = db.collection(DISPENSARY_CLAIMS_COLLECTION).doc(claimId);
@@ -249,7 +252,7 @@ export async function reviewOwnerClaim(claimId: string, body: { status: ReviewDe
         reviewedAt: now,
         reviewNotes: body.reviewNotes,
       },
-      { merge: true }
+      { merge: true },
     ),
     db
       .collection(OWNER_PROFILES_COLLECTION)
@@ -257,11 +260,10 @@ export async function reviewOwnerClaim(claimId: string, body: { status: ReviewDe
       .set(
         {
           dispensaryId: body.status === 'approved' ? claim.dispensaryId : null,
-          onboardingStep:
-            body.status === 'approved' ? 'business_verification' : 'claim_listing',
+          onboardingStep: body.status === 'approved' ? 'business_verification' : 'claim_listing',
           updatedAt: now,
         },
-        { merge: true }
+        { merge: true },
       ),
   ];
 
@@ -273,8 +275,8 @@ export async function reviewOwnerClaim(claimId: string, body: { status: ReviewDe
           claimStatus: 'approved',
           ownerClaimReviewedAt: now,
         },
-        { merge: true }
-      )
+        { merge: true },
+      ),
     );
   }
 
@@ -287,7 +289,10 @@ export async function reviewOwnerClaim(claimId: string, body: { status: ReviewDe
   };
 }
 
-export async function reviewBusinessVerification(ownerUid: string, body: { status: ReviewDecision; reviewNotes: string | null }) {
+export async function reviewBusinessVerification(
+  ownerUid: string,
+  body: { status: ReviewDecision; reviewNotes: string | null },
+) {
   const db = getAdminReviewDb();
   const now = createNow();
   const verificationRef = db.collection(BUSINESS_VERIFICATIONS_COLLECTION).doc(ownerUid);
@@ -299,7 +304,7 @@ export async function reviewBusinessVerification(ownerUid: string, body: { statu
         reviewedAt: now,
         adminNotes: body.reviewNotes,
       },
-      { merge: true }
+      { merge: true },
     ),
     db
       .collection(OWNER_PROFILES_COLLECTION)
@@ -308,12 +313,10 @@ export async function reviewBusinessVerification(ownerUid: string, body: { statu
         {
           businessVerificationStatus: verificationStatus,
           onboardingStep:
-            verificationStatus === 'verified'
-              ? 'identity_verification'
-              : 'business_verification',
+            verificationStatus === 'verified' ? 'identity_verification' : 'business_verification',
           updatedAt: now,
         },
-        { merge: true }
+        { merge: true },
       ),
   ]);
 
@@ -324,7 +327,10 @@ export async function reviewBusinessVerification(ownerUid: string, body: { statu
   };
 }
 
-export async function reviewIdentityVerification(ownerUid: string, body: { status: ReviewDecision; reviewNotes: string | null }) {
+export async function reviewIdentityVerification(
+  ownerUid: string,
+  body: { status: ReviewDecision; reviewNotes: string | null },
+) {
   const db = getAdminReviewDb();
   const now = createNow();
   const verificationRef = db.collection(IDENTITY_VERIFICATIONS_COLLECTION).doc(ownerUid);
@@ -336,7 +342,7 @@ export async function reviewIdentityVerification(ownerUid: string, body: { statu
         reviewedAt: now,
         adminNotes: body.reviewNotes,
       },
-      { merge: true }
+      { merge: true },
     ),
     db
       .collection(OWNER_PROFILES_COLLECTION)
@@ -348,7 +354,7 @@ export async function reviewIdentityVerification(ownerUid: string, body: { statu
             verificationStatus === 'verified' ? 'subscription' : 'identity_verification',
           updatedAt: now,
         },
-        { merge: true }
+        { merge: true },
       ),
   ]);
 
@@ -359,10 +365,14 @@ export async function reviewIdentityVerification(ownerUid: string, body: { statu
   };
 }
 
-export async function reviewStorefrontReport(reportId: string, body: { status: ReviewDecision; reviewNotes: string | null }) {
+export async function reviewStorefrontReport(
+  reportId: string,
+  body: { status: ReviewDecision; reviewNotes: string | null },
+) {
   const db = getAdminReviewDb();
   const now = createNow();
-  const moderationStatus = body.status === 'approved' ? 'reviewed' : body.status === 'rejected' ? 'dismissed' : 'open';
+  const moderationStatus =
+    body.status === 'approved' ? 'reviewed' : body.status === 'rejected' ? 'dismissed' : 'open';
 
   await db.collection(STOREFRONT_REPORTS_COLLECTION).doc(reportId).set(
     {
@@ -370,7 +380,7 @@ export async function reviewStorefrontReport(reportId: string, body: { status: R
       reviewedAt: now,
       reviewNotes: body.reviewNotes,
     },
-    { merge: true }
+    { merge: true },
   );
 
   return {
@@ -380,7 +390,10 @@ export async function reviewStorefrontReport(reportId: string, body: { status: R
   };
 }
 
-export async function reviewStorefrontPhoto(photoId: string, body: { status: ReviewDecision; reviewNotes: string | null }) {
+export async function reviewStorefrontPhoto(
+  photoId: string,
+  body: { status: ReviewDecision; reviewNotes: string | null },
+) {
   const moderationDecision =
     body.status === 'approved'
       ? 'approved'

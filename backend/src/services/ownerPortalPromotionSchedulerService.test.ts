@@ -12,7 +12,9 @@ import {
   saveOwnerStorefrontPromotionDocument,
 } from './ownerPortalWorkspaceData';
 
-function createPromotion(overrides?: Partial<OwnerStorefrontPromotionDocument>): OwnerStorefrontPromotionDocument {
+function createPromotion(
+  overrides?: Partial<OwnerStorefrontPromotionDocument>,
+): OwnerStorefrontPromotionDocument {
   const now = Date.now();
   const startsAt = new Date(now - 30 * 60 * 1000).toISOString();
   const endsAt = new Date(now + 30 * 60 * 1000).toISOString();
@@ -32,10 +34,9 @@ function createPromotion(overrides?: Partial<OwnerStorefrontPromotionDocument>):
     cardTone: overrides?.cardTone ?? 'owner_featured',
     placementSurfaces: overrides?.placementSurfaces ?? ['browse'],
     placementScope: overrides?.placementScope ?? 'storefront_area',
-    followersAlertedAt:
-      Object.prototype.hasOwnProperty.call(overrides ?? {}, 'followersAlertedAt')
-        ? overrides?.followersAlertedAt ?? null
-        : null,
+    followersAlertedAt: Object.prototype.hasOwnProperty.call(overrides ?? {}, 'followersAlertedAt')
+      ? (overrides?.followersAlertedAt ?? null)
+      : null,
     createdAt: overrides?.createdAt ?? new Date(now - 60 * 60 * 1000).toISOString(),
     updatedAt: overrides?.updatedAt ?? new Date(now - 60 * 60 * 1000).toISOString(),
   };
@@ -57,7 +58,7 @@ test('allows multi-day promotions when the time window is valid', () => {
     assertOwnerPromotionConstraints({
       nextPromotion,
       existingPromotions: [],
-    })
+    }),
   );
 });
 
@@ -69,7 +70,7 @@ test('rejects a sixth scheduled or active promotion for one storefront', () => {
       startsAt: new Date(now + index * 60 * 60 * 1000).toISOString(),
       endsAt: new Date(now + (index + 1) * 60 * 60 * 1000).toISOString(),
       status: 'scheduled',
-    })
+    }),
   );
 
   assert.throws(
@@ -83,7 +84,7 @@ test('rejects a sixth scheduled or active promotion for one storefront', () => {
         }),
         existingPromotions,
       }),
-    /at most 5 scheduled or active promotions/
+    /at most 5 scheduled or active promotions/,
   );
 });
 

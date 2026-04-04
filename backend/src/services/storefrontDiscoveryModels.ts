@@ -73,4 +73,3 @@ export type StorefrontDiscoveryStatusDocument = {
   latestRun: StorefrontDiscoveryRunDocument | null;
   state: StorefrontDiscoveryStateDocument;
 };
-

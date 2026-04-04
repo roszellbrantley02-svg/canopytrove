@@ -1,4 +1,12 @@
-import { App, ServiceAccount, applicationDefault, cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import {
+  App,
+  ServiceAccount,
+  applicationDefault,
+  cert,
+  getApp,
+  getApps,
+  initializeApp,
+} from 'firebase-admin/app';
 import { Auth, getAuth } from 'firebase-admin/auth';
 import { Firestore, getFirestore } from 'firebase-admin/firestore';
 import { Storage, getStorage } from 'firebase-admin/storage';
@@ -42,7 +50,12 @@ function parseServiceAccount(): ServiceAccount | null {
 }
 
 function readCloudProjectId() {
-  return readEnv('FIREBASE_PROJECT_ID') || readEnv('GOOGLE_CLOUD_PROJECT') || readEnv('GCLOUD_PROJECT') || '';
+  return (
+    readEnv('FIREBASE_PROJECT_ID') ||
+    readEnv('GOOGLE_CLOUD_PROJECT') ||
+    readEnv('GCLOUD_PROJECT') ||
+    ''
+  );
 }
 
 function readFirestoreDatabaseId() {
@@ -59,14 +72,14 @@ function isCloudRunRuntime() {
 
 const serviceAccount = parseServiceAccount();
 const hasApplicationDefaultCredentials = Boolean(
-  readEnv('GOOGLE_APPLICATION_CREDENTIALS') || isCloudRunRuntime() || readCloudProjectId()
+  readEnv('GOOGLE_APPLICATION_CREDENTIALS') || isCloudRunRuntime() || readCloudProjectId(),
 );
 const backendProjectId = readCloudProjectId() || serviceAccount?.projectId || undefined;
 const backendFirestoreDatabaseId = readFirestoreDatabaseId() || undefined;
 const backendStorageBucket = readStorageBucket() || undefined;
 
 export const hasBackendFirebaseConfig = Boolean(
-  serviceAccount || hasApplicationDefaultCredentials || getBackendFirebaseAuthTestOverride()
+  serviceAccount || hasApplicationDefaultCredentials || getBackendFirebaseAuthTestOverride(),
 );
 
 let cachedApp: App | null = null;
@@ -99,7 +112,7 @@ export function getBackendFirebaseApp(): App | null {
           credential: applicationDefault(),
           projectId: backendProjectId,
           storageBucket: backendStorageBucket,
-        }
+        },
   );
   return cachedApp;
 }
@@ -118,7 +131,9 @@ export function getBackendFirebaseDb(): Firestore | null {
     return null;
   }
 
-  cachedDb = backendFirestoreDatabaseId ? getFirestore(app, backendFirestoreDatabaseId) : getFirestore(app);
+  cachedDb = backendFirestoreDatabaseId
+    ? getFirestore(app, backendFirestoreDatabaseId)
+    : getFirestore(app);
   return cachedDb;
 }
 

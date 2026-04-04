@@ -249,7 +249,15 @@ export type OwnerStorefrontProfileToolsDocument = {
   verifiedBadgeLabel: string | null;
   featuredBadges: string[];
   cardSummary: string | null;
+  ownerHours?: OwnerHoursEntry[] | null;
   updatedAt: string;
+};
+
+export type OwnerHoursEntry = {
+  day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+  open: string | null;
+  close: string | null;
+  closed: boolean;
 };
 
 export type OwnerWorkspacePatternFlag = {
@@ -368,6 +376,7 @@ export type OwnerPortalProfileToolsInput = {
   verifiedBadgeLabel?: string | null;
   featuredBadges?: string[];
   cardSummary?: string | null;
+  ownerHours?: OwnerHoursEntry[] | null;
 };
 
 export type OwnerPortalLicenseComplianceInput = {

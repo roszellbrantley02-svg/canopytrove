@@ -1,4 +1,7 @@
-import { OwnerLicenseComplianceDocument, OwnerPortalLicenseComplianceInput } from '../../../src/types/ownerPortal';
+import {
+  OwnerLicenseComplianceDocument,
+  OwnerPortalLicenseComplianceInput,
+} from '../../../src/types/ownerPortal';
 import { getBackendFirebaseDb } from '../firebase';
 import { notifyOwnerPortalUser } from './ownerPortalAlertService';
 import { getOwnerLicenseComplianceCollection } from './ownerPortalWorkspaceCollections';
@@ -178,7 +181,7 @@ function normalizeOwnerLicenseCompliance(
     ownerUid: string;
     dispensaryId: string;
     createdAt?: string;
-  }
+  },
 ): OwnerLicenseComplianceDocument {
   const createdAt = normalizeNullableIso(record.createdAt) ?? fallback.createdAt ?? getNowIso();
   const updatedAt = normalizeNullableIso(record.updatedAt) ?? getNowIso();
@@ -217,8 +220,7 @@ function normalizeOwnerLicenseCompliance(
       record.source === 'admin_input' || record.source === 'verification_seed'
         ? record.source
         : 'owner_input',
-    notes:
-      typeof record.notes === 'string' && record.notes.trim() ? record.notes.trim() : null,
+    notes: typeof record.notes === 'string' && record.notes.trim() ? record.notes.trim() : null,
     createdAt,
     updatedAt,
   };
@@ -288,7 +290,7 @@ export async function getOwnerLicenseCompliance(ownerUid: string, dispensaryId: 
     {
       ownerUid,
       dispensaryId,
-    }
+    },
   );
 
   if (collectionRef) {
@@ -320,11 +322,8 @@ export async function saveOwnerLicenseCompliance(options: {
           ? options.input.licenseNumber
           : existing?.licenseNumber,
       licenseType:
-        options.input.licenseType !== undefined
-          ? options.input.licenseType
-          : existing?.licenseType,
-      issuedAt:
-        options.input.issuedAt !== undefined ? options.input.issuedAt : existing?.issuedAt,
+        options.input.licenseType !== undefined ? options.input.licenseType : existing?.licenseType,
+      issuedAt: options.input.issuedAt !== undefined ? options.input.issuedAt : existing?.issuedAt,
       expiresAt:
         options.input.expiresAt !== undefined ? options.input.expiresAt : existing?.expiresAt,
       renewalSubmittedAt:
@@ -340,7 +339,7 @@ export async function saveOwnerLicenseCompliance(options: {
       ownerUid: options.ownerUid,
       dispensaryId: options.dispensaryId,
       createdAt: existing?.createdAt ?? nowIso,
-    }
+    },
   );
 
   const collectionRef = getOwnerLicenseComplianceCollection();
@@ -366,10 +365,15 @@ export async function deleteOwnerLicenseComplianceRecordsForOwner(ownerUid: stri
   const collectionRef = getOwnerLicenseComplianceCollection();
   if (collectionRef) {
     const snapshot = await collectionRef.where('ownerUid', '==', ownerUid).get();
-    const deleteResults = await Promise.allSettled(snapshot.docs.map(async (documentSnapshot) => documentSnapshot.ref.delete()));
+    const deleteResults = await Promise.allSettled(
+      snapshot.docs.map(async (documentSnapshot) => documentSnapshot.ref.delete()),
+    );
     for (const result of deleteResults) {
       if (result.status === 'rejected') {
-        console.warn('[ownerPortalLicenseComplianceService] failed to delete a compliance record during owner cleanup:', result.reason);
+        console.warn(
+          '[ownerPortalLicenseComplianceService] failed to delete a compliance record during owner cleanup:',
+          result.reason,
+        );
       }
     }
   }
@@ -383,7 +387,7 @@ export async function deleteOwnerLicenseComplianceRecordsForOwner(ownerUid: stri
 
 function buildReminderMessage(
   compliance: OwnerLicenseComplianceDocument,
-  stage: NonNullable<OwnerLicenseComplianceDocument['lastReminderStage']>
+  stage: NonNullable<OwnerLicenseComplianceDocument['lastReminderStage']>,
 ) {
   const expiresOn = compliance.expiresAt
     ? new Date(compliance.expiresAt).toLocaleDateString('en-US', {
@@ -422,14 +426,14 @@ export async function runOwnerLicenseComplianceSweep() {
         normalizeOwnerLicenseCompliance(documentSnapshot.data() as OwnerLicenseComplianceDocument, {
           ownerUid: (documentSnapshot.data() as OwnerLicenseComplianceDocument).ownerUid,
           dispensaryId: (documentSnapshot.data() as OwnerLicenseComplianceDocument).dispensaryId,
-        })
+        }),
       )
     : Array.from(ownerLicenseComplianceStore.values()).map((record) =>
         normalizeOwnerLicenseCompliance(record, {
           ownerUid: record.ownerUid,
           dispensaryId: record.dispensaryId,
           createdAt: record.createdAt,
-        })
+        }),
       );
 
   if (!records.length) {
@@ -458,8 +462,9 @@ export async function runOwnerLicenseComplianceSweep() {
 
       const shouldRemind =
         Boolean(nextReminderStage) && nextReminderStage !== current.lastReminderStage;
-      const reminderMessage =
-        nextReminderStage ? buildReminderMessage(current, nextReminderStage) : null;
+      const reminderMessage = nextReminderStage
+        ? buildReminderMessage(current, nextReminderStage)
+        : null;
 
       if (shouldRemind && reminderMessage) {
         const notificationResult = await notifyOwnerPortalUser({
@@ -487,8 +492,7 @@ export async function runOwnerLicenseComplianceSweep() {
           ...current,
           renewalStatus: nextRenewalStatus,
           lastReminderStage: nextReminderStage,
-          lastReminderSentAt:
-            shouldRemind && reminderMessage ? nowIso : current.lastReminderSentAt,
+          lastReminderSentAt: shouldRemind && reminderMessage ? nowIso : current.lastReminderSentAt,
           updatedAt: nowIso,
         };
         if (collectionRef) {
@@ -499,11 +503,14 @@ export async function runOwnerLicenseComplianceSweep() {
           setOwnerLicenseComplianceInMemory(nextRecord);
         }
       }
-    })
+    }),
   );
   for (const result of reminderResults) {
     if (result.status === 'rejected') {
-      console.warn('[ownerPortalLicenseComplianceService] failed to process a license compliance reminder:', result.reason);
+      console.warn(
+        '[ownerPortalLicenseComplianceService] failed to process a license compliance reminder:',
+        result.reason,
+      );
     }
   }
 

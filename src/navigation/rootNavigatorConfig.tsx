@@ -25,11 +25,16 @@ import { OwnerPortalReviewInboxScreen } from '../screens/OwnerPortalReviewInboxS
 import { OwnerPortalSignInScreen } from '../screens/OwnerPortalSignInScreen';
 import { OwnerPortalSignUpScreen } from '../screens/OwnerPortalSignUpScreen';
 import { OwnerPortalSubscriptionScreen } from '../screens/OwnerPortalSubscriptionScreen';
+import { OwnerPortalBadgesScreen } from '../screens/OwnerPortalBadgesScreen';
+import { OwnerPortalHoursScreen } from '../screens/OwnerPortalHoursScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { ReportStorefrontScreen } from '../screens/ReportStorefrontScreen';
 import { StorefrontDetailScreen } from '../screens/StorefrontDetailScreen';
 import { DeleteAccountScreen } from '../screens/DeleteAccountScreen';
 import { WriteReviewScreen } from '../screens/WriteReviewScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
+import { SavedStorefrontsScreen } from '../screens/SavedStorefrontsScreen';
+import { BadgeGalleryScreen } from '../screens/BadgeGalleryScreen';
 import { colors } from '../theme/tokens';
 import type {
   AppReview,
@@ -40,6 +45,7 @@ import type {
 export type RootTabParamList = {
   Nearby: undefined;
   Browse: undefined;
+  HotDeals: undefined;
   Profile: undefined;
 };
 
@@ -67,7 +73,6 @@ export type RootStackParamList = {
         highlightProfileId?: string;
       }
     | undefined;
-  HotDeals: undefined;
   CanopyTroveSignIn: undefined;
   CanopyTroveSignUp: undefined;
   CanopyTroveForgotPassword: undefined;
@@ -126,6 +131,19 @@ export type RootStackParamList = {
         preview?: boolean;
       }
     | undefined;
+  OwnerPortalBadges:
+    | {
+        preview?: boolean;
+      }
+    | undefined;
+  OwnerPortalHours:
+    | {
+        preview?: boolean;
+      }
+    | undefined;
+  Settings: undefined;
+  SavedStorefronts: undefined;
+  BadgeGallery: undefined;
   AdminRuntimePanel: undefined;
 };
 
@@ -210,7 +228,6 @@ export const stackScreens = [
   { name: 'LegalCenter', component: LegalCenterScreen, options: bottomRiseScreenOptions },
   { name: 'DeleteAccount', component: DeleteAccountScreen, options: bottomRiseScreenOptions },
   { name: 'Leaderboard', component: LeaderboardScreen, options: detailFlowScreenOptions },
-  { name: 'HotDeals', component: HotDealsScreen, options: detailFlowScreenOptions },
   {
     name: 'CanopyTroveSignIn',
     component: CanopyTroveSignInScreen,
@@ -292,6 +309,31 @@ export const stackScreens = [
     options: workspaceFlowScreenOptions,
   },
   {
+    name: 'OwnerPortalBadges',
+    component: OwnerPortalBadgesScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalHours',
+    component: OwnerPortalHoursScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'Settings',
+    component: SettingsScreen,
+    options: bottomRiseScreenOptions,
+  },
+  {
+    name: 'SavedStorefronts',
+    component: SavedStorefrontsScreen,
+    options: detailFlowScreenOptions,
+  },
+  {
+    name: 'BadgeGallery',
+    component: BadgeGalleryScreen,
+    options: detailFlowScreenOptions,
+  },
+  {
     name: 'AdminRuntimePanel',
     component: AdminRuntimePanelScreen,
     options: workspaceFlowScreenOptions,
@@ -301,5 +343,6 @@ export const stackScreens = [
 export const tabScreens = [
   { name: 'Nearby', component: NearbyScreen },
   { name: 'Browse', component: BrowseScreen },
+  { name: 'HotDeals', component: HotDealsScreen },
   { name: 'Profile', component: ProfileScreen },
 ] as const;

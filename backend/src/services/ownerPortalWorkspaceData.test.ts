@@ -14,7 +14,7 @@ import {
 
 function createSummary(
   storefrontId: string,
-  overrides: Partial<StorefrontSummaryApiDocument> = {}
+  overrides: Partial<StorefrontSummaryApiDocument> = {},
 ): StorefrontSummaryApiDocument {
   return {
     id: storefrontId,
@@ -49,7 +49,7 @@ function createSummary(
 
 function createDetail(
   storefrontId: string,
-  overrides: Partial<StorefrontDetailApiDocument> = {}
+  overrides: Partial<StorefrontDetailApiDocument> = {},
 ): StorefrontDetailApiDocument {
   return {
     storefrontId,
@@ -76,7 +76,7 @@ function createDetail(
 
 function createProfileTools(
   storefrontId: string,
-  overrides: Partial<OwnerStorefrontProfileToolsDocument> = {}
+  overrides: Partial<OwnerStorefrontProfileToolsDocument> = {},
 ): OwnerStorefrontProfileToolsDocument {
   return {
     storefrontId,
@@ -96,7 +96,7 @@ function createProfileTools(
 
 function createPromotion(
   storefrontId: string,
-  overrides: Partial<OwnerStorefrontPromotionDocument> = {}
+  overrides: Partial<OwnerStorefrontPromotionDocument> = {},
 ): OwnerStorefrontPromotionDocument {
   const now = Date.now();
   return {

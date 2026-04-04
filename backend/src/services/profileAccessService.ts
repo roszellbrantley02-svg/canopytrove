@@ -6,7 +6,7 @@ import { getProfile, saveProfile } from './profileService';
 export class ProfileAccessError extends Error {
   constructor(
     message: string,
-    public readonly statusCode: number
+    public readonly statusCode: number,
   ) {
     super(message);
   }
@@ -62,7 +62,7 @@ export async function resolveVerifiedRequestAccountId(
   options?: {
     allowTestHeader?: boolean;
     invalidTokenBehavior?: 'throw' | 'ignore';
-  }
+  },
 ) {
   const testAccountId = getTestRequestAccountId(request, options?.allowTestHeader ?? false);
   if (testAccountId) {
@@ -96,7 +96,10 @@ export async function resolveVerifiedRequestAccountId(
   }
 }
 
-function buildClaimedProfile(profile: AppProfileApiDocument, accountId: string): AppProfileApiDocument {
+function buildClaimedProfile(
+  profile: AppProfileApiDocument,
+  accountId: string,
+): AppProfileApiDocument {
   return {
     ...profile,
     kind: 'authenticated',

@@ -23,7 +23,7 @@ function normalizeOffset(offset: number | undefined) {
 
 export async function getLeaderboard(
   limit?: number,
-  offset?: number
+  offset?: number,
 ): Promise<GamificationLeaderboardApiResponse> {
   const [profiles, gamificationStates] = await Promise.all([
     listProfiles(),
@@ -48,7 +48,7 @@ export async function getLeaderboard(
 
       return left.joinedDate.localeCompare(right.joinedDate);
     })
-    .map< GamificationLeaderboardEntryApiDocument>((state, index) => {
+    .map<GamificationLeaderboardEntryApiDocument>((state, index) => {
       const profile = profileById.get(state.profileId);
 
       return {
@@ -71,10 +71,7 @@ export async function getLeaderboard(
   const normalizedOffset = normalizeOffset(offset);
 
   return {
-    items: sortedEntries.slice(
-      normalizedOffset,
-      normalizedOffset + normalizedLimit
-    ),
+    items: sortedEntries.slice(normalizedOffset, normalizedOffset + normalizedLimit),
     total: sortedEntries.length,
     limit: normalizedLimit,
     offset: normalizedOffset,

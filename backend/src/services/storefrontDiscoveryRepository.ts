@@ -33,9 +33,7 @@ let discoveryStateStore: StorefrontDiscoveryStateDocument = {
 
 export function stripUndefinedDeep<T>(value: T): T {
   if (Array.isArray(value)) {
-    return value
-      .filter((item) => item !== undefined)
-      .map((item) => stripUndefinedDeep(item)) as T;
+    return value.filter((item) => item !== undefined).map((item) => stripUndefinedDeep(item)) as T;
   }
 
   if (!value || typeof value !== 'object') {
@@ -49,23 +47,19 @@ export function stripUndefinedDeep<T>(value: T): T {
   return Object.fromEntries(sanitizedEntries) as T;
 }
 
-function getDiscoveryCandidatesCollection():
-  | CollectionReference<StorefrontDiscoveryCandidateDocument>
-  | null {
+function getDiscoveryCandidatesCollection(): CollectionReference<StorefrontDiscoveryCandidateDocument> | null {
   return getOptionalFirestoreCollection<StorefrontDiscoveryCandidateDocument>(
-    DISCOVERY_CANDIDATES_COLLECTION
+    DISCOVERY_CANDIDATES_COLLECTION,
   );
 }
 
-function getDiscoveryRunsCollection():
-  | CollectionReference<StorefrontDiscoveryRunDocument>
-  | null {
+function getDiscoveryRunsCollection(): CollectionReference<StorefrontDiscoveryRunDocument> | null {
   return getOptionalFirestoreCollection<StorefrontDiscoveryRunDocument>(DISCOVERY_RUNS_COLLECTION);
 }
 
 function getDiscoveryStateCollection(): CollectionReference<StorefrontDiscoveryStateDocument> | null {
   return getOptionalFirestoreCollection<StorefrontDiscoveryStateDocument>(
-    DISCOVERY_STATE_COLLECTION
+    DISCOVERY_STATE_COLLECTION,
   );
 }
 
@@ -98,7 +92,7 @@ export function clearStorefrontDiscoveryRepositoryState() {
 }
 
 export async function getStorefrontDiscoveryCandidate(
-  candidateId: string
+  candidateId: string,
 ): Promise<StorefrontDiscoveryCandidateDocument | null> {
   const collectionRef = getDiscoveryCandidatesCollection();
   if (collectionRef) {
@@ -122,7 +116,9 @@ export async function listStorefrontDiscoveryCandidates(limit = 100) {
       .limit(normalizedLimit || 100)
       .get();
 
-    return snapshot.docs.map((documentSnapshot) => documentSnapshot.data() as StorefrontDiscoveryCandidateDocument);
+    return snapshot.docs.map(
+      (documentSnapshot) => documentSnapshot.data() as StorefrontDiscoveryCandidateDocument,
+    );
   }
 
   return Array.from(discoveryCandidateStore.values())
@@ -131,7 +127,7 @@ export async function listStorefrontDiscoveryCandidates(limit = 100) {
 }
 
 export async function saveStorefrontDiscoveryCandidate(
-  candidate: StorefrontDiscoveryCandidateDocument
+  candidate: StorefrontDiscoveryCandidateDocument,
 ) {
   discoveryCandidateStore.set(candidate.id, candidate);
   const collectionRef = getDiscoveryCandidatesCollection();
@@ -152,7 +148,9 @@ export async function listStorefrontDiscoveryRuns(limit = 20) {
       .limit(normalizedLimit || 20)
       .get();
 
-    return snapshot.docs.map((documentSnapshot) => documentSnapshot.data() as StorefrontDiscoveryRunDocument);
+    return snapshot.docs.map(
+      (documentSnapshot) => documentSnapshot.data() as StorefrontDiscoveryRunDocument,
+    );
   }
 
   return Array.from(discoveryRunStore.values())

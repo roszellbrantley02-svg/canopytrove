@@ -1,10 +1,7 @@
 import { Router } from 'express';
 import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
-import {
-  ensureAdminRuntimeAccess,
-  ensureAdminRuntimeAccessConfigured,
-} from '../http/adminAccess';
+import { ensureAdminRuntimeAccess, ensureAdminRuntimeAccessConfigured } from '../http/adminAccess';
 import { parseRuntimeAlertSyncBody, parseRuntimePolicyBody } from '../http/validation';
 import {
   evaluateRuntimePolicy,
@@ -28,7 +25,7 @@ opsRoutes.use(
     name: 'admin',
     windowMs: 10 * 60_000,
     max: serverConfig.adminRateLimitPerTenMinutes,
-  })
+  }),
 );
 opsRoutes.use('/admin/runtime', ensureAdminRuntimeAccessConfigured);
 opsRoutes.use('/admin/runtime', ensureAdminRuntimeAccess);
@@ -110,7 +107,7 @@ opsRoutes.post('/admin/runtime/monitoring/run', async (_request, response) => {
 opsRoutes.post('/admin/runtime/alerts/status', async (request, response) => {
   try {
     response.json(
-      await getAdminRuntimeAlertSubscriptionStatus(parseRuntimeAlertSyncBody(request.body))
+      await getAdminRuntimeAlertSubscriptionStatus(parseRuntimeAlertSyncBody(request.body)),
     );
   } catch (error) {
     response.status(400).json({
@@ -122,9 +119,7 @@ opsRoutes.post('/admin/runtime/alerts/status', async (request, response) => {
 
 opsRoutes.post('/admin/runtime/alerts/sync', async (request, response) => {
   try {
-    response.json(
-      await syncAdminRuntimeAlertSubscription(parseRuntimeAlertSyncBody(request.body))
-    );
+    response.json(await syncAdminRuntimeAlertSubscription(parseRuntimeAlertSyncBody(request.body)));
   } catch (error) {
     response.status(400).json({
       ok: false,

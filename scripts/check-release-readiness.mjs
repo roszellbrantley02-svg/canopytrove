@@ -34,10 +34,18 @@ function loadEnvFile(fileName) {
   return env;
 }
 
-const includeLocalOverrides = isTruthy(process.env.APP_RELEASE_CHECK_INCLUDE_LOCAL_OVERRIDES || '');
+const cliArgs = new Set(process.argv.slice(2).map((a) => a.toLowerCase()));
+const includeLocalOverrides =
+  cliArgs.has('--include-local-overrides') ||
+  isTruthy(process.env.APP_RELEASE_CHECK_INCLUDE_LOCAL_OVERRIDES || '');
+const useProductionEnv =
+  cliArgs.has('--production') ||
+  isTruthy(process.env.APP_RELEASE_CHECK_PRODUCTION || '');
 
 const env = {
-  ...loadEnvFile('.env'),
+  ...(useProductionEnv
+    ? loadEnvFile('.env.production.example')
+    : loadEnvFile('.env')),
   ...(includeLocalOverrides ? loadEnvFile('.env.local') : {}),
   ...process.env,
 };

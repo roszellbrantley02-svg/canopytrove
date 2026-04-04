@@ -29,7 +29,7 @@ function readMessageFromObject(value: unknown) {
     .map((key) => record[key])
     .filter(
       (candidate): candidate is string =>
-        typeof candidate === 'string' && Boolean(candidate.trim())
+        typeof candidate === 'string' && Boolean(candidate.trim()),
     )
     .map((candidate) => candidate.trim());
 
@@ -41,7 +41,7 @@ function readMessageFromObject(value: unknown) {
 }
 
 export function getDeliveryStateForResendEventType(
-  eventType: string | null | undefined
+  eventType: string | null | undefined,
 ): Exclude<TransactionalEmailDeliveryState, 'not_requested' | 'pending_provider' | 'sent'> | null {
   switch (trimValue(eventType)) {
     case 'email.delivered':

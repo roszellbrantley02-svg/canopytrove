@@ -80,6 +80,8 @@ export type StorefrontSummary = {
   promotionPlacementScope?: OwnerPromotionPlacementScope | null;
   placeId?: string;
   thumbnailUrl?: string | null;
+  /** Route starts per hour — drives the heat glow visual on cards. */
+  routeStartsPerHour?: number | null;
 };
 
 export type StorefrontDetails = {

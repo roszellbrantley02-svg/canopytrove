@@ -3,7 +3,7 @@ import { colors, radii, spacing, textStyles, typography } from '../../theme/toke
 
 export const styles = StyleSheet.create({
   filters: {
-    gap: spacing.md,
+    gap: spacing.lg,
     padding: spacing.xl,
     borderRadius: radii.xl,
     borderWidth: 1,
@@ -44,7 +44,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(245, 200, 106, 0.22)',
     backgroundColor: 'rgba(245, 200, 106, 0.10)',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
   filtersPillCompact: {
@@ -61,14 +61,14 @@ export const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   locationButton: {
-    minHeight: 40,
+    minHeight: 44,
     borderRadius: radii.pill,
     backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
   locationButtonText: {
     ...textStyles.button,
@@ -85,9 +85,9 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSoft,
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    gap: 2,
+    gap: spacing.xs,
   },
   locationMode: {
     ...textStyles.labelCaps,
@@ -99,14 +99,14 @@ export const styles = StyleSheet.create({
   },
   sortRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
     flexWrap: 'wrap',
   },
   sortChip: {
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.borderSoft,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     backgroundColor: colors.cardMuted,
   },
@@ -125,14 +125,14 @@ export const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   loadMoreButton: {
-    minHeight: 48,
-    borderRadius: radii.md,
+    minHeight: 52,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
   loadMoreButtonDisabled: {
     opacity: 0.72,
@@ -158,17 +158,17 @@ export const styles = StyleSheet.create({
   },
   memberGateActions: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
     flexWrap: 'wrap',
   },
   memberGatePrimaryButton: {
-    minHeight: 44,
+    minHeight: 52,
     flex: 1,
     borderRadius: radii.pill,
     backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
   memberGatePrimaryButtonText: {
     ...textStyles.button,
@@ -176,7 +176,7 @@ export const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   memberGateSecondaryButton: {
-    minHeight: 44,
+    minHeight: 52,
     flex: 1,
     borderRadius: radii.pill,
     borderWidth: 1,
@@ -184,7 +184,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.cardMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
   memberGateSecondaryButtonText: {
     ...textStyles.button,

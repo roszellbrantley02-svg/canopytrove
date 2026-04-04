@@ -149,7 +149,9 @@ export async function getCanonicalOwnerUidForStorefront(storefrontId: string) {
   return typeof ownerUid === 'string' && ownerUid.trim() ? ownerUid.trim() : null;
 }
 
-export async function getOwnerAuthorizationState(ownerUid: string): Promise<OwnerAuthorizationState> {
+export async function getOwnerAuthorizationState(
+  ownerUid: string,
+): Promise<OwnerAuthorizationState> {
   const hasBackendDb = Boolean(getBackendFirebaseDb());
   const ownerProfile = await getOwnerProfile(ownerUid);
 
@@ -162,15 +164,19 @@ export async function getOwnerAuthorizationState(ownerUid: string): Promise<Owne
     ]);
 
   const storefrontId = hasBackendDb
-    ? canonicalStorefront?.storefrontId ?? null
-    : canonicalStorefront?.storefrontId ?? ownerProfile?.dispensaryId ?? null;
+    ? (canonicalStorefront?.storefrontId ?? null)
+    : (canonicalStorefront?.storefrontId ?? ownerProfile?.dispensaryId ?? null);
   const ownerClaim = await getLatestOwnerClaimRecord(ownerUid, storefrontId);
   const businessVerificationStatus = hasBackendDb
-    ? businessVerification?.verificationStatus ?? null
-    : businessVerification?.verificationStatus ?? ownerProfile?.businessVerificationStatus ?? null;
+    ? (businessVerification?.verificationStatus ?? null)
+    : (businessVerification?.verificationStatus ??
+      ownerProfile?.businessVerificationStatus ??
+      null);
   const identityVerificationStatus = hasBackendDb
-    ? identityVerification?.verificationStatus ?? null
-    : identityVerification?.verificationStatus ?? ownerProfile?.identityVerificationStatus ?? null;
+    ? (identityVerification?.verificationStatus ?? null)
+    : (identityVerification?.verificationStatus ??
+      ownerProfile?.identityVerificationStatus ??
+      null);
   const effectiveSubscription =
     subscription ??
     (!hasBackendDb && ownerProfile?.subscriptionStatus
@@ -207,19 +213,17 @@ export async function assertAuthorizedOwnerStorefront(
     requireVerified?: boolean;
     requireActiveSubscription?: boolean;
     missingStorefrontMessage?: string;
-  }
+  },
 ) {
   const state = await getOwnerAuthorizationState(ownerUid);
 
   if (!state.storefrontId) {
-    throw new Error(
-      options?.missingStorefrontMessage ?? 'Owner storefront is not connected yet.'
-    );
+    throw new Error(options?.missingStorefrontMessage ?? 'Owner storefront is not connected yet.');
   }
 
   if (options?.requireVerified && (!state.hasVerifiedBusiness || !state.hasVerifiedIdentity)) {
     throw new Error(
-      'Business and identity verification must be approved before using this feature.'
+      'Business and identity verification must be approved before using this feature.',
     );
   }
 

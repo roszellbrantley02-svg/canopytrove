@@ -76,4 +76,3 @@ test('allows launch program config overrides', () => {
   assert.equal(config.serverConfig.launchEarlyAdopterLimit, 250);
   assert.equal(config.serverConfig.ownerLaunchTrialDays, 45);
 });
-

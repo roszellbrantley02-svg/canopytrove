@@ -28,7 +28,9 @@ function normalizeRouteState(routeState: StorefrontRouteStateApiDocument) {
       ? routeState.recentStorefrontIds.slice(0, 24)
       : [],
     activeRouteSession: routeState.activeRouteSession ?? null,
-    routeSessions: Array.isArray(routeState.routeSessions) ? routeState.routeSessions.slice(0, 12) : [],
+    routeSessions: Array.isArray(routeState.routeSessions)
+      ? routeState.routeSessions.slice(0, 12)
+      : [],
     plannedRouteStorefrontIds: Array.isArray(routeState.plannedRouteStorefrontIds)
       ? routeState.plannedRouteStorefrontIds.slice(0, 12)
       : [],
@@ -62,6 +64,35 @@ export async function saveRouteState(routeState: StorefrontRouteStateApiDocument
 
   routeStateStore.set(routeState.profileId, normalizedState);
   return normalizedState;
+}
+
+export async function isFollowingStorefront(
+  profileId: string,
+  storefrontId: string,
+): Promise<boolean> {
+  const routeState = await getRouteState(profileId);
+  return routeState.savedStorefrontIds.includes(storefrontId);
+}
+
+/**
+ * A user counts as a "frequent visitor" if the storefront appears in their
+ * recent views OR they have at least one route session with it (meaning they
+ * actually navigated there).  This uses the same route_state document that
+ * `isFollowingStorefront` reads, so the extra Firestore cost is zero when
+ * both checks run in the same request.
+ */
+export async function isFrequentVisitor(profileId: string, storefrontId: string): Promise<boolean> {
+  const routeState = await getRouteState(profileId);
+
+  if (routeState.recentStorefrontIds.includes(storefrontId)) {
+    return true;
+  }
+
+  if (routeState.routeSessions.some((session) => session.storefrontId === storefrontId)) {
+    return true;
+  }
+
+  return false;
 }
 
 export async function deleteRouteState(profileId: string) {

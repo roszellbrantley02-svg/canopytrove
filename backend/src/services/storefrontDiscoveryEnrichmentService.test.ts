@@ -147,7 +147,7 @@ test('keeps a previously published candidate published while refreshing its data
   assert.equal(publishedCandidate.publicationStatus, 'published');
   assert.equal(
     publishedCandidate.publicationReason,
-    'Published manually from the discovery staging queue.'
+    'Published manually from the discovery staging queue.',
   );
   assert.equal(publishedCandidate.publishedAt, '2026-03-29T12:00:00.000Z');
   assert.equal(publishedCandidate.publishedSummaryId, 'ny-store-1');
@@ -170,15 +170,15 @@ test('builds published storefront documents from the discovery staging source', 
     hours: ['Monday: 10:00 AM - 8:00 PM', 'Tuesday: 10:00 AM - 8:00 PM'],
     openNow: true,
     location: {
-      latitude: 40.7529,
-      longitude: -73.9772,
+      latitude: 40.751,
+      longitude: -73.983,
     },
   };
 
   const summary = buildPublishedStorefrontSummaryDocument(
     source,
     'google-place-3',
-    googleEnrichment
+    googleEnrichment,
   );
   const detail = buildPublishedStorefrontDetailDocument(source, googleEnrichment);
 
@@ -186,8 +186,8 @@ test('builds published storefront documents from the discovery staging source', 
   assert.equal(summary.rating, 4.8);
   assert.equal(summary.reviewCount, 128);
   assert.equal(summary.openNow, true);
-  assert.equal(summary.latitude, 40.7529);
-  assert.equal(summary.longitude, -73.9772);
+  assert.equal(summary.latitude, 40.751);
+  assert.equal(summary.longitude, -73.983);
   assert.equal(summary.menuUrl, 'https://store.example');
   assert.equal(summary.thumbnailUrl, 'https://store.example/thumb.png');
   assert.equal(detail.phone, '212-555-0111');

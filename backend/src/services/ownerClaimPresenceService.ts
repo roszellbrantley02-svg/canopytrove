@@ -38,7 +38,9 @@ export async function hasStorefrontOwnerClaim(storefrontId: string) {
       return false;
     }
 
-    const claimsRef = db.collection(DISPENSARY_CLAIMS_COLLECTION) as CollectionReference<ClaimDocument>;
+    const claimsRef = db.collection(
+      DISPENSARY_CLAIMS_COLLECTION,
+    ) as CollectionReference<ClaimDocument>;
     const snapshot = await claimsRef.where('dispensaryId', '==', storefrontId).limit(5).get();
     const hasClaim = snapshot.docs.some((document) => {
       const claimStatus = document.data().claimStatus?.trim().toLowerCase();

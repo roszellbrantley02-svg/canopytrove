@@ -7,7 +7,7 @@ import {
 } from './storefrontMediaAccessService';
 
 function createProfileTools(
-  overrides: Partial<OwnerStorefrontProfileToolsDocument> = {}
+  overrides: Partial<OwnerStorefrontProfileToolsDocument> = {},
 ): OwnerStorefrontProfileToolsDocument {
   return {
     storefrontId: 'storefront-1',
@@ -47,7 +47,9 @@ test('falls back to the existing card photo url when signed card resolution fail
           throw new Error('card signing failed');
         }
 
-        return fallbackUrl ?? `https://signed.example/${encodeURIComponent(storagePath ?? 'unknown')}`;
+        return (
+          fallbackUrl ?? `https://signed.example/${encodeURIComponent(storagePath ?? 'unknown')}`
+        );
       },
     });
 
@@ -92,7 +94,7 @@ test('keeps successful featured photo urls when one featured path fails', async 
     assert.ok(hydrated);
     assert.equal(
       hydrated?.cardPhotoUrl,
-      `https://signed.example/${encodeURIComponent(profileTools.cardPhotoPath ?? '')}`
+      `https://signed.example/${encodeURIComponent(profileTools.cardPhotoPath ?? '')}`,
     );
     assert.deepEqual(hydrated?.featuredPhotoUrls, [
       `https://signed.example/${encodeURIComponent(profileTools.cardPhotoPath ?? '')}`,

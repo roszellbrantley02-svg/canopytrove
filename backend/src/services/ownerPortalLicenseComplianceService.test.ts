@@ -45,7 +45,7 @@ test('derives renewal and reminder stages from the NY renewal window', async () 
       renewalSubmittedAt: null,
       nowIso: '2026-07-01T00:00:00.000Z',
     }),
-    'active'
+    'active',
   );
   assert.equal(
     service.deriveOwnerLicenseRenewalStatus({
@@ -53,7 +53,7 @@ test('derives renewal and reminder stages from the NY renewal window', async () 
       renewalSubmittedAt: null,
       nowIso: '2027-10-01T00:00:00.000Z',
     }),
-    'window_open'
+    'window_open',
   );
   assert.equal(
     service.deriveOwnerLicenseRenewalStatus({
@@ -61,7 +61,7 @@ test('derives renewal and reminder stages from the NY renewal window', async () 
       renewalSubmittedAt: null,
       nowIso: '2027-11-15T00:00:00.000Z',
     }),
-    'urgent'
+    'urgent',
   );
   assert.equal(
     service.deriveOwnerLicenseRenewalStatus({
@@ -69,7 +69,7 @@ test('derives renewal and reminder stages from the NY renewal window', async () 
       renewalSubmittedAt: null,
       nowIso: '2028-01-01T00:00:00.000Z',
     }),
-    'expired'
+    'expired',
   );
   assert.equal(
     service.deriveOwnerLicenseRenewalStatus({
@@ -77,7 +77,7 @@ test('derives renewal and reminder stages from the NY renewal window', async () 
       renewalSubmittedAt: '2027-10-01T00:00:00.000Z',
       nowIso: '2027-11-15T00:00:00.000Z',
     }),
-    'submitted'
+    'submitted',
   );
 
   assert.equal(
@@ -86,7 +86,7 @@ test('derives renewal and reminder stages from the NY renewal window', async () 
       renewalSubmittedAt: null,
       nowIso: '2027-09-02T00:00:00.000Z',
     }),
-    '120_day'
+    '120_day',
   );
   assert.equal(
     service.deriveOwnerLicenseReminderStage({
@@ -94,7 +94,7 @@ test('derives renewal and reminder stages from the NY renewal window', async () 
       renewalSubmittedAt: null,
       nowIso: '2027-10-02T00:00:00.000Z',
     }),
-    '90_day'
+    '90_day',
   );
   assert.equal(
     service.deriveOwnerLicenseReminderStage({
@@ -102,7 +102,7 @@ test('derives renewal and reminder stages from the NY renewal window', async () 
       renewalSubmittedAt: null,
       nowIso: '2027-11-02T00:00:00.000Z',
     }),
-    '60_day'
+    '60_day',
   );
   assert.equal(
     service.deriveOwnerLicenseReminderStage({
@@ -110,7 +110,7 @@ test('derives renewal and reminder stages from the NY renewal window', async () 
       renewalSubmittedAt: null,
       nowIso: '2027-12-01T00:00:00.000Z',
     }),
-    '30_day'
+    '30_day',
   );
   assert.equal(
     service.deriveOwnerLicenseReminderStage({
@@ -118,7 +118,7 @@ test('derives renewal and reminder stages from the NY renewal window', async () 
       renewalSubmittedAt: null,
       nowIso: '2027-12-18T00:00:00.000Z',
     }),
-    '14_day'
+    '14_day',
   );
   assert.equal(
     service.deriveOwnerLicenseReminderStage({
@@ -126,7 +126,7 @@ test('derives renewal and reminder stages from the NY renewal window', async () 
       renewalSubmittedAt: null,
       nowIso: '2027-12-26T00:00:00.000Z',
     }),
-    '7_day'
+    '7_day',
   );
 });
 

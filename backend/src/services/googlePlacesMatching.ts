@@ -34,7 +34,7 @@ function createSearchQueries(summary: StorefrontSummaryApiDocument) {
 
 function isPlausiblePlaceMatch(
   candidate: GoogleSearchPlace,
-  summary: StorefrontSummaryApiDocument
+  summary: StorefrontSummaryApiDocument,
 ) {
   const normalizedName = normalizeMatchValue(summary.displayName);
   const normalizedAddress = normalizeMatchValue(summary.addressLine1);
@@ -56,7 +56,15 @@ function isPlausiblePlaceMatch(
     normalizedFormattedAddress.includes(normalizedCity) ||
     normalizedFormattedAddress.includes(summary.zip.toLowerCase());
 
-  return cityMatches && (addressMatches || nameMatches);
+  // Street number must match exactly to avoid neighboring-building mismatches.
+  const sourceStreetNumber = normalizedAddress.match(/^\d+/)?.[0];
+  const candidateStreetNumber =
+    normalizedFormattedAddress.match(/^\d+/)?.[0] ??
+    normalizedFormattedAddress.match(/\b(\d+)\b/)?.[1];
+  const streetNumberMatches =
+    !sourceStreetNumber || !candidateStreetNumber || sourceStreetNumber === candidateStreetNumber;
+
+  return cityMatches && streetNumberMatches && (addressMatches || nameMatches);
 }
 
 export async function matchPlaceId(summary: StorefrontSummaryApiDocument) {
@@ -75,38 +83,40 @@ export async function matchPlaceId(summary: StorefrontSummaryApiDocument) {
     PLACE_ID_TTL_MS,
     googlePlacesCacheLimits.placeId,
     async () => {
-    for (const query of createSearchQueries(summary)) {
-      const payload = await requestGoogleJson<{ places?: GoogleSearchPlace[] }>(
-        'https://places.googleapis.com/v1/places:searchText',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            textQuery: query,
-            pageSize: 5,
-            languageCode: 'en',
-            regionCode: 'US',
-            locationBias: {
-              circle: {
-                center: {
-                  latitude: summary.latitude,
-                  longitude: summary.longitude,
+      for (const query of createSearchQueries(summary)) {
+        const payload = await requestGoogleJson<{ places?: GoogleSearchPlace[] }>(
+          'https://places.googleapis.com/v1/places:searchText',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              textQuery: query,
+              pageSize: 5,
+              languageCode: 'en',
+              regionCode: 'US',
+              locationBias: {
+                circle: {
+                  center: {
+                    latitude: summary.latitude,
+                    longitude: summary.longitude,
+                  },
+                  radius: 2000,
                 },
-                radius: 10000,
               },
-            },
-          }),
-        },
-        'places.id,places.displayName,places.formattedAddress'
-      );
+            }),
+          },
+          'places.id,places.displayName,places.formattedAddress',
+        );
 
-      const match = payload?.places?.find((candidate) => isPlausiblePlaceMatch(candidate, summary));
-      if (match?.id) {
-        void persistPlaceId(summary.id, match.id);
-        return match.id;
+        const match = payload?.places?.find((candidate) =>
+          isPlausiblePlaceMatch(candidate, summary),
+        );
+        if (match?.id) {
+          void persistPlaceId(summary.id, match.id);
+          return match.id;
+        }
       }
-    }
 
-    return null;
-    }
+      return null;
+    },
   );
 }

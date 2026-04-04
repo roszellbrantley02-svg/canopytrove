@@ -17,7 +17,7 @@ export function parseFavoriteDealAlertSyncBody(value: unknown) {
     savedStorefrontIds: parseOptionalIdArray(
       body.savedStorefrontIds,
       'body.savedStorefrontIds',
-      64
+      64,
     ),
     allowNotifications,
     devicePushToken:

@@ -38,7 +38,7 @@ export function getTransactionalEmailDeliveryStatus() {
 }
 
 function getTransactionalEmailDeliveryStatusForConfig(
-  emailRuntimeConfig: TransactionalEmailRuntimeConfig
+  emailRuntimeConfig: TransactionalEmailRuntimeConfig,
 ) {
   if (!emailRuntimeConfig.welcomeEmailsEnabled) {
     return {
@@ -72,7 +72,7 @@ function getTransactionalEmailDeliveryStatusForConfig(
 }
 
 export async function sendTransactionalEmail(
-  input: TransactionalEmailInput
+  input: TransactionalEmailInput,
 ): Promise<TransactionalEmailResult> {
   const emailRuntimeConfig = getTransactionalEmailRuntimeConfig();
   const deliveryStatus = getTransactionalEmailDeliveryStatusForConfig(emailRuntimeConfig);
@@ -107,9 +107,7 @@ export async function sendTransactionalEmail(
         html: input.html,
         text: input.text,
         reply_to:
-          trimConfiguredValue(input.replyTo) ??
-          emailRuntimeConfig.emailReplyToAddress ??
-          undefined,
+          trimConfiguredValue(input.replyTo) ?? emailRuntimeConfig.emailReplyToAddress ?? undefined,
         tags: input.tags?.length ? input.tags : undefined,
       }),
     });

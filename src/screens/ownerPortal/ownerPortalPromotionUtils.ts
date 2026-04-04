@@ -41,7 +41,7 @@ export const PROMOTION_AUDIENCE_OPTIONS: PromotionOption<OwnerPromotionAudience>
 ];
 
 export const PROMOTION_CARD_TONE_OPTIONS: PromotionOption<OwnerPromotionCardTone>[] = [
-  { value: 'hot_deal', label: 'Hot Deal' },
+  { value: 'hot_deal', label: 'Featured Special' },
   { value: 'owner_featured', label: 'Owner Highlight' },
   { value: 'standard', label: 'Standard Card' },
 ];
@@ -50,7 +50,7 @@ export const PROMOTION_PLACEMENT_SURFACE_OPTIONS: PromotionOption<OwnerPromotion
   [
     { value: 'nearby', label: 'Nearby' },
     { value: 'browse', label: 'Browse' },
-    { value: 'hot_deals', label: 'Hot Deals Lane' },
+    { value: 'hot_deals', label: 'Specials Lane' },
   ];
 
 export const PROMOTION_PLACEMENT_SCOPE_OPTIONS: PromotionOption<OwnerPromotionPlacementScope>[] = [
@@ -176,7 +176,7 @@ export function getPromotionPlannerTitle(editingPromotionId: string | null) {
 export function getPromotionPlannerBody(editingPromotionId: string | null) {
   return editingPromotionId
     ? 'Update timing, lane, placement, or highlight reach without losing the existing promotion state.'
-    : 'Lead with a hot deal by default, or switch to an owner highlight when the card should feel premium instead of urgent.';
+    : 'Lead with a featured special by default, or switch to an owner highlight when the card should feel premium instead of urgent.';
 }
 
 export function getPromotionPlannerModeLabel(editingPromotionId: string | null, preview: boolean) {
@@ -205,7 +205,7 @@ export function getPromotionRuntimeMessage(
 export function formatPromotionValue(value: string) {
   const normalizedValue = value.trim().toLowerCase();
   if (normalizedValue === 'hot_deal') {
-    return 'Hot Deal';
+    return 'Featured Special';
   }
 
   if (normalizedValue === 'owner_featured') {
@@ -217,7 +217,7 @@ export function formatPromotionValue(value: string) {
   }
 
   if (normalizedValue === 'hot_deals') {
-    return 'Hot Deals Lane';
+    return 'Specials Lane';
   }
 
   return value.replace(/_/g, ' ').replace(/\b\w/g, (segment) => segment.toUpperCase());

@@ -31,9 +31,7 @@ function parseAnalyticsScalarValue(value: unknown, field: string) {
     });
   }
 
-  throw new RequestValidationError(
-    `${field} must be a string, number, boolean, or null.`
-  );
+  throw new RequestValidationError(`${field} must be a string, number, boolean, or null.`);
 }
 
 function parseAnalyticsMetadata(value: unknown, field: string) {
@@ -45,7 +43,7 @@ function parseAnalyticsMetadata(value: unknown, field: string) {
   const entries = Object.entries(metadata);
   if (entries.length > MAX_ANALYTICS_METADATA_KEYS) {
     throw new RequestValidationError(
-      `${field} must contain at most ${MAX_ANALYTICS_METADATA_KEYS} keys.`
+      `${field} must contain at most ${MAX_ANALYTICS_METADATA_KEYS} keys.`,
     );
   }
 
@@ -55,7 +53,7 @@ function parseAnalyticsMetadata(value: unknown, field: string) {
         maxLength: 64,
       }),
       parseAnalyticsScalarValue(entryValue, `${field}.${key}`),
-    ])
+    ]),
   );
 }
 
@@ -112,7 +110,7 @@ export function parseAnalyticsEventBatchBody(value: unknown): AnalyticsEventBatc
 
   if (body.events.length > MAX_ANALYTICS_EVENTS) {
     throw new RequestValidationError(
-      `body.events must contain at most ${MAX_ANALYTICS_EVENTS} items.`
+      `body.events must contain at most ${MAX_ANALYTICS_EVENTS} items.`,
     );
   }
 
@@ -123,8 +121,6 @@ export function parseAnalyticsEventBatchBody(value: unknown): AnalyticsEventBatc
     appVersion: parseOptionalTrimmedString(body.appVersion, 'body.appVersion', {
       maxLength: 40,
     }),
-    events: body.events.map((event, index) =>
-      parseAnalyticsEvent(event, `body.events[${index}]`)
-    ),
+    events: body.events.map((event, index) => parseAnalyticsEvent(event, `body.events[${index}]`)),
   };
 }

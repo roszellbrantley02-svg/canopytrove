@@ -37,7 +37,7 @@ adminRoutes.use(
     name: 'admin',
     windowMs: 10 * 60_000,
     max: serverConfig.adminRateLimitPerTenMinutes,
-  })
+  }),
 );
 adminRoutes.use('/admin', ensureAdminApiKeyConfigured);
 adminRoutes.use('/admin', ensureAdminApiKeyMatch);
@@ -120,7 +120,7 @@ adminRoutes.get('/admin/email-subscriptions', async (request, response) => {
       response.setHeader('Content-Type', 'text/csv; charset=utf-8');
       response.setHeader(
         'Content-Disposition',
-        'attachment; filename="canopytrove-email-subscriptions.csv"'
+        'attachment; filename="canopytrove-email-subscriptions.csv"',
       );
       response.send(exportMemberEmailSubscriptionsCsv(result.items));
       return;
@@ -150,7 +150,8 @@ adminRoutes.get('/admin/email-delivery-events', async (request, response) => {
   } catch (error) {
     response.status(500).json({
       ok: false,
-      error: error instanceof Error ? error.message : 'Unknown email delivery event listing failure',
+      error:
+        error instanceof Error ? error.message : 'Unknown email delivery event listing failure',
     });
   }
 });
@@ -185,7 +186,7 @@ adminRoutes.get('/admin/reviews/photo-moderation/queue', async (request, respons
 adminRoutes.post('/admin/reviews/claims/:claimId', async (request, response) => {
   try {
     response.json(
-      await reviewOwnerClaim(request.params.claimId, parseAdminReviewBody(request.body))
+      await reviewOwnerClaim(request.params.claimId, parseAdminReviewBody(request.body)),
     );
   } catch (error) {
     response.status(400).json({
@@ -198,15 +199,13 @@ adminRoutes.post('/admin/reviews/claims/:claimId', async (request, response) => 
 adminRoutes.post('/admin/reviews/business-verifications/:ownerUid', async (request, response) => {
   try {
     response.json(
-      await reviewBusinessVerification(
-        request.params.ownerUid,
-        parseAdminReviewBody(request.body)
-      )
+      await reviewBusinessVerification(request.params.ownerUid, parseAdminReviewBody(request.body)),
     );
   } catch (error) {
     response.status(400).json({
       ok: false,
-      error: error instanceof Error ? error.message : 'Unknown business verification review failure',
+      error:
+        error instanceof Error ? error.message : 'Unknown business verification review failure',
     });
   }
 });
@@ -214,15 +213,13 @@ adminRoutes.post('/admin/reviews/business-verifications/:ownerUid', async (reque
 adminRoutes.post('/admin/reviews/identity-verifications/:ownerUid', async (request, response) => {
   try {
     response.json(
-      await reviewIdentityVerification(
-        request.params.ownerUid,
-        parseAdminReviewBody(request.body)
-      )
+      await reviewIdentityVerification(request.params.ownerUid, parseAdminReviewBody(request.body)),
     );
   } catch (error) {
     response.status(400).json({
       ok: false,
-      error: error instanceof Error ? error.message : 'Unknown identity verification review failure',
+      error:
+        error instanceof Error ? error.message : 'Unknown identity verification review failure',
     });
   }
 });
@@ -230,10 +227,7 @@ adminRoutes.post('/admin/reviews/identity-verifications/:ownerUid', async (reque
 adminRoutes.post('/admin/reviews/storefront-reports/:reportId', async (request, response) => {
   try {
     response.json(
-      await reviewStorefrontReport(
-        request.params.reportId,
-        parseAdminReviewBody(request.body)
-      )
+      await reviewStorefrontReport(request.params.reportId, parseAdminReviewBody(request.body)),
     );
   } catch (error) {
     response.status(400).json({
@@ -247,7 +241,7 @@ adminRoutes.post('/admin/reviews/photo-moderation/:photoId', async (request, res
   try {
     const result = await reviewStorefrontPhoto(
       request.params.photoId,
-      parseAdminReviewBody(request.body)
+      parseAdminReviewBody(request.body),
     );
     invalidateCachedStorefrontDetail(result.session.storefrontId);
     response.json(result);

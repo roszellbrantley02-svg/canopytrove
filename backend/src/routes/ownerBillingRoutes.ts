@@ -22,7 +22,7 @@ ownerBillingRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],
-  })
+  }),
 );
 
 function getErrorStatus(error: unknown) {
@@ -49,7 +49,7 @@ ownerBillingRoutes.post(
         error: getErrorMessage(error),
       });
     }
-  }
+  },
 );
 
 ownerBillingRoutes.post(
@@ -64,19 +64,14 @@ ownerBillingRoutes.post(
         error: getErrorMessage(error),
       });
     }
-  }
+  },
 );
 
 export async function ownerBillingWebhookHandler(request: Request, response: Response) {
   try {
-    const payloadBuffer = Buffer.isBuffer(request.body)
-      ? request.body
-      : Buffer.from('', 'utf8');
+    const payloadBuffer = Buffer.isBuffer(request.body) ? request.body : Buffer.from('', 'utf8');
     response.json(
-      await handleOwnerBillingWebhook(
-        payloadBuffer,
-        request.header('stripe-signature')
-      )
+      await handleOwnerBillingWebhook(payloadBuffer, request.header('stripe-signature')),
     );
   } catch (error) {
     response.status(getErrorStatus(error)).json({

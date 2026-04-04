@@ -73,7 +73,7 @@ export async function listProfiles() {
   if (collectionRef) {
     const snapshot = await collectionRef.get();
     return snapshot.docs.map((documentSnapshot) =>
-      normalizeProfile(documentSnapshot.data() as AppProfileApiDocument)
+      normalizeProfile(documentSnapshot.data() as AppProfileApiDocument),
     );
   }
 

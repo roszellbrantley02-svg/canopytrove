@@ -45,7 +45,7 @@ communityRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST', 'PUT', 'DELETE'],
-  })
+  }),
 );
 
 communityRoutes.post('/storefront-details/:storefrontId/reviews', async (request, response) => {
@@ -108,7 +108,10 @@ communityRoutes.post('/storefront-details/:storefrontId/reviews', async (request
   try {
     detail = await getStorefrontDetail(storefrontId);
   } catch (detailError) {
-    console.error('[community] post-write detail refresh failed for review_submitted:', detailError);
+    console.error(
+      '[community] post-write detail refresh failed for review_submitted:',
+      detailError,
+    );
   }
 
   // Gamification is a side effect — must not fail the primary write response
@@ -123,7 +126,10 @@ communityRoutes.post('/storefront-details/:storefrontId/reviews', async (request
       },
     });
   } catch (gamificationError) {
-    console.error('[community] gamification side effect failed for review_submitted:', gamificationError);
+    console.error(
+      '[community] gamification side effect failed for review_submitted:',
+      gamificationError,
+    );
   }
 
   response.json({
@@ -133,95 +139,104 @@ communityRoutes.post('/storefront-details/:storefrontId/reviews', async (request
   });
 });
 
-communityRoutes.put('/storefront-details/:storefrontId/reviews/:reviewId', async (request, response) => {
-  const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
-  const reviewId = parseReviewIdParam(request.params.reviewId);
-  const body = parseReviewSubmissionBody(request.body);
-  const { accountId } = await ensureProfileWriteAccess(request, body.profileId);
+communityRoutes.put(
+  '/storefront-details/:storefrontId/reviews/:reviewId',
+  async (request, response) => {
+    const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
+    const reviewId = parseReviewIdParam(request.params.reviewId);
+    const body = parseReviewSubmissionBody(request.body);
+    const { accountId } = await ensureProfileWriteAccess(request, body.profileId);
 
-  const input: StorefrontReviewSubmissionInput = {
-    storefrontId,
-    profileId: body.profileId,
-    authorName: body.authorName || 'Canopy Trove user',
-    rating: body.rating,
-    text: body.text,
-    gifUrl: body.gifUrl,
-    tags: body.tags,
-    photoCount: body.photoCount,
-  };
-  const reviewInput = {
-    ...input,
-    reviewId,
-    photoUploadIds: body.photoUploadIds,
-  };
+    const input: StorefrontReviewSubmissionInput = {
+      storefrontId,
+      profileId: body.profileId,
+      authorName: body.authorName || 'Canopy Trove user',
+      rating: body.rating,
+      text: body.text,
+      gifUrl: body.gifUrl,
+      tags: body.tags,
+      photoCount: body.photoCount,
+    };
+    const reviewInput = {
+      ...input,
+      reviewId,
+      photoUploadIds: body.photoUploadIds,
+    };
 
-  if (reviewInput.photoUploadIds.length && !accountId) {
-    response.status(403).json({
-      ok: false,
-      error: 'Signed-in access is required to attach review photos.',
-    });
-    return;
-  }
-
-  let reviewSubmission: Awaited<ReturnType<typeof updateStorefrontAppReview>>;
-  try {
-    reviewSubmission = await updateStorefrontAppReview(reviewInput);
-  } catch (error) {
-    if (error instanceof StorefrontCommunityError) {
-      response.status(error.statusCode).json({
+    if (reviewInput.photoUploadIds.length && !accountId) {
+      response.status(403).json({
         ok: false,
-        error: error.message,
+        error: 'Signed-in access is required to attach review photos.',
       });
       return;
     }
 
-    throw error;
-  }
+    let reviewSubmission: Awaited<ReturnType<typeof updateStorefrontAppReview>>;
+    try {
+      reviewSubmission = await updateStorefrontAppReview(reviewInput);
+    } catch (error) {
+      if (error instanceof StorefrontCommunityError) {
+        response.status(error.statusCode).json({
+          ok: false,
+          error: error.message,
+        });
+        return;
+      }
 
-  invalidateCachedStorefrontDetail(storefrontId);
+      throw error;
+    }
 
-  // Detail refresh is a convenience — must not fail the primary write response
-  let detail: Awaited<ReturnType<typeof getStorefrontDetail>> | null = null;
-  try {
-    detail = await getStorefrontDetail(storefrontId);
-  } catch (detailError) {
-    console.error('[community] post-write detail refresh failed for review_updated:', detailError);
-  }
+    invalidateCachedStorefrontDetail(storefrontId);
 
-  response.json({
-    detail,
-    rewardResult: null,
-    photoModeration: reviewSubmission.photoModeration,
-  });
-});
+    // Detail refresh is a convenience — must not fail the primary write response
+    let detail: Awaited<ReturnType<typeof getStorefrontDetail>> | null = null;
+    try {
+      detail = await getStorefrontDetail(storefrontId);
+    } catch (detailError) {
+      console.error(
+        '[community] post-write detail refresh failed for review_updated:',
+        detailError,
+      );
+    }
 
-communityRoutes.post('/storefront-details/:storefrontId/reviews/photo-uploads', async (request, response) => {
-  const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
-  const body = parseReviewPhotoUploadBody(request.body);
-  const { accountId } = await ensureProfileWriteAccess(request, body.profileId);
-
-  if (!accountId) {
-    response.status(403).json({
-      ok: false,
-      error: 'Signed-in access is required to upload review photos.',
+    response.json({
+      detail,
+      rewardResult: null,
+      photoModeration: reviewSubmission.photoModeration,
     });
-    return;
-  }
+  },
+);
 
-  const uploadSession = await createReviewPhotoUploadSession({
-    storefrontId,
-    profileId: body.profileId,
-    reviewId: body.reviewId ?? null,
-    fileName: body.fileName,
-    contentType: body.contentType,
-    sizeBytes: body.sizeBytes,
-  });
+communityRoutes.post(
+  '/storefront-details/:storefrontId/reviews/photo-uploads',
+  async (request, response) => {
+    const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
+    const body = parseReviewPhotoUploadBody(request.body);
+    const { accountId } = await ensureProfileWriteAccess(request, body.profileId);
 
-  response.status(201).json({
-    ok: true,
-    uploadSession,
-  });
-});
+    if (!accountId) {
+      response.status(403).json({
+        ok: false,
+        error: 'Signed-in access is required to upload review photos.',
+      });
+      return;
+    }
+
+    const uploadSession = await createReviewPhotoUploadSession({
+      storefrontId,
+      profileId: body.profileId,
+      reviewId: body.reviewId ?? null,
+      fileName: body.fileName,
+      contentType: body.contentType,
+      sizeBytes: body.sizeBytes,
+    });
+
+    response.status(201).json({
+      ok: true,
+      uploadSession,
+    });
+  },
+);
 
 communityRoutes.post(
   '/storefront-details/:storefrontId/reviews/photo-uploads/:photoId/complete',
@@ -261,7 +276,7 @@ communityRoutes.post(
       ok: true,
       ...result,
     });
-  }
+  },
 );
 
 communityRoutes.delete(
@@ -301,7 +316,7 @@ communityRoutes.delete(
       ok: true,
       photoId,
     });
-  }
+  },
 );
 
 communityRoutes.post(
@@ -334,7 +349,10 @@ communityRoutes.post(
         activityType: 'report_submitted',
       });
     } catch (gamificationError) {
-      console.error('[community] gamification side effect failed for report_submitted:', gamificationError);
+      console.error(
+        '[community] gamification side effect failed for report_submitted:',
+        gamificationError,
+      );
     }
 
     void notifyOwnersOfStorefrontActivity({
@@ -357,52 +375,58 @@ communityRoutes.post(
       ok: true,
       rewardResult,
     });
-  }
+  },
 );
 
-communityRoutes.post('/storefront-details/:storefrontId/reviews/:reviewId/helpful', async (request, response) => {
-  const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
-  const reviewId = parseReviewIdParam(request.params.reviewId);
-  const body = parseHelpfulVoteBody(request.body);
+communityRoutes.post(
+  '/storefront-details/:storefrontId/reviews/:reviewId/helpful',
+  async (request, response) => {
+    const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
+    const reviewId = parseReviewIdParam(request.params.reviewId);
+    const body = parseHelpfulVoteBody(request.body);
 
-  await ensureProfileWriteAccess(request, body.profileId);
-  const helpfulResult = await markStorefrontAppReviewHelpful({
-    storefrontId,
-    reviewId,
-    profileId: body.profileId,
-  });
+    await ensureProfileWriteAccess(request, body.profileId);
+    const helpfulResult = await markStorefrontAppReviewHelpful({
+      storefrontId,
+      reviewId,
+      profileId: body.profileId,
+    });
 
-  invalidateCachedStorefrontDetail(storefrontId);
+    invalidateCachedStorefrontDetail(storefrontId);
 
-  // Gamification is a side effect — must not fail the primary write response
-  if (
-    helpfulResult.didApply &&
-    helpfulResult.reviewAuthorProfileId &&
-    helpfulResult.reviewAuthorProfileId !== body.profileId
-  ) {
-    try {
-      await applyGamificationEvent(helpfulResult.reviewAuthorProfileId, {
-        activityType: 'helpful_vote_received',
-        payload: {
-          count: 1,
-        },
-      });
-    } catch (gamificationError) {
-      console.error('[community] gamification side effect failed for helpful_vote_received:', gamificationError);
+    // Gamification is a side effect — must not fail the primary write response
+    if (
+      helpfulResult.didApply &&
+      helpfulResult.reviewAuthorProfileId &&
+      helpfulResult.reviewAuthorProfileId !== body.profileId
+    ) {
+      try {
+        await applyGamificationEvent(helpfulResult.reviewAuthorProfileId, {
+          activityType: 'helpful_vote_received',
+          payload: {
+            count: 1,
+          },
+        });
+      } catch (gamificationError) {
+        console.error(
+          '[community] gamification side effect failed for helpful_vote_received:',
+          gamificationError,
+        );
+      }
     }
-  }
 
-  // Detail refresh is a convenience — must not fail the primary write response
-  let detail: Awaited<ReturnType<typeof getStorefrontDetail>> | null = null;
-  try {
-    detail = await getStorefrontDetail(storefrontId);
-  } catch (detailError) {
-    console.error('[community] post-write detail refresh failed for helpful_vote:', detailError);
-  }
+    // Detail refresh is a convenience — must not fail the primary write response
+    let detail: Awaited<ReturnType<typeof getStorefrontDetail>> | null = null;
+    try {
+      detail = await getStorefrontDetail(storefrontId);
+    } catch (detailError) {
+      console.error('[community] post-write detail refresh failed for helpful_vote:', detailError);
+    }
 
-  response.json({
-    detail,
-    didApply: helpfulResult.didApply,
-    reviewAuthorProfileId: helpfulResult.reviewAuthorProfileId,
-  });
-});
+    response.json({
+      detail,
+      didApply: helpfulResult.didApply,
+      reviewAuthorProfileId: helpfulResult.reviewAuthorProfileId,
+    });
+  },
+);

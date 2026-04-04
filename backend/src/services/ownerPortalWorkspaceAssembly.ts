@@ -9,7 +9,7 @@ import { StorefrontSummaryApiDocument } from '../types';
 import { StoredStorefrontReportRecord } from './storefrontCommunityService';
 
 export function buildEmptyOwnerPortalWorkspace(
-  runtimeStatus: RuntimeOpsStatus
+  runtimeStatus: RuntimeOpsStatus,
 ): OwnerPortalWorkspaceDocument {
   return {
     ownerProfile: null,
@@ -116,11 +116,14 @@ export function buildOwnerWorkspaceMetrics({
     averageRating: recentReviews.length
       ? Math.round(
           (recentReviews.reduce((sum, review) => sum + review.rating, 0) / recentReviews.length) *
-            10
+            10,
         ) / 10
       : null,
-    replyRate: recentReviews.length ? Math.round((replyCount / recentReviews.length) * 100) / 100 : 0,
-    openToRouteRate: openBase > 0 ? Math.round((storefrontMetrics.routes7d / openBase) * 1000) / 10 : 0,
+    replyRate: recentReviews.length
+      ? Math.round((replyCount / recentReviews.length) * 100) / 100
+      : 0,
+    openToRouteRate:
+      openBase > 0 ? Math.round((storefrontMetrics.routes7d / openBase) * 1000) / 10 : 0,
     openToWebsiteRate:
       openBase > 0 ? Math.round((storefrontMetrics.websiteTaps7d / openBase) * 1000) / 10 : 0,
     openToPhoneRate:
@@ -131,7 +134,7 @@ export function buildOwnerWorkspaceMetrics({
 }
 
 export function buildOwnerWorkspaceSummarySnapshot(
-  storefrontSummary: StorefrontSummaryApiDocument
+  storefrontSummary: StorefrontSummaryApiDocument,
 ): OwnerPortalWorkspaceDocument['storefrontSummary'] {
   return {
     id: storefrontSummary.id,

@@ -1,6 +1,9 @@
 import { StorefrontRecord } from '../../../src/types/storefrontRecord';
 import { getBackendFirebaseDb } from '../firebase';
-import { StorefrontDetailDocument, StorefrontSummaryDocument } from '../../../src/types/firestoreDocuments';
+import {
+  StorefrontDetailDocument,
+  StorefrontSummaryDocument,
+} from '../../../src/types/firestoreDocuments';
 import { backendStorefrontSource, backendStorefrontSourceStatus } from '../sources';
 import { clearStorefrontBackendCache } from './storefrontCacheService';
 import {
@@ -50,7 +53,10 @@ let discoverySchedulerHandle: ReturnType<typeof setTimeout> | null = null;
 type DiscoveryPersistenceDocRef = unknown;
 
 type DiscoveryPersistenceBatch = {
-  set(reference: DiscoveryPersistenceDocRef, value: Record<string, unknown>): DiscoveryPersistenceBatch;
+  set(
+    reference: DiscoveryPersistenceDocRef,
+    value: Record<string, unknown>,
+  ): DiscoveryPersistenceBatch;
   commit(): Promise<unknown>;
 };
 
@@ -101,9 +107,9 @@ function buildEmptyDiscoveryState(): StorefrontDiscoveryStateDocument {
 function isProductionLikeEnvironment() {
   return Boolean(
     process.env.K_SERVICE ||
-      process.env.CLOUD_RUN_JOB ||
-      process.env.STOREFRONT_DISCOVERY_SCHEDULER_ENABLED === 'true' ||
-      process.env.NODE_ENV === 'production'
+    process.env.CLOUD_RUN_JOB ||
+    process.env.STOREFRONT_DISCOVERY_SCHEDULER_ENABLED === 'true' ||
+    process.env.NODE_ENV === 'production',
   );
 }
 
@@ -116,14 +122,17 @@ export function calculateNextStorefrontDiscoveryRunAt(fromIso: string | null, no
   return new Date(startAt.getTime() + STOREFRONT_DISCOVERY_INTERVAL_MS).toISOString();
 }
 
-export function calculateFailedStorefrontDiscoveryRetryAt(fromIso: string | null, now = new Date()) {
+export function calculateFailedStorefrontDiscoveryRetryAt(
+  fromIso: string | null,
+  now = new Date(),
+) {
   const startAt = fromIso ? new Date(fromIso) : now;
   return new Date(startAt.getTime() + DISCOVERY_FAILURE_RETRY_MS).toISOString();
 }
 
 export function isStorefrontDiscoverySweepDue(
   state: Pick<StorefrontDiscoveryStateDocument, 'lastSuccessfulRunAt' | 'nextRunAt'>,
-  now = Date.now()
+  now = Date.now(),
 ) {
   const nextRunAtMs = parseIsoOrNull(state.nextRunAt);
   if (nextRunAtMs === null) {
@@ -153,7 +162,7 @@ function countCandidateStatuses(candidates: StorefrontDiscoveryCandidateDocument
       readyForPublishCount: 0,
       publishedCount: 0,
       suppressedCount: 0,
-    }
+    },
   );
 }
 
@@ -165,7 +174,7 @@ async function persistPublishedStorefrontDocuments(
   options?: {
     refreshCaches?: boolean;
     dbOverride?: DiscoveryPersistenceDb | null;
-  }
+  },
 ) {
   const db = (options?.dbOverride ?? getBackendFirebaseDb()) as DiscoveryPersistenceDb | null;
   if (!db) {
@@ -277,7 +286,7 @@ export async function runStorefrontDiscoverySweep(input: {
         marketId: input.marketId ?? null,
       });
       publicStorefrontIds = new Set(
-        (await backendStorefrontSource.getAllSummaries()).map((summary) => summary.id)
+        (await backendStorefrontSource.getAllSummaries()).map((summary) => summary.id),
       );
     } catch (error) {
       const finishedAt = createNowIso();
@@ -364,13 +373,10 @@ export async function runStorefrontDiscoverySweep(input: {
               buildPublishedStorefrontSummaryDocument(
                 source,
                 stagedCandidate.googlePlaceId,
-                stagedCandidate.googleEnrichment
+                stagedCandidate.googleEnrichment,
               );
             const publishedDetail: StorefrontDetailDocument =
-              buildPublishedStorefrontDetailDocument(
-                source,
-                stagedCandidate.googleEnrichment
-              );
+              buildPublishedStorefrontDetailDocument(source, stagedCandidate.googleEnrichment);
             await persistPublishedStorefrontDocuments(
               source.id,
               publishedSummary,
@@ -378,7 +384,7 @@ export async function runStorefrontDiscoverySweep(input: {
               startedAt,
               {
                 refreshCaches: false,
-              }
+              },
             );
             refreshedPublishedDocuments = true;
             nextCandidate = {
@@ -459,7 +465,7 @@ export async function runStorefrontDiscoverySweep(input: {
           suppressedCount: totals.suppressedCount,
           limit: completedRun.limit,
           marketId: completedRun.marketId,
-        })
+        }),
       );
 
       return {
@@ -491,25 +497,23 @@ export async function runStorefrontDiscoverySweep(input: {
         lastError: message,
       });
       await saveStorefrontDiscoveryRun(failedRun);
-      await saveStorefrontDiscoveryState(
-        {
-          ...previousState,
-          lastRunId: runId,
-          lastRunAt: startedAt,
-          nextRunAt: calculateFailedStorefrontDiscoveryRetryAt(finishedAt ?? startedAt),
-          lastRunReason: input.reason,
-          lastRunStatus: 'failed',
-          lastError: message,
-          totalSourceCount: sourceRecords.length,
-          candidateCount: nextCandidates.length,
-          hiddenCount: failedTotals.hiddenCount,
-          readyForPublishCount: failedTotals.readyForPublishCount,
-          publishedCount: failedTotals.publishedCount,
-          suppressedCount: failedTotals.suppressedCount,
-          lastRunLimit: runBase.limit,
-          lastRunMarketId: runBase.marketId,
-        }
-      );
+      await saveStorefrontDiscoveryState({
+        ...previousState,
+        lastRunId: runId,
+        lastRunAt: startedAt,
+        nextRunAt: calculateFailedStorefrontDiscoveryRetryAt(finishedAt ?? startedAt),
+        lastRunReason: input.reason,
+        lastRunStatus: 'failed',
+        lastError: message,
+        totalSourceCount: sourceRecords.length,
+        candidateCount: nextCandidates.length,
+        hiddenCount: failedTotals.hiddenCount,
+        readyForPublishCount: failedTotals.readyForPublishCount,
+        publishedCount: failedTotals.publishedCount,
+        suppressedCount: failedTotals.suppressedCount,
+        lastRunLimit: runBase.limit,
+        lastRunMarketId: runBase.marketId,
+      });
       throw error;
     }
   })();
@@ -535,28 +539,29 @@ export async function publishStorefrontDiscoveryCandidate(candidateId: string) {
     throw new Error(`Discovery candidate is suppressed and cannot be published: ${candidateId}`);
   }
 
-  if (candidate.publicationStatus !== 'ready_for_publish' && candidate.publicationStatus !== 'published') {
-    throw new Error(
-      `Discovery candidate is not ready for publish yet: ${candidateId}`
-    );
+  if (
+    candidate.publicationStatus !== 'ready_for_publish' &&
+    candidate.publicationStatus !== 'published'
+  ) {
+    throw new Error(`Discovery candidate is not ready for publish yet: ${candidateId}`);
   }
 
   const source = candidate.source;
   const publishedSummary: StorefrontSummaryDocument = buildPublishedStorefrontSummaryDocument(
     source,
     candidate.googlePlaceId,
-    candidate.googleEnrichment
+    candidate.googleEnrichment,
   );
   const publishedDetail: StorefrontDetailDocument = buildPublishedStorefrontDetailDocument(
     source,
-    candidate.googleEnrichment
+    candidate.googleEnrichment,
   );
 
   await persistPublishedStorefrontDocuments(
     candidate.id,
     publishedSummary,
     publishedDetail,
-    createNowIso()
+    createNowIso(),
   );
 
   const nowIso = createNowIso();
@@ -680,12 +685,40 @@ async function scheduleNextStorefrontDiscoverySweep() {
   }, DISCOVERY_TIMER_SAFETY_MS);
 }
 
+async function recoverStaleDiscoveryRun() {
+  try {
+    const latestRun = await getLatestStorefrontDiscoveryRun();
+    if (!latestRun || latestRun.status !== 'running') {
+      return;
+    }
+
+    const staleThresholdMs = 60 * 60 * 1000;
+    const startedAtMs = Date.parse(latestRun.startedAt);
+    if (!Number.isFinite(startedAtMs) || Date.now() - startedAtMs < staleThresholdMs) {
+      return;
+    }
+
+    const finishedAt = createNowIso();
+    const recoveredRun = buildRunDocument({
+      ...latestRun,
+      status: 'failed',
+      finishedAt,
+      lastError:
+        'Run was still in progress when the backend restarted. Marked as failed by startup recovery.',
+    });
+    await saveStorefrontDiscoveryRun(recoveredRun);
+  } catch {
+    // Startup recovery should never block the scheduler from starting.
+  }
+}
+
 export async function startStorefrontDiscoveryScheduler() {
   if (discoverySchedulerStarted || !isDiscoverySchedulerEnabled()) {
     return getStorefrontDiscoveryStatus();
   }
 
   discoverySchedulerStarted = true;
+  await recoverStaleDiscoveryRun();
   const state = await loadStorefrontDiscoveryState();
 
   if (shouldRunStorefrontDiscoveryScheduler(state)) {

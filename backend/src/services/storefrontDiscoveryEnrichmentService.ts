@@ -12,6 +12,25 @@ import {
   STOREFRONT_DISCOVERY_SOURCE_KIND,
 } from './storefrontDiscoverySourceService';
 
+/** Maximum distance (in miles) between OCM-geocoded and Google Places locations before we distrust the Google result. */
+const MAX_GOOGLE_LOCATION_DRIFT_MILES = 0.5;
+
+/** Quick haversine distance between two lat/lng pairs, returned in miles. */
+function haversineDistanceMiles(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 3958.8; // Earth radius in miles
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLon = toRad(b.longitude - a.longitude);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLon = Math.sin(dLon / 2);
+  const h =
+    sinLat * sinLat + Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * sinLon * sinLon;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
 function createNow() {
   return new Date().toISOString();
 }
@@ -25,7 +44,7 @@ function hasPendingDiscoveryHours(source: StorefrontRecord) {
 
 export function buildDiscoverySummaryLikeDocument(
   source: StorefrontRecord,
-  placeId?: string | null
+  placeId?: string | null,
 ): StorefrontSummaryApiDocument {
   return {
     id: source.id,
@@ -103,7 +122,7 @@ export async function resolveDiscoveryGoogleData(source: StorefrontRecord): Prom
 
 export function deriveDiscoveryPublicationStatus(
   source: StorefrontRecord,
-  googleEnrichment: GooglePlacesEnrichment | null
+  googleEnrichment: GooglePlacesEnrichment | null,
 ): {
   publicationStatus: StorefrontDiscoveryPublicationStatus;
   publicationReason: string;
@@ -147,7 +166,7 @@ export function buildDiscoveryCandidateDocument(
     googleEnrichment: GooglePlacesEnrichment | null;
     existing?: StorefrontDiscoveryCandidateDocument | null;
     nowIso?: string;
-  }
+  },
 ): StorefrontDiscoveryCandidateDocument {
   const nowIso = input.nowIso ?? createNow();
   const existing = input.existing ?? null;
@@ -179,9 +198,15 @@ export function buildDiscoveryCandidateDocument(
 export function buildPublishedStorefrontSummaryDocument(
   source: StorefrontRecord,
   googlePlaceId?: string | null,
-  googleEnrichment: GooglePlacesEnrichment | null = null
+  googleEnrichment: GooglePlacesEnrichment | null = null,
 ) {
-  const publishedLocation = googleEnrichment?.location ?? source.coordinates;
+  // Only use Google's location if it's within a reasonable distance of the
+  // OCM-geocoded address. A large drift means Google matched the wrong place.
+  const googleLocation = googleEnrichment?.location;
+  const googleLocationTrusted =
+    googleLocation &&
+    haversineDistanceMiles(source.coordinates, googleLocation) <= MAX_GOOGLE_LOCATION_DRIFT_MILES;
+  const publishedLocation = googleLocationTrusted ? googleLocation : source.coordinates;
 
   return {
     licenseId: source.licenseId,
@@ -220,13 +245,14 @@ export function buildPublishedStorefrontSummaryDocument(
 
 export function buildPublishedStorefrontDetailDocument(
   source: StorefrontRecord,
-  googleEnrichment: GooglePlacesEnrichment | null
+  googleEnrichment: GooglePlacesEnrichment | null,
 ) {
   return {
     phone: googleEnrichment?.phone ?? source.phone,
     website: googleEnrichment?.website ?? source.website,
     hours: googleEnrichment?.hours?.length ? [...googleEnrichment.hours] : [...source.hours],
-    openNow: googleEnrichment?.openNow ?? (hasPendingDiscoveryHours(source) ? null : source.openNow),
+    openNow:
+      googleEnrichment?.openNow ?? (hasPendingDiscoveryHours(source) ? null : source.openNow),
     hasOwnerClaim: false,
     menuUrl: null,
     verifiedOwnerBadgeLabel: null,

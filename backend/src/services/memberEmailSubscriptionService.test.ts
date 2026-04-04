@@ -26,9 +26,8 @@ beforeEach(() => {
 afterEach(async () => {
   global.fetch = originalFetch;
   clearBackendModuleCache();
-  const { clearMemberEmailSubscriptionMemoryStateForTests } = await import(
-    './memberEmailSubscriptionService'
-  );
+  const { clearMemberEmailSubscriptionMemoryStateForTests } =
+    await import('./memberEmailSubscriptionService');
   clearMemberEmailSubscriptionMemoryStateForTests();
 });
 
@@ -71,10 +70,8 @@ test('sends the welcome email only once when resend is configured', async () => 
     });
   }) as typeof fetch;
 
-  const {
-    getMemberEmailSubscriptionStatus,
-    syncMemberEmailSubscription,
-  } = await import('./memberEmailSubscriptionService');
+  const { getMemberEmailSubscriptionStatus, syncMemberEmailSubscription } =
+    await import('./memberEmailSubscriptionService');
 
   const firstResult = await syncMemberEmailSubscription({
     accountId: 'member-2',
@@ -128,9 +125,8 @@ test('sends the welcome email only once when resend is configured', async () => 
 });
 
 test('does not send the welcome email as a side effect of a status read', async () => {
-  const { getMemberEmailSubscriptionStatus, syncMemberEmailSubscription } = await import(
-    './memberEmailSubscriptionService'
-  );
+  const { getMemberEmailSubscriptionStatus, syncMemberEmailSubscription } =
+    await import('./memberEmailSubscriptionService');
 
   const pendingResult = await syncMemberEmailSubscription({
     accountId: 'member-4',

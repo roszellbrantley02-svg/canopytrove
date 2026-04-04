@@ -226,10 +226,7 @@ export function ProfileAccountSection({
         : 'Sign in to keep your history, reviews, and saved storefronts together.';
 
   return (
-    <SectionCard
-      title="Account"
-      body="Manage your sign-in, display name, and business portal access."
-    >
+    <SectionCard title="Account" body="Manage your sign-in and display name.">
       <View style={styles.previewCard}>
         <View style={styles.previewCardHeader}>
           <View style={styles.progressText}>
@@ -387,7 +384,7 @@ export function ProfileAccountSection({
       {ownerPortalEnabled && ownerPortalPreviewEnabled && showOwnerPreview ? (
         <View style={styles.previewCard}>
           <View style={styles.previewCardHeader}>
-            <Text style={styles.previewCardTitle}>Demo mode (internal)</Text>
+            <Text style={styles.previewCardTitle}>Preview mode</Text>
             {onDismissOwnerPreview ? (
               <Pressable
                 accessibilityRole="button"
@@ -401,8 +398,7 @@ export function ProfileAccountSection({
             ) : null}
           </View>
           <Text style={styles.previewCardBody}>
-            Preview business tools without affecting live data. For internal and App Review use
-            only.
+            Preview business tools without affecting live data.
           </Text>
           <View style={styles.heroActions}>
             <Pressable
@@ -412,7 +408,7 @@ export function ProfileAccountSection({
               onPress={onOpenOwnerPreviewPortal}
               style={styles.primaryButton}
             >
-              <Text style={styles.primaryButtonText}>Open Demo Mode</Text>
+              <Text style={styles.primaryButtonText}>Open Preview</Text>
             </Pressable>
           </View>
         </View>

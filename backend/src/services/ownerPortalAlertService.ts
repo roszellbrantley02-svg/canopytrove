@@ -29,9 +29,7 @@ function createEmptyOwnerAlertRecord(ownerUid: string): OwnerPortalAlertRecord {
   };
 }
 
-function normalizeOwnerPortalAlertRecord(
-  record: OwnerPortalAlertRecord
-): OwnerPortalAlertRecord {
+function normalizeOwnerPortalAlertRecord(record: OwnerPortalAlertRecord): OwnerPortalAlertRecord {
   return {
     ownerUid: record.ownerUid,
     devicePushToken:
@@ -125,8 +123,7 @@ export async function getOwnerPortalAlertStatus(ownerUid: string) {
   const record = await getOwnerPortalAlertRecord(ownerUid);
   return {
     pushEnabled: Boolean(record.devicePushToken),
-    updatedAt:
-      record.updatedAt === new Date(0).toISOString() ? null : record.updatedAt,
+    updatedAt: record.updatedAt === new Date(0).toISOString() ? null : record.updatedAt,
   };
 }
 
@@ -140,13 +137,12 @@ export async function notifyOwnersOfStorefrontActivity(options: {
   if (!ownerUids.length) {
     return {
       notifiedOwnerCount: 0,
-      storage:
-        backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+      storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
     };
   }
 
   const settledAlertRecords = await Promise.allSettled(
-    ownerUids.map((ownerUid) => getOwnerPortalAlertRecord(ownerUid))
+    ownerUids.map((ownerUid) => getOwnerPortalAlertRecord(ownerUid)),
   );
   const ownerAlertRecords = settledAlertRecords.flatMap((result, index) => {
     if (result.status === 'fulfilled') {
@@ -154,7 +150,7 @@ export async function notifyOwnersOfStorefrontActivity(options: {
     }
     console.warn(
       `[ownerPortalAlertService] failed to load alert record for ${ownerUids[index] ?? 'unknown'}:`,
-      result.reason
+      result.reason,
     );
     return [];
   });
@@ -162,8 +158,7 @@ export async function notifyOwnersOfStorefrontActivity(options: {
   if (!recordsWithTokens.length) {
     return {
       notifiedOwnerCount: 0,
-      storage:
-        backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+      storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
     };
   }
 
@@ -180,7 +175,7 @@ export async function notifyOwnersOfStorefrontActivity(options: {
         storefrontId: options.storefrontId,
         ...options.data,
       },
-    }))
+    })),
   );
 
   const tokenCleanupResults = await Promise.allSettled(
@@ -192,7 +187,7 @@ export async function notifyOwnersOfStorefrontActivity(options: {
           devicePushToken: null,
         });
       }
-    })
+    }),
   );
   for (const result of tokenCleanupResults) {
     if (result.status === 'rejected') {
@@ -202,8 +197,7 @@ export async function notifyOwnersOfStorefrontActivity(options: {
 
   return {
     notifiedOwnerCount: tickets.filter((ticket) => ticket.status === 'ok').length,
-    storage:
-      backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+    storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
   };
 }
 
@@ -217,8 +211,7 @@ export async function notifyOwnerPortalUser(options: {
   if (!record.devicePushToken) {
     return {
       notifiedOwnerCount: 0,
-      storage:
-        backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+      storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
     };
   }
 
@@ -247,7 +240,6 @@ export async function notifyOwnerPortalUser(options: {
 
   return {
     notifiedOwnerCount: tickets.filter((ticket) => ticket.status === 'ok').length,
-    storage:
-      backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+    storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
   };
 }

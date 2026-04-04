@@ -118,13 +118,25 @@ export function CustomerStateCard({
                 { color: toneStyle.eyebrowColor },
                 centered && styles.textCentered,
               ]}
+              maxFontSizeMultiplier={1.1}
             >
               {eyebrow}
             </Text>
           ) : null}
-          <Text style={[styles.title, centered && styles.textCentered]}>{title}</Text>
-          <Text style={[styles.body, centered && styles.textCentered]}>{body}</Text>
-          {note ? <Text style={[styles.note, centered && styles.textCentered]}>{note}</Text> : null}
+          <Text style={[styles.title, centered && styles.textCentered]} maxFontSizeMultiplier={1.2}>
+            {title}
+          </Text>
+          <Text style={[styles.body, centered && styles.textCentered]} maxFontSizeMultiplier={1.3}>
+            {body}
+          </Text>
+          {note ? (
+            <Text
+              style={[styles.note, centered && styles.textCentered]}
+              maxFontSizeMultiplier={1.3}
+            >
+              {note}
+            </Text>
+          ) : null}
         </View>
       </View>
       {children ? <View style={styles.footer}>{children}</View> : null}

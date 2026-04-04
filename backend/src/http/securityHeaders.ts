@@ -23,10 +23,7 @@ export const securityHeadersMiddleware: RequestHandler = (request, response, nex
   }
 
   // Content Security Policy - very restrictive
-  response.setHeader(
-    'Content-Security-Policy',
-    "default-src 'none'; frame-ancestors 'none'"
-  );
+  response.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
 
   // Prevent caching of sensitive data
   response.setHeader('Cache-Control', 'no-store');
@@ -35,10 +32,7 @@ export const securityHeadersMiddleware: RequestHandler = (request, response, nex
   response.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   // Disable sensitive browser features
-  response.setHeader(
-    'Permissions-Policy',
-    'camera=(), microphone=(), geolocation=()'
-  );
+  response.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   next();
 };

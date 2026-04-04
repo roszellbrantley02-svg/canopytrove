@@ -46,7 +46,7 @@ type GeneratedOwnerAiPayloadBase<T extends GeneratedOwnerAiPayload> = Omit<
 >;
 
 type OwnerAiPayloadValidator<T extends GeneratedOwnerAiPayload> = (
-  value: unknown
+  value: unknown,
 ) => GeneratedOwnerAiPayloadBase<T> | null;
 
 const OWNER_AI_PRIORITY_TONES = new Set<OwnerAiActionPlan['priorities'][number]['tone']>([
@@ -112,7 +112,7 @@ function parseEnumValue<T extends string>(value: unknown, allowed: Set<T>) {
 }
 
 function validateOwnerAiActionPlanPayload(
-  value: unknown
+  value: unknown,
 ): GeneratedOwnerAiPayloadBase<OwnerAiActionPlan> | null {
   const payload = asObjectRecord(value);
   if (!payload) {
@@ -157,7 +157,7 @@ function validateOwnerAiActionPlanPayload(
 }
 
 function validateOwnerAiPromotionDraftPayload(
-  value: unknown
+  value: unknown,
 ): GeneratedOwnerAiPayloadBase<OwnerAiPromotionDraft> | null {
   const payload = asObjectRecord(value);
   if (!payload) {
@@ -172,7 +172,7 @@ function validateOwnerAiPromotionDraftPayload(
   const placementSurfacesRaw = parseStringArray(payload.placementSurfaces, { maxItems: 3 });
   const placementScope = parseEnumValue(
     payload.placementScope,
-    OWNER_AI_PROMOTION_PLACEMENT_SCOPES
+    OWNER_AI_PROMOTION_PLACEMENT_SCOPES,
   );
   const reasoning = parseRequiredString(payload.reasoning);
 
@@ -190,12 +190,10 @@ function validateOwnerAiPromotionDraftPayload(
   }
 
   const placementSurfaces = placementSurfacesRaw.filter(
-    (
-      surface
-    ): surface is OwnerAiPromotionDraft['placementSurfaces'][number] =>
+    (surface): surface is OwnerAiPromotionDraft['placementSurfaces'][number] =>
       OWNER_AI_PROMOTION_PLACEMENT_SURFACES.has(
-        surface as OwnerAiPromotionDraft['placementSurfaces'][number]
-      )
+        surface as OwnerAiPromotionDraft['placementSurfaces'][number],
+      ),
   );
 
   if (!placementSurfaces.length) {
@@ -215,7 +213,7 @@ function validateOwnerAiPromotionDraftPayload(
 }
 
 function validateOwnerAiReviewReplyDraftPayload(
-  value: unknown
+  value: unknown,
 ): GeneratedOwnerAiPayloadBase<OwnerAiReviewReplyDraft> | null {
   const payload = asObjectRecord(value);
   if (!payload) {
@@ -237,7 +235,7 @@ function validateOwnerAiReviewReplyDraftPayload(
 }
 
 function validateOwnerAiProfileSuggestionPayload(
-  value: unknown
+  value: unknown,
 ): GeneratedOwnerAiPayloadBase<OwnerAiProfileSuggestion> | null {
   const payload = asObjectRecord(value);
   if (!payload) {
@@ -343,9 +341,7 @@ async function generateJsonWithFallback<T extends GeneratedOwnerAiPayload>(optio
         severity: 'warning',
         source: 'owner-portal-ai',
         message:
-          error instanceof Error
-            ? error.message
-            : 'Owner portal AI fell back to local generation.',
+          error instanceof Error ? error.message : 'Owner portal AI fell back to local generation.',
         metadata: {
           provider: 'openai',
           model: serverConfig.openAiModel,
@@ -369,7 +365,7 @@ export async function getOwnerAiActionPlan(ownerUid: string): Promise<OwnerAiAct
   const missingProfileTools =
     !workspace.profileTools?.cardSummary || !workspace.profileTools?.menuUrl;
   const hasNoLivePromotion = workspace.promotions.every(
-    (promotion) => promotion.status !== 'active'
+    (promotion) => promotion.status !== 'active',
   );
 
   const fallback = (): Omit<OwnerAiActionPlan, 'usedFallback' | 'generatedAt'> => {
@@ -436,7 +432,7 @@ export async function generateOwnerAiPromotionDraft(
   input: {
     goal?: string | null;
     tone?: string | null;
-  }
+  },
 ): Promise<OwnerAiPromotionDraft> {
   const workspace = await getOwnerPortalWorkspace(ownerUid);
   const storefrontName =
@@ -449,7 +445,7 @@ export async function generateOwnerAiPromotionDraft(
       input.goal ?? '',
       workspace.metrics.followerCount >= 10
         ? 'Saved-follower weekend offer'
-        : 'Premium storefront feature this week'
+        : 'Premium storefront feature this week',
     ),
     description:
       workspace.metrics.followerCount >= 10
@@ -488,7 +484,7 @@ export async function generateOwnerAiReviewReplyDraft(
   reviewId: string,
   input: {
     tone?: string | null;
-  }
+  },
 ): Promise<OwnerAiReviewReplyDraft> {
   const workspace = await getOwnerPortalWorkspace(ownerUid);
   const review = workspace.recentReviews.find((candidate) => candidate.id === reviewId);
@@ -531,7 +527,7 @@ export async function generateOwnerAiProfileSuggestion(
   ownerUid: string,
   input: {
     focus?: string | null;
-  }
+  },
 ): Promise<OwnerAiProfileSuggestion> {
   const workspace = await getOwnerPortalWorkspace(ownerUid);
   const storefrontName =

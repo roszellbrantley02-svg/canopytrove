@@ -43,8 +43,11 @@ afterEach(async () => {
 });
 
 test('deleteProfileAccountData removes compliance records for the owner profile', async () => {
-  const { clearOwnerLicenseComplianceMemoryStateForTests, saveOwnerLicenseCompliance, getOwnerLicenseCompliance } =
-    await loadComplianceService();
+  const {
+    clearOwnerLicenseComplianceMemoryStateForTests,
+    saveOwnerLicenseCompliance,
+    getOwnerLicenseCompliance,
+  } = await loadComplianceService();
   const { deleteProfileAccountData } = await loadCleanupService();
 
   clearOwnerLicenseComplianceMemoryStateForTests();
@@ -109,7 +112,7 @@ test('deleteProfileAccountData leaves the profile record intact when dependent c
         },
       ]);
       return true;
-    }
+    },
   );
 
   assert.deepEqual(completedSteps, [

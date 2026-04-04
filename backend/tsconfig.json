@@ -8,21 +8,20 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "typeRoots": ["./node_modules/@types", "../node_modules/@types"]
   },
   "include": [
     "src/**/*",
     "scripts/**/*",
-    "../src/data/mockFirestoreSeed.ts",
-    "../src/adapters/firestoreDocumentAdapter.ts",
-    "../src/adapters/storefrontAdapter.ts",
-    "../src/data/mockStorefrontRecords.ts",
-    "../src/domain/canopyTroveGamification.ts",
-    "../src/types/firestoreDocuments.ts",
-    "../src/types/ownerPortal.ts",
-    "../src/types/runtimeOps.ts",
-    "../src/types/storefront.ts",
-    "../src/types/storefrontRecord.ts",
-    "../src/utils/ownerPromotionPlacement.ts"
+    "../src/adapters/**/*.ts",
+    "../src/data/**/*.ts",
+    "../src/domain/**/*.ts",
+    "../src/types/**/*.ts",
+    "../src/utils/**/*.ts"
+  ],
+  "exclude": [
+    "../src/**/*.test.ts",
+    "../src/**/*.test.tsx"
   ]
 }

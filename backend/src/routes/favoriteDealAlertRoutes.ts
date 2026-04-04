@@ -14,22 +14,25 @@ favoriteDealAlertRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],
-  })
+  }),
 );
 
-favoriteDealAlertRoutes.post('/profiles/:profileId/favorite-deal-alerts/sync', async (request, response) => {
-  const profileId = parseProfileIdParam(request.params.profileId);
-  const body = parseFavoriteDealAlertSyncBody(request.body);
+favoriteDealAlertRoutes.post(
+  '/profiles/:profileId/favorite-deal-alerts/sync',
+  async (request, response) => {
+    const profileId = parseProfileIdParam(request.params.profileId);
+    const body = parseFavoriteDealAlertSyncBody(request.body);
 
-  await ensureProfileWriteAccess(request, profileId);
-  const routeState = await getRouteState(profileId);
+    await ensureProfileWriteAccess(request, profileId);
+    const routeState = await getRouteState(profileId);
 
-  response.json(
-    await syncFavoriteDealAlerts({
-      profileId,
-      savedStorefrontIds: body.savedStorefrontIds ?? routeState.savedStorefrontIds,
-      allowNotifications: body.allowNotifications,
-      devicePushToken: body.devicePushToken,
-    })
-  );
-});
+    response.json(
+      await syncFavoriteDealAlerts({
+        profileId,
+        savedStorefrontIds: body.savedStorefrontIds ?? routeState.savedStorefrontIds,
+        allowNotifications: body.allowNotifications,
+        devicePushToken: body.devicePushToken,
+      }),
+    );
+  },
+);

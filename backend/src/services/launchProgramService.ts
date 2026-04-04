@@ -68,10 +68,7 @@ function parseLaunchProgramWindow(nowIso: string): LaunchProgramWindow | null {
   };
 }
 
-function getNormalizedBadges(
-  badges: string[] | undefined,
-  includeEarlyAdopter: boolean
-) {
+function getNormalizedBadges(badges: string[] | undefined, includeEarlyAdopter: boolean) {
   const nextBadges: string[] = [];
   const seen = new Set<string>();
 
@@ -81,7 +78,11 @@ function getNormalizedBadges(
     }
 
     const normalizedBadge = badge.trim();
-    if (!normalizedBadge || normalizedBadge === EARLY_ADOPTER_BADGE_ID || seen.has(normalizedBadge)) {
+    if (
+      !normalizedBadge ||
+      normalizedBadge === EARLY_ADOPTER_BADGE_ID ||
+      seen.has(normalizedBadge)
+    ) {
       continue;
     }
 
@@ -101,7 +102,7 @@ function normalizeSubscriptionStatus(value: string | null | undefined) {
 }
 
 function shouldBlockOwnerTrialForExistingSubscription(
-  subscription: TrialEligibilitySubscription | null | undefined
+  subscription: TrialEligibilitySubscription | null | undefined,
 ) {
   if (subscription?.externalSubscriptionId) {
     return true;
@@ -109,10 +110,7 @@ function shouldBlockOwnerTrialForExistingSubscription(
 
   const status = normalizeSubscriptionStatus(subscription?.status);
   return (
-    status === 'trial' ||
-    status === 'active' ||
-    status === 'past_due' ||
-    status === 'suspended'
+    status === 'trial' || status === 'active' || status === 'past_due' || status === 'suspended'
   );
 }
 
@@ -165,7 +163,7 @@ async function claimEarlyAdopterBadge(input: {
 
       const claimedCount = Number(
         (metaSnapshot.data() as Partial<LaunchProgramMetaRecord> | undefined)
-          ?.earlyAdopterClaimCount ?? 0
+          ?.earlyAdopterClaimCount ?? 0,
       );
       if (claimedCount >= serverConfig.launchEarlyAdopterLimit) {
         return;
@@ -186,7 +184,7 @@ async function claimEarlyAdopterBadge(input: {
           earlyAdopterClaimCount: claimedCount + 1,
           updatedAt: input.claimedAt,
         } satisfies LaunchProgramMetaRecord,
-        { merge: true }
+        { merge: true },
       );
     });
 
@@ -293,7 +291,7 @@ export async function applyEarlyAdopterLaunchProgramToGamificationState(input: {
         profileId: input.profileId,
         joinedDate: input.joinedDate,
         claimedAt: now,
-      })
+      }),
     );
   }
 

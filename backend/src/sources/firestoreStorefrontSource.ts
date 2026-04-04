@@ -22,11 +22,21 @@ const DETAILS_COLLECTION = 'storefront_details';
 const SCOPED_SUMMARY_TTL_MS = 20_000;
 const MATERIALIZED_SUMMARY_TTL_MS = 5 * 60_000;
 const NEARBY_SUMMARY_TTL_MS = 90_000;
-const scopedSummaryCache = new Map<string, { expiresAt: number; items: StorefrontSummaryApiDocument[] }>();
+const scopedSummaryCache = new Map<
+  string,
+  { expiresAt: number; items: StorefrontSummaryApiDocument[] }
+>();
 const scopedSummaryInFlight = new Map<string, Promise<StorefrontSummaryApiDocument[]>>();
-const nearbySummaryCache = new Map<string, { expiresAt: number; page: ReturnType<typeof selectNearestSummaryPage> }>();
-const nearbySummaryInFlight = new Map<string, Promise<ReturnType<typeof selectNearestSummaryPage>>>();
-let materializedSummaryCache: { expiresAt: number; items: StorefrontSummaryApiDocument[] } | null = null;
+const nearbySummaryCache = new Map<
+  string,
+  { expiresAt: number; page: ReturnType<typeof selectNearestSummaryPage> }
+>();
+const nearbySummaryInFlight = new Map<
+  string,
+  Promise<ReturnType<typeof selectNearestSummaryPage>>
+>();
+let materializedSummaryCache: { expiresAt: number; items: StorefrontSummaryApiDocument[] } | null =
+  null;
 let materializedSummaryInFlight: Promise<StorefrontSummaryApiDocument[]> | null = null;
 
 export function clearFirestoreStorefrontSourceCache() {
@@ -62,7 +72,7 @@ function applySearch(items: StorefrontSummaryApiDocument[], searchQuery?: string
 
 function toSummaryDocument(
   storefrontId: string,
-  document: StorefrontSummaryDocument
+  document: StorefrontSummaryDocument,
 ): StorefrontSummaryApiDocument {
   return {
     id: storefrontId,
@@ -113,7 +123,7 @@ function hasBooleanOrNull(value: unknown): value is boolean | null {
 }
 
 export function isCompleteStorefrontSummaryDocument(
-  document: Partial<StorefrontSummaryDocument> | undefined
+  document: Partial<StorefrontSummaryDocument> | undefined,
 ) {
   if (!document) {
     return false;
@@ -204,7 +214,7 @@ export function seedFirestoreStorefrontSourceCacheForTests() {
       total: items.length,
       limit: items.length,
       offset: 0,
-    })
+    }),
   );
   materializedSummaryCache = {
     expiresAt,
@@ -226,7 +236,7 @@ export function getFirestoreStorefrontSourceCacheStateForTests() {
 
 function toDetailDocument(
   storefrontId: string,
-  document: StorefrontDetailDocument
+  document: StorefrontDetailDocument,
 ): StorefrontDetailApiDocument {
   return {
     storefrontId,
@@ -256,15 +266,17 @@ function toDetailDocument(
 
 async function getSummarySnapshots(
   buildQuery?: (
-    collectionRef: CollectionReference<StorefrontSummaryDocument>
-  ) => Query<StorefrontSummaryDocument> | CollectionReference<StorefrontSummaryDocument>
+    collectionRef: CollectionReference<StorefrontSummaryDocument>,
+  ) => Query<StorefrontSummaryDocument> | CollectionReference<StorefrontSummaryDocument>,
 ) {
   const db = getBackendFirebaseDb();
   if (!db) {
     return [];
   }
 
-  const collectionRef = db.collection(SUMMARY_COLLECTION) as CollectionReference<StorefrontSummaryDocument>;
+  const collectionRef = db.collection(
+    SUMMARY_COLLECTION,
+  ) as CollectionReference<StorefrontSummaryDocument>;
   const target = buildQuery ? buildQuery(collectionRef) : collectionRef;
   const snapshots = await target.get();
   return snapshots.docs
@@ -310,7 +322,7 @@ async function getMaterializedSummaries() {
 }
 
 async function buildScopedSummaries(
-  sourceQuery: StorefrontSummaryQuery
+  sourceQuery: StorefrontSummaryQuery,
 ): Promise<StorefrontSummaryApiDocument[]> {
   const areaId = sourceQuery.areaId;
   const searchQuery = sourceQuery.searchQuery;
@@ -326,9 +338,9 @@ async function buildScopedSummaries(
     filterByRadius(
       applyOriginMetrics(applySearch(scopedSummaries, searchQuery), origin),
       origin,
-      radiusMiles
+      radiusMiles,
     ),
-    sortKey
+    sortKey,
   );
 }
 
@@ -383,7 +395,7 @@ async function getNearbySummaryPage(sourceQuery: StorefrontSummaryQuery) {
       scopedSummaries,
       sourceQuery.origin!,
       sourceQuery.radiusMiles!,
-      sourceQuery.limit!
+      sourceQuery.limit!,
     );
 
     nearbySummaryCache.set(cacheKey, {
@@ -421,7 +433,11 @@ export const firestoreStorefrontSource: StorefrontBackendSource = {
       return getNearbySummaryPage(sourceQuery);
     }
 
-    return paginateSummaries(await getScopedSummaries(sourceQuery), sourceQuery.limit, sourceQuery.offset);
+    return paginateSummaries(
+      await getScopedSummaries(sourceQuery),
+      sourceQuery.limit,
+      sourceQuery.offset,
+    );
   },
 
   async getSummaries(sourceQuery) {
@@ -434,7 +450,9 @@ export const firestoreStorefrontSource: StorefrontBackendSource = {
       return null;
     }
 
-    const collectionRef = db.collection(DETAILS_COLLECTION) as CollectionReference<StorefrontDetailDocument>;
+    const collectionRef = db.collection(
+      DETAILS_COLLECTION,
+    ) as CollectionReference<StorefrontDetailDocument>;
     const snapshot = await collectionRef.doc(storefrontId).get();
     if (!snapshot.exists) {
       return null;

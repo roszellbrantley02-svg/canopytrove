@@ -68,8 +68,7 @@ export function parseReviewSubmissionBody(value: unknown) {
         maxItems: MAX_TAG_COUNT,
         maxItemLength: MAX_TAG_LENGTH,
       }) ?? [],
-    photoUploadIds:
-      parseOptionalIdArray(body.photoUploadIds, 'body.photoUploadIds', 4) ?? [],
+    photoUploadIds: parseOptionalIdArray(body.photoUploadIds, 'body.photoUploadIds', 4) ?? [],
     photoCount:
       parseOptionalIntegerValue(body.photoCount, 'body.photoCount', {
         min: 0,
@@ -104,34 +103,38 @@ export function parseReportSubmissionBody(value: unknown) {
     body.reportTarget === undefined
       ? 'storefront'
       : parseEnumValue(body.reportTarget, 'body.reportTarget', ['storefront', 'review'] as const);
-  const reportedReviewId = parseOptionalTrimmedString(body.reportedReviewId, 'body.reportedReviewId', {
-    maxLength: MAX_REASON_LENGTH,
-  });
+  const reportedReviewId = parseOptionalTrimmedString(
+    body.reportedReviewId,
+    'body.reportedReviewId',
+    {
+      maxLength: MAX_REASON_LENGTH,
+    },
+  );
   const reportedReviewAuthorProfileId = parseOptionalTrimmedString(
     body.reportedReviewAuthorProfileId,
     'body.reportedReviewAuthorProfileId',
     {
       maxLength: MAX_REASON_LENGTH,
-    }
+    },
   );
   const reportedReviewAuthorName = parseOptionalTrimmedString(
     body.reportedReviewAuthorName,
     'body.reportedReviewAuthorName',
     {
       maxLength: MAX_DISPLAY_NAME_LENGTH,
-    }
+    },
   );
   const reportedReviewExcerpt = parseOptionalTrimmedString(
     body.reportedReviewExcerpt,
     'body.reportedReviewExcerpt',
     {
       maxLength: MAX_REPORT_TEXT_LENGTH,
-    }
+    },
   );
 
   if (reportTarget === 'review' && !reportedReviewId) {
     throw new RequestValidationError(
-      'body.reportedReviewId is required when body.reportTarget is review.'
+      'body.reportedReviewId is required when body.reportTarget is review.',
     );
   }
 

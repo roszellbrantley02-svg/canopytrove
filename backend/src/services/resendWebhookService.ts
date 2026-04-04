@@ -62,12 +62,12 @@ function normalizeIsoDate(value: string | null | undefined) {
 
 function getCollection() {
   return getOptionalFirestoreCollection<StoredTransactionalEmailWebhookRecord>(
-    RESEND_WEBHOOK_EVENTS_COLLECTION
+    RESEND_WEBHOOK_EVENTS_COLLECTION,
   );
 }
 
 function normalizeStoredRecord(
-  record: StoredTransactionalEmailWebhookRecord
+  record: StoredTransactionalEmailWebhookRecord,
 ): StoredTransactionalEmailWebhookRecord {
   return {
     webhookId: normalizeProviderEventId(record.webhookId) ?? '',
@@ -177,7 +177,9 @@ function normalizeResendWebhookPayload(payload: unknown): VerifiedResendWebhookE
 
   const record = payload as Record<string, unknown>;
   const eventType = trimValue(typeof record.type === 'string' ? record.type : null);
-  const occurredAt = normalizeIsoDate(typeof record.created_at === 'string' ? record.created_at : null);
+  const occurredAt = normalizeIsoDate(
+    typeof record.created_at === 'string' ? record.created_at : null,
+  );
   const data =
     typeof record.data === 'object' && record.data && !Array.isArray(record.data)
       ? (record.data as Record<string, unknown>)
@@ -187,8 +189,8 @@ function normalizeResendWebhookPayload(payload: unknown): VerifiedResendWebhookE
   }
 
   const recipientEmail = Array.isArray(data.to)
-    ? trimValue(typeof data.to[0] === 'string' ? data.to[0] : null)?.toLowerCase() ?? null
-    : trimValue(typeof data.to === 'string' ? data.to : null)?.toLowerCase() ?? null;
+    ? (trimValue(typeof data.to[0] === 'string' ? data.to[0] : null)?.toLowerCase() ?? null)
+    : (trimValue(typeof data.to === 'string' ? data.to : null)?.toLowerCase() ?? null);
 
   return {
     eventType,
@@ -242,7 +244,10 @@ async function matchAndApplyEvent(event: VerifiedResendWebhookEvent, webhookId: 
   };
 }
 
-function toProcessResult(record: StoredTransactionalEmailWebhookRecord, duplicate: boolean): ProcessResendWebhookResult {
+function toProcessResult(
+  record: StoredTransactionalEmailWebhookRecord,
+  duplicate: boolean,
+): ProcessResendWebhookResult {
   return {
     duplicate,
     webhookId: record.webhookId,
@@ -285,13 +290,11 @@ export async function processResendWebhook(input: {
   return toProcessResult(storedRecord, false);
 }
 
-export async function listResendWebhookEvents(options?: {
-  limit?: number;
-}) {
+export async function listResendWebhookEvents(options?: { limit?: number }) {
   const collectionRef = getCollection();
   const records = collectionRef
     ? (await collectionRef.get()).docs.map((documentSnapshot) =>
-        normalizeStoredRecord(documentSnapshot.data() as StoredTransactionalEmailWebhookRecord)
+        normalizeStoredRecord(documentSnapshot.data() as StoredTransactionalEmailWebhookRecord),
       )
     : Array.from(resendWebhookEventStore.values()).map(normalizeStoredRecord);
 

@@ -32,7 +32,7 @@ async function loadPlaceDetail(placeId: string) {
         {
           method: 'GET',
         },
-        'id,websiteUri,nationalPhoneNumber,businessStatus,location,regularOpeningHours.weekdayDescriptions,currentOpeningHours.openNow'
+        'id,websiteUri,nationalPhoneNumber,businessStatus,location,regularOpeningHours.weekdayDescriptions,currentOpeningHours.openNow',
       );
 
       if (!payload?.id) {
@@ -43,7 +43,10 @@ async function loadPlaceDetail(placeId: string) {
         phone: typeof payload.nationalPhoneNumber === 'string' ? payload.nationalPhoneNumber : null,
         website: typeof payload.websiteUri === 'string' ? payload.websiteUri : null,
         hours: normalizeHours(payload.regularOpeningHours?.weekdayDescriptions),
-        openNow: typeof payload.currentOpeningHours?.openNow === 'boolean' ? payload.currentOpeningHours.openNow : null,
+        openNow:
+          typeof payload.currentOpeningHours?.openNow === 'boolean'
+            ? payload.currentOpeningHours.openNow
+            : null,
         businessStatus: typeof payload.businessStatus === 'string' ? payload.businessStatus : null,
         location:
           typeof payload.location?.latitude === 'number' &&
@@ -54,13 +57,13 @@ async function loadPlaceDetail(placeId: string) {
               }
             : null,
       };
-    }
+    },
   );
 }
 
 async function runBackgroundSummaryTasks(
   summaries: StorefrontSummaryApiDocument[],
-  worker: (summary: StorefrontSummaryApiDocument) => Promise<void>
+  worker: (summary: StorefrontSummaryApiDocument) => Promise<void>,
 ) {
   const queue = [...summaries];
   const workers = Array.from({ length: Math.min(BACKGROUND_CONCURRENCY, queue.length) }, () =>
@@ -77,7 +80,7 @@ async function runBackgroundSummaryTasks(
           // Background work should never affect request flow.
         }
       }
-    })()
+    })(),
   );
 
   await Promise.allSettled(workers);
@@ -109,7 +112,7 @@ export async function getGooglePlacesEnrichment(summary: StorefrontSummaryApiDoc
         return null;
       }
       return loadPlaceDetail(placeId);
-    }
+    },
   );
 }
 
@@ -133,7 +136,7 @@ export function clearGooglePlacesServiceCache() {
 
 export function backfillGooglePlaceIdsForSummaries(
   summaries: StorefrontSummaryApiDocument[],
-  maxCount = 8
+  maxCount = 8,
 ) {
   if (!hasGooglePlacesConfig()) {
     return;
@@ -153,7 +156,7 @@ export function backfillGooglePlaceIdsForSummaries(
 
 export function prewarmGooglePlacesEnrichmentForSummaries(
   summaries: StorefrontSummaryApiDocument[],
-  maxCount = 3
+  maxCount = 3,
 ) {
   if (!hasGooglePlacesConfig()) {
     return;

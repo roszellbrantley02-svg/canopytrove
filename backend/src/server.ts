@@ -35,6 +35,27 @@ if (shouldLoadBackendEnvFiles()) {
   loadBackendEnv({ includeLocalOverride: true });
 }
 
+// Global crash handlers — log + report, then exit for Cloud Run restart
+process.on('unhandledRejection', (reason) => {
+  // Dynamic require to avoid circular deps with lazy-loaded modules
+  const { logger } = require('./observability/logger');
+  logger.error('Unhandled rejection', {
+    error: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
+  });
+  process.exitCode = 1;
+});
+
+process.on('uncaughtException', (error) => {
+  const { logger } = require('./observability/logger');
+  logger.error('Uncaught exception — exiting', {
+    error: error.message,
+    stack: error.stack,
+  });
+  // Give a brief window for async reporters, then hard exit
+  setTimeout(() => process.exit(1), 2_000).unref();
+});
+
 function stopBackgroundSchedulers(options: {
   stopOwnerLicenseComplianceScheduler: () => void;
   stopOwnerPromotionScheduler: () => void;
@@ -56,10 +77,22 @@ function registerShutdownHandlers(server: Server, cleanup: () => void) {
     }
 
     shuttingDown = true;
+    const { markShuttingDown } = require('./observability/shutdownState');
+    const { logger } = require('./observability/logger');
+
+    markShuttingDown();
+    logger.info('Graceful shutdown initiated');
+
     cleanup();
     server.close(() => {
-      // Let Cloud Run and local process supervisors terminate naturally.
+      logger.info('Server closed');
     });
+
+    const timeout = setTimeout(() => {
+      logger.error('Graceful shutdown timeout exceeded, forcing exit');
+      process.exit(1);
+    }, 9_000);
+    timeout.unref();
   };
 
   process.once('SIGINT', shutdown);
@@ -68,33 +101,22 @@ function registerShutdownHandlers(server: Server, cleanup: () => void) {
 }
 
 void (async () => {
-  const {
-    captureBackendException,
-    initializeBackendMonitoring,
-    installBackendProcessMonitoring,
-  } = await import('./observability/sentry');
-  const { startOwnerLicenseComplianceScheduler } = await import(
-    './services/ownerPortalLicenseComplianceService'
-  );
-  const { stopOwnerLicenseComplianceScheduler } = await import(
-    './services/ownerPortalLicenseComplianceService'
-  );
-  const { startOwnerPromotionScheduler } = await import(
-    './services/ownerPortalPromotionSchedulerService'
-  );
-  const { stopOwnerPromotionScheduler } = await import(
-    './services/ownerPortalPromotionSchedulerService'
-  );
-  const {
-    startRuntimeHealthMonitorScheduler,
-    stopRuntimeHealthMonitorScheduler,
-  } = await import('./services/healthMonitorService');
-  const { startStorefrontDiscoveryScheduler } = await import(
-    './services/storefrontDiscoveryOrchestrationService'
-  );
-  const { stopStorefrontDiscoveryScheduler } = await import(
-    './services/storefrontDiscoveryOrchestrationService'
-  );
+  const { captureBackendException, initializeBackendMonitoring, installBackendProcessMonitoring } =
+    await import('./observability/sentry');
+  const { startOwnerLicenseComplianceScheduler } =
+    await import('./services/ownerPortalLicenseComplianceService');
+  const { stopOwnerLicenseComplianceScheduler } =
+    await import('./services/ownerPortalLicenseComplianceService');
+  const { startOwnerPromotionScheduler } =
+    await import('./services/ownerPortalPromotionSchedulerService');
+  const { stopOwnerPromotionScheduler } =
+    await import('./services/ownerPortalPromotionSchedulerService');
+  const { startRuntimeHealthMonitorScheduler, stopRuntimeHealthMonitorScheduler } =
+    await import('./services/healthMonitorService');
+  const { startStorefrontDiscoveryScheduler } =
+    await import('./services/storefrontDiscoveryOrchestrationService');
+  const { stopStorefrontDiscoveryScheduler } =
+    await import('./services/storefrontDiscoveryOrchestrationService');
   const { serverConfig } = await import('./config');
 
   initializeBackendMonitoring();

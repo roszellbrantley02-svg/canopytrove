@@ -72,11 +72,8 @@ test('keeps explicit mock mode available for storefront reads', async () => {
 test('fails loudly when firestore mode is requested without backend Firebase config', async () => {
   process.env.STOREFRONT_BACKEND_SOURCE = 'firestore';
 
-  const {
-    backendStorefrontSource,
-    backendStorefrontSourceStatus,
-    warmBackendStorefrontSource,
-  } = await loadSourcesModule();
+  const { backendStorefrontSource, backendStorefrontSourceStatus, warmBackendStorefrontSource } =
+    await loadSourcesModule();
 
   assert.equal(backendStorefrontSourceStatus.requestedMode, 'firestore');
   assert.equal(backendStorefrontSourceStatus.activeMode, 'firestore');
@@ -84,10 +81,10 @@ test('fails loudly when firestore mode is requested without backend Firebase con
   assert.match(String(backendStorefrontSourceStatus.fallbackReason), /Missing backend Firebase/i);
   await assert.rejects(
     () => backendStorefrontSource.getAllSummaries(),
-    /backend Firebase environment config is missing/i
+    /backend Firebase environment config is missing/i,
   );
   await assert.rejects(
     () => warmBackendStorefrontSource(),
-    /backend Firebase environment config is missing/i
+    /backend Firebase environment config is missing/i,
   );
 });

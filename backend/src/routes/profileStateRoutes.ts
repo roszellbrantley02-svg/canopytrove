@@ -15,7 +15,7 @@ profileStateRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['PUT'],
-  })
+  }),
 );
 
 profileStateRoutes.get('/profile-state/:profileId', async (request, response) => {
@@ -39,10 +39,10 @@ profileStateRoutes.put('/profile-state/:profileId', async (request, response) =>
         displayName:
           body.profile?.displayName !== undefined
             ? body.profile.displayName
-            : profile.displayName ?? null,
+            : (profile.displayName ?? null),
         createdAt: profile.createdAt ?? body.profile?.createdAt ?? now,
         updatedAt: now,
       },
-    })
+    }),
   );
 });

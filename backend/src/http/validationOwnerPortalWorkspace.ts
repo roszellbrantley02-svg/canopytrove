@@ -98,9 +98,7 @@ function parseOptionalStorefrontMediaPathArray(value: unknown, field: string) {
     return paths;
   }
 
-  return paths.map((path, index) =>
-    parseStorefrontMediaPath(path, `${field}[${index}]`)
-  );
+  return paths.map((path, index) => parseStorefrontMediaPath(path, `${field}[${index}]`));
 }
 
 export function parseOwnerPortalProfileToolsBody(body: unknown): OwnerPortalProfileToolsInput {
@@ -108,22 +106,22 @@ export function parseOwnerPortalProfileToolsBody(body: unknown): OwnerPortalProf
 
   return {
     menuUrl: parseOptionalHttpUrl(payload.menuUrl, 'body.menuUrl'),
-    featuredPhotoUrls: parseOptionalHttpUrlArray(payload.featuredPhotoUrls, 'body.featuredPhotoUrls'),
+    featuredPhotoUrls: parseOptionalHttpUrlArray(
+      payload.featuredPhotoUrls,
+      'body.featuredPhotoUrls',
+    ),
     cardPhotoUrl: parseOptionalHttpUrl(payload.cardPhotoUrl, 'body.cardPhotoUrl'),
     featuredPhotoPaths: parseOptionalStorefrontMediaPathArray(
       payload.featuredPhotoPaths,
-      'body.featuredPhotoPaths'
+      'body.featuredPhotoPaths',
     ),
-    cardPhotoPath: parseOptionalStorefrontMediaPath(
-      payload.cardPhotoPath,
-      'body.cardPhotoPath'
-    ),
+    cardPhotoPath: parseOptionalStorefrontMediaPath(payload.cardPhotoPath, 'body.cardPhotoPath'),
     verifiedBadgeLabel: parseNullableTrimmedString(
       payload.verifiedBadgeLabel,
       'body.verifiedBadgeLabel',
       {
         maxLength: 60,
-      }
+      },
     ),
     featuredBadges: parseOptionalStringArray(payload.featuredBadges, 'body.featuredBadges', {
       maxItems: 5,
@@ -136,7 +134,7 @@ export function parseOwnerPortalProfileToolsBody(body: unknown): OwnerPortalProf
 }
 
 export function parseOwnerPortalLicenseComplianceBody(
-  body: unknown
+  body: unknown,
 ): OwnerPortalLicenseComplianceInput {
   const payload = asObject(body, 'body');
 
@@ -153,7 +151,7 @@ export function parseOwnerPortalLicenseComplianceBody(
     expiresAt: parseNullableIsoDateString(payload.expiresAt, 'body.expiresAt'),
     renewalSubmittedAt: parseNullableIsoDateString(
       payload.renewalSubmittedAt,
-      'body.renewalSubmittedAt'
+      'body.renewalSubmittedAt',
     ),
     notes: parseNullableTrimmedString(payload.notes, 'body.notes', {
       maxLength: 600,
@@ -183,19 +181,11 @@ export function parseOwnerPortalPromotionBody(body: unknown): OwnerPortalPromoti
       }) ?? [],
     startsAt: parseIsoDateString(payload.startsAt, 'body.startsAt'),
     endsAt: parseIsoDateString(payload.endsAt, 'body.endsAt'),
-    audience: parseEnumValue(
-      payload.audience,
-      'body.audience',
-      OWNER_PROMOTION_AUDIENCES
-    ),
+    audience: parseEnumValue(payload.audience, 'body.audience', OWNER_PROMOTION_AUDIENCES),
     alertFollowersOnStart: payload.alertFollowersOnStart === true,
     cardTone: parseEnumValue(payload.cardTone, 'body.cardTone', OWNER_PROMOTION_CARD_TONES),
     placementSurfaces: placementSurfaces.map((value, index) =>
-      parseEnumValue(
-        value,
-        `body.placementSurfaces[${index}]`,
-        OWNER_PROMOTION_PLACEMENT_SURFACES
-      )
+      parseEnumValue(value, `body.placementSurfaces[${index}]`, OWNER_PROMOTION_PLACEMENT_SURFACES),
     ) as OwnerPromotionPlacementSurface[],
     placementScope:
       payload.placementScope === undefined
@@ -203,7 +193,7 @@ export function parseOwnerPortalPromotionBody(body: unknown): OwnerPortalPromoti
         : (parseEnumValue(
             payload.placementScope,
             'body.placementScope',
-            OWNER_PROMOTION_PLACEMENT_SCOPES
+            OWNER_PROMOTION_PLACEMENT_SCOPES,
           ) as OwnerPromotionPlacementScope),
   };
 }

@@ -124,10 +124,8 @@ test('applies complaint webhook events to the stored owner welcome email state',
       },
     })) as typeof fetch;
 
-  const {
-    recordOwnerWelcomeEmailDeliveryEvent,
-    sendOwnerWelcomeEmailIfNeeded,
-  } = await import('./ownerWelcomeEmailService');
+  const { recordOwnerWelcomeEmailDeliveryEvent, sendOwnerWelcomeEmailIfNeeded } =
+    await import('./ownerWelcomeEmailService');
 
   const sendStatus = await sendOwnerWelcomeEmailIfNeeded({
     ownerUid: 'owner-delivery-1',
@@ -151,6 +149,6 @@ test('applies complaint webhook events to the stored owner welcome email state',
   assert.equal(complainedStatus?.welcomeEmailLastEventType, 'email.complained');
   assert.equal(
     complainedStatus?.welcomeEmailLastEventSummary,
-    'Recipient marked this message as spam.'
+    'Recipient marked this message as spam.',
   );
 });

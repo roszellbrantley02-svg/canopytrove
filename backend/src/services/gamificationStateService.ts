@@ -28,7 +28,7 @@ function getPointsForLevel(level: number): number {
 
 export function createDefaultGamificationStateDocument(
   profileId: string,
-  joinedDate?: string | null
+  joinedDate?: string | null,
 ): StorefrontGamificationStateApiDocument {
   const totalPoints = 0;
   const level = getLevelFromPoints(totalPoints);
@@ -65,7 +65,7 @@ export function createDefaultGamificationStateDocument(
 export function normalizeGamificationStateDocument(
   profileId: string,
   state: Partial<StorefrontGamificationStateApiDocument> | undefined,
-  joinedDate?: string | null
+  joinedDate?: string | null,
 ): StorefrontGamificationStateApiDocument {
   const fallback = createDefaultGamificationStateDocument(profileId, joinedDate);
   const totalPoints = Number(state?.totalPoints ?? fallback.totalPoints);

@@ -11,20 +11,25 @@ import type { RootTabParamList } from '../navigation/RootNavigator';
 const TAB_LABELS: Record<keyof RootTabParamList, string> = {
   Nearby: 'Nearby',
   Browse: 'Browse',
+  HotDeals: 'Specials',
   Profile: 'Profile',
 };
 
-const TAB_ICONS: Record<keyof RootTabParamList, 'nearby' | 'browse' | 'profile'> = {
+const TAB_ICONS: Record<keyof RootTabParamList, 'nearby' | 'browse' | 'hotDeals' | 'profile'> = {
   Nearby: 'nearby',
   Browse: 'browse',
+  HotDeals: 'hotDeals',
   Profile: 'profile',
 };
+
+const HOT_DEALS_TAB_COLOR = '#F5C86A';
 
 type TabBarItemProps = {
   accessibilityLabel?: string;
   focused: boolean;
   label: string;
-  iconName: 'nearby' | 'browse' | 'profile';
+  iconName: 'nearby' | 'browse' | 'hotDeals' | 'profile';
+  accentColor?: string;
   onLongPress: () => void;
   onPress: () => void;
   routeKey: string;
@@ -36,6 +41,7 @@ function TabBarItem({
   focused,
   label,
   iconName,
+  accentColor,
   onLongPress,
   onPress,
   routeKey,
@@ -75,6 +81,9 @@ function TabBarItem({
         style={[
           styles.itemChrome,
           focused && styles.itemChromeFocused,
+          focused && accentColor
+            ? { borderColor: `${accentColor}1A`, backgroundColor: `${accentColor}08` }
+            : undefined,
           {
             transform: [
               {
@@ -110,6 +119,9 @@ function TabBarItem({
           style={[
             styles.iconPlate,
             focused && styles.iconPlateFocused,
+            focused && accentColor
+              ? { borderColor: `${accentColor}44`, ...styles.iconPlateAccent }
+              : undefined,
             {
               transform: [
                 {
@@ -126,6 +138,7 @@ function TabBarItem({
             style={[
               styles.iconShadow,
               styles.iconShadowFocused,
+              accentColor ? { backgroundColor: `${accentColor}0D` } : undefined,
               {
                 opacity: focusProgress.interpolate({
                   inputRange: [0, 1],
@@ -134,7 +147,12 @@ function TabBarItem({
               },
             ]}
           />
-          <AppTabIcon name={iconName} size={focused ? 27 : 23} focused={focused} />
+          <AppTabIcon
+            name={iconName}
+            size={focused ? 27 : 23}
+            focused={focused}
+            accentColor={accentColor}
+          />
         </Animated.View>
         <Animated.Text
           style={[
@@ -161,6 +179,7 @@ function TabBarItem({
         <Animated.View
           style={[
             styles.focusPip,
+            accentColor ? { backgroundColor: accentColor, shadowColor: accentColor } : undefined,
             {
               opacity: focusProgress,
               transform: [
@@ -265,6 +284,7 @@ export function CanopyTroveTabBar({ state, descriptors, navigation }: BottomTabB
                 focused={focused}
                 iconName={TAB_ICONS[routeName]}
                 label={TAB_LABELS[routeName]}
+                accentColor={routeName === 'HotDeals' ? HOT_DEALS_TAB_COLOR : undefined}
                 onLongPress={onLongPress}
                 onPress={onPress}
                 routeKey={route.key}
@@ -367,6 +387,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.24,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
+  },
+  iconPlateAccent: {
+    backgroundColor: 'rgba(9, 17, 22, 1)',
   },
   iconPlateFocused: {
     backgroundColor: 'rgba(9, 17, 22, 1)',

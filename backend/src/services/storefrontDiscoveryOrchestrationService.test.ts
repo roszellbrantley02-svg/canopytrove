@@ -26,7 +26,7 @@ function createStorefrontRecord(overrides: Partial<StorefrontRecord> = {}): Stor
     zip: '10012',
     coordinates: {
       latitude: 40.723,
-      longitude: -74.000,
+      longitude: -74.0,
     },
     distanceMiles: 0,
     travelMinutes: 0,
@@ -72,12 +72,15 @@ test('calculates the next storefront discovery run on a biweekly cadence', async
   const { calculateNextStorefrontDiscoveryRunAt } = await loadService();
 
   assert.equal(
-    calculateNextStorefrontDiscoveryRunAt('2026-03-30T00:00:00.000Z', new Date('2026-03-30T00:00:00.000Z')),
-    '2026-04-13T00:00:00.000Z'
+    calculateNextStorefrontDiscoveryRunAt(
+      '2026-03-30T00:00:00.000Z',
+      new Date('2026-03-30T00:00:00.000Z'),
+    ),
+    '2026-04-13T00:00:00.000Z',
   );
   assert.equal(
     calculateNextStorefrontDiscoveryRunAt(null, new Date('2026-03-30T00:00:00.000Z')),
-    '2026-04-13T00:00:00.000Z'
+    '2026-04-13T00:00:00.000Z',
   );
 });
 
@@ -87,9 +90,9 @@ test('schedules a failed storefront discovery retry for one hour later', async (
   assert.equal(
     calculateFailedStorefrontDiscoveryRetryAt(
       '2026-03-30T00:00:00.000Z',
-      new Date('2026-03-30T00:00:00.000Z')
+      new Date('2026-03-30T00:00:00.000Z'),
     ),
-    '2026-03-30T01:00:00.000Z'
+    '2026-03-30T01:00:00.000Z',
   );
 });
 
@@ -102,9 +105,9 @@ test('treats stale state as sweep-due and future state as scheduled', async () =
         lastSuccessfulRunAt: '2026-03-01T00:00:00.000Z',
         nextRunAt: '2026-03-14T00:00:00.000Z',
       },
-      Date.parse('2026-03-30T00:00:00.000Z')
+      Date.parse('2026-03-30T00:00:00.000Z'),
     ),
-    true
+    true,
   );
   assert.equal(
     isStorefrontDiscoverySweepDue(
@@ -112,9 +115,9 @@ test('treats stale state as sweep-due and future state as scheduled', async () =
         lastSuccessfulRunAt: '2026-03-30T00:00:00.000Z',
         nextRunAt: '2026-04-13T00:00:00.000Z',
       },
-      Date.parse('2026-03-30T00:00:00.000Z')
+      Date.parse('2026-03-30T00:00:00.000Z'),
     ),
-    false
+    false,
   );
 });
 
@@ -199,13 +202,13 @@ test('persists published storefront summary/detail atomically with a single batc
     {
       refreshCaches: false,
       dbOverride: fakeDb,
-    }
+    },
   );
 
   assert.equal(commitCount, 1);
   assert.deepEqual(
     writes.map((write) => write.path),
-    ['storefront_summaries/ny-store-2', 'storefront_details/ny-store-2']
+    ['storefront_summaries/ny-store-2', 'storefront_details/ny-store-2'],
   );
   assert.equal(writes[0]?.value.ingestSource, 'registry');
   assert.equal(writes[1]?.value.ingestSource, 'registry');

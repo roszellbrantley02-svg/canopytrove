@@ -113,22 +113,16 @@ export const serverConfig = {
   stripeOwnerCancelUrl: readConfiguredValue(process.env.OWNER_BILLING_CANCEL_URL),
   stripeOwnerPortalReturnUrl: readConfiguredValue(process.env.OWNER_BILLING_PORTAL_RETURN_URL),
   launchProgramStartAt: readConfiguredValue(process.env.LAUNCH_PROGRAM_START_AT),
-  launchProgramDurationDays: parsePositiveInteger(
-    process.env.LAUNCH_PROGRAM_DURATION_DAYS,
-    183
-  ),
-  launchEarlyAdopterLimit: parsePositiveInteger(
-    process.env.LAUNCH_EARLY_ADOPTER_LIMIT,
-    500
-  ),
+  launchProgramDurationDays: parsePositiveInteger(process.env.LAUNCH_PROGRAM_DURATION_DAYS, 183),
+  launchEarlyAdopterLimit: parsePositiveInteger(process.env.LAUNCH_EARLY_ADOPTER_LIMIT, 500),
   ownerLaunchTrialDays: parsePositiveInteger(process.env.OWNER_LAUNCH_TRIAL_DAYS, 30),
   ownerPortalPrelaunchEnabled: parseBoolean(
     process.env.OWNER_PORTAL_PRELAUNCH_ENABLED ??
       process.env.EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED,
-    false
+    false,
   ),
   ownerPortalAllowlist: parseCsv(
-    process.env.OWNER_PORTAL_ALLOWLIST ?? process.env.EXPO_PUBLIC_OWNER_PORTAL_ALLOWLIST
+    process.env.OWNER_PORTAL_ALLOWLIST ?? process.env.EXPO_PUBLIC_OWNER_PORTAL_ALLOWLIST,
   ),
   allowDevSeed: process.env.ALLOW_DEV_SEED === 'true',
   requestLoggingEnabled: process.env.REQUEST_LOGGING_ENABLED !== 'false',
@@ -141,35 +135,32 @@ export const serverConfig = {
   opsHealthcheckTimeoutMs: parsePositiveInteger(process.env.OPS_HEALTHCHECK_TIMEOUT_MS, 8_000),
   opsHealthcheckFailureConfirmationSweeps: parsePositiveInteger(
     process.env.OPS_HEALTHCHECK_FAILURE_CONFIRMATION_SWEEPS,
-    2
+    2,
   ),
   opsHealthcheckFailureRetryCount: parsePositiveInteger(
     process.env.OPS_HEALTHCHECK_FAILURE_RETRY_COUNT,
-    1
+    1,
   ),
   opsHealthcheckFailureRetryDelayMs: parsePositiveInteger(
     process.env.OPS_HEALTHCHECK_FAILURE_RETRY_DELAY_MS,
-    1_000
+    1_000,
   ),
   opsHealthcheckIntervalMinutes: parsePositiveInteger(
     process.env.OPS_HEALTHCHECK_INTERVAL_MINUTES,
-    5
+    5,
   ),
   ownerLicenseComplianceSchedulerEnabled: parseBoolean(
     process.env.OWNER_LICENSE_COMPLIANCE_SCHEDULER_ENABLED,
-    true
+    true,
   ),
   ownerLicenseComplianceIntervalHours: parsePositiveInteger(
     process.env.OWNER_LICENSE_COMPLIANCE_INTERVAL_HOURS,
-    24
+    24,
   ),
-  ownerPromotionSchedulerEnabled: parseBoolean(
-    process.env.OWNER_PROMOTION_SCHEDULER_ENABLED,
-    true
-  ),
+  ownerPromotionSchedulerEnabled: parseBoolean(process.env.OWNER_PROMOTION_SCHEDULER_ENABLED, true),
   ownerPromotionSweepIntervalMinutes: parsePositiveInteger(
     process.env.OWNER_PROMOTION_SWEEP_INTERVAL_MINUTES,
-    5
+    5,
   ),
   opsAlertWebhookUrl: readConfiguredValue(process.env.OPS_ALERT_WEBHOOK_URL),
   opsAlertCooldownMinutes: parsePositiveInteger(process.env.OPS_ALERT_COOLDOWN_MINUTES, 30),
@@ -177,7 +168,7 @@ export const serverConfig = {
   writeRateLimitPerMinute: parsePositiveInteger(process.env.WRITE_RATE_LIMIT_PER_MINUTE, 180),
   adminRateLimitPerTenMinutes: parsePositiveInteger(
     process.env.ADMIN_RATE_LIMIT_PER_TEN_MINUTES,
-    10
+    10,
   ),
 } as const;
 
@@ -220,7 +211,7 @@ export function getMissingOwnerBillingBackendEnvVars(options?: { includeWebhook?
     missingEnvVars.push(
       ...Object.entries(ownerBillingWebhookEnvMap)
         .filter(([, value]) => !value)
-        .map(([name]) => name)
+        .map(([name]) => name),
     );
   }
 
@@ -236,7 +227,7 @@ export function hasConfiguredOwnerPortalClaimSync() {
 }
 
 export function hasConfiguredTransactionalEmailDelivery(
-  emailRuntimeConfig: TransactionalEmailRuntimeConfig = getTransactionalEmailRuntimeConfig()
+  emailRuntimeConfig: TransactionalEmailRuntimeConfig = getTransactionalEmailRuntimeConfig(),
 ) {
   if (!emailRuntimeConfig.welcomeEmailsEnabled) {
     return false;

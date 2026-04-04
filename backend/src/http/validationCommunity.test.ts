@@ -16,13 +16,10 @@ test('accepts giphy-hosted gif urls in review submissions', () => {
   const parsed = parseReviewSubmissionBody(
     createReviewBody({
       gifUrl: 'https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif',
-    })
+    }),
   );
 
-  assert.equal(
-    parsed.gifUrl,
-    'https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif'
-  );
+  assert.equal(parsed.gifUrl, 'https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif');
 });
 
 test('rejects non-giphy gif urls in review submissions', () => {
@@ -31,10 +28,10 @@ test('rejects non-giphy gif urls in review submissions', () => {
       parseReviewSubmissionBody(
         createReviewBody({
           gifUrl: 'https://tracker.example.com/pixel.gif',
-        })
+        }),
       ),
     (error: unknown) =>
       error instanceof RequestValidationError &&
-      error.message === 'body.gifUrl must use a valid Giphy URL.'
+      error.message === 'body.gifUrl must use a valid Giphy URL.',
   );
 });

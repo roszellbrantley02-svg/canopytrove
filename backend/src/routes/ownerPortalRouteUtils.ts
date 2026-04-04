@@ -17,7 +17,7 @@ function getOwnerPortalRouteErrorMessage(error: unknown, fallbackMessage: string
 
 export function createOwnerPortalJsonRoute(
   fallbackMessage: string,
-  handler: OwnerPortalRouteHandler
+  handler: OwnerPortalRouteHandler,
 ) {
   return async (request: Request, response: Response) => {
     try {

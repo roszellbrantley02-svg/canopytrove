@@ -59,7 +59,11 @@ function normalizeStoragePath(value: string | null | undefined) {
 
 function uniqueStrings(values: Array<string | null | undefined>) {
   return Array.from(
-    new Set(values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0))
+    new Set(
+      values.filter(
+        (value): value is string => typeof value === 'string' && value.trim().length > 0,
+      ),
+    ),
   );
 }
 
@@ -121,7 +125,7 @@ export async function hydrateOwnerStorefrontProfileToolsMedia(
   profileTools: OwnerStorefrontProfileToolsDocument | null,
   deps: StorefrontMediaAccessDeps = {
     resolveReadUrl: resolveStorefrontMediaReadUrl,
-  }
+  },
 ) {
   if (!profileTools) {
     return null;
@@ -140,7 +144,7 @@ export async function hydrateOwnerStorefrontProfileToolsMedia(
   if (cardPhotoResult[0]?.status === 'rejected') {
     console.warn(
       `[storefrontMediaAccess] failed to resolve card photo URL for path ${profileTools.cardPhotoPath ?? 'unknown'}:`,
-      cardPhotoResult[0].reason
+      cardPhotoResult[0].reason,
     );
   }
 
@@ -149,8 +153,8 @@ export async function hydrateOwnerStorefrontProfileToolsMedia(
       deps.resolveReadUrl({
         storagePath,
         fallbackUrl: null,
-      })
-    )
+      }),
+    ),
   );
   const resolvedFeaturedPhotos = featuredPhotoResults.flatMap((result, index) => {
     if (result.status === 'fulfilled') {
@@ -158,7 +162,7 @@ export async function hydrateOwnerStorefrontProfileToolsMedia(
     }
     console.warn(
       `[storefrontMediaAccess] failed to resolve featured photo URL for path ${(profileTools.featuredPhotoPaths ?? [])[index] ?? 'unknown'}:`,
-      result.reason
+      result.reason,
     );
     return [];
   });

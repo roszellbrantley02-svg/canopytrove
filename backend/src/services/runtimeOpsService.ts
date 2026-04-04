@@ -99,7 +99,7 @@ function createOpenPolicy(reason?: string | null): RuntimePolicy {
 }
 
 function normalizeMetadata(
-  metadata: Record<string, unknown> | undefined
+  metadata: Record<string, unknown> | undefined,
 ): Record<string, string | number | boolean | null> {
   if (!metadata) {
     return {};
@@ -160,7 +160,9 @@ async function listRuntimeIncidentRecords(limit = 20) {
   const collectionRef = getRuntimeIncidentCollection();
   if (collectionRef) {
     const snapshot = await collectionRef.orderBy('occurredAt', 'desc').limit(limit).get();
-    return snapshot.docs.map((documentSnapshot) => documentSnapshot.data() as RuntimeIncidentRecord);
+    return snapshot.docs.map(
+      (documentSnapshot) => documentSnapshot.data() as RuntimeIncidentRecord,
+    );
   }
 
   return Array.from(runtimeIncidentStore.values())
@@ -300,7 +302,10 @@ export async function getRuntimeOpsStatus(limit = 12): Promise<RuntimeOpsStatus>
   const policy = policyResult.status === 'fulfilled' ? policyResult.value : createDefaultPolicy();
   const incidents = incidentsResult.status === 'fulfilled' ? incidentsResult.value : [];
   if (policyResult.status === 'rejected') {
-    console.warn('[runtimeOpsService] failed to load runtime policy, using default:', policyResult.reason);
+    console.warn(
+      '[runtimeOpsService] failed to load runtime policy, using default:',
+      policyResult.reason,
+    );
   }
   if (incidentsResult.status === 'rejected') {
     console.warn('[runtimeOpsService] failed to load incident records:', incidentsResult.reason);
@@ -340,8 +345,8 @@ export async function evaluateRuntimePolicy() {
   if (shouldEnableSafeMode && currentPolicy.trigger !== 'manual') {
     const nextPolicy = await persistRuntimePolicy(
       createAutomaticSafeModePolicy(
-        `Automatic safe mode engaged after ${status.incidentCounts.criticalLast15Minutes} critical incidents in the last 15 minutes.`
-      )
+        `Automatic safe mode engaged after ${status.incidentCounts.criticalLast15Minutes} critical incidents in the last 15 minutes.`,
+      ),
     );
     await notifyRuntimeAlertSubscribers({
       title: 'Canopy Trove entered protected mode',
@@ -359,12 +364,11 @@ export async function evaluateRuntimePolicy() {
 
   if (!shouldEnableSafeMode && currentPolicy.trigger === 'automatic') {
     const nextPolicy = await persistRuntimePolicy(
-      createOpenPolicy('Automatic safe mode cleared after incident pressure dropped.')
+      createOpenPolicy('Automatic safe mode cleared after incident pressure dropped.'),
     );
     await notifyRuntimeAlertSubscribers({
       title: 'Canopy Trove resumed normal mode',
-      body:
-        nextPolicy.reason ?? 'Protected mode cleared after runtime incident pressure dropped.',
+      body: nextPolicy.reason ?? 'Protected mode cleared after runtime incident pressure dropped.',
       data: {
         alertType: 'protected_mode_cleared',
       },
@@ -377,12 +381,12 @@ export async function evaluateRuntimePolicy() {
 }
 
 export async function assertRuntimePolicyAllowsOwnerAction(
-  action: 'promotion' | 'review_reply' | 'profile_tools'
+  action: 'promotion' | 'review_reply' | 'profile_tools',
 ) {
   const policy = await getStoredRuntimePolicy();
   if (!policy.ownerPortalWritesEnabled) {
     const error = new Error(
-      'Owner portal writes are temporarily paused while the system stabilizes.'
+      'Owner portal writes are temporarily paused while the system stabilizes.',
     ) as Error & {
       statusCode?: number;
     };
@@ -392,7 +396,7 @@ export async function assertRuntimePolicyAllowsOwnerAction(
 
   if (action === 'promotion' && !policy.promotionWritesEnabled) {
     const error = new Error(
-      'Promotion changes are temporarily paused while the system stabilizes.'
+      'Promotion changes are temporarily paused while the system stabilizes.',
     ) as Error & {
       statusCode?: number;
     };
@@ -402,7 +406,7 @@ export async function assertRuntimePolicyAllowsOwnerAction(
 
   if (action === 'review_reply' && !policy.reviewRepliesEnabled) {
     const error = new Error(
-      'Review replies are temporarily paused while the system stabilizes.'
+      'Review replies are temporarily paused while the system stabilizes.',
     ) as Error & {
       statusCode?: number;
     };
@@ -412,7 +416,7 @@ export async function assertRuntimePolicyAllowsOwnerAction(
 
   if (action === 'profile_tools' && !policy.profileToolsWritesEnabled) {
     const error = new Error(
-      'Profile tool updates are temporarily paused while the system stabilizes.'
+      'Profile tool updates are temporarily paused while the system stabilizes.',
     ) as Error & {
       statusCode?: number;
     };

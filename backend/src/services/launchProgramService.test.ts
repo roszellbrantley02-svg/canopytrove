@@ -36,30 +36,21 @@ test('caps early adopter claims at the configured limit', async () => {
   const firstState = await launchProgram.applyEarlyAdopterLaunchProgramToGamificationState({
     profileId: 'profile-1',
     accountId: 'account-1',
-    currentState: createDefaultGamificationStateDocument(
-      'profile-1',
-      '2026-04-01T10:00:00.000Z'
-    ),
+    currentState: createDefaultGamificationStateDocument('profile-1', '2026-04-01T10:00:00.000Z'),
     joinedDate: '2026-04-01T10:00:00.000Z',
     now: '2026-04-01T10:00:00.000Z',
   });
   const secondState = await launchProgram.applyEarlyAdopterLaunchProgramToGamificationState({
     profileId: 'profile-2',
     accountId: 'account-2',
-    currentState: createDefaultGamificationStateDocument(
-      'profile-2',
-      '2026-04-01T10:05:00.000Z'
-    ),
+    currentState: createDefaultGamificationStateDocument('profile-2', '2026-04-01T10:05:00.000Z'),
     joinedDate: '2026-04-01T10:05:00.000Z',
     now: '2026-04-01T10:05:00.000Z',
   });
   const thirdState = await launchProgram.applyEarlyAdopterLaunchProgramToGamificationState({
     profileId: 'profile-3',
     accountId: 'account-3',
-    currentState: createDefaultGamificationStateDocument(
-      'profile-3',
-      '2026-04-01T10:10:00.000Z'
-    ),
+    currentState: createDefaultGamificationStateDocument('profile-3', '2026-04-01T10:10:00.000Z'),
     joinedDate: '2026-04-01T10:10:00.000Z',
     now: '2026-04-01T10:10:00.000Z',
   });

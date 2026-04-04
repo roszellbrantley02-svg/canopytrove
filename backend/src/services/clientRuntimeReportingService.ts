@@ -13,7 +13,7 @@ import { recordRuntimeIncident } from './runtimeOpsService';
 
 export async function recordClientRuntimeError(
   report: ClientRuntimeErrorReport,
-  ip: string | undefined
+  ip: string | undefined,
 ) {
   console.error(
     JSON.stringify({
@@ -27,7 +27,7 @@ export async function recordClientRuntimeError(
       name: report.name ?? 'Error',
       message: report.message,
       stack: report.stack ?? null,
-    })
+    }),
   );
 
   await recordRuntimeIncident({

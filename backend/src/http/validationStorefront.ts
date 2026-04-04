@@ -41,7 +41,7 @@ export function parseStorefrontSummariesQuery(query: PlainObject) {
   const areaId = normalizeStorefrontAreaId(
     parseOptionalTrimmedString(query.areaId, 'areaId', {
       maxLength: 64,
-    })
+    }),
   );
   const searchQuery = parseOptionalTrimmedString(query.searchQuery, 'searchQuery', {
     maxLength: MAX_SEARCH_QUERY_LENGTH,
@@ -63,11 +63,7 @@ export function parseStorefrontSummariesQuery(query: PlainObject) {
   let sortKey: StorefrontSummarySortKey | undefined;
   let prioritySurface: OwnerPromotionPlacementSurface | undefined;
   if (query.sortKey !== undefined) {
-    sortKey = parseEnumValue(query.sortKey, 'sortKey', [
-      'distance',
-      'rating',
-      'reviews',
-    ] as const);
+    sortKey = parseEnumValue(query.sortKey, 'sortKey', ['distance', 'rating', 'reviews'] as const);
   }
 
   if (query.prioritySurface !== undefined) {
@@ -101,11 +97,7 @@ export function parseStorefrontSummaryIdsQuery(query: PlainObject) {
   }
 
   const ids = Array.from(
-    new Set(
-      rawIds
-        .split(',')
-        .map((id, index) => parseId(id, `ids[${index}]`))
-    )
+    new Set(rawIds.split(',').map((id, index) => parseId(id, `ids[${index}]`))),
   );
 
   if (ids.length > 100) {
@@ -129,8 +121,10 @@ export function parseLeaderboardQuery(query: PlainObject) {
 }
 
 export function parseLocationQuery(query: PlainObject) {
-  return parseOptionalTrimmedString(query.query, 'query', {
-    maxLength: MAX_LOCATION_QUERY_LENGTH,
-    emptyAsUndefined: false,
-  }) ?? '';
+  return (
+    parseOptionalTrimmedString(query.query, 'query', {
+      maxLength: MAX_LOCATION_QUERY_LENGTH,
+      emptyAsUndefined: false,
+    }) ?? ''
+  );
 }

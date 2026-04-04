@@ -11,7 +11,7 @@ type NotificationNavigationRequest =
     }
   | {
       routeName: 'HotDeals';
-      params: RootStackParamList['HotDeals'];
+      params: undefined;
     }
   | {
       routeName: 'OwnerPortalAccess';
@@ -160,7 +160,7 @@ export async function handleNotificationNavigationResponse(
       navigation.navigate('StorefrontDetail', target.params);
       return true;
     case 'HotDeals':
-      navigation.navigate('HotDeals');
+      navigation.navigate('Tabs', { screen: 'HotDeals' });
       return true;
     case 'OwnerPortalAccess':
       navigation.navigate('OwnerPortalAccess', target.params);

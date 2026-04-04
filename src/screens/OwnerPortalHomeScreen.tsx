@@ -2,132 +2,177 @@ import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { ownerPortalPreviewEnabled } from '../config/ownerPortalConfig';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { OwnerPortalDealBadgeEditor } from './ownerPortal/OwnerPortalDealBadgeEditor';
-import { OwnerPortalDealOverridePanel } from './ownerPortal/OwnerPortalDealOverridePanel';
+import { AttentionCard } from '../components/AttentionCard';
+import { QuickActionsRow, type QuickAction } from '../components/QuickActionsRow';
 import { OwnerPortalLicenseComplianceCard } from './ownerPortal/OwnerPortalLicenseComplianceCard';
 import {
-  formatOwnerValue,
   getJourneyItems,
   getOwnerHomeDerivedMetrics,
   getOwnerStatusChips,
-  getProfileSummaryTiles,
-  getRuntimeStatusMessage,
-  getRuntimeStatusTone,
 } from './ownerPortal/ownerPortalHomeData';
 import { OwnerPortalHomeHero } from './ownerPortal/OwnerPortalHomeHero';
-import { OwnerPortalHomeProfileSection } from './ownerPortal/OwnerPortalHomeProfileSection';
 import { OwnerPortalHomeRoiSection } from './ownerPortal/OwnerPortalHomeRoiSection';
 import { OwnerPortalStageList } from './ownerPortal/OwnerPortalStageList';
-import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 import { useOwnerPortalHomeScreenModel } from './ownerPortal/useOwnerPortalHomeScreenModel';
 import { useOwnerPortalWorkspace } from './ownerPortal/useOwnerPortalWorkspace';
+import type { OwnerPortalWorkspaceDocument } from '../types/ownerPortal';
+import type { AppUiIconName } from '../icons/AppUiIcon';
 
 type OwnerPortalHomeRoute = RouteProp<RootStackParamList, 'OwnerPortalHome'>;
-type OwnerPortalSurfaceSection = 'overview' | 'workspace' | 'setup';
 
 const ignoreAsyncError = () => undefined;
+
+interface AttentionItem {
+  key: string;
+  title: string;
+  body: string;
+  iconName: AppUiIconName;
+  tone: 'warning' | 'danger' | 'info' | 'success';
+}
+
+/**
+ * Compute attention items from workspace data.
+ * Only show items that are relevant or in preview mode.
+ */
+function getAttentionItems(
+  workspace: OwnerPortalWorkspaceDocument | null,
+  preview: boolean,
+): AttentionItem[] {
+  const items: AttentionItem[] = [];
+
+  if (!workspace && !preview) {
+    return items;
+  }
+
+  // Unreplied reviews
+  const unrepliedCount = workspace?.recentReviews?.filter((r) => !r.ownerReply).length ?? 0;
+  if (unrepliedCount > 0 || preview) {
+    items.push({
+      key: 'reviews',
+      title: `${preview ? 3 : unrepliedCount} reviews need replies`,
+      body: 'Respond to keep engagement high.',
+      iconName: 'chatbubble-ellipses-outline',
+      tone: 'warning',
+    });
+  }
+
+  // License compliance
+  const renewalStatus = workspace?.licenseCompliance?.renewalStatus;
+  if (renewalStatus === 'urgent' || renewalStatus === 'expired' || preview) {
+    items.push({
+      key: 'license',
+      title: 'License needs attention',
+      body: preview ? 'Renewal window opens soon.' : `Status: ${renewalStatus}`,
+      iconName: 'shield-checkmark-outline',
+      tone: 'danger',
+    });
+  }
+
+  // Follower milestone
+  const followers = workspace?.metrics?.followerCount ?? 0;
+  if (followers > 0 || preview) {
+    items.push({
+      key: 'followers',
+      title: `${preview ? 214 : followers} followers`,
+      body: 'Your storefront community is growing.',
+      iconName: 'people-outline',
+      tone: 'success',
+    });
+  }
+
+  return items;
+}
 
 export function OwnerPortalHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<OwnerPortalHomeRoute>();
   const preview = ownerPortalPreviewEnabled && Boolean(route.params?.preview);
-  const [activeSection, setActiveSection] = React.useState<OwnerPortalSurfaceSection>(
-    preview ? 'workspace' : 'overview',
-  );
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const roiSectionY = React.useRef(0);
   const {
     accessState,
-    isCheckingAccess,
     authSession,
-    claimedStorefront,
-    errorText,
-    handleContinue,
-    isLoading,
-    nextStep,
-    ownerClaim,
+    claimedStorefront: _claimedStorefront,
+    isLoading: _isLoading,
     ownerProfile,
   } = useOwnerPortalHomeScreenModel(preview);
   const {
     actionPlan,
-    aiErrorText,
     isAiLoading,
     isSaving,
     refreshActionPlan,
-    runtimeStatus,
     saveLicenseCompliance,
     workspace,
     isLoading: isWorkspaceLoading,
-    errorText: workspaceErrorText,
   } = useOwnerPortalWorkspace(preview);
   const homeMetrics = getOwnerHomeDerivedMetrics(workspace);
+  const attentionItems = getAttentionItems(workspace, preview);
 
-  const previewRoutes = [
+  // Compute quick actions
+  const quickActions: QuickAction[] = [
     {
-      label: 'Business Details',
-      body: 'Review business profile and company information.',
-      routeName: 'OwnerPortalBusinessDetails' as const,
-      params: {
-        ownerUid: ownerProfile?.uid,
-        initialLegalName: ownerProfile?.legalName,
-        initialCompanyName: ownerProfile?.companyName,
-        initialPhone: ownerProfile?.phone ?? '',
-        preview: true,
+      key: 'reviews',
+      label: 'Reviews',
+      iconName: 'chatbubble-ellipses-outline',
+      onPress: () => {
+        navigation.navigate('OwnerPortalReviewInbox', preview ? { preview: true } : undefined);
+      },
+      badge: workspace?.recentReviews?.filter((r) => !r.ownerReply).length ?? 0,
+    },
+    {
+      key: 'create-special',
+      label: 'Create Special',
+      iconName: 'megaphone-outline',
+      onPress: () => {
+        navigation.navigate('OwnerPortalPromotions', preview ? { preview: true } : undefined);
       },
     },
     {
-      label: 'Claim Listing',
-      body: 'Walk through the storefront claim flow.',
-      routeName: 'OwnerPortalClaimListing' as const,
-      params: { preview: true },
+      key: 'edit-listing',
+      label: 'Edit Listing',
+      iconName: 'storefront-outline',
+      onPress: () => {
+        navigation.navigate('OwnerPortalProfileTools', preview ? { preview: true } : undefined);
+      },
     },
     {
-      label: 'Business Verification',
-      body: 'Review the business verification step.',
-      routeName: 'OwnerPortalBusinessVerification' as const,
-      params: { preview: true },
+      key: 'badges',
+      label: 'Badges',
+      iconName: 'ribbon-outline',
+      onPress: () => {
+        navigation.navigate('OwnerPortalBadges', preview ? { preview: true } : undefined);
+      },
     },
     {
-      label: 'Identity Verification',
-      body: 'Review the identity verification step.',
-      routeName: 'OwnerPortalIdentityVerification' as const,
-      params: { preview: true },
+      key: 'hours',
+      label: 'Hours',
+      iconName: 'time-outline',
+      onPress: () => {
+        navigation.navigate('OwnerPortalHours', preview ? { preview: true } : undefined);
+      },
     },
     {
-      label: 'Subscription',
-      body: 'Review the premium plan experience.',
-      routeName: 'OwnerPortalSubscription' as const,
-      params: { preview: true },
+      key: 'metrics',
+      label: 'Metrics',
+      iconName: 'stats-chart-outline',
+      onPress: () => {
+        scrollViewRef.current?.scrollTo({ y: roiSectionY.current, animated: true });
+      },
     },
   ];
-  const workspaceTools = [
-    {
-      label: 'Review Management',
-      body: 'Reply faster and track low-rating trends.',
-      routeName: 'OwnerPortalReviewInbox' as const,
-    },
-    {
-      label: 'Promotions And Results',
-      body: 'Schedule offers and compare deal performance.',
-      routeName: 'OwnerPortalPromotions' as const,
-    },
-    {
-      label: 'Profile Conversion Tools',
-      body: 'Upgrade storefront card with premium photos and copy.',
-      routeName: 'OwnerPortalProfileTools' as const,
-    },
-  ];
+
   const ownerStatusChips = getOwnerStatusChips({
     preview,
     allowlisted: accessState.allowlisted,
     ownerProfile,
   });
-  const profileSummaryTiles = getProfileSummaryTiles(ownerProfile);
   const journeyItems = getJourneyItems({
     preview,
     signedIn: authSession.status === 'authenticated',
@@ -139,280 +184,172 @@ export function OwnerPortalHomeScreen() {
     identityVerificationStatus: ownerProfile?.identityVerificationStatus,
     subscriptionStatus: ownerProfile?.subscriptionStatus,
   });
-  const runtimeStatusMessage = getRuntimeStatusMessage(runtimeStatus);
-  const runtimeStatusTone = getRuntimeStatusTone(runtimeStatus);
-  const sections: Array<{
-    key: OwnerPortalSurfaceSection;
-    label: string;
-    body: string;
-  }> = [
-    {
-      key: 'overview',
-      label: 'Overview',
-      body: 'Access and listing status.',
-    },
-    {
-      key: 'workspace',
-      label: 'Workspace',
-      body: 'Deals, compliance, and media.',
-    },
-    {
-      key: 'setup',
-      label: 'Setup',
-      body: 'Setup and preview tools.',
-    },
-  ];
+
+  // Check if onboarding is complete
+  const isOnboardingComplete = ownerProfile?.onboardingStep === 'completed';
+
+  // Get first active promotion or null
+  const activePromotion = workspace?.promotions?.find((p) => p.status === 'active') ?? null;
 
   return (
     <ScreenShell
       eyebrow="Owner Portal"
-      title={preview ? 'Demo mode' : 'Business dashboard'}
+      title={preview ? 'Preview mode' : 'Business dashboard'}
       subtitle={
         preview
-          ? 'Explore business tools with sample data. For internal use only.'
-          : 'Manage your listing, verification, deals, media, and billing.'
+          ? 'Explore business tools with example data.'
+          : 'Manage your listing, verification, specials, media, and billing.'
       }
-      headerPill={preview ? 'Demo' : 'Business'}
+      headerPill={preview ? 'Preview' : 'Business'}
     >
-      <MotionInView delay={70}>
-        <OwnerPortalHomeHero
-          chips={ownerStatusChips}
-          managedStorefrontCount={ownerProfile?.dispensaryId ? 1 : 0}
-          preview={preview}
-          savedFollowers={workspace?.metrics.followerCount ?? (preview ? 214 : 0)}
-          trackedActions7d={workspace ? homeMetrics.totalActions7d : preview ? 62 : 0}
-        />
-      </MotionInView>
+      <ScrollView
+        ref={scrollViewRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={localStyles.scrollContent}
+      >
+        {/* 1. Hero */}
+        <MotionInView delay={70}>
+          <OwnerPortalHomeHero
+            chips={ownerStatusChips}
+            managedStorefrontCount={ownerProfile?.dispensaryId ? 1 : 0}
+            preview={preview}
+            savedFollowers={workspace?.metrics.followerCount ?? (preview ? 214 : 0)}
+            trackedActions7d={workspace ? homeMetrics.totalActions7d : preview ? 62 : 0}
+          />
+        </MotionInView>
 
-      <MotionInView delay={120}>
-        <View style={styles.surfaceSwitcher}>
-          {sections.map((section) => {
-            const isActive = section.key === activeSection;
+        {/* 2. Attention Bar - only show if there are items */}
+        {attentionItems.length > 0 ? (
+          <MotionInView delay={100}>
+            <View style={localStyles.sectionSpaced}>
+              {attentionItems.map((item) => (
+                <AttentionCard
+                  key={item.key}
+                  title={item.title}
+                  body={item.body}
+                  iconName={item.iconName}
+                  tone={item.tone}
+                />
+              ))}
+            </View>
+          </MotionInView>
+        ) : null}
 
-            return (
-              <Pressable
-                key={section.key}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isActive }}
-                accessibilityLabel={`Open ${section.label.toLowerCase()} owner section`}
-                onPress={() => setActiveSection(section.key)}
-                style={[
-                  styles.surfaceSwitcherButton,
-                  isActive && styles.surfaceSwitcherButtonActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.surfaceSwitcherButtonLabel,
-                    isActive && styles.surfaceSwitcherButtonLabelActive,
-                  ]}
-                >
-                  {section.label}
-                </Text>
-                <Text
-                  style={[
-                    styles.surfaceSwitcherButtonBody,
-                    isActive && styles.surfaceSwitcherButtonBodyActive,
-                  ]}
-                >
-                  {section.body}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </MotionInView>
+        {/* 3. Quick Actions Row */}
+        {ownerProfile?.dispensaryId ? (
+          <MotionInView delay={130}>
+            <View style={localStyles.sectionSpaced}>
+              <QuickActionsRow actions={quickActions} />
+            </View>
+          </MotionInView>
+        ) : null}
 
-      {activeSection === 'overview' ? (
-        <>
-          <MotionInView delay={150}>
-            <SectionCard
-              title={preview ? 'Preview workspace' : 'Access'}
-              body={
-                preview
-                  ? 'Review owner access safely.'
-                  : accessState.enabled
-                    ? 'Access controlled.'
-                    : 'Owner access is open for this workspace.'
-              }
-            >
-              <View
-                style={[
-                  styles.statusPanel,
-                  preview ? styles.statusPanelWarm : styles.statusPanelSuccess,
-                ]}
-              >
-                <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>Email</Text>
-                  <Text style={styles.statusValue}>
-                    {preview ? 'preview@canopytrove.com' : (authSession.email ?? 'Not signed in')}
+        {/* 4. Metrics Snapshot */}
+        {workspace?.metrics || preview ? (
+          <MotionInView delay={160}>
+            <SectionCard title="Metrics Snapshot" body="Key performance indicators.">
+              <View style={localStyles.metricsGrid}>
+                <View style={localStyles.metricTile}>
+                  <Text style={localStyles.metricLabel}>Followers</Text>
+                  <Text style={localStyles.metricValue}>
+                    {preview ? 214 : (workspace?.metrics?.followerCount ?? 0)}
                   </Text>
                 </View>
-                <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>{preview ? 'Workspace' : 'Account'}</Text>
-                  <Text style={styles.statusValue}>
-                    {preview
-                      ? 'Preview data'
-                      : authSession.status === 'authenticated'
-                        ? 'Signed in'
-                        : 'Not signed in'}
-                  </Text>
+                <View style={localStyles.metricTile}>
+                  <Text style={localStyles.metricLabel}>Impressions 7d</Text>
+                  <Text style={localStyles.metricValue}>{homeMetrics.totalActions7d}</Text>
                 </View>
-                <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>Access</Text>
-                  <Text style={styles.statusValue}>
-                    {preview
-                      ? 'Preview access'
-                      : isCheckingAccess
-                        ? 'Checking'
-                        : accessState.allowlisted
-                          ? 'Approved'
-                          : accessState.enabled
-                            ? 'Invite required'
-                            : 'Open'}
+                <View style={localStyles.metricTile}>
+                  <Text style={localStyles.metricLabel}>Avg Rating</Text>
+                  <Text style={localStyles.metricValue}>
+                    {workspace?.metrics?.averageRating?.toFixed(1) ?? 'N/A'}
                   </Text>
-                </View>
-                <View style={styles.portalHeroMetaRow}>
-                  <View style={styles.metaChip}>
-                    <Text style={styles.metaChipText}>
-                      {preview ? 'Demo mode' : 'Business portal'}
-                    </Text>
-                  </View>
-                  <View style={styles.metaChip}>
-                    <Text style={styles.metaChipText}>
-                      {accessState.enabled ? 'Access controls enabled' : 'Owner access open'}
-                    </Text>
-                  </View>
                 </View>
               </View>
             </SectionCard>
           </MotionInView>
+        ) : null}
 
-          <MotionInView delay={180}>
+        {/* 5. Active Promotion Section */}
+        {ownerProfile?.dispensaryId ? (
+          <MotionInView delay={190}>
             <SectionCard
-              title="Business account"
-              body="Onboarding, verification, listing, and subscription."
+              title="Active Promotion"
+              body={activePromotion ? 'Your current deal.' : 'No active deals.'}
             >
-              <OwnerPortalHomeProfileSection
-                errorText={errorText}
-                isLoading={isLoading}
-                ownerProfile={ownerProfile}
-                profileSummaryTiles={profileSummaryTiles}
-              />
-            </SectionCard>
-          </MotionInView>
-
-          {authSession.uid && ownerProfile && nextStep ? (
-            <MotionInView delay={210}>
-              <SectionCard title="Next step" body="Resume your progress.">
-                <View style={styles.ctaPanel}>
-                  <View style={styles.splitHeaderRow}>
-                    <View style={styles.splitHeaderCopy}>
-                      <Text style={styles.sectionEyebrow}>Continue setup</Text>
-                      <Text style={styles.splitHeaderTitle}>{nextStep.title}</Text>
-                      <Text style={styles.splitHeaderBody}>{nextStep.body}</Text>
-                    </View>
-                    <AppUiIcon name="sparkles-outline" size={20} color="#F5C86A" />
-                  </View>
+              {activePromotion ? (
+                <View style={localStyles.promotionCard}>
+                  <Text style={localStyles.promotionTitle}>{activePromotion.title}</Text>
+                  <Text style={localStyles.promotionBody}>{activePromotion.description}</Text>
+                  <Text style={localStyles.promotionMeta}>
+                    Active until{' '}
+                    {activePromotion.endsAt
+                      ? new Date(activePromotion.endsAt).toLocaleDateString()
+                      : 'ongoing'}
+                  </Text>
+                </View>
+              ) : (
+                <View style={localStyles.emptyState}>
+                  <AppUiIcon name="megaphone-outline" size={32} color="#9CC5B4" />
+                  <Text style={localStyles.emptyStateText}>
+                    Create your first special to attract customers
+                  </Text>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={nextStep.actionLabel}
-                    accessibilityHint="Opens the next owner onboarding step."
-                    disabled={!nextStep.routeName}
-                    onPress={handleContinue}
-                    style={[styles.primaryButton, !nextStep.routeName && styles.buttonDisabled]}
+                    onPress={() => {
+                      navigation.navigate(
+                        'OwnerPortalPromotions',
+                        preview ? { preview: true } : undefined,
+                      );
+                    }}
+                    style={localStyles.primaryButton}
                   >
-                    <Text style={styles.primaryButtonText}>{nextStep.actionLabel}</Text>
+                    <Text style={localStyles.primaryButtonText}>Create Special</Text>
                   </Pressable>
                 </View>
-              </SectionCard>
-            </MotionInView>
-          ) : null}
+              )}
+            </SectionCard>
+          </MotionInView>
+        ) : null}
 
-          {ownerProfile?.dispensaryId ? (
-            <MotionInView delay={240}>
-              <SectionCard title="Managed storefront" body="Your claimed listing.">
-                <View style={[styles.statusPanel, styles.statusPanelSuccess]}>
-                  <View style={styles.statusRow}>
-                    <Text style={styles.statusLabel}>Listing</Text>
-                    <Text style={styles.statusValue}>
-                      {claimedStorefront?.displayName ?? ownerProfile.dispensaryId}
-                    </Text>
-                  </View>
-                  <View style={styles.statusRow}>
-                    <Text style={styles.statusLabel}>Claim review</Text>
-                    <Text style={styles.statusValue}>
-                      {formatOwnerValue(ownerClaim?.claimStatus ?? 'pending')}
-                    </Text>
-                  </View>
-                  {claimedStorefront ? (
-                    <View style={styles.statusRow}>
-                      <Text style={styles.statusLabel}>Location</Text>
-                      <Text style={styles.statusValue}>
-                        {claimedStorefront.addressLine1}, {claimedStorefront.city}
-                      </Text>
-                    </View>
-                  ) : null}
-                  <View style={styles.portalHeroMetaRow}>
-                    <View style={styles.metaChip}>
-                      <Text style={styles.metaChipText}>
-                        {ownerClaim?.claimStatus
-                          ? formatOwnerValue(ownerClaim.claimStatus)
-                          : 'Claim pending'}
-                      </Text>
-                    </View>
-                    {claimedStorefront?.state ? (
-                      <View style={styles.metaChip}>
-                        <Text style={styles.metaChipText}>{claimedStorefront.state}</Text>
-                      </View>
-                    ) : null}
-                  </View>
+        {/* 6. AI Insights Card - only show in live mode with action plan */}
+        {!preview && actionPlan && ownerProfile?.dispensaryId ? (
+          <MotionInView delay={220}>
+            <SectionCard title="AI Insights" body="Weekly priorities.">
+              <View style={localStyles.aiCard}>
+                <View style={localStyles.aiCardHeader}>
+                  <AppUiIcon name="sparkles-outline" size={20} color="#F5C86A" />
+                  <Text style={localStyles.aiCardTitle}>{actionPlan.headline}</Text>
                 </View>
-              </SectionCard>
-            </MotionInView>
-          ) : null}
-        </>
-      ) : null}
+                {actionPlan.priorities?.[0] ? (
+                  <View style={localStyles.aiPriority}>
+                    <Text style={localStyles.aiPriorityLabel}>Top priority</Text>
+                    <Text style={localStyles.aiPriorityTitle}>
+                      {actionPlan.priorities[0].title}
+                    </Text>
+                    <Text style={localStyles.aiPriorityBody}>{actionPlan.priorities[0].body}</Text>
+                  </View>
+                ) : null}
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    void refreshActionPlan().catch(ignoreAsyncError);
+                  }}
+                  style={localStyles.secondaryButton}
+                  disabled={isAiLoading}
+                >
+                  <Text style={localStyles.secondaryButtonText}>
+                    {isAiLoading ? 'Loading...' : 'View Full Plan'}
+                  </Text>
+                </Pressable>
+              </View>
+            </SectionCard>
+          </MotionInView>
+        ) : null}
 
-      {activeSection === 'workspace' ? (
-        <>
-          {ownerProfile?.dispensaryId ? (
-            <MotionInView delay={150}>
-              <SectionCard
-                title="Owner workspace tools"
-                body="Manage reviews, promotions, and profile upgrades."
-              >
-                <View style={styles.actionGrid}>
-                  {workspaceTools.map((item) => (
-                    <Pressable
-                      key={item.label}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Open ${item.label}`}
-                      accessibilityHint={item.body}
-                      onPress={() =>
-                        navigation.navigate(
-                          item.routeName,
-                          preview ? ({ preview: true } as never) : undefined,
-                        )
-                      }
-                      style={styles.actionTile}
-                    >
-                      <View style={styles.splitHeaderRow}>
-                        <View style={styles.splitHeaderCopy}>
-                          <Text style={styles.actionTileMeta}>Workspace tool</Text>
-                          <Text style={styles.actionTileTitle}>{item.label}</Text>
-                          <Text style={styles.actionTileBody}>{item.body}</Text>
-                        </View>
-                        <AppUiIcon name="chevron-forward" size={20} color="#9CC5B4" />
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
-              </SectionCard>
-            </MotionInView>
-          ) : null}
-
-          <MotionInView delay={180}>
+        {/* 7. License Compliance */}
+        {ownerProfile?.dispensaryId ? (
+          <MotionInView delay={250}>
             <SectionCard title="Compliance" body="License number and renewal window.">
               <OwnerPortalLicenseComplianceCard
                 workspace={workspace}
@@ -421,185 +358,169 @@ export function OwnerPortalHomeScreen() {
               />
             </SectionCard>
           </MotionInView>
+        ) : null}
 
-          <MotionInView delay={210}>
-            <SectionCard title="System status" body="Operations health and recommendations.">
-              <View
-                style={[
-                  styles.statusPanel,
-                  runtimeStatusTone === 'success'
-                    ? styles.statusPanelSuccess
-                    : styles.statusPanelWarm,
-                ]}
-              >
-                <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>Runtime mode</Text>
-                  <Text style={styles.statusValue}>
-                    {runtimeStatus?.policy.safeModeEnabled ? 'Protected mode' : 'Normal'}
-                  </Text>
-                </View>
-                <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>Critical incidents 24H</Text>
-                  <Text style={styles.statusValue}>
-                    {runtimeStatus?.incidentCounts.criticalLast24Hours ?? 0}
-                  </Text>
-                </View>
-                <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>Client incidents 24H</Text>
-                  <Text style={styles.statusValue}>
-                    {runtimeStatus?.incidentCounts.clientLast24Hours ?? 0}
-                  </Text>
-                </View>
-                <Text style={styles.helperText}>{runtimeStatusMessage}</Text>
-              </View>
-
-              {!preview ? (
-                <View style={styles.sectionStack}>
-                  <View style={styles.plannerPanel}>
-                    <View style={styles.splitHeaderRow}>
-                      <View style={styles.splitHeaderCopy}>
-                        <Text style={styles.sectionEyebrow}>Recommendations</Text>
-                        <Text style={styles.splitHeaderTitle}>Weekly priorities</Text>
-                        <Text style={styles.splitHeaderBody}>
-                          AI-generated next actions for your storefront.
-                        </Text>
-                      </View>
-                      <AppUiIcon name="sparkles-outline" size={20} color="#F5C86A" />
-                    </View>
-                    {aiErrorText ? <Text style={styles.errorText}>{aiErrorText}</Text> : null}
-                    {actionPlan ? (
-                      <View style={styles.cardStack}>
-                        <View style={styles.actionTile}>
-                          <Text style={styles.actionTileMeta}>This week</Text>
-                          <Text style={styles.actionTileTitle}>{actionPlan.headline}</Text>
-                          <Text style={styles.actionTileBody}>{actionPlan.summary}</Text>
-                        </View>
-                        {actionPlan.priorities.map((priority) => (
-                          <View
-                            key={priority.title}
-                            style={[
-                              styles.actionTile,
-                              priority.tone === 'warning'
-                                ? styles.resultWarning
-                                : priority.tone === 'success'
-                                  ? styles.resultSuccess
-                                  : null,
-                            ]}
-                          >
-                            <Text style={styles.actionTileMeta}>Priority</Text>
-                            <Text style={styles.actionTileTitle}>{priority.title}</Text>
-                            <Text style={styles.actionTileBody}>{priority.body}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <Text style={styles.helperText}>
-                        {isAiLoading
-                          ? 'Generating the current owner action plan...'
-                          : 'Load the current owner action plan once the workspace is ready.'}
-                      </Text>
-                    )}
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Refresh AI action plan"
-                      accessibilityHint="Generates a fresh owner action plan from the current workspace state."
-                      disabled={isAiLoading}
-                      onPress={() => {
-                        void refreshActionPlan().catch(ignoreAsyncError);
-                      }}
-                      style={[styles.secondaryButton, isAiLoading && styles.buttonDisabled]}
-                    >
-                      <Text style={styles.secondaryButtonText}>
-                        {isAiLoading ? 'Refreshing...' : 'Refresh AI Action Plan'}
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-              ) : null}
-            </SectionCard>
-          </MotionInView>
-
-          {(workspace?.metrics || isWorkspaceLoading || workspaceErrorText) &&
-          ownerProfile?.dispensaryId ? (
-            <MotionInView delay={240}>
+        {/* 8. ROI Section */}
+        {ownerProfile?.dispensaryId && (workspace?.metrics || isWorkspaceLoading) ? (
+          <View
+            onLayout={(e) => {
+              roiSectionY.current = e.nativeEvent.layout.y;
+            }}
+          >
+            <MotionInView delay={280}>
               <SectionCard
                 title="Owner ROI"
                 body="Visibility, conversion, and customer action metrics."
               >
                 <OwnerPortalHomeRoiSection
-                  errorText={workspaceErrorText}
+                  errorText=""
                   isLoading={isWorkspaceLoading}
                   metrics={homeMetrics}
                   workspace={workspace}
                 />
               </SectionCard>
             </MotionInView>
-          ) : null}
+          </View>
+        ) : null}
 
-          {preview && claimedStorefront ? (
-            <MotionInView delay={270}>
-              <SectionCard
-                title="Card badge editor"
-                body="Stage deal badges on the storefront card."
-              >
-                <OwnerPortalDealBadgeEditor storefront={claimedStorefront} />
-              </SectionCard>
-            </MotionInView>
-          ) : null}
-
-          {preview && claimedStorefront ? (
-            <MotionInView delay={300}>
-              <SectionCard
-                title="Multi-store preview controls"
-                body="Review deal badges across preview cards."
-              >
-                <OwnerPortalDealOverridePanel claimedStorefront={claimedStorefront} />
-              </SectionCard>
-            </MotionInView>
-          ) : null}
-        </>
-      ) : null}
-
-      {activeSection === 'setup' ? (
-        <>
-          <MotionInView delay={150}>
+        {/* 9. Onboarding Checklist - only if not complete */}
+        {!isOnboardingComplete && ownerProfile?.dispensaryId ? (
+          <MotionInView delay={310}>
             <SectionCard title="Journey" body="Your onboarding progress.">
               <OwnerPortalStageList items={journeyItems} />
             </SectionCard>
           </MotionInView>
-
-          {preview ? (
-            <MotionInView delay={180}>
-              <SectionCard
-                title="Explore every owner page"
-                body="Walk through each step with preview data."
-              >
-                <View style={styles.actionGrid}>
-                  {previewRoutes.map((item) => (
-                    <Pressable
-                      key={item.label}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Open ${item.label}`}
-                      accessibilityHint={item.body}
-                      onPress={() => navigation.navigate(item.routeName, item.params as never)}
-                      style={[styles.actionTile, styles.actionTileWarm]}
-                    >
-                      <View style={styles.splitHeaderRow}>
-                        <View style={styles.splitHeaderCopy}>
-                          <Text style={styles.actionTileMeta}>Preview route</Text>
-                          <Text style={styles.actionTileTitle}>{item.label}</Text>
-                          <Text style={styles.actionTileBody}>{item.body}</Text>
-                        </View>
-                        <AppUiIcon name="arrow-forward-circle-outline" size={20} color="#F5C86A" />
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
-              </SectionCard>
-            </MotionInView>
-          ) : null}
-        </>
-      ) : null}
+        ) : null}
+      </ScrollView>
     </ScreenShell>
   );
 }
+
+const localStyles = StyleSheet.create({
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  sectionSpaced: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  metricTile: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(46, 204, 113, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(46, 204, 113, 0.18)',
+  },
+  metricLabel: {
+    fontSize: 11,
+    color: '#C4B8B0',
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  metricValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFBF7',
+  },
+  promotionCard: {
+    paddingVertical: 12,
+    gap: 8,
+  },
+  promotionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFBF7',
+  },
+  promotionBody: {
+    fontSize: 13,
+    color: '#C4B8B0',
+    lineHeight: 18,
+  },
+  promotionMeta: {
+    fontSize: 11,
+    color: '#9CC5B4',
+    marginTop: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 12,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#C4B8B0',
+    textAlign: 'center',
+  },
+  aiCard: {
+    gap: 16,
+    paddingVertical: 8,
+  },
+  aiCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  aiCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFBF7',
+    flex: 1,
+  },
+  aiPriority: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(245, 200, 106, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 200, 106, 0.18)',
+    gap: 6,
+  },
+  aiPriorityLabel: {
+    fontSize: 11,
+    color: '#F5C86A',
+    fontWeight: '500',
+  },
+  aiPriorityTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFBF7',
+  },
+  aiPriorityBody: {
+    fontSize: 12,
+    color: '#C4B8B0',
+    lineHeight: 16,
+  },
+  primaryButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#2ECC71',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#9CC5B4',
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    color: '#9CC5B4',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+});

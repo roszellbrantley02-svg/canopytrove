@@ -48,7 +48,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
     paddingTop: spacing.lg,
-    gap: spacing.md,
+    gap: spacing.lg,
     backgroundColor: 'transparent',
   },
   bodyHotDeal: {
@@ -74,7 +74,7 @@ export const styles = StyleSheet.create({
   },
   kickerChip: {
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderWidth: 1,
   },
@@ -105,7 +105,8 @@ export const styles = StyleSheet.create({
   kickerChipText: {
     ...textStyles.labelCaps,
     color: colors.goldSoft,
-    letterSpacing: 0.5,
+    fontSize: 11,
+    letterSpacing: 0.6,
   },
   kickerChipTextHotDeal: {
     color: '#FFC9C0',
@@ -160,6 +161,9 @@ export const styles = StyleSheet.create({
   },
   ownerBadge: {
     maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     borderRadius: radii.pill,
     backgroundColor: 'rgba(0,245,140,0.12)',
     borderWidth: 1,
@@ -248,18 +252,18 @@ export const styles = StyleSheet.create({
     flex: 1,
     fontFamily: fontFamilies.display,
     color: colors.text,
-    fontSize: 21,
-    lineHeight: 26,
-    letterSpacing: -0.2,
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: -0.3,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   metaRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
     flexWrap: 'wrap',
   },
   metaChip: {
@@ -325,7 +329,7 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
   },
   primaryCta: {
-    minHeight: 48,
+    minHeight: 52,
     borderRadius: radii.lg,
     backgroundColor: colors.gold,
     borderWidth: 1,
@@ -333,7 +337,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
     shadowColor: colors.gold,
     shadowOpacity: 0.18,
     shadowRadius: 12,
@@ -349,11 +354,12 @@ export const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
+    marginTop: spacing.xs,
   },
   secondaryCta: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 52,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.borderSoft,
@@ -361,7 +367,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
     shadowColor: colors.shadow,
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -370,6 +377,16 @@ export const styles = StyleSheet.create({
   secondaryCtaText: {
     ...textStyles.button,
     color: colors.text,
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
+  heatChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  heatChipText1: { color: '#FFB450' },
+  heatChipText2: { color: '#FFA032' },
+  heatChipText3: { color: '#FF7820' },
+  heatChipText4: { color: '#FF5014' },
+  heatChipText5: { color: '#FF320A' },
 });

@@ -13,7 +13,7 @@ ownerWelcomeEmailRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],
-  })
+  }),
 );
 
 function getBearerToken(authorizationHeader: string | undefined) {
@@ -43,7 +43,8 @@ function getTestAuthenticatedOwner(request: Request) {
   return {
     ownerUid,
     email:
-      request.header('x-canopy-test-email')?.trim() || `${ownerUid.replaceAll(/[^a-z0-9_-]/gi, '')}@example.com`,
+      request.header('x-canopy-test-email')?.trim() ||
+      `${ownerUid.replaceAll(/[^a-z0-9_-]/gi, '')}@example.com`,
     displayName: request.header('x-canopy-test-display-name')?.trim() || null,
     companyName: request.header('x-canopy-test-company-name')?.trim() || null,
     claimRole: request.header('x-canopy-test-claim-role')?.trim().toLowerCase() || '',
@@ -54,10 +55,14 @@ ownerWelcomeEmailRoutes.post('/owner-welcome-email', async (request, response) =
   try {
     const testOwner = getTestAuthenticatedOwner(request);
     if (testOwner) {
-      if (!testOwner.companyName && testOwner.claimRole !== 'owner' && testOwner.claimRole !== 'admin') {
+      if (
+        !testOwner.companyName &&
+        testOwner.claimRole !== 'owner' &&
+        testOwner.claimRole !== 'admin'
+      ) {
         throw new OwnerWelcomeEmailAccessError(
           'Owner welcome email is only available for owner accounts.',
-          403
+          403,
         );
       }
 
@@ -67,7 +72,7 @@ ownerWelcomeEmailRoutes.post('/owner-welcome-email', async (request, response) =
           email: testOwner.email,
           displayName: testOwner.displayName,
           companyName: testOwner.companyName,
-        })
+        }),
       );
       return;
     }
@@ -96,7 +101,9 @@ ownerWelcomeEmailRoutes.post('/owner-welcome-email', async (request, response) =
     const userRecord = await auth.getUser(decodedToken.uid);
     const email = userRecord.email?.trim() || null;
     if (!email) {
-      throw new RequestValidationError('The signed-in owner account does not have an email address.');
+      throw new RequestValidationError(
+        'The signed-in owner account does not have an email address.',
+      );
     }
 
     const ownerProfileCollection = getOwnerProfileCollection();
@@ -117,7 +124,7 @@ ownerWelcomeEmailRoutes.post('/owner-welcome-email', async (request, response) =
     if (!companyName && claimRole !== 'owner' && claimRole !== 'admin') {
       throw new OwnerWelcomeEmailAccessError(
         'Owner welcome email is only available for owner accounts.',
-        403
+        403,
       );
     }
 
@@ -127,7 +134,7 @@ ownerWelcomeEmailRoutes.post('/owner-welcome-email', async (request, response) =
         email,
         displayName: userRecord.displayName?.trim() || null,
         companyName,
-      })
+      }),
     );
   } catch (error) {
     const statusCode =
@@ -146,7 +153,7 @@ ownerWelcomeEmailRoutes.post('/owner-welcome-email', async (request, response) =
 class OwnerWelcomeEmailAccessError extends Error {
   constructor(
     message: string,
-    public readonly statusCode: number
+    public readonly statusCode: number,
   ) {
     super(message);
   }

@@ -46,7 +46,7 @@ export function parseTrimmedString(
   options?: {
     maxLength?: number;
     allowEmpty?: boolean;
-  }
+  },
 ) {
   const normalizedValue = assertSingleValue(value, field);
   if (typeof normalizedValue !== 'string') {
@@ -71,7 +71,7 @@ export function parseOptionalTrimmedString(
   options?: {
     maxLength?: number;
     emptyAsUndefined?: boolean;
-  }
+  },
 ) {
   const normalizedValue = assertSingleValue(value, field);
   if (normalizedValue === undefined) {
@@ -99,7 +99,7 @@ export function parseNullableTrimmedString(
   field: string,
   options?: {
     maxLength?: number;
-  }
+  },
 ) {
   const normalizedValue = assertSingleValue(value, field);
   if (normalizedValue === undefined) {
@@ -125,7 +125,7 @@ export function parseNumberValue(
     integer?: boolean;
     min?: number;
     max?: number;
-  }
+  },
 ) {
   const normalizedValue = assertSingleValue(value, field);
   if (typeof normalizedValue !== 'number' || !Number.isFinite(normalizedValue)) {
@@ -154,7 +154,7 @@ export function parseOptionalNumberValue(
     integer?: boolean;
     min?: number;
     max?: number;
-  }
+  },
 ) {
   const normalizedValue = assertSingleValue(value, field);
   if (normalizedValue === undefined) {
@@ -165,8 +165,7 @@ export function parseOptionalNumberValue(
     return undefined;
   }
 
-  const candidate =
-    typeof normalizedValue === 'string' ? Number(normalizedValue) : normalizedValue;
+  const candidate = typeof normalizedValue === 'string' ? Number(normalizedValue) : normalizedValue;
   return parseNumberValue(candidate, field, options);
 }
 
@@ -176,7 +175,7 @@ export function parseOptionalIntegerValue(
   options?: {
     min?: number;
     max?: number;
-  }
+  },
 ) {
   return parseOptionalNumberValue(value, field, {
     ...options,
@@ -218,7 +217,7 @@ export function parseNullableIsoDateString(value: unknown, field: string) {
 export function parseEnumValue<T extends string>(
   value: unknown,
   field: string,
-  allowedValues: readonly T[]
+  allowedValues: readonly T[],
 ) {
   const normalizedValue = parseTrimmedString(value, field);
   if (!allowedValues.includes(normalizedValue as T)) {
@@ -234,7 +233,7 @@ export function parseOptionalStringArray(
   options: {
     maxItems: number;
     maxItemLength?: number;
-  }
+  },
 ) {
   if (value === undefined) {
     return undefined;
@@ -249,9 +248,9 @@ export function parseOptionalStringArray(
       value.map((item, index) =>
         parseTrimmedString(item, `${field}[${index}]`, {
           maxLength: options.maxItemLength ?? MAX_ID_LENGTH,
-        })
-      )
-    )
+        }),
+      ),
+    ),
   );
 
   if (items.length > options.maxItems) {
@@ -286,12 +285,12 @@ export function parseOptionalCoordinatesFromQuery(query: PlainObject) {
     const latitude = parseNumberValue(
       typeof originLat === 'string' ? Number(originLat) : originLat,
       'originLat',
-      { min: -90, max: 90 }
+      { min: -90, max: 90 },
     );
     const longitude = parseNumberValue(
       typeof originLng === 'string' ? Number(originLng) : originLng,
       'originLng',
-      { min: -180, max: 180 }
+      { min: -180, max: 180 },
     );
 
     origin = {

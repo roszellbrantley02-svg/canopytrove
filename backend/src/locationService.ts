@@ -51,7 +51,7 @@ function averageCoordinates(items: StorefrontSummaryApiDocument[]): Coordinates 
       accumulator.longitude += item.longitude;
       return accumulator;
     },
-    { latitude: 0, longitude: 0 }
+    { latitude: 0, longitude: 0 },
   );
 
   return {
@@ -86,7 +86,7 @@ function buildLocationGroups(summaries: StorefrontSummaryApiDocument[]) {
 function buildLocationResponse(
   label: string,
   summaries: StorefrontSummaryApiDocument[],
-  source: 'summary'
+  source: 'summary',
 ): LocationResolutionApiResponse {
   return {
     coordinates: averageCoordinates(summaries),
@@ -103,7 +103,9 @@ function formatSummaryLabel(query: string, summary: StorefrontSummaryApiDocument
   return `${summary.city}, NY`;
 }
 
-export async function resolveLocationQuery(rawQuery: string): Promise<LocationResolutionApiResponse> {
+export async function resolveLocationQuery(
+  rawQuery: string,
+): Promise<LocationResolutionApiResponse> {
   const query = rawQuery.trim();
   if (!query) {
     return {
@@ -117,7 +119,9 @@ export async function resolveLocationQuery(rawQuery: string): Promise<LocationRe
   const areaMatch =
     mockAreas.find((area) => {
       const values = [area.label, area.subtitle].map((value) => normalizeQuery(value));
-      return values.some((value) => value.includes(normalizedQuery) || normalizedQuery.includes(value));
+      return values.some(
+        (value) => value.includes(normalizedQuery) || normalizedQuery.includes(value),
+      );
     }) ?? null;
 
   if (areaMatch) {
@@ -141,11 +145,7 @@ export async function resolveLocationQuery(rawQuery: string): Promise<LocationRe
 
     const exactCityMatches = cityGroups.get(normalizedQuery) ?? [];
     if (exactCityMatches.length) {
-      return buildLocationResponse(
-        `${exactCityMatches[0].city}, NY`,
-        exactCityMatches,
-        'summary'
-      );
+      return buildLocationResponse(`${exactCityMatches[0].city}, NY`, exactCityMatches, 'summary');
     }
 
     const scored = summaries
@@ -181,14 +181,10 @@ export async function resolveLocationQuery(rawQuery: string): Promise<LocationRe
     if (
       bestMatches.length > 1 &&
       bestMatches.every(
-        (summary) => normalizeQuery(summary.city) === normalizeQuery(topSummary.city)
+        (summary) => normalizeQuery(summary.city) === normalizeQuery(topSummary.city),
       )
     ) {
-      return buildLocationResponse(
-        `${topSummary.city}, NY`,
-        bestMatches,
-        'summary'
-      );
+      return buildLocationResponse(`${topSummary.city}, NY`, bestMatches, 'summary');
     }
 
     return {

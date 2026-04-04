@@ -67,7 +67,7 @@ export function HotDealsFilters({
             style={styles.locationButton}
             accessibilityRole="button"
             accessibilityLabel="Apply location"
-            accessibilityHint="Applies the location to filter hot deals."
+            accessibilityHint="Applies the location to filter specials."
           >
             {isResolvingLocation ? <ActivityIndicator size="small" color="#06130c" /> : null}
             <Text style={styles.locationButtonText}>
@@ -89,7 +89,7 @@ export function HotDealsFilters({
         <SearchField
           value={dealSearchQuery}
           onChangeText={setDealSearchQuery}
-          placeholder="Search deal or storefront"
+          placeholder="Search special or storefront"
           isActive={Boolean(activeDealSearchQuery)}
         />
 
@@ -118,7 +118,7 @@ export function HotDealsFilters({
               style={[styles.sortChip, sortKey === value && styles.sortChipActive]}
               accessibilityRole="button"
               accessibilityLabel={`Sort by ${label}`}
-              accessibilityHint={`Sorts hot deals by ${label.toLowerCase()}`}
+              accessibilityHint={`Sorts specials by ${label.toLowerCase()}`}
             >
               <Text style={[styles.sortChipText, sortKey === value && styles.sortChipTextActive]}>
                 {label}
@@ -163,16 +163,16 @@ export function HotDealsMemberGate({
   return (
     <MotionInView delay={180}>
       <CustomerStateCard
-        title="Member access required for live deals."
-        body="Live offers are now member-only. Sign in to view current deals, follow storefronts, and get notified when your favorite legal dispensaries post something new."
+        title="Member access required for live specials."
+        body="Live specials are now member-only. Sign in to view current promotions, follow storefronts, and get notified when your favorite licensed dispensaries post something new."
         tone="warm"
         iconName="lock-closed-outline"
         eyebrow="Members only"
-        note="Storefront discovery stays public. Live deal browsing stays reserved for signed-in members."
+        note="Storefront discovery stays public. Live specials browsing stays reserved for signed-in members."
       >
         <View style={styles.memberGateActions}>
           <Pressable
-            accessibilityLabel="Sign in to view members-only live deals"
+            accessibilityLabel="Sign in to view members-only live specials"
             accessibilityRole="button"
             accessibilityHint="Opens the sign in screen."
             onPress={onOpenMemberSignIn}
@@ -181,7 +181,7 @@ export function HotDealsMemberGate({
             <Text style={styles.memberGatePrimaryButtonText}>Sign In</Text>
           </Pressable>
           <Pressable
-            accessibilityLabel="Create a Canopy Trove account to unlock members-only live deals"
+            accessibilityLabel="Create a Canopy Trove account to unlock members-only live specials"
             accessibilityRole="button"
             accessibilityHint="Opens the account creation screen."
             onPress={onOpenMemberSignUp}
@@ -236,7 +236,7 @@ export function HotDealsList({
             storefront={item}
             variant="list"
             primaryActionLabel="Directions"
-            secondaryActionLabel="View Storefront"
+            secondaryActionLabel="Details"
             isSaved={isSavedStorefront(item.id)}
             isVisited={visitedStorefrontIds.includes(item.id)}
             showPromotionText={true}

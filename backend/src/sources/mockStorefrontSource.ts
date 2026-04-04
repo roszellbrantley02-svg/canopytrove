@@ -21,14 +21,26 @@ const allSummaries = Object.entries(mockStorefrontSummaryDocuments).map(([id, do
 }));
 
 const detailById = new Map(
-  Object.entries(mockStorefrontDetailDocuments).map(([id, document]) => [id, { storefrontId: id, ...document }])
+  Object.entries(mockStorefrontDetailDocuments).map(([id, document]) => [
+    id,
+    { storefrontId: id, ...document },
+  ]),
 );
 const SCOPED_SUMMARY_TTL_MS = 20_000;
 const NEARBY_SUMMARY_TTL_MS = 90_000;
-const scopedSummaryCache = new Map<string, { expiresAt: number; items: StorefrontSummaryApiDocument[] }>();
+const scopedSummaryCache = new Map<
+  string,
+  { expiresAt: number; items: StorefrontSummaryApiDocument[] }
+>();
 const scopedSummaryInFlight = new Map<string, Promise<StorefrontSummaryApiDocument[]>>();
-const nearbySummaryCache = new Map<string, { expiresAt: number; page: ReturnType<typeof selectNearestSummaryPage> }>();
-const nearbySummaryInFlight = new Map<string, Promise<ReturnType<typeof selectNearestSummaryPage>>>();
+const nearbySummaryCache = new Map<
+  string,
+  { expiresAt: number; page: ReturnType<typeof selectNearestSummaryPage> }
+>();
+const nearbySummaryInFlight = new Map<
+  string,
+  Promise<ReturnType<typeof selectNearestSummaryPage>>
+>();
 
 export function clearMockStorefrontSourceCache() {
   scopedSummaryCache.clear();
@@ -80,9 +92,9 @@ async function getScopedSummaries(query: Parameters<StorefrontBackendSource['get
       filterByRadius(
         applyOriginMetrics(applySearch(scoped, query.searchQuery), query.origin),
         query.origin,
-        query.radiusMiles
+        query.radiusMiles,
       ),
-      query.sortKey
+      query.sortKey,
     );
 
     scopedSummaryCache.set(cacheKey, {
@@ -101,7 +113,9 @@ async function getScopedSummaries(query: Parameters<StorefrontBackendSource['get
   }
 }
 
-async function getNearbySummaryPage(query: Parameters<StorefrontBackendSource['getSummaryPage']>[0]) {
+async function getNearbySummaryPage(
+  query: Parameters<StorefrontBackendSource['getSummaryPage']>[0],
+) {
   const cacheKey = createNearbySummaryCacheKey(query);
   const cached = nearbySummaryCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -117,12 +131,7 @@ async function getNearbySummaryPage(query: Parameters<StorefrontBackendSource['g
     const scoped = query.areaId
       ? allSummaries.filter((item) => item.marketId === query.areaId)
       : allSummaries;
-    const page = selectNearestSummaryPage(
-      scoped,
-      query.origin!,
-      query.radiusMiles!,
-      query.limit!
-    );
+    const page = selectNearestSummaryPage(scoped, query.origin!, query.radiusMiles!, query.limit!);
 
     nearbySummaryCache.set(cacheKey, {
       page,

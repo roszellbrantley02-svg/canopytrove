@@ -18,7 +18,7 @@ function isAllowedGooglePlacesUrl(url: string) {
 export async function requestGoogleJson<T>(
   url: string,
   init: RequestInit,
-  fieldMask: string
+  fieldMask: string,
 ): Promise<T | null> {
   if (!GOOGLE_MAPS_API_KEY || !hasGooglePlacesConfig()) {
     return null;

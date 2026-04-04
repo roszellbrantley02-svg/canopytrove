@@ -161,7 +161,7 @@ export function NearbyStoreList({
             storefront={store}
             variant="feature"
             primaryActionLabel="Directions"
-            secondaryActionLabel="View Storefront"
+            secondaryActionLabel="Details"
             isSaved={isSavedStorefront(store.id)}
             isVisited={visitedStorefrontIds.includes(store.id)}
             showPromotionText={Boolean(store.promotionText?.trim())}

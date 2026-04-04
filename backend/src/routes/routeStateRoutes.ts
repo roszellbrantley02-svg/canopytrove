@@ -15,7 +15,7 @@ routeStateRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['PUT'],
-  })
+  }),
 );
 
 routeStateRoutes.get('/route-state/:profileId', async (request, response) => {
