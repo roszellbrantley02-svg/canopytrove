@@ -1,5 +1,7 @@
 import React from 'react';
-import { Image, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+// TODO: Replace with `import { Image } from 'expo-image'` after running `npx expo install expo-image`
+import { Image } from 'react-native';
 import { styles } from './mapGridPreview/mapGridPreviewStyles';
 import type { PreviewTone, PreviewStatusTone } from './mapGridPreview/mapGridPreviewTones';
 import { getStatusToneStyles, getToneStyles } from './mapGridPreview/mapGridPreviewTones';

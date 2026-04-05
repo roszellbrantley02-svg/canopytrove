@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   tertiaryButton: {
-    minHeight: 44,
+    minHeight: 48,
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',

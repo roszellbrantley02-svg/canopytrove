@@ -54,7 +54,7 @@ function getBearerToken(authorizationHeader: string | undefined) {
 }
 
 function getTestAuthenticatedMember(request: Request) {
-  if (process.env.NODE_ENV !== 'test') {
+  if (process.env.NODE_ENV !== 'test' || process.env.K_SERVICE) {
     return null;
   }
 

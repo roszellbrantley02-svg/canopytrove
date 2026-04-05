@@ -3,25 +3,85 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Canopy Trove&#8482; | Licensed dispensary discovery</title>
+    <title>Find Licensed Dispensaries Near You in New York | Canopy Trove&#8482;</title>
     <meta
       name="description"
-      content="Canopy Trove is a mobile app for adults discovering licensed dispensaries with trusted storefront details, community reviews, saved favorites, alerts, rewards, and verified operator tools."
+      content="Discover licensed dispensaries near you in New York. Real hours, community reviews, verified storefronts, deals, and directions. Browse 600+ OCM-licensed dispensaries — no download required."
     />
+    <meta name="keywords" content="dispensary near me, licensed dispensary, New York dispensary, dispensaries near me, cannabis dispensary NYC, legal dispensary, dispensary open now, dispensary reviews, dispensary deals, OCM licensed dispensary" />
+    <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://canopytrove.com/" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Canopy Trove&#8482; | Licensed dispensary discovery" />
+    <meta property="og:title" content="Find Licensed Dispensaries Near You | Canopy Trove&#8482;" />
     <meta
       property="og:description"
-      content="Canopy Trove is a mobile app for adults discovering licensed dispensaries with trusted storefront details, community reviews, saved favorites, alerts, rewards, and verified operator tools."
+      content="Discover licensed dispensaries near you in New York. Real hours, community reviews, verified storefronts, deals, and directions. Browse 600+ OCM-licensed dispensaries."
     />
     <meta property="og:url" content="https://canopytrove.com/" />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Canopy Trove&#8482; | Licensed dispensary discovery" />
+    <meta property="og:image" content="https://canopytrove.com/media/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Canopy Trove" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Find Licensed Dispensaries Near You | Canopy Trove&#8482;" />
     <meta
       name="twitter:description"
-      content="Canopy Trove is a mobile app for adults discovering licensed dispensaries with trusted storefront details, community reviews, saved favorites, alerts, rewards, and verified operator tools."
+      content="Discover licensed dispensaries near you in New York. Real hours, community reviews, verified storefronts, deals, and directions. Browse 600+ OCM-licensed dispensaries."
     />
+    <meta name="twitter:image" content="https://canopytrove.com/media/og-image.png" />
+
+    <!-- Structured Data — Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Canopy Trove",
+      "legalName": "Canopy Trove LLC",
+      "url": "https://canopytrove.com",
+      "description": "Licensed dispensary discovery for adults in New York. Community reviews, verified storefronts, deals, and operator tools.",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "support@canopytrove.com",
+        "contactType": "customer support",
+        "url": "https://canopytrove.com/support"
+      }
+    }
+    </script>
+
+    <!-- Structured Data — WebSite with SearchAction -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Canopy Trove",
+      "url": "https://canopytrove.com",
+      "description": "Find licensed dispensaries near you in New York with real hours, community reviews, and verified storefront details.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://app.canopytrove.com/browse?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- Structured Data — WebApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Canopy Trove",
+      "url": "https://app.canopytrove.com",
+      "description": "Browse licensed dispensaries open now near you. Live hours, directions, hot deals, real reviews, and verified storefronts in New York.",
+      "applicationCategory": "LifestyleApplication",
+      "operatingSystem": "Any",
+      "browserRequirements": "Requires JavaScript",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -70,7 +130,7 @@
               <div class="hero-stage">
                 <div class="hero-copy">
                   <p class="eyebrow">Coming to New York</p>
-                  <h1>Find the licensed dispensaries worth choosing.</h1>
+                  <h1>Find licensed dispensaries near you in New York.</h1>
                   <p>
                     Real details. Community reviews. Trusted discovery without the marketplace noise.
                   </p>
@@ -517,37 +577,7 @@
 
     </div>
 
-    <script>
-      // Scroll-reveal via IntersectionObserver
-      (function () {
-        const targets = document.querySelectorAll('[data-reveal]');
-        if (!targets.length) return;
-        const observer = new IntersectionObserver(
-          function (entries) {
-            entries.forEach(function (entry) {
-              if (entry.isIntersecting) {
-                entry.target.classList.add('revealed');
-                observer.unobserve(entry.target);
-              }
-            });
-          },
-          { threshold: 0.08 }
-        );
-        targets.forEach(function (el) { observer.observe(el); });
-      })();
-
-      // Mobile nav toggle
-      (function () {
-        var btn = document.querySelector('.nav-toggle');
-        var nav = document.querySelector('.nav');
-        if (!btn || !nav) return;
-        btn.addEventListener('click', function () {
-          var open = nav.classList.toggle('nav-open');
-          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-          btn.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
-        });
-      })();
-    </script>
+    <script src="/scripts.js"></script>
 
   </body>
 </html>

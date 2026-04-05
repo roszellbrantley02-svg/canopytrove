@@ -42,7 +42,7 @@ export const storefrontRoutes = Router();
 
 storefrontRoutes.get('/storefront-summaries', async (request, response) => {
   const accountId = await resolveVerifiedRequestAccountId(request, {
-    allowTestHeader: true,
+    allowTestHeader: process.env.NODE_ENV === 'test' && !process.env.K_SERVICE,
     invalidTokenBehavior: 'ignore',
   });
   const viewerContext = accountId ? { profileId: accountId } : null;
@@ -61,7 +61,7 @@ storefrontRoutes.get('/storefront-summaries', async (request, response) => {
 
 storefrontRoutes.get('/storefront-summaries/by-ids', async (request, response) => {
   const accountId = await resolveVerifiedRequestAccountId(request, {
-    allowTestHeader: true,
+    allowTestHeader: process.env.NODE_ENV === 'test' && !process.env.K_SERVICE,
     invalidTokenBehavior: 'ignore',
   });
   const viewerContext = accountId ? { profileId: accountId } : null;
@@ -85,7 +85,7 @@ storefrontRoutes.get('/storefront-summaries/by-ids', async (request, response) =
 
 storefrontRoutes.get('/storefront-details/:storefrontId', async (request, response) => {
   const accountId = await resolveVerifiedRequestAccountId(request, {
-    allowTestHeader: true,
+    allowTestHeader: process.env.NODE_ENV === 'test' && !process.env.K_SERVICE,
     invalidTokenBehavior: 'ignore',
   });
   const viewerContext = accountId ? { profileId: accountId } : null;

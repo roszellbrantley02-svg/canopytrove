@@ -3,7 +3,9 @@ import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { Image, Pressable, Text, TextInput, View } from 'react-native';
+// TODO: Replace with `import { Image } from 'expo-image'` after running `npx expo install expo-image`
+import { Image } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { InlineFeedbackPanel } from '../components/InlineFeedbackPanel';
 import { MotionInView } from '../components/MotionInView';

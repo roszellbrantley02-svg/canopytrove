@@ -1,5 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+// TODO: Replace with `import { Image } from 'expo-image'` after running `npx expo install expo-image`
+import { Image } from 'react-native';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { SectionCard } from '../../components/SectionCard';

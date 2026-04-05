@@ -4,6 +4,11 @@ import { RequestHandler } from 'express';
 /**
  * Track failed authentication attempts per IP
  * Structure: IP -> array of timestamps of failed attempts
+ *
+ * WARNING: This is in-memory storage and will NOT persist across Cloud Run instances.
+ * For production resilience with multiple instances, this should be migrated to
+ * Firestore-backed storage with TTL-based cleanup.
+ * TODO: Migrate failedAuthAttempts and blockedIps to Firestore collections
  */
 const failedAuthAttempts = new Map<string, number[]>();
 
@@ -15,6 +20,9 @@ const BLOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 /**
  * Track of temporarily blocked IPs
  * Structure: IP -> timestamp when block expires
+ *
+ * WARNING: This is in-memory storage and will NOT persist across Cloud Run instances.
+ * See note above about migrating to Firestore for production resilience.
  */
 const blockedIps = new Map<string, number>();
 

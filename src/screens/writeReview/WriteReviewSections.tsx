@@ -1,5 +1,7 @@
 import React from 'react';
-import { Image, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
+// TODO: Replace with `import { Image } from 'expo-image'` after running `npx expo install expo-image`
+import { Image } from 'react-native';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { HapticPressable } from '../../components/HapticPressable';
 import { MotionInView } from '../../components/MotionInView';

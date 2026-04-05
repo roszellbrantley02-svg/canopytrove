@@ -3,6 +3,21 @@ import { RequestValidationError } from './errors';
 
 export type PlainObject = Record<string, unknown>;
 
+/**
+ * Check for dangerous keys that could enable prototype pollution attacks.
+ * Throws if a dangerous key is detected.
+ */
+export function validatePrototypePollutionSafety(obj: PlainObject, context: string) {
+  const dangerousKeys = ['__proto__', 'constructor', 'prototype'];
+  for (const key of Object.keys(obj)) {
+    if (dangerousKeys.includes(key)) {
+      throw new RequestValidationError(
+        `${context} contains illegal key: ${key}. Prototype pollution protection.`,
+      );
+    }
+  }
+}
+
 export const MAX_ID_LENGTH = 128;
 export const MAX_DISPLAY_NAME_LENGTH = 60;
 export const MAX_SEARCH_QUERY_LENGTH = 120;

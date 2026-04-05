@@ -282,7 +282,7 @@ service cloud.firestore {
     }
 
     match /gamification_state/{docId} {
-      allow read: if isSignedIn();
+      allow read: if isSelf(docId) || isAdmin();
       allow write: if isAdmin();
     }
   }

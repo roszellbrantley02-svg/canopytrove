@@ -62,11 +62,20 @@ adminRoutes.get('/admin/seed-status', (_request, response) => {
   });
 });
 
-adminRoutes.post('/admin/seed-firestore', async (_request, response) => {
+adminRoutes.post('/admin/seed-firestore', async (request, response) => {
   if (!serverConfig.allowDevSeed) {
     response.status(403).json({
       ok: false,
       error: 'Dev seed endpoint is disabled.',
+    });
+    return;
+  }
+
+  const confirmHeader = request.header('x-confirm-destructive')?.trim();
+  if (confirmHeader !== 'seed-confirmed') {
+    response.status(403).json({
+      ok: false,
+      error: 'Destructive operation requires x-confirm-destructive: seed-confirmed header.',
     });
     return;
   }

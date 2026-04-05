@@ -57,7 +57,7 @@ export function initializeBackendMonitoring() {
     environment: sentryEnvironment,
     tracesSampleRate: sentryTracesSampleRate,
     enableLogs: sentryLogsEnabled,
-    sendDefaultPii: true,
+    sendDefaultPii: false,
   });
 
   Sentry.setTag('service', 'canopytrove-backend');

@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   searchActionButton: {
-    minHeight: 42,
+    minHeight: 48,
     borderRadius: radii.pill,
     backgroundColor: colors.gold,
     alignItems: 'center',
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   activeSearchClearButton: {
-    minHeight: 40,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,

@@ -62,10 +62,7 @@
     "react-native-gesture-handler": "~2.30.0",
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.23.0",
-    "react-native-svg": "15.15.3",
-    "react-native-web": "~0.20.7",
-    "react-dom": "19.2.0",
-    "@expo/metro-runtime": "~5.0.8"
+    "react-native-svg": "15.15.3"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",

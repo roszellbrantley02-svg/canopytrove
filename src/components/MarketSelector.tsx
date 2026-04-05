@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   chip: {
-    minHeight: 40,
+    minHeight: 48,
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.borderStrong,

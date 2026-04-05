@@ -31,7 +31,7 @@ function getBearerToken(authorizationHeader: string | undefined) {
 }
 
 function getTestAuthenticatedOwner(request: Request) {
-  if (process.env.NODE_ENV !== 'test') {
+  if (process.env.NODE_ENV !== 'test' || process.env.K_SERVICE) {
     return null;
   }
 
