@@ -232,7 +232,7 @@ export function NearbyScreen() {
           visitedStorefrontIds={visitedStorefrontIds}
           onPrepareStorefront={prepareStorefrontDetail}
           onOpenStorefront={(store) =>
-            navigation.navigate('StorefrontDetail', { storefront: store })
+            navigation.navigate('StorefrontDetail', { storefrontId: store.id, storefront: store })
           }
           onGoNow={handleGoNow}
           delayBase={40}
@@ -279,7 +279,7 @@ export function NearbyScreen() {
           visitedStorefrontIds={visitedStorefrontIds}
           onPrepareStorefront={prepareStorefrontDetail}
           onOpenStorefront={(store) =>
-            navigation.navigate('StorefrontDetail', { storefront: store })
+            navigation.navigate('StorefrontDetail', { storefrontId: store.id, storefront: store })
           }
           onGoNow={handleGoNow}
           delayBase={40}

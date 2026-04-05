@@ -1,7 +1,7 @@
 import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
-import { Linking, Pressable, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, Text, View } from 'react-native';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
@@ -160,7 +160,11 @@ function OwnerPortalSubscriptionScreenInner() {
     setStatusText(null);
     try {
       const session = await createOwnerBillingCheckoutSession(billingCycle, tier);
-      await Linking.openURL(session.url);
+      if (Platform.OS === 'web') {
+        window.open(session.url, '_blank', 'noopener,noreferrer');
+      } else {
+        await Linking.openURL(session.url);
+      }
       setStatusText(
         'Checkout opened. Complete billing, then return here and tap Refresh Billing Status.',
       );
@@ -184,7 +188,11 @@ function OwnerPortalSubscriptionScreenInner() {
     setStatusText(null);
     try {
       const session = await createOwnerBillingPortalSession();
-      await Linking.openURL(session.url);
+      if (Platform.OS === 'web') {
+        window.open(session.url, '_blank', 'noopener,noreferrer');
+      } else {
+        await Linking.openURL(session.url);
+      }
       setStatusText('Billing management opened in your browser.');
     } catch (error) {
       setStatusText(error instanceof Error ? error.message : 'Unable to open billing management.');

@@ -39,7 +39,9 @@ export function ProfileStorefrontList({
       {storefronts.map((storefront) => (
         <Pressable
           key={storefront.id}
-          onPress={() => navigation.navigate('StorefrontDetail', { storefront })}
+          onPress={() =>
+            navigation.navigate('StorefrontDetail', { storefrontId: storefront.id, storefront })
+          }
           style={styles.storefrontRow}
           accessibilityRole="button"
           accessibilityLabel={storefront.displayName}

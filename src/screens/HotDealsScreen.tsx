@@ -140,7 +140,9 @@ export function HotDealsScreen() {
           items={items}
           isSavedStorefront={isSavedStorefront}
           visitedStorefrontIds={visitedStorefrontIds}
-          onOpenDetail={(item) => navigation.navigate('StorefrontDetail', { storefront: item })}
+          onOpenDetail={(item) =>
+            navigation.navigate('StorefrontDetail', { storefrontId: item.id, storefront: item })
+          }
           onGoNow={(item) => {
             void openStorefrontRoute(item, 'verified', {
               profileId,

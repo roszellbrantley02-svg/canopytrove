@@ -16,7 +16,7 @@ export function SavedStorefrontsScreen() {
   const { data: savedStorefronts, isLoading } = useSavedSummaries(savedStorefrontIds);
 
   const handleStorefrontPress = (storefront: (typeof savedStorefronts)[0]) => {
-    navigation.navigate('StorefrontDetail', { storefront });
+    navigation.navigate('StorefrontDetail', { storefrontId: storefront.id, storefront });
   };
 
   const renderStorefrontCard = ({

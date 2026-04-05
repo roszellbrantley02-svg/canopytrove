@@ -1,6 +1,15 @@
 import React from 'react';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { crossPlatformAlert } from '../../utils/crossPlatformAlert';
+
+/** Open a URL in a web-safe way. On web, use window.open; on native, use Linking. */
+async function openUrl(url: string) {
+  if (Platform.OS === 'web') {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  } else {
+    await Linking.openURL(url);
+  }
+}
 import { submitStorefrontReviewHelpful } from '../../services/storefrontCommunityService';
 import { trackAnalyticsEvent } from '../../services/analyticsService';
 import { markStorefrontAsRecent } from '../../services/recentStorefrontService';
@@ -127,7 +136,7 @@ export function useStorefrontDetailActions({
         dealId: storefront.activePromotionId ?? undefined,
       },
     );
-    await Linking.openURL(detailData.website);
+    await openUrl(detailData.website);
   }, [detailData.website, storefront.activePromotionId, storefront.id]);
 
   const callStore = React.useCallback(async () => {
@@ -146,7 +155,7 @@ export function useStorefrontDetailActions({
         dealId: storefront.activePromotionId ?? undefined,
       },
     );
-    await Linking.openURL(`tel:${detailData.phone}`);
+    await openUrl(`tel:${detailData.phone}`);
   }, [detailData.phone, storefront.activePromotionId, storefront.id]);
 
   const openMenu = React.useCallback(async () => {
@@ -165,7 +174,7 @@ export function useStorefrontDetailActions({
         dealId: storefront.activePromotionId ?? undefined,
       },
     );
-    await Linking.openURL(detailData.menuUrl);
+    await openUrl(detailData.menuUrl);
   }, [detailData.menuUrl, storefront.activePromotionId, storefront.id]);
 
   const goNow = React.useCallback(async () => {

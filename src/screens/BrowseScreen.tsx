@@ -263,7 +263,9 @@ export function BrowseScreen() {
           isSavedStorefront={isSavedStorefront}
           visitedStorefrontIds={visitedStorefrontIds}
           onPrepareStorefront={prepareStorefrontDetail}
-          onOpenStorefront={(item) => navigation.navigate('StorefrontDetail', { storefront: item })}
+          onOpenStorefront={(item) =>
+            navigation.navigate('StorefrontDetail', { storefrontId: item.id, storefront: item })
+          }
           onGoNow={(item) => {
             trackAnalyticsEvent(
               'go_now_tapped',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, Text, TextInput, View } from 'react-native';
+import { Linking, Platform, Text, TextInput, View } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStateCard } from '../components/CustomerStateCard';
 import { MotionInView } from '../components/MotionInView';
@@ -28,7 +28,11 @@ export function DeleteAccountScreen({
   const matchesConfirmation = confirmationText.trim().toUpperCase() === DELETE_CONFIRMATION_PHRASE;
   const isMemberAccount = authSession.status === 'authenticated';
   const openSupportEmail = React.useCallback(() => {
-    void Linking.openURL(legalConfig.supportEmailUrl);
+    if (Platform.OS === 'web') {
+      window.open(legalConfig.supportEmailUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      void Linking.openURL(legalConfig.supportEmailUrl);
+    }
   }, []);
 
   const handleDelete = React.useCallback(async () => {

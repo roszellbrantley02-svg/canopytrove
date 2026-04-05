@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, Text, View } from 'react-native';
+import { Linking, Platform, Text, View } from 'react-native';
 import { CustomerStateCard } from '../components/CustomerStateCard';
 import { HapticPressable } from '../components/HapticPressable';
 import { MotionInView } from '../components/MotionInView';
@@ -52,11 +52,19 @@ export function LegalCenterScreen() {
       return;
     }
 
-    void Linking.openURL(url);
+    if (Platform.OS === 'web') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      void Linking.openURL(url);
+    }
   }, []);
 
   const openSupportEmail = React.useCallback(() => {
-    void Linking.openURL(legalConfig.supportEmailUrl);
+    if (Platform.OS === 'web') {
+      window.open(legalConfig.supportEmailUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      void Linking.openURL(legalConfig.supportEmailUrl);
+    }
   }, []);
 
   return (

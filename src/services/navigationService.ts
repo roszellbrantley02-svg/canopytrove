@@ -23,6 +23,15 @@ function buildAddressDestination(
 }
 
 async function tryOpenUrl(url: string) {
+  if (Platform.OS === 'web') {
+    try {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   if (!(await Linking.canOpenURL(url))) {
     return false;
   }
@@ -85,6 +94,15 @@ export async function openStorefrontRoute(
     webRouteUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
   } else {
     webRouteUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+  }
+
+  // On web, skip native URL schemes (Apple Maps / geo:) — go straight to Google Maps.
+  if (Platform.OS === 'web') {
+    if (await tryOpenUrl(webRouteUrl)) {
+      return;
+    }
+    await tryOpenUrl(coordinateFallbackUrl);
+    return;
   }
 
   const preferredUrl = routeMode === 'verified' ? nativeRouteUrl : webRouteUrl;
