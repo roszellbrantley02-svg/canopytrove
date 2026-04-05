@@ -1,6 +1,6 @@
 import React from 'react';
 import type { AppStateStatus } from 'react-native';
-import { Animated, AppState, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, AppState, StyleSheet, Text, View } from 'react-native';
 import type { NavigationContainerRef } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -106,13 +106,13 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
       Animated.timing(opacity, {
         toValue: pendingPrompt ? 1 : 0,
         duration: pendingPrompt ? 200 : 160,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }),
       Animated.spring(translateY, {
         toValue: pendingPrompt ? 0 : 28,
         tension: 165,
         friction: 18,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }),
     ]);
 

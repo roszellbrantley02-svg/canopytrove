@@ -41,7 +41,7 @@ export function HapticPressable({
       if (enableScale) {
         Animated.spring(scaleValue, {
           toValue: 0.97,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
           speed: 50,
           bounciness: 0,
         }).start();
@@ -56,7 +56,7 @@ export function HapticPressable({
       if (enableScale) {
         Animated.spring(scaleValue, {
           toValue: 1,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
           speed: 40,
           bounciness: 4,
         }).start();

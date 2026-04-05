@@ -84,7 +84,7 @@ export function ScreenShell({
       toValue: 1,
       duration: motion.ambient,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     });
 
     animation.start();

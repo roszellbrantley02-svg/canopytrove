@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing } from 'react-native';
+import { Animated, Platform, Easing } from 'react-native';
 import { AppBootHeader, AppBootHero, AppBootLayout } from './appBoot/AppBootSections';
 
 export function AppBootScreen() {
@@ -13,13 +13,13 @@ export function AppBootScreen() {
           toValue: 1,
           duration: 1100,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(pulse, {
           toValue: 0,
           duration: 1100,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]),
     );
@@ -29,7 +29,7 @@ export function AppBootScreen() {
         toValue: 1,
         duration: 1800,
         easing: Easing.inOut(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }),
     );
 

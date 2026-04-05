@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import React, { useEffect, useRef } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Animated, Easing } from 'react-native';
+import { Animated, Easing, Platform } from 'react-native';
 import { motion } from '../theme/tokens';
 
 type MotionInViewProps = PropsWithChildren<{
@@ -33,7 +33,7 @@ export function MotionInView({
         duration: resolvedDuration,
         delay,
         easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       });
 
       animation.start();

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Platform, Easing, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // ---------------------------------------------------------------------------
@@ -152,7 +152,7 @@ export function StorefrontHeatGlow({ heatLevel }: StorefrontHeatGlowProps) {
           toValue: 1,
           duration: LEVEL_TRANSITION_DURATION,
           easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }).start();
       }
 
@@ -169,13 +169,13 @@ export function StorefrontHeatGlow({ heatLevel }: StorefrontHeatGlowProps) {
             toValue: 1,
             duration: config.pulseDuration / 2,
             easing: Easing.inOut(Easing.sin),
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
           }),
           Animated.timing(pulseAnim, {
             toValue: 0,
             duration: config.pulseDuration / 2,
             easing: Easing.inOut(Easing.sin),
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
           }),
         ]),
       );
@@ -199,7 +199,7 @@ export function StorefrontHeatGlow({ heatLevel }: StorefrontHeatGlowProps) {
       toValue: 0,
       duration: COOLDOWN_FADE_DURATION,
       easing: Easing.in(Easing.quad),
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start(({ finished }) => {
       if (finished) {
         setRenderLevel(null);

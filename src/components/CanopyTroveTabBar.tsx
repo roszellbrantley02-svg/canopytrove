@@ -55,7 +55,7 @@ function TabBarItem({
       stiffness: 260,
       damping: 24,
       mass: 0.9,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     });
 
     animation.start();
@@ -209,7 +209,7 @@ export function CanopyTroveTabBar({ state, descriptors, navigation }: BottomTabB
       toValue: 1,
       duration: motion.standard,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     });
 
     animation.start();

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Platform, Easing, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radii } from '../theme/tokens';
 
@@ -25,7 +25,7 @@ export function ShimmerBlock({
         toValue: 1,
         duration: 1400,
         easing: Easing.inOut(Easing.ease),
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }),
     );
 
