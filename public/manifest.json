@@ -3,6 +3,7 @@
   "name": "Canopy Trove — Licensed Dispensary Discovery",
   "description": "Discover licensed dispensaries, hot deals, and real reviews near you.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#121614",
