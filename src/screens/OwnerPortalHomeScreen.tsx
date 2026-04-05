@@ -133,8 +133,8 @@ function OwnerPortalHomeScreenInner() {
       badge: workspace?.recentReviews?.filter((r) => !r.ownerReply).length ?? 0,
     },
     {
-      key: 'create-special',
-      label: 'Create Special',
+      key: 'create-deal',
+      label: 'Create Deal',
       iconName: 'megaphone-outline',
       locked: !isGrowthOrAbove,
       onPress: () => {
@@ -211,7 +211,7 @@ function OwnerPortalHomeScreenInner() {
     <ScreenShell
       eyebrow="Owner Portal"
       title="Business dashboard"
-      subtitle="Manage your listing, verification, specials, media, and billing."
+      subtitle="Manage your listing, verification, deals, media, and billing."
       headerPill="Business"
     >
       <ScrollView
@@ -345,7 +345,7 @@ function OwnerPortalHomeScreenInner() {
                 <View style={localStyles.emptyState}>
                   <AppUiIcon name="megaphone-outline" size={32} color="#9CC5B4" />
                   <Text style={localStyles.emptyStateText}>
-                    Create your first special to attract customers
+                    Create your first deal to attract customers
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -354,14 +354,14 @@ function OwnerPortalHomeScreenInner() {
                     }}
                     style={localStyles.primaryButton}
                   >
-                    <Text style={localStyles.primaryButtonText}>Create Special</Text>
+                    <Text style={localStyles.primaryButtonText}>Create Deal</Text>
                   </Pressable>
                 </View>
               ) : (
                 <View style={localStyles.lockedFeature}>
                   <AppUiIcon name="lock-closed-outline" size={24} color="#C4B8B0" />
                   <Text style={localStyles.lockedFeatureText}>
-                    Specials and deals require the Growth plan or higher.
+                    Deals require the Growth plan or higher.
                   </Text>
                   <Pressable
                     accessibilityRole="button"

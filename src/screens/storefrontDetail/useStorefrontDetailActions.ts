@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert, Linking } from 'react-native';
+import { Linking } from 'react-native';
+import { crossPlatformAlert } from '../../utils/crossPlatformAlert';
 import { submitStorefrontReviewHelpful } from '../../services/storefrontCommunityService';
 import { trackAnalyticsEvent } from '../../services/analyticsService';
 import { markStorefrontAsRecent } from '../../services/recentStorefrontService';
@@ -277,7 +278,7 @@ export function useStorefrontDetailActions({
         return;
       }
 
-      Alert.alert(
+      crossPlatformAlert(
         'Report this review?',
         'Use reports for harassment, spam, illegal claims, or other abusive content. Block only hides the author on this device.',
         [

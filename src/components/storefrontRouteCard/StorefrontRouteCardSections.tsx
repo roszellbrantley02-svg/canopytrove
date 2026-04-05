@@ -309,10 +309,10 @@ export function StorefrontRouteCardBody({
               {activePromotionCount > 1
                 ? isAndroid
                   ? `Members unlock ${activePromotionCount} recent updates`
-                  : `Members unlock ${activePromotionCount} live specials`
+                  : `Members unlock ${activePromotionCount} live deals`
                 : isAndroid
                   ? 'Members unlock this recent update'
-                  : 'Members unlock this live special'}
+                  : 'Members unlock this live deal'}
             </Text>
           </View>
         ) : null}

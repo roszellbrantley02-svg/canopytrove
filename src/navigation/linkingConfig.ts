@@ -2,7 +2,13 @@ import type { LinkingOptions } from '@react-navigation/native';
 import type { RootStackParamList } from './rootNavigatorConfig';
 
 export const linkingConfig: LinkingOptions<RootStackParamList> = {
-  prefixes: ['canopytrove://', 'https://canopytrove.com', 'https://www.canopytrove.com'],
+  prefixes: [
+    'canopytrove://',
+    'https://canopytrove.com',
+    'https://www.canopytrove.com',
+    'https://app.canopytrove.com',
+    'https://canopytrove-webapp.web.app',
+  ],
   config: {
     screens: {
       Tabs: {

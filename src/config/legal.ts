@@ -81,7 +81,7 @@ export const privacyPolicySections = [
   },
   {
     title: 'Notifications',
-    body: 'If you allow notifications, Canopy Trove can send specials alerts and follow-up prompts tied to the storefronts you save or visit.',
+    body: 'If you allow notifications, Canopy Trove can send deal alerts and follow-up prompts tied to the storefronts you save or visit.',
   },
 ] as const;
 

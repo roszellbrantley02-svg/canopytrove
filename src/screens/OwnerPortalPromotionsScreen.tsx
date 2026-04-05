@@ -169,9 +169,9 @@ function OwnerPortalPromotionsScreenInner() {
       subtitle={
         Platform.OS === 'android'
           ? 'Plan updates, reserve owner highlights for premium placement, and compare performance over time.'
-          : 'Plan the lead specials lane, reserve owner highlights for premium placement, and compare offer performance over time.'
+          : 'Plan the lead hot deals lane, reserve owner highlights for premium placement, and compare offer performance over time.'
       }
-      headerPill={Platform.OS === 'android' ? 'Updates' : 'Specials'}
+      headerPill={Platform.OS === 'android' ? 'Updates' : 'Hot Deals'}
     >
       <MotionInView delay={70}>
         <View style={styles.portalHeroCard}>
@@ -182,12 +182,12 @@ function OwnerPortalPromotionsScreenInner() {
           <Text style={styles.portalHeroTitle}>
             {Platform.OS === 'android'
               ? 'Lead with updates. Save owner highlights for premium placement.'
-              : 'Lead with specials. Save owner highlights for premium placement.'}
+              : 'Lead with hot deals. Save owner highlights for premium placement.'}
           </Text>
           <Text style={styles.portalHeroBody}>
             {Platform.OS === 'android'
               ? 'The planner now treats updates as the primary content lane while keeping owner-highlight cards reserved for curated premium storytelling.'
-              : 'The planner now treats specials as the primary urgency lane while keeping owner-highlight cards reserved for curated premium storytelling.'}
+              : 'The planner now treats hot deals as the primary urgency lane while keeping owner-highlight cards reserved for curated premium storytelling.'}
           </Text>
           <View style={styles.portalHeroMetricRow}>
             <View style={styles.portalHeroMetricCard}>
@@ -230,7 +230,7 @@ function OwnerPortalPromotionsScreenInner() {
           body={
             Platform.OS === 'android'
               ? 'Use ISO-style dates for exact scheduling. Default to a featured update when the card should drive engagement, then switch to owner highlight when the message should read as a premium curated feature. Each storefront can keep up to five scheduled or active updates at once.'
-              : 'Use ISO-style dates for exact scheduling. Default to a featured special when the card should drive urgency, then switch to owner highlight only when the message should read as a premium curated feature. Each storefront can keep up to five scheduled or active offers at once.'
+              : 'Use ISO-style dates for exact scheduling. Default to a hot deal when the card should drive urgency, then switch to owner highlight only when the message should read as a premium curated feature. Each storefront can keep up to five scheduled or active offers at once.'
           }
         >
           <View style={styles.sectionStack}>
@@ -354,7 +354,7 @@ function OwnerPortalPromotionsScreenInner() {
                   </Text>
                   <Text style={styles.splitHeaderBody}>
                     Keep the message tight enough to scan in one pass whether it lands as a featured{' '}
-                    {Platform.OS === 'android' ? 'update' : 'special'} or an owner highlight.
+                    {Platform.OS === 'android' ? 'update' : 'deal'} or an owner highlight.
                   </Text>
                 </View>
                 <AppUiIcon name="megaphone-outline" size={20} color="#F5C86A" />
@@ -529,7 +529,7 @@ function OwnerPortalPromotionsScreenInner() {
                   {cardTone === 'hot_deal'
                     ? Platform.OS === 'android'
                       ? 'Use Featured Update when this content should drive engagement and feel timely.'
-                      : 'Use Featured Special when this offer should own the urgency lane and feel time-sensitive.'
+                      : 'Use Hot Deal when this offer should own the urgency lane and feel time-sensitive.'
                     : cardTone === 'owner_featured'
                       ? Platform.OS === 'android'
                         ? 'Use Owner Highlight when the card should feel premium, curated, and showcase value over promotions.'
@@ -580,7 +580,7 @@ function OwnerPortalPromotionsScreenInner() {
                 <Text style={styles.fieldHint}>
                   {Platform.OS === 'android'
                     ? 'Updates is the primary content lane. Nearby and Browse keep the update visible in the standard discovery feeds.'
-                    : 'Specials is the primary promotions lane. Nearby and Browse keep the campaign visible in the standard discovery feeds.'}
+                    : 'Hot Deals is the primary promotions lane. Nearby and Browse keep the campaign visible in the standard discovery feeds.'}
                 </Text>
               </View>
 
@@ -697,7 +697,7 @@ function OwnerPortalPromotionsScreenInner() {
                   {maxPromotions === 0
                     ? Platform.OS === 'android'
                       ? 'Updates require the Growth plan or higher. Upgrade to create updates.'
-                      : 'Promotions require the Growth plan or higher. Upgrade to create specials.'
+                      : 'Promotions require the Growth plan or higher. Upgrade to create deals.'
                     : Platform.OS === 'android'
                       ? `You've reached the limit of ${maxPromotions} active or scheduled updates. Let one expire or remove it to create a new one.`
                       : `You've reached the limit of ${maxPromotions} active or scheduled promotions. Let one expire or remove it to create a new deal.`}
@@ -783,7 +783,7 @@ function OwnerPortalPromotionsScreenInner() {
           body={
             Platform.OS === 'android'
               ? 'Load any update into the planner to edit timing, placement, badge mix, or move it between the featured updates lane and the owner-highlight lane.'
-              : 'Load any promotion into the planner to edit timing, placement, badge mix, or move it between the featured specials lane and the owner-highlight lane.'
+              : 'Load any promotion into the planner to edit timing, placement, badge mix, or move it between the hot deals lane and the owner-highlight lane.'
           }
         >
           {promotions.length ? (
@@ -875,7 +875,7 @@ function OwnerPortalPromotionsScreenInner() {
           body={
             Platform.OS === 'android'
               ? 'These results use the live update analytics tied to update IDs, so you can compare featured updates against owner highlights by visibility, taps, and route intent.'
-              : 'These results use the live promotion analytics tied to promotion IDs, so you can compare featured specials against owner highlights by visibility, taps, and route intent.'
+              : 'These results use the live promotion analytics tied to promotion IDs, so you can compare hot deals against owner highlights by visibility, taps, and route intent.'
           }
         >
           {promotionPerformance.length ? (

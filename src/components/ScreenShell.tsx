@@ -94,6 +94,8 @@ export function ScreenShell({
     };
   }, [shellProgress]);
 
+  const isWeb = Platform.OS === 'web';
+
   return (
     <LinearGradient
       colors={[colors.backgroundDeep, colors.background, colors.backgroundAlt]}
@@ -130,10 +132,10 @@ export function ScreenShell({
           style={styles.ambientBeam}
         />
       </Animated.View>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, isWeb && styles.webSafeArea]}>
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={contentContainerStyle}
+          contentContainerStyle={[contentContainerStyle, isWeb && styles.webScrollContent]}
           showsVerticalScrollIndicator={false}
         >
           {showTopBar ? (
@@ -298,6 +300,13 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  webSafeArea: {
+    alignItems: 'center',
+  },
+  webScrollContent: {
+    maxWidth: 480,
+    width: '100%',
   },
   content: {
     padding: spacing.xl,

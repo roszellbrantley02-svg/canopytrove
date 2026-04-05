@@ -184,11 +184,11 @@ function BrowseFiltersBarComponent({
           onPress={onToggleHotDeals}
           style={[styles.sortChip, hotDealsOnly && styles.hotDealsChipActive]}
           accessibilityRole="button"
-          accessibilityLabel={Platform.OS === 'android' ? 'Toggle updates' : 'Toggle specials'}
+          accessibilityLabel={Platform.OS === 'android' ? 'Toggle updates' : 'Toggle hot deals'}
           accessibilityHint={
             Platform.OS === 'android'
               ? 'Shows only storefronts with recent updates.'
-              : 'Shows only storefronts with live specials.'
+              : 'Shows only storefronts with live deals.'
           }
           accessibilityState={{ selected: hotDealsOnly }}
         >
@@ -198,7 +198,7 @@ function BrowseFiltersBarComponent({
             color={hotDealsOnly ? colors.backgroundDeep : colors.danger}
           />
           <Text style={[styles.sortChipText, hotDealsOnly && styles.hotDealsChipTextActive]}>
-            {Platform.OS === 'android' ? 'Updates' : 'Specials'}
+            {Platform.OS === 'android' ? 'Updates' : 'Hot Deals'}
           </Text>
         </Pressable>
       </View>

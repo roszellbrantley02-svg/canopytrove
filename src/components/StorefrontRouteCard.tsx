@@ -79,7 +79,7 @@ function StorefrontRouteCardComponent({
     isOperationalStatusPending,
   });
   const heatLevel = routeStartsToHeatLevel(storefront.routeStartsPerHour ?? 0);
-  const accessibilityLabel = `${storefront.displayName}, ${storefront.city}, ${storefront.state}. ${previewStatusLabel}. ${hasPromotion ? 'Live special available.' : 'No live special highlighted.'}`;
+  const accessibilityLabel = `${storefront.displayName}, ${storefront.city}, ${storefront.state}. ${previewStatusLabel}. ${hasPromotion ? 'Live deal available.' : 'No live deal highlighted.'}`;
 
   return (
     <Pressable

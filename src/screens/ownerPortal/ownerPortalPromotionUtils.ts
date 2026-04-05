@@ -42,7 +42,7 @@ export const PROMOTION_AUDIENCE_OPTIONS: PromotionOption<OwnerPromotionAudience>
 ];
 
 export const PROMOTION_CARD_TONE_OPTIONS: PromotionOption<OwnerPromotionCardTone>[] = [
-  { value: 'hot_deal', label: Platform.OS === 'android' ? 'Featured Update' : 'Featured Special' },
+  { value: 'hot_deal', label: Platform.OS === 'android' ? 'Featured Update' : 'Hot Deal' },
   { value: 'owner_featured', label: 'Owner Highlight' },
   { value: 'standard', label: 'Standard Card' },
 ];
@@ -51,7 +51,7 @@ export const PROMOTION_PLACEMENT_SURFACE_OPTIONS: PromotionOption<OwnerPromotion
   [
     { value: 'nearby', label: 'Nearby' },
     { value: 'browse', label: 'Browse' },
-    { value: 'hot_deals', label: Platform.OS === 'android' ? 'Updates Lane' : 'Specials Lane' },
+    { value: 'hot_deals', label: Platform.OS === 'android' ? 'Updates Lane' : 'Hot Deals Lane' },
   ];
 
 export const PROMOTION_PLACEMENT_SCOPE_OPTIONS: PromotionOption<OwnerPromotionPlacementScope>[] = [
@@ -177,7 +177,7 @@ export function getPromotionPlannerTitle(editingPromotionId: string | null) {
 export function getPromotionPlannerBody(editingPromotionId: string | null) {
   return editingPromotionId
     ? 'Update timing, lane, placement, or highlight reach without losing the existing promotion state.'
-    : 'Lead with a featured special by default, or switch to an owner highlight when the card should feel premium instead of urgent.';
+    : 'Lead with a hot deal by default, or switch to an owner highlight when the card should feel premium instead of urgent.';
 }
 
 export function getPromotionPlannerModeLabel(editingPromotionId: string | null) {
@@ -206,7 +206,7 @@ export function getPromotionRuntimeMessage(
 export function formatPromotionValue(value: string) {
   const normalizedValue = value.trim().toLowerCase();
   if (normalizedValue === 'hot_deal') {
-    return Platform.OS === 'android' ? 'Featured Update' : 'Featured Special';
+    return Platform.OS === 'android' ? 'Featured Update' : 'Hot Deal';
   }
 
   if (normalizedValue === 'owner_featured') {
@@ -218,7 +218,7 @@ export function formatPromotionValue(value: string) {
   }
 
   if (normalizedValue === 'hot_deals') {
-    return Platform.OS === 'android' ? 'Updates Lane' : 'Specials Lane';
+    return Platform.OS === 'android' ? 'Updates Lane' : 'Hot Deals Lane';
   }
 
   return value.replace(/_/g, ' ').replace(/\b\w/g, (segment) => segment.toUpperCase());

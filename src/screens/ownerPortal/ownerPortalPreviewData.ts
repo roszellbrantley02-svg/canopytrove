@@ -160,7 +160,8 @@ export const ownerPortalPreviewPromotions: OwnerStorefrontPromotionDocument[] = 
     storefrontId: ownerPortalPreviewStorefront.id,
     ownerUid: OWNER_PORTAL_PREVIEW_UID,
     title: 'Today only: 20% off premium flower',
-    description: 'Primary specials lane with same-day urgency across Nearby, Browse, and Specials.',
+    description:
+      'Primary hot deals lane with same-day urgency across Nearby, Browse, and Hot Deals.',
     badges: ['20% Off', 'Today Only', 'Weekend Drop'],
     startsAt: '2026-03-28T09:00:00.000Z',
     endsAt: '2026-03-30T02:00:00.000Z',
@@ -247,8 +248,8 @@ export const ownerPortalPreviewWorkspace = {
   patternFlags: [
     {
       id: 'followers-waiting',
-      title: 'Followers react fast to featured specials',
-      body: 'Saved followers engage best when the lead offer launches as a same-day featured special.',
+      title: 'Followers react fast to hot deals',
+      body: 'Saved followers engage best when the lead offer launches as a same-day hot deal.',
       tone: 'success',
     },
     {

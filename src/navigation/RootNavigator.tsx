@@ -1,10 +1,24 @@
 import React from 'react';
 import type { NavigationContainerRef } from '@react-navigation/native';
 import { NavigationContainer } from '@react-navigation/native';
+import { Platform } from 'react-native';
 import { CanopyTroveTabBar } from '../components/CanopyTroveTabBar';
-import { FavoriteDealNotificationBridge } from '../components/FavoriteDealNotificationBridge';
-import { NotificationResponseBridge } from '../components/NotificationResponseBridge';
 import { PostVisitPromptHost } from '../components/PostVisitPromptHost';
+
+/* Notification bridges use expo-notifications which has no web implementation.
+   Lazy-require on native only to prevent bundler errors on web. */
+/* eslint-disable @typescript-eslint/no-require-imports */
+const NotificationResponseBridge =
+  Platform.OS !== 'web'
+    ? require('../components/NotificationResponseBridge').NotificationResponseBridge
+    : () => null;
+
+const FavoriteDealNotificationBridge =
+  Platform.OS !== 'web'
+    ? require('../components/FavoriteDealNotificationBridge').FavoriteDealNotificationBridge
+    : () => null;
+/* eslint-enable @typescript-eslint/no-require-imports */
+
 import { trackScreenView } from '../services/analyticsService';
 import { navigationTheme } from '../theme/navigationTheme';
 import { motion } from '../theme/tokens';

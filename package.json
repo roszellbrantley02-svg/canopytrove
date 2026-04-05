@@ -7,6 +7,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "web:build": "npx expo export --platform web && node -e \"const fs=require('fs'),p=require('path');const src='public',dst='dist';if(fs.existsSync(src)){fs.readdirSync(src).forEach(f=>{fs.copyFileSync(p.join(src,f),p.join(dst,f));console.log('Copied',f,'to dist/')})}\"",
+    "web:deploy": "npm run web:build && npx firebase-tools deploy --only hosting:webapp",
+    "web:preview": "npm run web:build && npx firebase-tools hosting:channel:deploy preview --only webapp",
     "test": "vitest run",
     "test:frontend-core": "vitest run src/services/notificationRoutingService.test.ts src/services/notificationPayloadService.test.ts src/services/analyticsTransport.test.ts src/services/analyticsSessionLifecycle.test.ts src/services/analyticsService.test.ts src/services/storefrontMemberDealAccessService.test.ts src/context/useStorefrontQueryModel.test.tsx src/context/useStorefrontProfileModel.test.tsx src/hooks/storefrontDataHooks.test.tsx src/screens/writeReview/reviewComposerShared.test.ts src/utils/storefrontRatings.test.ts src/screens/ownerPortal/ownerPortalLicenseCompliance.test.ts src/services/ownerPortalProfileToolsMediaService.test.ts src/config/ownerPortalConfig.test.ts src/utils/favoriteDealAlerts.test.ts",
     "test:frontend-integration": "vitest run App.test.tsx src/services/postVisitPromptService.test.ts",
@@ -60,7 +63,10 @@
     "react-native-gesture-handler": "~2.30.0",
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.23.0",
-    "react-native-svg": "15.15.3"
+    "react-native-svg": "15.15.3",
+    "react-native-web": "~0.20.7",
+    "react-dom": "19.2.0",
+    "@expo/metro-runtime": "~5.0.8"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",

@@ -1,29 +1,59 @@
-import * as SecureStore from 'expo-secure-store';
-import Constants from 'expo-constants';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { brand } from '../config/brand';
 
-const DEVICE_PUSH_TOKEN_KEY = `${brand.storageNamespace}:device-push-token:v1`;
 export const CUSTOMER_DEAL_NOTIFICATION_CHANNEL_ID = 'favorite-store-deals';
 export const OWNER_ALERT_NOTIFICATION_CHANNEL_ID = 'owner-portal-alerts';
-const EXPO_PROJECT_ID =
-  process.env.EXPO_PUBLIC_EAS_PROJECT_ID?.trim() ||
-  Constants.easConfig?.projectId ||
-  Constants.expoConfig?.extra?.eas?.projectId ||
-  null;
-const isExpoGo = Constants.appOwnership === 'expo';
+
+/**
+ * Web does not support native push notifications. All functions in this module
+ * return safe no-op defaults when running on web so that calling code doesn't
+ * need platform checks at every call site.
+ */
+const isWeb = Platform.OS === 'web';
+
+/* ---- Native-only imports (lazy so they never run on web) ---- */
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+let SecureStore: typeof import('expo-secure-store') | null = null;
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+let Notifications: typeof import('expo-notifications') | null = null;
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+let Constants: typeof import('expo-constants').default | null = null;
+
+if (!isWeb) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  SecureStore = require('expo-secure-store');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Notifications = require('expo-notifications');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Constants = require('expo-constants').default;
+}
+
+const DEVICE_PUSH_TOKEN_KEY = isWeb
+  ? ''
+  : (() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { brand } = require('../config/brand');
+      return `${brand.storageNamespace}:device-push-token:v1`;
+    })();
+
+const EXPO_PROJECT_ID = isWeb
+  ? null
+  : process.env.EXPO_PUBLIC_EAS_PROJECT_ID?.trim() ||
+    Constants?.easConfig?.projectId ||
+    Constants?.expoConfig?.extra?.eas?.projectId ||
+    null;
+
+const isExpoGo = isWeb ? false : Constants?.appOwnership === 'expo';
 
 let initializationPromise: Promise<string | null> | null = null;
 let memoryPushToken: string | null = null;
 let notificationHandlerInitialized = false;
 
 function initializeForegroundNotificationHandler() {
-  if (notificationHandlerInitialized) {
+  if (isWeb || notificationHandlerInitialized) {
     return;
   }
 
-  Notifications.setNotificationHandler({
+  Notifications!.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowBanner: true,
       shouldShowList: true,
@@ -37,21 +67,25 @@ function initializeForegroundNotificationHandler() {
 async function persistDevicePushToken(token: string | null) {
   memoryPushToken = token?.trim() || null;
 
+  if (isWeb) return;
+
   try {
     if (memoryPushToken) {
-      await SecureStore.setItemAsync(DEVICE_PUSH_TOKEN_KEY, memoryPushToken);
+      await SecureStore!.setItemAsync(DEVICE_PUSH_TOKEN_KEY, memoryPushToken);
       return;
     }
 
-    await SecureStore.deleteItemAsync(DEVICE_PUSH_TOKEN_KEY);
+    await SecureStore!.deleteItemAsync(DEVICE_PUSH_TOKEN_KEY);
   } catch {
     // Push token persistence should never block app startup.
   }
 }
 
 export async function requestDevicePushNotificationPermission(prompt = true) {
+  if (isWeb) return false;
+
   try {
-    const currentPermission = await Notifications.getPermissionsAsync();
+    const currentPermission = await Notifications!.getPermissionsAsync();
     if (currentPermission.status === 'granted') {
       return true;
     }
@@ -60,7 +94,7 @@ export async function requestDevicePushNotificationPermission(prompt = true) {
       return false;
     }
 
-    const permission = await Notifications.requestPermissionsAsync();
+    const permission = await Notifications!.requestPermissionsAsync();
     return permission.status === 'granted';
   } catch {
     return false;
@@ -73,18 +107,20 @@ export async function initializeDevicePushNotifications() {
   }
 
   initializationPromise = (async () => {
+    if (isWeb) return null;
+
     initializeForegroundNotificationHandler();
 
     if (Platform.OS === 'android') {
       try {
-        await Notifications.setNotificationChannelAsync(CUSTOMER_DEAL_NOTIFICATION_CHANNEL_ID, {
+        await Notifications!.setNotificationChannelAsync(CUSTOMER_DEAL_NOTIFICATION_CHANNEL_ID, {
           name: 'Favorite store updates',
-          importance: Notifications.AndroidImportance.HIGH,
+          importance: Notifications!.AndroidImportance.HIGH,
           vibrationPattern: [0, 180, 80, 180],
         });
-        await Notifications.setNotificationChannelAsync(OWNER_ALERT_NOTIFICATION_CHANNEL_ID, {
+        await Notifications!.setNotificationChannelAsync(OWNER_ALERT_NOTIFICATION_CHANNEL_ID, {
           name: 'Owner and runtime alerts',
-          importance: Notifications.AndroidImportance.HIGH,
+          importance: Notifications!.AndroidImportance.HIGH,
           vibrationPattern: [0, 240, 120, 240],
         });
       } catch {
@@ -93,7 +129,7 @@ export async function initializeDevicePushNotifications() {
     }
 
     try {
-      const rawToken = await SecureStore.getItemAsync(DEVICE_PUSH_TOKEN_KEY);
+      const rawToken = await SecureStore!.getItemAsync(DEVICE_PUSH_TOKEN_KEY);
       memoryPushToken = rawToken?.trim() || null;
     } catch {
       memoryPushToken = null;
@@ -123,7 +159,7 @@ export async function getRegisteredDevicePushToken(options?: { prompt?: boolean 
 
   try {
     const token = (
-      await Notifications.getExpoPushTokenAsync({
+      await Notifications!.getExpoPushTokenAsync({
         projectId: EXPO_PROJECT_ID,
       })
     ).data?.trim();

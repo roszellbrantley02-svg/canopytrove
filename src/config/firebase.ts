@@ -1,6 +1,5 @@
 import type { FirebaseApp } from 'firebase/app';
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { Auth } from 'firebase/auth';
 import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
@@ -64,12 +63,22 @@ export function getFirebaseDb(): Firestore | null {
  * Firebase Auth only calls getItem / setItem / removeItem at runtime,
  * but the SDK typings demand the full AsyncStorageStatic surface.
  * Casting through unknown is the accepted community workaround.
+ *
+ * On web, Firebase Auth uses browser localStorage by default (via getAuth),
+ * so this adapter is never needed and expo-secure-store is not loaded.
  */
-const secureStoreAdapter = {
-  getItem: (key: string) => SecureStore.getItemAsync(key),
-  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
-  removeItem: (key: string) => SecureStore.deleteItemAsync(key),
-} as Parameters<typeof getReactNativePersistence>[0];
+const secureStoreAdapter =
+  Platform.OS !== 'web'
+    ? (() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const SecureStore = require('expo-secure-store');
+        return {
+          getItem: (key: string) => SecureStore.getItemAsync(key),
+          setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+          removeItem: (key: string) => SecureStore.deleteItemAsync(key),
+        } as Parameters<typeof getReactNativePersistence>[0];
+      })()
+    : (null as unknown as Parameters<typeof getReactNativePersistence>[0]);
 
 export function getFirebaseAuth(): Auth | null {
   if (!hasFirebaseConfig) {

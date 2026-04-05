@@ -1,5 +1,13 @@
 import React from 'react';
-import { BackHandler, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  BackHandler,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { brand } from '../config/brand';
@@ -18,6 +26,7 @@ export function AgeGateScreen({ onAccept }: AgeGateScreenProps) {
   const [isAccessBlocked, setIsAccessBlocked] = React.useState(false);
   const { width, height } = useWindowDimensions();
   const compactLayout = width < 390 || height < 780;
+  const isWeb = Platform.OS === 'web';
 
   const blockAccess = React.useCallback(() => {
     setIsAccessBlocked(true);
@@ -32,7 +41,7 @@ export function AgeGateScreen({ onAccept }: AgeGateScreenProps) {
       colors={[colors.backgroundDeep, colors.background, colors.backgroundAlt]}
       style={styles.screen}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, isWeb && styles.webSafeArea]}>
         <View pointerEvents="none" style={styles.ambientWrap}>
           <View style={[styles.backdropOrb, styles.backdropOrbPrimary]} />
           <View style={[styles.backdropOrb, styles.backdropOrbWarm]} />
@@ -41,6 +50,7 @@ export function AgeGateScreen({ onAccept }: AgeGateScreenProps) {
           contentContainerStyle={[
             styles.scrollContent,
             compactLayout && styles.scrollContentCompact,
+            isWeb && styles.webScrollContent,
           ]}
           showsVerticalScrollIndicator={false}
           bounces={false}
@@ -153,6 +163,13 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  webSafeArea: {
+    alignItems: 'center' as const,
+  },
+  webScrollContent: {
+    maxWidth: 480,
+    width: '100%' as unknown as number,
   },
   scrollContent: {
     flexGrow: 1,

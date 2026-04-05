@@ -1,9 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Location from 'expo-location';
+import { Platform } from 'react-native';
 import { brand } from '../config/brand';
 import type { Coordinates } from '../types/storefront';
 import type { DeviceLocationResult } from './locationServiceShared';
 import { createCoordinatesCacheKey, formatResolvedLabel } from './locationServiceShared';
+
+/* expo-location has no web implementation — lazy-require on native only. */
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+let Location: typeof import('expo-location') | null = null;
+if (Platform.OS !== 'web') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Location = require('expo-location');
+}
 
 const DEVICE_LOCATION_CACHE_KEY = `${brand.storageNamespace}:device-location`;
 const DEVICE_LOCATION_TTL_MS = 15 * 60 * 1000;
@@ -37,17 +45,21 @@ export async function getBestAvailableDeviceLocation(): Promise<DeviceLocationRe
 
   const task = (async (): Promise<DeviceLocationResult> => {
     try {
-      const currentPermission = await Location.getForegroundPermissionsAsync();
+      if (Platform.OS === 'web') {
+        return await getWebDeviceLocation();
+      }
+
+      const currentPermission = await Location!.getForegroundPermissionsAsync();
       const permission =
         currentPermission.status === 'granted'
           ? currentPermission
-          : await Location.requestForegroundPermissionsAsync();
+          : await Location!.requestForegroundPermissionsAsync();
 
       if (permission.status !== 'granted') {
         return { coordinates: null, source: 'unavailable' };
       }
 
-      const lastKnown = await Location.getLastKnownPositionAsync();
+      const lastKnown = await Location!.getLastKnownPositionAsync();
       if (lastKnown?.coords) {
         const coordinates = {
           latitude: lastKnown.coords.latitude,
@@ -60,8 +72,8 @@ export async function getBestAvailableDeviceLocation(): Promise<DeviceLocationRe
         };
       }
 
-      const current = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+      const current = await Location!.getCurrentPositionAsync({
+        accuracy: Location!.Accuracy.Balanced,
       });
       const coordinates = {
         latitude: current.coords.latitude,
@@ -144,6 +156,34 @@ export async function primeStoredDeviceLocation() {
   }
 }
 
+/**
+ * Browser Geolocation API wrapper. Returns coordinates via the
+ * standard `navigator.geolocation.getCurrentPosition` API.
+ */
+function getWebDeviceLocation(): Promise<DeviceLocationResult> {
+  return new Promise((resolve) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      resolve({ coordinates: null, source: 'unavailable' });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coordinates = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        void cacheDeviceLocation(coordinates);
+        resolve({ coordinates, source: 'current' });
+      },
+      () => {
+        resolve({ coordinates: null, source: 'unavailable' });
+      },
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+    );
+  });
+}
+
 export async function resolveDeviceLocationLabel(
   coordinates: Coordinates,
   fallbackLabel?: string | null,
@@ -156,8 +196,15 @@ export async function resolveDeviceLocationLabel(
 
   const nextFallbackLabel = fallbackLabel?.trim() || 'Current location';
 
+  if (Platform.OS === 'web') {
+    // On web, reverse geocoding is handled via the backend Google Places
+    // gateway. For now, return the fallback label. A full web implementation
+    // can call the backend reverse-geocode endpoint later.
+    return nextFallbackLabel;
+  }
+
   try {
-    const reverseMatches = await Location.reverseGeocodeAsync({
+    const reverseMatches = await Location!.reverseGeocodeAsync({
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
     });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert } from 'react-native';
+import { crossPlatformAlert } from '../../utils/crossPlatformAlert';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -692,7 +692,7 @@ export function useWriteReviewScreenModel(input: {
       );
 
       if (response.photoModeration?.message) {
-        Alert.alert(
+        crossPlatformAlert(
           isEditingReview ? 'Review updated' : 'Review submitted',
           response.photoModeration.message,
         );

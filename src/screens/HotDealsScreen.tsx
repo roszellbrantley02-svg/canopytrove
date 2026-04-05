@@ -97,8 +97,8 @@ export function HotDealsScreen() {
 
   return (
     <ScreenShell
-      eyebrow="Specials"
-      title="Live specials near you."
+      eyebrow="Hot Deals"
+      title="Live deals near you."
       subtitle="Filter by location, storefront, or offer details to browse active promotions."
       headerPill={activeLocationLabel}
       onBrandIconPress={handleRefreshDeviceLocation}
@@ -125,7 +125,7 @@ export function HotDealsScreen() {
       ) : error && items.length === 0 ? (
         <View style={{ padding: spacing.xl, paddingTop: spacing.xxl }}>
           <ErrorRecoveryCard
-            title="Unable to load specials"
+            title="Unable to load deals"
             message={error}
             onRetry={handleRetryError}
             retryLabel="Refresh"

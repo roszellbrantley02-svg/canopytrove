@@ -1,5 +1,13 @@
-import * as Location from 'expo-location';
+import { Platform } from 'react-native';
 import { storefrontApiBaseUrl, storefrontSourceMode } from '../config/storefrontSourceConfig';
+
+/* expo-location has no web implementation — lazy-require on native only. */
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+let Location: typeof import('expo-location') | null = null;
+if (Platform.OS !== 'web') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Location = require('expo-location');
+}
 import { resolveStorefrontBackendLocation } from './storefrontBackendService';
 import type { MarketArea } from '../types/storefront';
 import type { SearchLocationResult } from './locationServiceShared';
@@ -72,54 +80,59 @@ export async function resolveSearchLocation(
       }
     }
 
-    const candidates = normalizedQuery.toLowerCase().includes('ny')
-      ? [normalizedQuery]
-      : [`${normalizedQuery}, New York`, `${normalizedQuery}, NY`, normalizedQuery];
+    /* expo-location geocoding is native-only. On web, if the backend
+       didn't resolve the query, we fall through to 'unavailable'. */
+    if (Location) {
+      const candidates = normalizedQuery.toLowerCase().includes('ny')
+        ? [normalizedQuery]
+        : [`${normalizedQuery}, New York`, `${normalizedQuery}, NY`, normalizedQuery];
 
-    let bestMatch: SearchLocationResult | null = null;
-    let bestScore = -1;
+      let bestMatch: SearchLocationResult | null = null;
+      let bestScore = -1;
 
-    for (const candidate of candidates) {
-      try {
-        const matches = await Location.geocodeAsync(candidate);
-        if (!matches.length) {
-          continue;
-        }
-
-        for (const match of matches.slice(0, 3)) {
-          let address: Location.LocationGeocodedAddress | null = null;
-
-          try {
-            const reverseMatches = await Location.reverseGeocodeAsync({
-              latitude: match.latitude,
-              longitude: match.longitude,
-            });
-            address = reverseMatches[0] ?? null;
-          } catch {
-            address = null;
+      for (const candidate of candidates) {
+        try {
+          const matches = await Location.geocodeAsync(candidate);
+          if (!matches.length) {
+            continue;
           }
 
-          const score = scoreResolvedAddress(normalizedQuery, address);
-          if (score > bestScore) {
-            bestScore = score;
-            bestMatch = {
-              coordinates: {
+          for (const match of matches.slice(0, 3)) {
+            let address: Awaited<ReturnType<typeof Location.reverseGeocodeAsync>>[number] | null =
+              null;
+
+            try {
+              const reverseMatches = await Location.reverseGeocodeAsync({
                 latitude: match.latitude,
                 longitude: match.longitude,
-              },
-              label: formatResolvedLabel(normalizedQuery, address),
-              source: 'geocode',
-            };
-          }
-        }
-      } catch {
-        continue;
-      }
-    }
+              });
+              address = reverseMatches[0] ?? null;
+            } catch {
+              address = null;
+            }
 
-    if (bestMatch && bestMatch.coordinates && bestScore >= 4) {
-      locationSearchCache.set(cacheKey, bestMatch);
-      return bestMatch;
+            const score = scoreResolvedAddress(normalizedQuery, address);
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = {
+                coordinates: {
+                  latitude: match.latitude,
+                  longitude: match.longitude,
+                },
+                label: formatResolvedLabel(normalizedQuery, address),
+                source: 'geocode',
+              };
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (bestMatch && bestMatch.coordinates && bestScore >= 4) {
+        locationSearchCache.set(cacheKey, bestMatch);
+        return bestMatch;
+      }
     }
 
     const result: SearchLocationResult = {

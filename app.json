@@ -73,7 +73,13 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Canopy Trove",
+      "shortName": "Canopy Trove",
+      "description": "Discover licensed dispensaries, hot deals, and real reviews near you.",
+      "lang": "en",
+      "themeColor": "#121614",
+      "backgroundColor": "#121614"
     },
     "plugins": [
       [

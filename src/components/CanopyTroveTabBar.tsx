@@ -1,5 +1,5 @@
 import React from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +11,7 @@ import type { RootTabParamList } from '../navigation/RootNavigator';
 const TAB_LABELS: Record<keyof RootTabParamList, string> = {
   Nearby: 'Nearby',
   Browse: 'Browse',
-  HotDeals: 'Specials',
+  HotDeals: 'Hot Deals',
   Profile: 'Profile',
 };
 
@@ -202,6 +202,7 @@ export function CanopyTroveTabBar({ state, descriptors, navigation }: BottomTabB
   const insets = useSafeAreaInsets();
   const bottomOffset = Math.max(insets.bottom + spacing.xs, spacing.lg);
   const barProgress = React.useRef(new Animated.Value(0)).current;
+  const isWeb = Platform.OS === 'web';
 
   React.useEffect(() => {
     const animation = Animated.timing(barProgress, {
@@ -220,80 +221,154 @@ export function CanopyTroveTabBar({ state, descriptors, navigation }: BottomTabB
 
   return (
     <View pointerEvents="box-none" style={styles.shell}>
-      <Animated.View
-        style={[
-          styles.barMotion,
-          {
-            bottom: bottomOffset,
-            opacity: barProgress.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 1],
-            }),
-            transform: [
-              {
-                translateY: barProgress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [18, 0],
-                }),
-              },
-              {
-                scale: barProgress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.98, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <LinearGradient
-          colors={['rgba(5, 10, 14, 0.98)', 'rgba(12, 20, 27, 0.95)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.bar}
+      {isWeb ? (
+        <View pointerEvents="box-none" style={[styles.webBarAnchor, { bottom: bottomOffset }]}>
+          <View pointerEvents="box-none" style={styles.webBarCenter}>
+            <Animated.View
+              style={[
+                styles.webBarInner,
+                {
+                  opacity: barProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 1],
+                  }),
+                  transform: [
+                    {
+                      translateY: barProgress.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [18, 0],
+                      }),
+                    },
+                    {
+                      scale: barProgress.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.98, 1],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(5, 10, 14, 0.98)', 'rgba(12, 20, 27, 0.95)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.bar}
+              >
+                <View pointerEvents="none" style={styles.barHighlight} />
+                {state.routes.map((route, index) => {
+                  const routeName = route.name as keyof RootTabParamList;
+                  const focused = state.index === index;
+                  const { options } = descriptors[route.key];
+                  const onPress = () => {
+                    const event = navigation.emit({
+                      type: 'tabPress',
+                      target: route.key,
+                      canPreventDefault: true,
+                    });
+                    if (!focused && !event.defaultPrevented) {
+                      navigation.navigate(route.name);
+                    }
+                  };
+                  const onLongPress = () => {
+                    navigation.emit({ type: 'tabLongPress', target: route.key });
+                  };
+                  return (
+                    <TabBarItem
+                      key={route.key}
+                      accessibilityLabel={options.tabBarAccessibilityLabel}
+                      focused={focused}
+                      iconName={TAB_ICONS[routeName]}
+                      label={TAB_LABELS[routeName]}
+                      accentColor={routeName === 'HotDeals' ? HOT_DEALS_TAB_COLOR : undefined}
+                      onLongPress={onLongPress}
+                      onPress={onPress}
+                      routeKey={route.key}
+                      testID={options.tabBarButtonTestID}
+                    />
+                  );
+                })}
+              </LinearGradient>
+            </Animated.View>
+          </View>
+        </View>
+      ) : null}
+      {!isWeb ? (
+        <Animated.View
+          style={[
+            styles.barMotion,
+            {
+              bottom: bottomOffset,
+              opacity: barProgress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 1],
+              }),
+              transform: [
+                {
+                  translateY: barProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [18, 0],
+                  }),
+                },
+                {
+                  scale: barProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.98, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
         >
-          <View pointerEvents="none" style={styles.barHighlight} />
-          {state.routes.map((route, index) => {
-            const routeName = route.name as keyof RootTabParamList;
-            const focused = state.index === index;
-            const { options } = descriptors[route.key];
+          <LinearGradient
+            colors={['rgba(5, 10, 14, 0.98)', 'rgba(12, 20, 27, 0.95)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.bar}
+          >
+            <View pointerEvents="none" style={styles.barHighlight} />
+            {state.routes.map((route, index) => {
+              const routeName = route.name as keyof RootTabParamList;
+              const focused = state.index === index;
+              const { options } = descriptors[route.key];
 
-            const onPress = () => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
+              const onPress = () => {
+                const event = navigation.emit({
+                  type: 'tabPress',
+                  target: route.key,
+                  canPreventDefault: true,
+                });
 
-              if (!focused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
-              }
-            };
+                if (!focused && !event.defaultPrevented) {
+                  navigation.navigate(route.name);
+                }
+              };
 
-            const onLongPress = () => {
-              navigation.emit({
-                type: 'tabLongPress',
-                target: route.key,
-              });
-            };
+              const onLongPress = () => {
+                navigation.emit({
+                  type: 'tabLongPress',
+                  target: route.key,
+                });
+              };
 
-            return (
-              <TabBarItem
-                key={route.key}
-                accessibilityLabel={options.tabBarAccessibilityLabel}
-                focused={focused}
-                iconName={TAB_ICONS[routeName]}
-                label={TAB_LABELS[routeName]}
-                accentColor={routeName === 'HotDeals' ? HOT_DEALS_TAB_COLOR : undefined}
-                onLongPress={onLongPress}
-                onPress={onPress}
-                routeKey={route.key}
-                testID={options.tabBarButtonTestID}
-              />
-            );
-          })}
-        </LinearGradient>
-      </Animated.View>
+              return (
+                <TabBarItem
+                  key={route.key}
+                  accessibilityLabel={options.tabBarAccessibilityLabel}
+                  focused={focused}
+                  iconName={TAB_ICONS[routeName]}
+                  label={TAB_LABELS[routeName]}
+                  accentColor={routeName === 'HotDeals' ? HOT_DEALS_TAB_COLOR : undefined}
+                  onLongPress={onLongPress}
+                  onPress={onPress}
+                  routeKey={route.key}
+                  testID={options.tabBarButtonTestID}
+                />
+              );
+            })}
+          </LinearGradient>
+        </Animated.View>
+      ) : null}
     </View>
   );
 }
@@ -302,6 +377,20 @@ const styles = StyleSheet.create({
   shell: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 40,
+  },
+  webBarAnchor: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center' as const,
+  },
+  webBarCenter: {
+    maxWidth: 480,
+    width: '100%' as unknown as number,
+    paddingHorizontal: spacing.lg,
+  },
+  webBarInner: {
+    width: '100%' as unknown as number,
   },
   barMotion: {
     position: 'absolute',

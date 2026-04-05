@@ -1,6 +1,8 @@
-import React, { useCallback, useRef } from 'react';
-import type { GestureResponderEvent, PressableProps } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import type { GestureResponderEvent, PressableProps, ViewStyle } from 'react-native';
 import { Animated, Platform, Pressable, Vibration } from 'react-native';
+
+const isWeb = Platform.OS === 'web';
 
 type HapticPressableProps = PressableProps & {
   hapticType?: 'selection' | 'impact' | 'notification';
@@ -64,15 +66,42 @@ export function HapticPressable({
     [enableScale, scaleValue, onPressOut],
   );
 
+  const [hovered, setHovered] = useState(false);
+
+  const webHoverProps = isWeb
+    ? {
+        onMouseEnter: () => setHovered(true),
+        onMouseLeave: () => setHovered(false),
+      }
+    : {};
+
+  const webCursorStyle: ViewStyle | undefined =
+    isWeb && !props.disabled ? ({ cursor: 'pointer' } as unknown as ViewStyle) : undefined;
+
+  const hoverOpacityStyle: ViewStyle | undefined =
+    isWeb && hovered && !props.disabled ? { opacity: 0.88 } : undefined;
+
   if (!enableScale) {
     return (
-      <Pressable {...props} style={style} onPressIn={handlePressIn} onPressOut={handlePressOut} />
+      <Pressable
+        {...props}
+        {...webHoverProps}
+        style={[style, webCursorStyle, hoverOpacityStyle] as PressableProps['style']}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      />
     );
   }
 
   return (
-    <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
-      <Pressable {...props} style={style} onPressIn={handlePressIn} onPressOut={handlePressOut} />
+    <Animated.View style={[{ transform: [{ scale: scaleValue }] }, hoverOpacityStyle]}>
+      <Pressable
+        {...props}
+        {...webHoverProps}
+        style={[style, webCursorStyle] as PressableProps['style']}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      />
     </Animated.View>
   );
 }

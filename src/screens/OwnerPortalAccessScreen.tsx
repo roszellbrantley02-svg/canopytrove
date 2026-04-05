@@ -17,7 +17,7 @@ const OWNER_WORKSPACE_FEATURES = [
   'Claim and manage your dispensary listing',
   'Submit business and identity verification',
   'Reply to reviews and monitor reports fast',
-  'Schedule live specials with follower alerts and performance results',
+  'Schedule live deals with follower alerts and performance results',
   'Control premium card treatments, menu links, and photo upgrades',
   'Manage owner-only plan access and listing tools',
 ];
