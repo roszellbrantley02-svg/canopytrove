@@ -10,7 +10,6 @@ import { colors, radii, spacing, textStyles, motion } from '../theme/tokens';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { useMemberEmailSubscription } from '../hooks/useMemberEmailSubscription';
 import { getCommunitySafetyState } from '../services/communitySafetyService';
-import { ownerPortalAccessAvailable } from '../config/ownerPortalConfig';
 import { legalConfig } from '../config/legal';
 import Constants from 'expo-constants';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -165,21 +164,12 @@ function SettingsScreenInner() {
               value={memberEmail || 'Not signed in'}
             />
 
-            <SettingsRow
-              icon={isAuthenticated ? 'log-out-outline' : 'person-circle-outline'}
-              title={isAuthenticated ? 'Sign out' : 'Sign in'}
-              onPress={
-                isAuthenticated ? handleSignOut : () => navigation.navigate('CanopyTroveSignIn')
-              }
-              isDanger={isAuthenticated}
-            />
-
-            {ownerPortalAccessAvailable ? (
+            {isAuthenticated ? (
               <SettingsRow
-                icon="storefront-outline"
-                title="Owner Portal"
-                subtitle="Manage your dispensary listing"
-                onPress={() => navigation.navigate('OwnerPortalAccess')}
+                icon="log-out-outline"
+                title="Sign out"
+                onPress={handleSignOut}
+                isDanger
               />
             ) : null}
           </View>
@@ -272,7 +262,8 @@ export const SettingsScreen = withScreenErrorBoundary(SettingsScreenInner, 'sett
 
 const styles = StyleSheet.create({
   sectionGroup: {
-    gap: spacing.sm,
+    gap: spacing.xs,
+    marginBottom: spacing.md,
   },
   sectionHeader: {
     ...textStyles.labelCaps,
@@ -295,9 +286,10 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 56,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderSoft,
     gap: spacing.md,
   },
@@ -342,7 +334,7 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     fontSize: 14,
     textAlign: 'right',
-    maxWidth: 140,
+    maxWidth: 180,
   },
   rowValueDanger: {
     color: colors.danger,
