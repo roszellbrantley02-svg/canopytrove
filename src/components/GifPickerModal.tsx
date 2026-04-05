@@ -57,6 +57,7 @@ export function GifPickerModal({
               accessibilityRole="button"
               accessibilityLabel="Close GIF picker"
               accessibilityHint="Closes the GIF selection modal."
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
               <AppUiIcon name="close" size={18} color={colors.text} />
             </HapticPressable>
@@ -212,6 +213,7 @@ const styles = StyleSheet.create({
   gifTile: {
     width: '31%',
     aspectRatio: 1,
+    minHeight: 48,
     borderRadius: radii.md,
     overflow: 'hidden',
     borderWidth: 1,

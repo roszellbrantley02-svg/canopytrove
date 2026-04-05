@@ -6,6 +6,7 @@ import { LocationPinIcon } from '../../icons/AppIcons';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import { colors } from '../../theme/tokens';
 import type { StorefrontSummary } from '../../types/storefront';
+import { getUSHolidayInfo } from '../../utils/holidayUtils';
 import { getStorefrontRatingDisplay } from '../../utils/storefrontRatings';
 import {
   formatStorefrontPromotionExpiry,
@@ -80,7 +81,7 @@ export function getStorefrontRouteCardState({
       : isOperationalStatusPending
         ? 'checking'
         : 'default';
-  const previewStatusLabel =
+  const baseStatusLabel =
     typeof openNow === 'boolean'
       ? openNow
         ? 'Open Now'
@@ -88,6 +89,11 @@ export function getStorefrontRouteCardState({
       : isOperationalStatusPending
         ? 'Checking'
         : 'Check Hours';
+
+  const holiday = getUSHolidayInfo();
+  const previewStatusLabel = holiday
+    ? `${baseStatusLabel} \u00B7 ${holiday.notice}`
+    : baseStatusLabel;
 
   return {
     cardVisualLane,

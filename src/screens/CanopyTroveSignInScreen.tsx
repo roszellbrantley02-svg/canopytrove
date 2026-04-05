@@ -5,12 +5,14 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { colors } from '../theme/tokens';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import { signInCanopyTroveEmailPassword } from '../services/canopyTroveAuthService';
 import { customerEntryStyles as styles } from './customerEntry/customerEntryStyles';
 
-export function CanopyTroveSignInScreen() {
+function CanopyTroveSignInScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -114,7 +116,7 @@ export function CanopyTroveSignInScreen() {
                         placeholder="Email"
                         autoCapitalize="none"
                         keyboardType="email-address"
-                        placeholderTextColor="#738680"
+                        placeholderTextColor={colors.textSoft}
                         style={styles.inputPremium}
                         accessibilityLabel="Email"
                         accessibilityHint="Enter your member account email address."
@@ -127,7 +129,7 @@ export function CanopyTroveSignInScreen() {
                         onChangeText={setPassword}
                         placeholder="Password"
                         secureTextEntry={true}
-                        placeholderTextColor="#738680"
+                        placeholderTextColor={colors.textSoft}
                         style={styles.inputPremium}
                         accessibilityLabel="Password"
                         accessibilityHint="Enter your member account password."
@@ -201,3 +203,8 @@ export function CanopyTroveSignInScreen() {
     </ScreenShell>
   );
 }
+
+export const CanopyTroveSignInScreen = withScreenErrorBoundary(
+  CanopyTroveSignInScreenInner,
+  'canopy-trove-sign-in-screen',
+);

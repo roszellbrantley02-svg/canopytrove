@@ -1,4 +1,5 @@
 ﻿import React from 'react';
+import { colors } from '../theme/tokens';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -108,7 +109,7 @@ function OwnerPortalIdentityVerificationPreview() {
                   value={fullName}
                   onChangeText={setFullName}
                   placeholder="Full legal name"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -296,7 +297,7 @@ function OwnerPortalIdentityVerificationLive() {
                       value={fullName}
                       onChangeText={setFullName}
                       placeholder="Full legal name"
-                      placeholderTextColor="#738680"
+                      placeholderTextColor={colors.textSoft}
                       style={styles.inputPremium}
                     />
                   </View>

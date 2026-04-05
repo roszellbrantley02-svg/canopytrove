@@ -1,3 +1,4 @@
+import { colors } from '../../theme/tokens';
 import React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { StorefrontRouteCard } from '../../components/StorefrontRouteCard';
@@ -164,7 +165,7 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
           value={badgeDraft}
           onChangeText={setBadgeDraft}
           placeholder="Add a badge like 20% Off"
-          placeholderTextColor="#738680"
+          placeholderTextColor={colors.textSoft}
           style={[styles.input, styles.inlineInput]}
           maxLength={24}
         />
@@ -251,7 +252,7 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
             value={customDurationInput}
             onChangeText={setCustomDurationInput}
             placeholder="Custom hours"
-            placeholderTextColor="#738680"
+            placeholderTextColor={colors.textSoft}
             keyboardType="number-pad"
             style={[styles.input, styles.inlineInput]}
             maxLength={3}

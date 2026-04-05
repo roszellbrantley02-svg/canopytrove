@@ -13,6 +13,7 @@ import {
 import { ErrorRecoveryCard } from '../components/ErrorRecoveryCard';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { useNearbySummaries, useNearbyWarmSnapshot } from '../hooks/useStorefrontSummaryData';
 import { spacing } from '../theme/tokens';
 import {
@@ -37,7 +38,7 @@ type NearbyNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
-export function NearbyScreen() {
+function NearbyScreenInner() {
   const navigation = useNavigation<NearbyNavigationProp>();
   const [isLocationPanelOpen, setIsLocationPanelOpen] = React.useState(false);
   const prefetchedDetailIdsRef = React.useRef(new Set<string>());
@@ -288,3 +289,5 @@ export function NearbyScreen() {
     </ScreenShell>
   );
 }
+
+export const NearbyScreen = withScreenErrorBoundary(NearbyScreenInner, 'nearby-screen');

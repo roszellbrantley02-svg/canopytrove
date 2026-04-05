@@ -96,8 +96,22 @@ export async function openStorefrontRoute(
     webRouteUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
   }
 
-  // On web, skip native URL schemes (Apple Maps / geo:) — go straight to Google Maps.
+  // On web, detect iOS devices to prefer Apple Maps over Google Maps.
   if (Platform.OS === 'web') {
+    const isIOSWeb =
+      typeof navigator !== 'undefined' &&
+      (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+
+    if (isIOSWeb) {
+      // Apple Maps URLs open directly in the Maps app on iOS — no re-entry needed.
+      const appleMapsUrl = `https://maps.apple.com/?daddr=${encodedAddress}&dirflg=d`;
+      if (await tryOpenUrl(appleMapsUrl)) {
+        return;
+      }
+    }
+
+    // Non-iOS web or Apple Maps failed — use Google Maps.
     if (await tryOpenUrl(webRouteUrl)) {
       return;
     }
@@ -105,14 +119,15 @@ export async function openStorefrontRoute(
     return;
   }
 
-  const preferredUrl = routeMode === 'verified' ? nativeRouteUrl : webRouteUrl;
-
-  if (await tryOpenUrl(preferredUrl)) {
+  // Native: always try the platform-native maps app first (Apple Maps on iOS,
+  // geo: intent on Android), regardless of route mode. This gives the user a
+  // one-tap "Go" experience instead of bouncing through a browser.
+  if (await tryOpenUrl(nativeRouteUrl)) {
     return;
   }
 
   // Address-based web route as second attempt.
-  if (preferredUrl !== webRouteUrl && (await tryOpenUrl(webRouteUrl))) {
+  if (await tryOpenUrl(webRouteUrl)) {
     return;
   }
 

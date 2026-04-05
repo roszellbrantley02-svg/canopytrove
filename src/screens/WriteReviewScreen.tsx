@@ -4,6 +4,7 @@ import { useRoute } from '@react-navigation/native';
 import { CustomerStateCard } from '../components/CustomerStateCard';
 import { GifPickerModal } from '../components/GifPickerModal';
 import { ScreenShell } from '../components/ScreenShell';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import {
   WriteReviewBodySection,
@@ -67,7 +68,7 @@ function WriteReviewContent({
   );
 }
 
-export function WriteReviewScreen() {
+function WriteReviewScreenInner() {
   const route = useRoute<WriteReviewRoute>();
   const params = route.params as Partial<RootStackParamList['WriteReview']> | undefined;
   const storefront = params?.storefront ?? null;
@@ -94,3 +95,8 @@ export function WriteReviewScreen() {
 
   return <WriteReviewContent storefront={storefront} existingReview={existingReview} />;
 }
+
+export const WriteReviewScreen = withScreenErrorBoundary(
+  WriteReviewScreenInner,
+  'write-review-screen',
+);

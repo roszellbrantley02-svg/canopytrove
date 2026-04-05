@@ -32,17 +32,22 @@ async function loadPlaceDetail(placeId: string) {
         {
           method: 'GET',
         },
-        'id,websiteUri,nationalPhoneNumber,businessStatus,location,regularOpeningHours.weekdayDescriptions,currentOpeningHours.openNow',
+        'id,websiteUri,nationalPhoneNumber,businessStatus,location,regularOpeningHours.weekdayDescriptions,currentOpeningHours.openNow,currentOpeningHours.weekdayDescriptions',
       );
 
       if (!payload?.id) {
         return null;
       }
 
+      // Prefer currentOpeningHours (accounts for holidays & special hours)
+      // over regularOpeningHours (fixed weekly schedule).
+      const currentHours = normalizeHours(payload.currentOpeningHours?.weekdayDescriptions);
+      const regularHours = normalizeHours(payload.regularOpeningHours?.weekdayDescriptions);
+
       return {
         phone: typeof payload.nationalPhoneNumber === 'string' ? payload.nationalPhoneNumber : null,
         website: typeof payload.websiteUri === 'string' ? payload.websiteUri : null,
-        hours: normalizeHours(payload.regularOpeningHours?.weekdayDescriptions),
+        hours: currentHours.length > 0 ? currentHours : regularHours,
         openNow:
           typeof payload.currentOpeningHours?.openNow === 'boolean'
             ? payload.currentOpeningHours.openNow

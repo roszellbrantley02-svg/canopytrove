@@ -1,3 +1,4 @@
+import { colors } from '../theme/tokens';
 import React from 'react';
 import { Linking, Platform, Text, TextInput, View } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -104,7 +105,7 @@ export function DeleteAccountScreen({
               onChangeText={setConfirmationText}
               autoCapitalize="characters"
               placeholder={DELETE_CONFIRMATION_PHRASE}
-              placeholderTextColor="#738680"
+              placeholderTextColor={colors.textSoft}
               style={styles.input}
               accessibilityLabel="Confirmation text"
               accessibilityHint={`Type ${DELETE_CONFIRMATION_PHRASE} to confirm account deletion.`}

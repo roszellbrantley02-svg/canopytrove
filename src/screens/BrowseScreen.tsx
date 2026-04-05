@@ -12,6 +12,7 @@ import { BrowseFiltersBar } from '../components/BrowseFiltersBar';
 import { ErrorRecoveryCard } from '../components/ErrorRecoveryCard';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { useBrowseSummaries } from '../hooks/useStorefrontSummaryData';
 import { spacing } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -33,7 +34,7 @@ import {
 
 const PAGE_SIZE = 8;
 
-export function BrowseScreen() {
+function BrowseScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [offset, setOffset] = React.useState(0);
   const [items, setItems] = React.useState<StorefrontSummary[]>([]);
@@ -308,3 +309,5 @@ export function BrowseScreen() {
     </ScreenShell>
   );
 }
+
+export const BrowseScreen = withScreenErrorBoundary(BrowseScreenInner, 'browse-screen');

@@ -102,7 +102,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    minHeight: 48,
     paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    justifyContent: 'center',
   },
   seeAllText: {
     ...textStyles.caption,

@@ -5,10 +5,12 @@ import { AppUiIcon } from '../icons/AppUiIcon';
 import { HapticPressable } from '../components/HapticPressable';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { colors, radii, spacing, textStyles, motion } from '../theme/tokens';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { useMemberEmailSubscription } from '../hooks/useMemberEmailSubscription';
 import { getCommunitySafetyState } from '../services/communitySafetyService';
+import { ownerPortalAccessAvailable } from '../config/ownerPortalConfig';
 import { legalConfig } from '../config/legal';
 import Constants from 'expo-constants';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -41,7 +43,7 @@ function SettingsRow({
   const content = (
     <>
       <View style={styles.rowIconWrap}>
-        <AppUiIcon name={icon} size={18} color={isDanger ? colors.danger : colors.textSoft} />
+        <AppUiIcon name={icon} size={20} color={isDanger ? colors.danger : colors.textSoft} />
       </View>
 
       <View style={styles.rowContent}>
@@ -56,6 +58,9 @@ function SettingsRow({
           disabled={isLoading}
           trackColor={{ false: colors.borderSoft, true: colors.primary }}
           thumbColor={value ? colors.accent : colors.textSoft}
+          accessibilityRole="switch"
+          accessibilityLabel={title}
+          accessibilityState={{ checked: value }}
         />
       ) : value ? (
         <View style={styles.rowAccessory}>
@@ -81,18 +86,25 @@ function SettingsRow({
         onPress={onPress}
         disabled={isLoading}
         style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityHint={subtitle}
       >
         {content}
       </HapticPressable>
     );
   }
 
-  return <View style={styles.row}>{content}</View>;
+  return (
+    <View style={styles.row} accessible accessibilityLabel={title} accessibilityHint={subtitle}>
+      {content}
+    </View>
+  );
 }
 
-export function SettingsScreen() {
+function SettingsScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { appProfile, authSession, signOutSession } = useStorefrontProfileController();
+  const { authSession, signOutSession } = useStorefrontProfileController();
   const emailSubscription = useMemberEmailSubscription(authSession);
   const [communitySafetyState, setCommunitySafetyState] = React.useState(() =>
     getCommunitySafetyState(),
@@ -109,7 +121,6 @@ export function SettingsScreen() {
   }, [navigation]);
 
   const isAuthenticated = authSession.status === 'authenticated';
-  const displayName = appProfile?.displayName || 'Anonymous';
   const memberEmail = authSession.email;
   const emailSubscribed = emailSubscription.status.subscribed;
   const isLoadingEmailSubscription = emailSubscription.isLoading;
@@ -148,8 +159,6 @@ export function SettingsScreen() {
           <Text style={styles.sectionHeader}>Account</Text>
 
           <View style={styles.rowsContainer}>
-            <SettingsRow icon="person-circle-outline" title="Display name" value={displayName} />
-
             <SettingsRow
               icon="mail-open-outline"
               title="Email"
@@ -164,6 +173,15 @@ export function SettingsScreen() {
               }
               isDanger={isAuthenticated}
             />
+
+            {ownerPortalAccessAvailable ? (
+              <SettingsRow
+                icon="storefront-outline"
+                title="Owner Portal"
+                subtitle="Manage your dispensary listing"
+                onPress={() => navigation.navigate('OwnerPortalAccess')}
+              />
+            ) : null}
           </View>
         </View>
       </MotionInView>
@@ -250,6 +268,8 @@ export function SettingsScreen() {
   );
 }
 
+export const SettingsScreen = withScreenErrorBoundary(SettingsScreenInner, 'settings-screen');
+
 const styles = StyleSheet.create({
   sectionGroup: {
     gap: spacing.sm,
@@ -301,6 +321,7 @@ const styles = StyleSheet.create({
   rowTitle: {
     ...textStyles.bodyStrong,
     color: colors.text,
+    fontSize: 16,
   },
   rowTitleDanger: {
     color: colors.danger,
@@ -308,6 +329,8 @@ const styles = StyleSheet.create({
   rowSubtitle: {
     ...textStyles.caption,
     color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
   },
   rowAccessory: {
     flexDirection: 'row',
@@ -317,8 +340,9 @@ const styles = StyleSheet.create({
   rowValue: {
     ...textStyles.caption,
     color: colors.textSoft,
+    fontSize: 14,
     textAlign: 'right',
-    maxWidth: 120,
+    maxWidth: 140,
   },
   rowValueDanger: {
     color: colors.danger,

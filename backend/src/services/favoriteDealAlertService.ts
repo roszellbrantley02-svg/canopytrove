@@ -222,7 +222,7 @@ export async function syncFavoriteDealAlerts(options: {
 }
 
 export async function dispatchFavoriteDealAlertsForAllProfiles() {
-  const profiles = await listProfiles();
+  const profiles = await listProfiles(10000);
   const settledResults = await Promise.allSettled(
     profiles.map(async (profile) => {
       const routeState = await getRouteState(profile.id);
@@ -260,7 +260,7 @@ export async function dispatchFavoriteDealAlertsForAllProfiles() {
 }
 
 export async function dispatchFavoriteDealAlertsForStorefront(storefrontId: string) {
-  const profiles = await listProfiles();
+  const profiles = await listProfiles(10000);
   const settledMatchingProfiles = await Promise.allSettled(
     profiles.map(async (profile) => {
       const routeState = await getRouteState(profile.id);

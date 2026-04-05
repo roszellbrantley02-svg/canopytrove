@@ -1,19 +1,22 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { QuickActionsRow, type QuickAction } from '../components/QuickActionsRow';
 import { SectionHeader } from '../components/SectionHeader';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { AppUiIcon } from '../icons/AppUiIcon';
 import Constants from 'expo-constants';
 import { brand } from '../config/brand';
+import { ownerPortalAccessAvailable } from '../config/ownerPortalConfig';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { colors, motion, spacing, textStyles } from '../theme/tokens';
+import { colors, radii, motion, spacing, textStyles } from '../theme/tokens';
 import { ProfileHeroCard, StorefrontCollectionSection } from './profile/ProfileSections';
 import { useProfileScreenModel } from './profile/useProfileScreenModel';
 
-export function ProfileScreen() {
+function ProfileScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const model = useProfileScreenModel(navigation);
   const scrollViewRef = React.useRef<ScrollView>(null);
@@ -94,10 +97,60 @@ export function ProfileScreen() {
           />
         </MotionInView>
 
+        {/* 1b. Sign-in / Create Account CTA (guests only) */}
+        {model.authSession.status !== 'authenticated' ? (
+          <MotionInView dense delay={revealDelay(0) + 30}>
+            <View style={internalStyles.authCard}>
+              <View style={internalStyles.authCardIcon}>
+                <AppUiIcon name="person-add-outline" size={22} color={colors.accent} />
+              </View>
+              <View style={internalStyles.authCardContent}>
+                <Text style={internalStyles.authCardTitle}>Create an account or sign in</Text>
+                <Text style={internalStyles.authCardBody}>
+                  Save favorites, write reviews, earn badges, and unlock your full profile.
+                </Text>
+              </View>
+              <View style={internalStyles.authCardActions}>
+                <Pressable
+                  onPress={() => navigation.navigate('CanopyTroveSignUp')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create account"
+                  style={({ pressed }) => [
+                    internalStyles.authCardButton,
+                    internalStyles.authCardButtonPrimary,
+                    pressed && internalStyles.authCardButtonPressed,
+                  ]}
+                >
+                  <Text style={internalStyles.authCardButtonPrimaryText}>Create Account</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => navigation.navigate('CanopyTroveSignIn')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Sign in"
+                  style={({ pressed }) => [
+                    internalStyles.authCardButton,
+                    internalStyles.authCardButtonSecondary,
+                    pressed && internalStyles.authCardButtonPressed,
+                  ]}
+                >
+                  <Text style={internalStyles.authCardButtonSecondaryText}>Sign In</Text>
+                </Pressable>
+              </View>
+            </View>
+          </MotionInView>
+        ) : null}
+
         {/* 2. QuickActionsRow */}
         <MotionInView dense delay={revealDelay(1)}>
           <QuickActionsRow actions={quickActions} />
         </MotionInView>
+
+        {/* 2b. Owner Portal CTA */}
+        {ownerPortalAccessAvailable ? (
+          <MotionInView dense delay={revealDelay(1) + 30}>
+            <OwnerClaimCard onPress={() => navigation.navigate('OwnerPortalAccess')} />
+          </MotionInView>
+        ) : null}
 
         {/* 3. Stats Snapshot */}
         <MotionInView dense delay={revealDelay(2)}>
@@ -186,6 +239,8 @@ export function ProfileScreen() {
   );
 }
 
+export const ProfileScreen = withScreenErrorBoundary(ProfileScreenInner, 'profile-screen');
+
 /** Stats Snapshot: compact 3-column view of key metrics */
 function StatsSnapshot({
   totalPoints,
@@ -247,6 +302,33 @@ function BadgeShowcase({ badges }: { badges: Array<{ icon?: string; name?: strin
         </View>
       ))}
     </View>
+  );
+}
+
+/** Owner Claim CTA: visible banner linking to the Owner Portal */
+function OwnerClaimCard({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Claim your dispensary"
+      accessibilityHint="Opens the owner portal to claim and manage your dispensary listing."
+      style={({ pressed }) => [
+        internalStyles.ownerCard,
+        pressed && internalStyles.ownerCardPressed,
+      ]}
+    >
+      <View style={internalStyles.ownerCardIcon}>
+        <AppUiIcon name="storefront-outline" size={22} color={colors.gold} />
+      </View>
+      <View style={internalStyles.ownerCardContent}>
+        <Text style={internalStyles.ownerCardTitle}>Own a dispensary?</Text>
+        <Text style={internalStyles.ownerCardBody}>
+          Claim your listing, manage reviews, and publish deals.
+        </Text>
+      </View>
+      <AppUiIcon name="chevron-forward" size={16} color={colors.textSoft} />
+    </Pressable>
   );
 }
 
@@ -338,5 +420,103 @@ const internalStyles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 11,
     letterSpacing: 0.3,
+  },
+  authCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+  },
+  authCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(46, 204, 113, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+  authCardContent: {
+    gap: 4,
+  },
+  authCardTitle: {
+    ...textStyles.bodyStrong,
+    color: colors.text,
+  },
+  authCardBody: {
+    ...textStyles.caption,
+    color: colors.textMuted,
+    lineHeight: 20,
+  },
+  authCardActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  authCardButton: {
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authCardButtonPrimary: {
+    backgroundColor: colors.accent,
+  },
+  authCardButtonSecondary: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  authCardButtonPressed: {
+    opacity: 0.7,
+  },
+  authCardButtonPrimaryText: {
+    ...textStyles.bodyStrong,
+    color: colors.background,
+    fontSize: 14,
+  },
+  authCardButtonSecondaryText: {
+    ...textStyles.bodyStrong,
+    color: colors.text,
+    fontSize: 14,
+  },
+  ownerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+  },
+  ownerCardPressed: {
+    opacity: 0.7,
+  },
+  ownerCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(232, 160, 0, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ownerCardContent: {
+    flex: 1,
+    gap: 2,
+  },
+  ownerCardTitle: {
+    ...textStyles.bodyStrong,
+    color: colors.text,
+  },
+  ownerCardBody: {
+    ...textStyles.caption,
+    color: colors.textMuted,
   },
 });

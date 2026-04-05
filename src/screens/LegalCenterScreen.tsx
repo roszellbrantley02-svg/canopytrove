@@ -5,6 +5,7 @@ import { HapticPressable } from '../components/HapticPressable';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import {
   accountDeletionDisclosureText,
   communityGuidelines,
@@ -26,7 +27,7 @@ import {
 } from '../services/communitySafetyService';
 import { customerSupportStyles as styles } from './customerSupport/customerSupportStyles';
 
-export function LegalCenterScreen() {
+function LegalCenterScreenInner() {
   const [blockedAuthorProfileIds, setBlockedAuthorProfileIds] = React.useState<string[]>([]);
 
   React.useEffect(() => {
@@ -291,3 +292,8 @@ export function LegalCenterScreen() {
     </ScreenShell>
   );
 }
+
+export const LegalCenterScreen = withScreenErrorBoundary(
+  LegalCenterScreenInner,
+  'legal-center-screen',
+);

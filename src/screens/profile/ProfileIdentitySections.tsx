@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppIconStatCard } from '../../components/AppIconStatCard';
 import { SectionCard } from '../../components/SectionCard';
@@ -174,30 +174,20 @@ export function ProfileHeroCard({
 
 export function ProfileAccountSection({
   displayNameInput,
-  setDisplayNameInput,
-  isSavingDisplayName,
-  hasDisplayName,
   profileActionStatus,
   authSessionStatus,
   memberEmail,
   ownerPortalEnabled,
-  onSaveDisplayName,
-  onClearDisplayName,
   onSignOut,
   onOpenMemberSignIn,
   onOpenMemberSignUp,
   onOpenOwnerSignIn,
 }: {
   displayNameInput: string;
-  setDisplayNameInput: (value: string) => void;
-  isSavingDisplayName: boolean;
-  hasDisplayName: boolean;
   profileActionStatus: string | null;
   authSessionStatus: string;
   memberEmail: string | null;
   ownerPortalEnabled: boolean;
-  onSaveDisplayName: () => void;
-  onClearDisplayName: () => void;
   onSignOut: () => void;
   onOpenMemberSignIn: () => void;
   onOpenMemberSignUp: () => void;
@@ -218,7 +208,7 @@ export function ProfileAccountSection({
         : 'Sign in to keep your history, reviews, and saved storefronts together.';
 
   return (
-    <SectionCard title="Account" body="Manage your sign-in and display name.">
+    <SectionCard title="Account" body="Manage your sign-in and member account.">
       <View style={styles.previewCard}>
         <View style={styles.previewCardHeader}>
           <View style={styles.progressText}>
@@ -275,21 +265,12 @@ export function ProfileAccountSection({
         </View>
       </View>
 
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Display name</Text>
-        <Text style={styles.fieldHint}>Shown on your profile and reviews.</Text>
-        <TextInput
-          accessibilityLabel="Display name"
-          accessibilityHint="Sets the name shown on your reviews and profile."
-          value={displayNameInput}
-          onChangeText={setDisplayNameInput}
-          placeholder="Display name"
-          placeholderTextColor={colors.textSoft}
-          style={styles.input}
-          returnKeyType="done"
-          maxFontSizeMultiplier={1.1}
-        />
-      </View>
+      {memberEmail ? (
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Display name</Text>
+          <Text style={styles.fieldHint}>{memberEmail}</Text>
+        </View>
+      ) : null}
 
       <View style={styles.heroActions}>
         <Pressable
@@ -327,35 +308,8 @@ export function ProfileAccountSection({
         ) : null}
       </View>
 
-      <View style={styles.heroActions}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Save display name"
-          accessibilityHint="Saves your current display name."
-          disabled={isSavingDisplayName}
-          onPress={onSaveDisplayName}
-          style={[styles.primaryButton, isSavingDisplayName && styles.buttonDisabled]}
-        >
-          {isSavingDisplayName ? <ActivityIndicator color={colors.backgroundDeep} /> : null}
-          <Text style={styles.primaryButtonText}>
-            {isSavingDisplayName ? 'Saving...' : 'Save Name'}
-          </Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Clear display name"
-          accessibilityHint="Removes the saved display name from your profile."
-          disabled={isSavingDisplayName || !hasDisplayName}
-          onPress={onClearDisplayName}
-          style={[
-            styles.secondaryButton,
-            (isSavingDisplayName || !hasDisplayName) && styles.buttonDisabled,
-          ]}
-        >
-          <AppUiIcon name="close-circle-outline" size={16} color={colors.text} />
-          <Text style={styles.secondaryButtonText}>Clear Name</Text>
-        </Pressable>
-        {authSessionStatus === 'anonymous' || authSessionStatus === 'authenticated' ? (
+      {authSessionStatus === 'anonymous' || authSessionStatus === 'authenticated' ? (
+        <View style={styles.heroActions}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Sign out"
@@ -366,8 +320,8 @@ export function ProfileAccountSection({
             <AppUiIcon name="log-out-outline" size={16} color={colors.text} />
             <Text style={styles.secondaryButtonText}>Sign Out</Text>
           </Pressable>
-        ) : null}
-      </View>
+        </View>
+      ) : null}
 
       {profileActionStatus ? (
         <Text style={styles.environmentNote}>{profileActionStatus}</Text>

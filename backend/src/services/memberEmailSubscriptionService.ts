@@ -387,22 +387,40 @@ export async function syncMemberEmailSubscription(input: {
   return toStatus(finalRecord);
 }
 
-export async function listMemberEmailSubscriptions(options?: { includeUnsubscribed?: boolean }) {
+export async function listMemberEmailSubscriptions(options?: {
+  includeUnsubscribed?: boolean;
+  limit?: number;
+  startAfter?: string;
+}) {
   const collectionRef = getCollection();
+  const limit = options?.limit ?? 1000;
   const records = collectionRef
-    ? (await collectionRef.get()).docs.map((documentSnapshot) =>
+    ? (
+        await collectionRef
+          .orderBy('updatedAt', 'desc')
+          .limit(Math.min(limit * 2, 5000))
+          .get()
+      ).docs.map((documentSnapshot) =>
         normalizeRecord(documentSnapshot.data() as MemberEmailSubscriptionRecord),
       )
     : Array.from(memberEmailSubscriptionStore.values()).map(normalizeRecord);
 
-  const filteredRecords = options?.includeUnsubscribed
+  let filteredRecords = options?.includeUnsubscribed
     ? records
     : records.filter((record) => record.subscribed);
+
+  // Apply pagination
+  if (options?.startAfter) {
+    const startIndex = filteredRecords.findIndex((r) => r.email === options.startAfter);
+    filteredRecords = filteredRecords.slice(startIndex + 1);
+  }
+
+  const paginatedRecords = filteredRecords.slice(0, limit);
 
   return {
     storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
     count: filteredRecords.length,
-    items: filteredRecords
+    items: paginatedRecords
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
       .map(toStatus),
   };

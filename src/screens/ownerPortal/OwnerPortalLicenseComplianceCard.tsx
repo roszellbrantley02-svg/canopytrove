@@ -154,7 +154,7 @@ export function OwnerPortalLicenseComplianceCard({ workspace, isSaving = false, 
             value={draft.licenseNumber}
             onChangeText={(value) => setDraftField('licenseNumber', value)}
             placeholder="OCM-XXXX"
-            placeholderTextColor="#738680"
+            placeholderTextColor={colors.textSoft}
             autoCapitalize="characters"
             style={styles.inputPremium}
           />
@@ -166,7 +166,7 @@ export function OwnerPortalLicenseComplianceCard({ workspace, isSaving = false, 
             value={draft.licenseType}
             onChangeText={(value) => setDraftField('licenseType', value)}
             placeholder="Adult-use retail dispensary"
-            placeholderTextColor="#738680"
+            placeholderTextColor={colors.textSoft}
             autoCapitalize="words"
             style={styles.inputPremium}
           />
@@ -178,7 +178,7 @@ export function OwnerPortalLicenseComplianceCard({ workspace, isSaving = false, 
             value={draft.issuedAt}
             onChangeText={(value) => setDraftField('issuedAt', normalizeDateInput(value))}
             placeholder="YYYY-MM-DD or ISO string"
-            placeholderTextColor="#738680"
+            placeholderTextColor={colors.textSoft}
             autoCapitalize="none"
             style={styles.inputPremium}
           />
@@ -190,7 +190,7 @@ export function OwnerPortalLicenseComplianceCard({ workspace, isSaving = false, 
             value={draft.expiresAt}
             onChangeText={(value) => setDraftField('expiresAt', normalizeDateInput(value))}
             placeholder="YYYY-MM-DD or ISO string"
-            placeholderTextColor="#738680"
+            placeholderTextColor={colors.textSoft}
             autoCapitalize="none"
             style={styles.inputPremium}
           />
@@ -202,7 +202,7 @@ export function OwnerPortalLicenseComplianceCard({ workspace, isSaving = false, 
             value={draft.renewalSubmittedAt}
             onChangeText={(value) => setDraftField('renewalSubmittedAt', normalizeDateInput(value))}
             placeholder="Leave blank until submitted"
-            placeholderTextColor="#738680"
+            placeholderTextColor={colors.textSoft}
             autoCapitalize="none"
             style={styles.inputPremium}
           />
@@ -214,7 +214,7 @@ export function OwnerPortalLicenseComplianceCard({ workspace, isSaving = false, 
             value={draft.notes}
             onChangeText={(value) => setDraftField('notes', value)}
             placeholder="Renewal notes, reminders, or internal follow-up"
-            placeholderTextColor="#738680"
+            placeholderTextColor={colors.textSoft}
             multiline
             style={[styles.inputPremium, styles.textAreaPremium]}
           />

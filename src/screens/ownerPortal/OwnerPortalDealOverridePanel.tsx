@@ -1,3 +1,4 @@
+import { colors } from '../../theme/tokens';
 import React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import {
@@ -217,7 +218,7 @@ export function OwnerPortalDealOverridePanel({
           value={searchText}
           onChangeText={setSearchText}
           placeholder="Search storefronts by name or city"
-          placeholderTextColor="#738680"
+          placeholderTextColor={colors.textSoft}
           style={styles.input}
         />
         {catalogError ? <Text style={styles.errorText}>{catalogError}</Text> : null}
@@ -281,7 +282,7 @@ export function OwnerPortalDealOverridePanel({
             value={batchBadgeDraft}
             onChangeText={setBatchBadgeDraft}
             placeholder="Add a badge like 20% Off"
-            placeholderTextColor="#738680"
+            placeholderTextColor={colors.textSoft}
             style={[styles.input, styles.inlineInput]}
             maxLength={24}
           />
@@ -368,7 +369,7 @@ export function OwnerPortalDealOverridePanel({
               value={customDurationInput}
               onChangeText={setCustomDurationInput}
               placeholder="Custom hours"
-              placeholderTextColor="#738680"
+              placeholderTextColor={colors.textSoft}
               keyboardType="number-pad"
               style={[styles.input, styles.inlineInput]}
               maxLength={3}

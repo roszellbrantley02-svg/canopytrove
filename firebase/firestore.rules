@@ -270,5 +270,20 @@ service cloud.firestore {
     match /analytics_daily_query_metrics/{docId} {
       allow read, write: if isAdmin();
     }
+
+    match /storefront_app_reviews/{reviewId} {
+      allow create: if isSignedIn() &&
+        request.resource.data.profileId == request.auth.uid;
+      allow read: if isSignedIn();
+      allow update: if isSignedIn() &&
+        resource.data.profileId == request.auth.uid;
+      allow delete: if isSignedIn() &&
+        resource.data.profileId == request.auth.uid;
+    }
+
+    match /gamification_state/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
   }
 }

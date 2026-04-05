@@ -3,14 +3,16 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
+import { colors } from '../theme/tokens';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import { sendCanopyTrovePasswordReset } from '../services/canopyTroveAuthService';
 import { customerEntryStyles as styles } from './customerEntry/customerEntryStyles';
 
-export function CanopyTroveForgotPasswordScreen() {
+function CanopyTroveForgotPasswordScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [email, setEmail] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -98,7 +100,7 @@ export function CanopyTroveForgotPasswordScreen() {
                     placeholder="Email"
                     autoCapitalize="none"
                     keyboardType="email-address"
-                    placeholderTextColor="#738680"
+                    placeholderTextColor={colors.textSoft}
                     style={styles.inputPremium}
                     accessibilityLabel="Email"
                     accessibilityHint="Enter the email address associated with your member account."
@@ -168,3 +170,8 @@ export function CanopyTroveForgotPasswordScreen() {
     </ScreenShell>
   );
 }
+
+export const CanopyTroveForgotPasswordScreen = withScreenErrorBoundary(
+  CanopyTroveForgotPasswordScreenInner,
+  'canopy-trove-forgot-password-screen',
+);

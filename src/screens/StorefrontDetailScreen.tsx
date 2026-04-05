@@ -9,6 +9,7 @@ import { CustomerStateCard } from '../components/CustomerStateCard';
 import { MotionInView } from '../components/MotionInView';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { MapGridPreview } from '../components/MapGridPreview';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { useStorefrontSummariesByIds } from '../hooks/useStorefrontSummaryData';
 import { colors } from '../theme/tokens';
 import type { StorefrontSummary } from '../types/storefront';
@@ -212,7 +213,7 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
   );
 }
 
-export function StorefrontDetailScreen() {
+function StorefrontDetailScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<DetailRoute>();
   const routeParams =
@@ -271,3 +272,8 @@ export function StorefrontDetailScreen() {
 
   return <StorefrontDetailContent navigation={navigation} storefront={storefront} />;
 }
+
+export const StorefrontDetailScreen = withScreenErrorBoundary(
+  StorefrontDetailScreenInner,
+  'storefront-detail-screen',
+);

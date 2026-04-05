@@ -10,6 +10,7 @@ import {
 } from '../context/StorefrontController';
 import { ErrorRecoveryCard } from '../components/ErrorRecoveryCard';
 import { ScreenShell } from '../components/ScreenShell';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useBrowseSummaries } from '../hooks/useStorefrontSummaryData';
 import { spacing } from '../theme/tokens';
@@ -26,7 +27,7 @@ import {
 
 const PAGE_SIZE = 6;
 
-export function HotDealsScreen() {
+function HotDealsScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [offset, setOffset] = React.useState(0);
   const [items, setItems] = React.useState<StorefrontSummary[]>([]);
@@ -161,3 +162,5 @@ export function HotDealsScreen() {
     </ScreenShell>
   );
 }
+
+export const HotDealsScreen = withScreenErrorBoundary(HotDealsScreenInner, 'hot-deals-screen');

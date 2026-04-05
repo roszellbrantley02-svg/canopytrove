@@ -48,7 +48,7 @@ Updated: March 29, 2026
 - [x] Added local author-blocking controls on storefront reviews.
 - [x] Added secured backend admin-review endpoints for owner claims, owner verification, and storefront reports.
 - [x] Added live owner billing code paths using hosted Stripe checkout, webhook syncing, and billing-portal sessions when production env is configured.
-- [x] Created Stripe sandbox owner-plan resources at `$79/month` and `$790/year` and wired hosted checkout-link fallback env into the project.
+- [x] Created Stripe sandbox owner-plan resources at `$49/month` and `$490/year` and wired hosted checkout-link fallback env into the project.
 - [x] Fixed the iOS release identity to `com.rezell.canopytrove` and added the `canopytrove` URL scheme.
 - [x] Added production release docs for privacy policy, terms, community guidelines, admin review, store metadata, and production setup.
 - [x] Added owner promotion priority placement so active paid deals can be boosted in Nearby, Browse, and Hot Deals.

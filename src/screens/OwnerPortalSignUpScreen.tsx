@@ -1,3 +1,4 @@
+import { colors } from '../theme/tokens';
 import React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -109,7 +110,7 @@ export function OwnerPortalSignUpScreen() {
                   value={displayName}
                   onChangeText={setDisplayName}
                   placeholder="Display name"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -119,7 +120,7 @@ export function OwnerPortalSignUpScreen() {
                   value={legalName}
                   onChangeText={setLegalName}
                   placeholder="Legal name"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -129,7 +130,7 @@ export function OwnerPortalSignUpScreen() {
                   value={companyName}
                   onChangeText={setCompanyName}
                   placeholder="Company name"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -141,7 +142,7 @@ export function OwnerPortalSignUpScreen() {
                   placeholder="Email"
                   autoCapitalize="none"
                   keyboardType="email-address"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -152,7 +153,7 @@ export function OwnerPortalSignUpScreen() {
                   onChangeText={setPassword}
                   placeholder="Password"
                   secureTextEntry={true}
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -163,7 +164,7 @@ export function OwnerPortalSignUpScreen() {
                   onChangeText={setConfirmPassword}
                   placeholder="Confirm password"
                   secureTextEntry={true}
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>

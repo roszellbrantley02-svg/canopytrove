@@ -15,12 +15,16 @@ analyticsRoutes.use(
   }),
 );
 
-analyticsRoutes.post('/analytics/events', async (request, response) => {
-  const body = parseAnalyticsEventBatchBody(request.body);
-  const result = await recordAnalyticsEvents(body, {
-    ipAddress: request.ip ?? null,
-    userAgent: request.headers['user-agent'] ?? null,
-  });
+analyticsRoutes.post('/analytics/events', async (request, response, next) => {
+  try {
+    const body = parseAnalyticsEventBatchBody(request.body);
+    const result = await recordAnalyticsEvents(body, {
+      ipAddress: request.ip ?? null,
+      userAgent: request.headers['user-agent'] ?? null,
+    });
 
-  response.status(202).json(result);
+    response.status(202).json(result);
+  } catch (error) {
+    next(error);
+  }
 });

@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { SectionCard } from '../../components/SectionCard';
 import type { StorefrontActivePromotion } from '../../types/storefront';
+import { getUSHolidayInfo } from '../../utils/holidayUtils';
 import { formatStorefrontPromotionExpiry } from '../../utils/storefrontPromotions';
 import { styles } from './storefrontDetailStyles';
 
@@ -87,8 +88,17 @@ export function DetailStoreSummarySection({
 }
 
 export function DetailHoursSection({ hours }: { hours: string[] }) {
+  const holiday = getUSHolidayInfo();
+
   return (
-    <SectionCard title="Hours" body="Official business hours from the detail payload.">
+    <SectionCard
+      title="Hours"
+      body={
+        holiday
+          ? `${holiday.name} today \u2014 hours may differ from the regular schedule.`
+          : 'Official business hours from the detail payload.'
+      }
+    >
       <View style={styles.listBlock}>
         {hours.map((line) => {
           const { day, value } = splitHoursLine(line);

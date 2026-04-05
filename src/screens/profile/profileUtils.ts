@@ -12,8 +12,12 @@ export type BadgeProgressItem = {
   label: string;
 };
 
-export function getProfileDisplayName(appProfile: AppProfile | null, profileId: string) {
-  return appProfile?.displayName?.trim() || `Canopy Trove ${profileId.slice(-6)}`;
+export function getProfileDisplayName(
+  appProfile: AppProfile | null,
+  profileId: string,
+  email?: string | null,
+) {
+  return appProfile?.displayName?.trim() || email?.trim() || `Canopy Trove ${profileId.slice(-6)}`;
 }
 
 export function getProfileInitials(label: string) {

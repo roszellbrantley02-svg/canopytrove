@@ -44,12 +44,10 @@ export function useStorefrontDetailScreenModel(
     isVisited,
     isOperationalDataPending,
   });
+  const appReviews = derivedState.detailData.appReviews;
   const myReview = React.useMemo(
-    () =>
-      derivedState.detailData.appReviews.find(
-        (review: AppReview) => review.authorProfileId === profileId,
-      ) ?? null,
-    [derivedState.detailData.appReviews, profileId],
+    () => appReviews.find((review: AppReview) => review.authorProfileId === profileId) ?? null,
+    [appReviews, profileId],
   );
   const actions = useStorefrontDetailActions({
     detailData: derivedState.detailData,
@@ -63,11 +61,11 @@ export function useStorefrontDetailScreenModel(
   });
   const visibleAppReviews = React.useMemo(
     () =>
-      derivedState.detailData.appReviews.filter(
+      appReviews.filter(
         (review: AppReview) =>
           !review.authorProfileId || !blockedAuthorProfileIds.includes(review.authorProfileId),
       ),
-    [blockedAuthorProfileIds, derivedState.detailData.appReviews],
+    [blockedAuthorProfileIds, appReviews],
   );
   const hiddenReviewCount = derivedState.detailData.appReviews.length - visibleAppReviews.length;
 

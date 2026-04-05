@@ -38,10 +38,9 @@ function matchesAdminApiKey(
     return false;
   }
 
-  return timingSafeEqual(
-    createSecretDigest(providedApiKey.trim()),
-    createSecretDigest(expectedApiKey.trim()),
-  );
+  const providedDigest = createSecretDigest(providedApiKey.trim());
+  const expectedDigest = createSecretDigest(expectedApiKey.trim());
+  return timingSafeEqual(providedDigest, expectedDigest);
 }
 
 export const ensureAdminApiKeyConfigured: RequestHandler = (_request, response, next) => {

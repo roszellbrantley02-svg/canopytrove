@@ -56,7 +56,13 @@ export function OwnerPortalAiActionPlanCard({
         </Text>
         <Pressable
           onPress={onRefresh}
+          disabled={isLoading}
           style={[styles.secondaryButton, isLoading && styles.buttonDisabled]}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isLoading ? 'Generating AI plan' : actionPlan ? 'Refresh AI plan' : 'Generate AI plan'
+          }
+          accessibilityHint="Generates or refreshes the AI-powered action plan for your storefront."
         >
           <Text style={styles.secondaryButtonText}>
             {isLoading ? 'Generating...' : actionPlan ? 'Refresh AI Plan' : 'Generate AI Plan'}

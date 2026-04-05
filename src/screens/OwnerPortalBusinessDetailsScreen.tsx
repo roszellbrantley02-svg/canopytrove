@@ -1,3 +1,4 @@
+import { colors } from '../theme/tokens';
 import React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import type { RouteProp } from '@react-navigation/native';
@@ -105,7 +106,7 @@ function OwnerPortalBusinessDetailsScreenInner() {
                   value={legalName}
                   onChangeText={setLegalName}
                   placeholder="Legal name"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -115,7 +116,7 @@ function OwnerPortalBusinessDetailsScreenInner() {
                   value={companyName}
                   onChangeText={setCompanyName}
                   placeholder="Company name"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -126,7 +127,7 @@ function OwnerPortalBusinessDetailsScreenInner() {
                   onChangeText={setPhone}
                   placeholder="Phone"
                   keyboardType="phone-pad"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>

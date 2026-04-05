@@ -40,12 +40,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   chip: {
+    minHeight: 40,
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chipActive: {
     backgroundColor: colors.primary,

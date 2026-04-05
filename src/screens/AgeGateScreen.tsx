@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { brand } from '../config/brand';
 import { MotionInView } from '../components/MotionInView';
 import { HapticPressable } from '../components/HapticPressable';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { BrandMarkIcon } from '../icons/BrandMarkIcon';
 import { colors, fontFamilies, radii, spacing, textStyles } from '../theme/tokens';
 
@@ -22,7 +23,7 @@ type AgeGateScreenProps = {
   onAccept: () => void;
 };
 
-export function AgeGateScreen({ onAccept }: AgeGateScreenProps) {
+function AgeGateScreenInner({ onAccept }: AgeGateScreenProps) {
   const [isAccessBlocked, setIsAccessBlocked] = React.useState(false);
   const { width, height } = useWindowDimensions();
   const compactLayout = width < 390 || height < 780;
@@ -155,6 +156,8 @@ export function AgeGateScreen({ onAccept }: AgeGateScreenProps) {
     </LinearGradient>
   );
 }
+
+export const AgeGateScreen = withScreenErrorBoundary(AgeGateScreenInner, 'age-gate-screen');
 
 const styles = StyleSheet.create({
   screen: {

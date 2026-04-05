@@ -5,6 +5,7 @@ import {
 } from '../../../src/types/storefront';
 import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
+import { getSafeErrorMessage } from '../http/errors';
 import {
   parseHelpfulVoteBody,
   parseReportSubmissionBody,
@@ -81,9 +82,14 @@ communityRoutes.post('/storefront-details/:storefrontId/reviews', async (request
     reviewSubmission = await submitStorefrontAppReview(reviewInput);
   } catch (error) {
     if (error instanceof StorefrontCommunityError) {
+      const requestId = response.getHeader('X-CanopyTrove-Request-Id');
       response.status(error.statusCode).json({
         ok: false,
-        error: error.message,
+        error: getSafeErrorMessage(
+          error,
+          error.statusCode,
+          typeof requestId === 'string' ? requestId : null,
+        ),
       });
       return;
     }
@@ -176,9 +182,14 @@ communityRoutes.put(
       reviewSubmission = await updateStorefrontAppReview(reviewInput);
     } catch (error) {
       if (error instanceof StorefrontCommunityError) {
+        const requestId = response.getHeader('X-CanopyTrove-Request-Id');
         response.status(error.statusCode).json({
           ok: false,
-          error: error.message,
+          error: getSafeErrorMessage(
+            error,
+            error.statusCode,
+            typeof requestId === 'string' ? requestId : null,
+          ),
         });
         return;
       }

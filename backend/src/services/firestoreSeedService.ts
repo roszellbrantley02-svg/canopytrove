@@ -7,6 +7,7 @@ import {
   deleteSeedOperationsInBatches,
   writeSeedOperationsInBatches,
 } from './backendSeedWriterService';
+import { COLLECTIONS } from '../constants/collections';
 
 export function getBackendSeedCounts() {
   return {
@@ -25,8 +26,8 @@ async function seedCollections() {
   const expectedDetailIds = new Set(Object.keys(mockStorefrontDetailDocuments));
 
   const [existingSummarySnapshots, existingDetailSnapshots] = await Promise.all([
-    db.collection('storefront_summaries').get(),
-    db.collection('storefront_details').get(),
+    db.collection(COLLECTIONS.STOREFRONT_SUMMARIES).get(),
+    db.collection(COLLECTIONS.STOREFRONT_DETAILS).get(),
   ]);
 
   const staleOperations = [
@@ -41,7 +42,7 @@ async function seedCollections() {
       })
       .map((documentSnapshot) => documentSnapshot.id)
       .map((storefrontId) => ({
-        collectionName: 'storefront_summaries' as const,
+        collectionName: COLLECTIONS.STOREFRONT_SUMMARIES,
         storefrontId,
       })),
     ...existingDetailSnapshots.docs
@@ -55,7 +56,7 @@ async function seedCollections() {
       })
       .map((documentSnapshot) => documentSnapshot.id)
       .map((storefrontId) => ({
-        collectionName: 'storefront_details' as const,
+        collectionName: COLLECTIONS.STOREFRONT_DETAILS,
         storefrontId,
       })),
   ];

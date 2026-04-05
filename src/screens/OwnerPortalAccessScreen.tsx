@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { useOwnerPortalAccessState } from '../hooks/useOwnerPortalAccessState';
@@ -24,7 +25,7 @@ const OWNER_WORKSPACE_FEATURES = [
 
 const ONBOARDING_STEPS = ['Access', 'Account', 'Business Details', 'Claim Listing', 'Verification'];
 
-export function OwnerPortalAccessScreen() {
+function OwnerPortalAccessScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { authSession } = useStorefrontProfileController();
   const { accessState, isCheckingAccess } = useOwnerPortalAccessState(authSession);
@@ -212,3 +213,8 @@ export function OwnerPortalAccessScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalAccessScreen = withScreenErrorBoundary(
+  OwnerPortalAccessScreenInner,
+  'owner-portal-access-screen',
+);

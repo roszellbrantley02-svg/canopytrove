@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { trackAnalyticsEvent } from '../services/analyticsService';
@@ -14,10 +15,9 @@ import { reportRuntimeError } from '../services/runtimeReportingService';
 import { colors } from '../theme/tokens';
 import { customerEntryStyles as styles } from './customerEntry/customerEntryStyles';
 
-export function CanopyTroveSignUpScreen() {
+function CanopyTroveSignUpScreenInner() {
   const minimumPasswordLength = 6;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [displayName, setDisplayName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -52,7 +52,7 @@ export function CanopyTroveSignUpScreen() {
       source: 'profile',
     });
     try {
-      const authSession = await signUpCanopyTroveEmailPassword(email, password, displayName);
+      const authSession = await signUpCanopyTroveEmailPassword(email, password, email.trim());
       if (!authSession?.uid) {
         throw new Error('Unable to create account.');
       }
@@ -150,18 +150,6 @@ export function CanopyTroveSignUpScreen() {
                 <View style={[styles.plannerPanel, styles.plannerPanelFeatured]}>
                   <View style={styles.form}>
                     <View style={styles.fieldGroup}>
-                      <Text style={styles.fieldLabel}>Display name</Text>
-                      <TextInput
-                        value={displayName}
-                        onChangeText={setDisplayName}
-                        placeholder="Display name"
-                        placeholderTextColor="#738680"
-                        style={styles.inputPremium}
-                        accessibilityLabel="Display name"
-                        accessibilityHint="Enter the name to display on your reviews and profile."
-                      />
-                    </View>
-                    <View style={styles.fieldGroup}>
                       <Text style={styles.fieldLabel}>Email</Text>
                       <TextInput
                         value={email}
@@ -169,7 +157,7 @@ export function CanopyTroveSignUpScreen() {
                         placeholder="Email"
                         autoCapitalize="none"
                         keyboardType="email-address"
-                        placeholderTextColor="#738680"
+                        placeholderTextColor={colors.textSoft}
                         style={styles.inputPremium}
                         accessibilityLabel="Email"
                         accessibilityHint="Enter your email address for your member account."
@@ -182,7 +170,7 @@ export function CanopyTroveSignUpScreen() {
                         onChangeText={setPassword}
                         placeholder="Password"
                         secureTextEntry={true}
-                        placeholderTextColor="#738680"
+                        placeholderTextColor={colors.textSoft}
                         style={styles.inputPremium}
                         accessibilityLabel="Password"
                         accessibilityHint="Enter a password for your member account."
@@ -200,7 +188,7 @@ export function CanopyTroveSignUpScreen() {
                         onChangeText={setConfirmPassword}
                         placeholder="Confirm password"
                         secureTextEntry={true}
-                        placeholderTextColor="#738680"
+                        placeholderTextColor={colors.textSoft}
                         style={styles.inputPremium}
                         accessibilityLabel="Confirm password"
                         accessibilityHint="Re-enter your password to confirm."
@@ -295,3 +283,8 @@ export function CanopyTroveSignUpScreen() {
     </ScreenShell>
   );
 }
+
+export const CanopyTroveSignUpScreen = withScreenErrorBoundary(
+  CanopyTroveSignUpScreenInner,
+  'canopy-trove-sign-up-screen',
+);

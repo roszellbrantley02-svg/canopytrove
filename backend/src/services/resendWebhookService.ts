@@ -121,7 +121,7 @@ async function saveStoredRecord(record: StoredTransactionalEmailWebhookRecord) {
 
 function getRequiredHeader(headers: Record<string, string | undefined>, names: string[]) {
   for (const name of names) {
-    const value = trimValue(headers[name]);
+    const value = trimValue(headers[name.toLowerCase()]);
     if (value) {
       return value;
     }

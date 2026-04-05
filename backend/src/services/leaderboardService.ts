@@ -26,8 +26,8 @@ export async function getLeaderboard(
   offset?: number,
 ): Promise<GamificationLeaderboardApiResponse> {
   const [profiles, gamificationStates] = await Promise.all([
-    listProfiles(),
-    listGamificationStates(),
+    listProfiles(5000),
+    listGamificationStates(5000),
   ]);
 
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]));

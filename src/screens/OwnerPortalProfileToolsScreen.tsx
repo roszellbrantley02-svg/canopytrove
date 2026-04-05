@@ -1,3 +1,4 @@
+import { colors } from '../theme/tokens';
 import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
@@ -449,7 +450,7 @@ function OwnerPortalProfileToolsScreenInner() {
                   value={menuUrl}
                   onChangeText={setMenuUrl}
                   placeholder="Menu link"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                   editable={isUploadingMedia === null}
                 />
@@ -465,7 +466,7 @@ function OwnerPortalProfileToolsScreenInner() {
                   value={cardPhotoUrl}
                   onChangeText={setCardPhotoUrl}
                   placeholder="Card photo URL"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                   editable={isUploadingMedia === null}
                 />
@@ -515,7 +516,7 @@ function OwnerPortalProfileToolsScreenInner() {
                   value={cardSummary}
                   onChangeText={setCardSummary}
                   placeholder="Card summary"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   multiline={true}
                   style={[styles.inputPremium, styles.textAreaPremium]}
                   editable={isUploadingMedia === null}
@@ -542,7 +543,7 @@ function OwnerPortalProfileToolsScreenInner() {
                   value={verifiedBadgeLabel}
                   onChangeText={setVerifiedBadgeLabel}
                   placeholder="Verified badge label"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                   editable={isUploadingMedia === null}
                 />
@@ -555,7 +556,7 @@ function OwnerPortalProfileToolsScreenInner() {
                   value={featuredBadgesInput}
                   onChangeText={setFeaturedBadgesInput}
                   placeholder="Featured badges, comma separated"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                   editable={isUploadingMedia === null}
                 />
@@ -584,7 +585,7 @@ function OwnerPortalProfileToolsScreenInner() {
                   value={featuredPhotoUrlsInput}
                   onChangeText={setFeaturedPhotoUrlsInput}
                   placeholder="Feature photo URLs, one per line"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   multiline={true}
                   style={[styles.inputPremium, styles.textAreaPremium]}
                   editable={isUploadingMedia === null}

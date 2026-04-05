@@ -7,6 +7,7 @@ import { CustomerStateCard } from '../components/CustomerStateCard';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import {
   useStorefrontProfileController,
@@ -38,7 +39,7 @@ import {
 
 type ReportRoute = RouteProp<RootStackParamList, 'ReportStorefront'>;
 
-export function ReportStorefrontScreen() {
+function ReportStorefrontScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<ReportRoute>();
   const routeParams =
@@ -308,6 +309,11 @@ export function ReportStorefrontScreen() {
     </ScreenShell>
   );
 }
+
+export const ReportStorefrontScreen = withScreenErrorBoundary(
+  ReportStorefrontScreenInner,
+  'report-storefront-screen',
+);
 
 const styles = StyleSheet.create({
   overviewCard: {

@@ -1,7 +1,7 @@
 /**
  * Owner subscription tiers for Canopy Trove.
  *
- * - verified:  $79/mo  — Verified Presence (one location, basics)
+ * - verified:  $49/mo  — Verified Presence (one location, basics)
  * - growth:    $149/mo — Growth (analytics, promotions, messaging)
  * - pro:       $249/mo — Pro (AI, multi-location, full suite)
  */
@@ -34,8 +34,8 @@ export const OWNER_TIERS: Record<OwnerSubscriptionTier, OwnerTierDefinition> = {
     tier: 'verified',
     label: 'Verified Presence',
     tagline: 'Get found. Get trusted.',
-    monthlyPrice: 79,
-    annualPrice: 790,
+    monthlyPrice: 49,
+    annualPrice: 490,
     features: [
       'OCM verified badge on listing',
       'Claim and manage your storefront',

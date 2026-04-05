@@ -117,6 +117,7 @@ curl -s "https://canopytrove-api-XXXXX-ue.a.run.app/storefront-summaries?limit=3
 ### Set uptime monitor targets (after deploy gives you the URL)
 
 Update Cloud Run env with:
+
 ```
 OPS_HEALTHCHECK_API_URL=https://canopytrove-api-XXXXX-ue.a.run.app/readyz
 OPS_HEALTHCHECK_API_RAW_URL=https://canopytrove-api-XXXXX-ue.a.run.app/readyz
@@ -130,6 +131,7 @@ firebase deploy --only hosting --project canopy-trove
 ```
 
 Verify each page loads:
+
 - https://canopytrove.com/privacy
 - https://canopytrove.com/terms
 - https://canopytrove.com/community-guidelines
@@ -140,8 +142,8 @@ Verify each page loads:
 
 1. Switch Stripe dashboard to live mode.
 2. Create products and prices:
-   - Monthly plan: $79/month recurring
-   - Annual plan: $790/year recurring
+   - Monthly plan: $49/month recurring
+   - Annual plan: $490/year recurring
 3. Copy the `price_xxx` IDs into Cloud Run env as
    `STRIPE_OWNER_MONTHLY_PRICE_ID` and `STRIPE_OWNER_ANNUAL_PRICE_ID`.
 4. Register the webhook endpoint:
@@ -161,6 +163,7 @@ eas build --platform ios --profile production
 ```
 
 Then submit to App Store Connect:
+
 ```bash
 eas submit --platform ios
 ```
@@ -175,6 +178,7 @@ eas build --platform android --profile production
 
 This produces an AAB file. Upload it to Google Play Console manually (first
 release) or via:
+
 ```bash
 eas submit --platform android
 ```

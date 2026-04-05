@@ -1,3 +1,4 @@
+import { colors } from '../theme/tokens';
 import React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -79,7 +80,7 @@ export function OwnerPortalSignInScreen() {
                   placeholder="Email"
                   autoCapitalize="none"
                   keyboardType="email-address"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -90,7 +91,7 @@ export function OwnerPortalSignInScreen() {
                   onChangeText={setPassword}
                   placeholder="Password"
                   secureTextEntry={true}
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>

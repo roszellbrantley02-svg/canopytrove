@@ -98,7 +98,7 @@ export function parseGamificationEventBody(value: unknown): GamificationEventReq
           ? {
               count: parseOptionalIntegerValue(payload.count, 'body.payload.count', {
                 min: 1,
-                max: 1000,
+                max: 10,
               }),
               occurredAt:
                 payload.occurredAt === undefined
@@ -116,7 +116,7 @@ export function parseGamificationEventBody(value: unknown): GamificationEventReq
           count: parseNumberValue(payload.count, 'body.payload.count', {
             integer: true,
             min: 0,
-            max: 1_000_000,
+            max: 10_000,
           }),
           occurredAt:
             payload.occurredAt === undefined

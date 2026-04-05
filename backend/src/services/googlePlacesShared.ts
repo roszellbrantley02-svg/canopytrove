@@ -32,6 +32,7 @@ export type GooglePlaceDetailResponse = {
   };
   currentOpeningHours?: {
     openNow?: boolean;
+    weekdayDescriptions?: string[];
   };
   location?: {
     latitude?: number;

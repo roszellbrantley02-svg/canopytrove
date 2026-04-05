@@ -422,7 +422,7 @@ function buildReminderMessage(
 export async function runOwnerLicenseComplianceSweep() {
   const collectionRef = getOwnerLicenseComplianceCollection();
   const records = collectionRef
-    ? (await collectionRef.get()).docs.map((documentSnapshot) =>
+    ? (await collectionRef.limit(50000).get()).docs.map((documentSnapshot) =>
         normalizeOwnerLicenseCompliance(documentSnapshot.data() as OwnerLicenseComplianceDocument, {
           ownerUid: (documentSnapshot.data() as OwnerLicenseComplianceDocument).ownerUid,
           dispensaryId: (documentSnapshot.data() as OwnerLicenseComplianceDocument).dispensaryId,

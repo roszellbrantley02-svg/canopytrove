@@ -1,4 +1,5 @@
 import { ErrorRequestHandler } from 'express';
+import { logger } from '../observability/logger';
 import { getProfileAccessErrorStatus } from '../services/profileAccessService';
 import { recordRuntimeIncident } from '../services/runtimeOpsService';
 
@@ -21,6 +22,34 @@ function isJsonSyntaxError(error: unknown) {
     typeof error.message === 'string' &&
     error.message.toLowerCase().includes('json')
   );
+}
+
+/**
+ * Sanitize error messages for client-facing responses.
+ * For 4xx errors, returns the original message (expected to be user-safe).
+ * For 5xx errors, returns a generic message and logs the actual error server-side.
+ */
+export function getSafeErrorMessage(
+  error: unknown,
+  statusCode: number,
+  requestId?: string | null,
+): string {
+  if (statusCode < 500) {
+    // For 4xx errors (and other non-5xx), the error message should already be user-safe
+    return error instanceof Error ? error.message : 'Request error';
+  }
+
+  // For 5xx errors, log the actual error and return a generic message
+  if (error instanceof Error) {
+    logger.error('Unhandled server error', {
+      message: error.message,
+      stack: error.stack,
+      statusCode,
+      requestId,
+    });
+  }
+
+  return 'Internal server error';
 }
 
 function getErrorStatus(error: unknown) {

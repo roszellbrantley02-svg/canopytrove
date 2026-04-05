@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { FlatList, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { FlatList, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { MotionInView } from '../../components/MotionInView';
 import { StorefrontRouteCard } from '../../components/StorefrontRouteCard';
@@ -250,6 +250,9 @@ export function BrowseStoreList({
         disabled={isLoading}
         onPress={onLoadMore}
         style={[styles.loadMoreButton, isLoading && styles.loadMoreButtonDisabled]}
+        accessibilityRole="button"
+        accessibilityLabel={isLoading ? 'Loading more storefronts' : 'Load more storefronts'}
+        accessibilityHint={`${items.length} of ${total} storefronts loaded`}
       >
         <Text style={styles.loadMoreButtonText}>
           {isLoading
@@ -259,6 +262,23 @@ export function BrowseStoreList({
       </Pressable>
     </MotionInView>
   ) : null;
+
+  // On web, FlatList's removeClippedSubviews and nested scroll container
+  // cause items to vanish permanently and block parent scroll/touch input
+  // after navigating back. Plain View rendering avoids both issues and
+  // works fine since browsers handle long lists natively.
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.list}>
+        {items.map((item, index) => (
+          <React.Fragment key={item.id}>
+            {renderItem({ item, index } as { item: StorefrontSummary; index: number })}
+          </React.Fragment>
+        ))}
+        {listFooter}
+      </View>
+    );
+  }
 
   return (
     <FlatList

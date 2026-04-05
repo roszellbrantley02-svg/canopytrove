@@ -31,7 +31,7 @@ eas build --platform android --profile preview
 - `preview` is the primary install/test build for phone QA.
 - Storefront detail rendering was repaired to recover critical data on-device instead of depending on the dead local LAN backend path.
 - Post-visit reminders were shifted to a foreground-only flow instead of background location tracking.
-- Owner pricing is set at `$79/month` and `$790/year`.
+- Owner pricing is set at `$49/month` and `$490/year`.
 - Owner promotions now support paid priority placement across `Nearby`, `Browse`, and `Hot Deals`.
 - Owner analytics now track visibility and action, not just surface-level promotion CTR.
 - Owner demo access is now explicitly build-gated so it stays available in preview builds and off in production builds.

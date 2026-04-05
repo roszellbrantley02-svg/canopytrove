@@ -1,6 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
+import { getSafeErrorMessage } from '../http/errors';
 import {
   createOwnerBillingCheckoutSession,
   createOwnerBillingPortalSession,
@@ -29,8 +30,8 @@ function getErrorStatus(error: unknown) {
   return error instanceof OwnerBillingError ? error.statusCode : 500;
 }
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Unknown owner billing failure.';
+function getErrorMessage(error: unknown, statusCode: number, requestId?: string | null) {
+  return getSafeErrorMessage(error, statusCode, requestId);
 }
 
 function parseCheckoutBody(body: unknown): { billingCycle: unknown; tier: unknown } {
@@ -53,9 +54,11 @@ ownerBillingRoutes.post(
       const { billingCycle, tier } = parseCheckoutBody(request.body);
       response.json(await createOwnerBillingCheckoutSession(request, billingCycle, tier));
     } catch (error) {
-      response.status(getErrorStatus(error)).json({
+      const statusCode = getErrorStatus(error);
+      const requestId = response.getHeader('X-CanopyTrove-Request-Id');
+      response.status(statusCode).json({
         ok: false,
-        error: getErrorMessage(error),
+        error: getErrorMessage(error, statusCode, typeof requestId === 'string' ? requestId : null),
       });
     }
   },
@@ -68,9 +71,11 @@ ownerBillingRoutes.post(
     try {
       response.json(await createOwnerBillingPortalSession(request));
     } catch (error) {
-      response.status(getErrorStatus(error)).json({
+      const statusCode = getErrorStatus(error);
+      const requestId = response.getHeader('X-CanopyTrove-Request-Id');
+      response.status(statusCode).json({
         ok: false,
-        error: getErrorMessage(error),
+        error: getErrorMessage(error, statusCode, typeof requestId === 'string' ? requestId : null),
       });
     }
   },
@@ -83,9 +88,11 @@ export async function ownerBillingWebhookHandler(request: Request, response: Res
       await handleOwnerBillingWebhook(payloadBuffer, request.header('stripe-signature')),
     );
   } catch (error) {
-    response.status(getErrorStatus(error)).json({
+    const statusCode = getErrorStatus(error);
+    const requestId = response.getHeader('X-CanopyTrove-Request-Id');
+    response.status(statusCode).json({
       ok: false,
-      error: getErrorMessage(error),
+      error: getErrorMessage(error, statusCode, typeof requestId === 'string' ? requestId : null),
     });
   }
 }

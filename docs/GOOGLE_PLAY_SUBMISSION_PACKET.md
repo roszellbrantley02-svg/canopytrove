@@ -26,9 +26,11 @@ Still needed:
 ## Play Console Store Listing Copy
 
 ### App name
+
 `Canopy Trove`
 
 ### Short description (max 80 chars)
+
 `Find licensed dispensaries near you. Adults 21+ where lawful.`
 
 ### Full description (max 4000 chars)
@@ -60,22 +62,24 @@ claimed storefront. Those owner tools cover listing management, review follow-up
 promotions, verification, and billing for the business workspace.
 
 ### Category
+
 `Maps & Navigation` (primary) or `Lifestyle` (secondary)
 
 ### Tags
+
 `dispensary`, `cannabis`, `licensed`, `discovery`, `storefront`, `reviews`
 
 ## Content Rating (IARC Questionnaire)
 
 Answer these questions in the Google Play Console IARC questionnaire:
 
-| Question | Answer | Rationale |
-|----------|--------|-----------|
-| Does the app contain references to drugs or drug use? | Yes — cannabis/marijuana references | The app is a licensed dispensary directory. It references cannabis by nature but does not sell, order, or facilitate transactions. |
-| Does the app facilitate the sale of drugs or controlled substances? | No | The app is discovery-only. No cart, no ordering, no delivery. Users navigate to dispensary websites externally. |
-| Does the app contain user-generated content? | Yes | Community reviews with photos (moderated before publishing). |
-| Does the app share the user's location? | Yes — approximate and precise, with consent | Used to find nearby dispensaries. Standard location permission flow. |
-| Does the app contain in-app purchases? | Yes | Owner portal subscription ($79/month or $790/year) for dispensary operators. Consumer use is free. |
+| Question                                                            | Answer                                      | Rationale                                                                                                                          |
+| ------------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Does the app contain references to drugs or drug use?               | Yes — cannabis/marijuana references         | The app is a licensed dispensary directory. It references cannabis by nature but does not sell, order, or facilitate transactions. |
+| Does the app facilitate the sale of drugs or controlled substances? | No                                          | The app is discovery-only. No cart, no ordering, no delivery. Users navigate to dispensary websites externally.                    |
+| Does the app contain user-generated content?                        | Yes                                         | Community reviews with photos (moderated before publishing).                                                                       |
+| Does the app share the user's location?                             | Yes — approximate and precise, with consent | Used to find nearby dispensaries. Standard location permission flow.                                                               |
+| Does the app contain in-app purchases?                              | Yes                                         | Owner portal subscription ($49/month or $490/year) for dispensary operators. Consumer use is free.                                 |
 
 Expected IARC rating: **Mature 17+** or equivalent (varies by region).
 
@@ -84,14 +88,17 @@ Expected IARC rating: **Mature 17+** or equivalent (varies by region).
 Google Play requires screenshots for at least one device type. Recommended:
 
 ### Phone screenshots (required)
+
 - Minimum: 2 screenshots, maximum: 8
 - Size: `1080 x 1920` (portrait, 16:9) or `1080 x 2340` (portrait, 19.5:9)
 - Format: JPEG or 24-bit PNG, no alpha
 
 ### 7-inch tablet (recommended)
+
 - Size: `1200 x 1920`
 
 ### 10-inch tablet (recommended)
+
 - Size: `1600 x 2560`
 
 ### Suggested screenshot sequence (reuse Apple set, re-render at Android sizes)
@@ -131,6 +138,7 @@ Canopy Trove is compliant with Google Play's cannabis app restrictions because:
    does not list unlicensed or gray-market operations.
 
 If the app is rejected, appeal with:
+
 - Reference to Weedmaps (com.weedmaps.app.android) and Leafly (leafly.android)
   as precedent for discovery-only cannabis apps on Google Play
 - Point to the age gate, absence of any cart/checkout/delivery, and OCM
@@ -142,16 +150,17 @@ Google Play requires a Data Safety section. Here is the declaration:
 
 ### Data collected
 
-| Data type | Collected | Shared | Purpose |
-|-----------|-----------|--------|---------|
-| Approximate location | Yes | No | Find nearby dispensaries |
-| Precise location | Yes | No | Distance calculation, visit detection |
-| Email address | Yes (if signed in) | No | Account, owner portal auth |
-| Photos | Yes (if uploading review) | No | Review attachments (moderated) |
-| App interactions | Yes | No | Analytics, screen views |
-| Crash logs | Yes | No | Sentry crash reporting |
+| Data type            | Collected                 | Shared | Purpose                               |
+| -------------------- | ------------------------- | ------ | ------------------------------------- |
+| Approximate location | Yes                       | No     | Find nearby dispensaries              |
+| Precise location     | Yes                       | No     | Distance calculation, visit detection |
+| Email address        | Yes (if signed in)        | No     | Account, owner portal auth            |
+| Photos               | Yes (if uploading review) | No     | Review attachments (moderated)        |
+| App interactions     | Yes                       | No     | Analytics, screen views               |
+| Crash logs           | Yes                       | No     | Sentry crash reporting                |
 
 ### Data handling
+
 - Data is encrypted in transit (HTTPS)
 - Users can request account deletion via in-app flow or canopytrove.com/account-deletion
 - Data is not sold to third parties
@@ -160,6 +169,7 @@ Google Play requires a Data Safety section. Here is the declaration:
 ## Feature Graphic
 
 Google Play requires a 1024 x 500 feature graphic. Create one with:
+
 - Dark background (#0A1117 or #121614)
 - Canopy Trove logo centered
 - Tagline: "Licensed dispensary discovery"

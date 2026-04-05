@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Request, RequestHandler, Response } from 'express';
 import { getBackendFirebaseDb } from '../firebase';
+import { logger } from '../observability/logger';
 
 type RateLimitOptions = {
   name: string;
@@ -22,8 +23,14 @@ function getClientIp(request: Request) {
   return request.ip || request.socket.remoteAddress || 'unknown';
 }
 
+function hashClientIp(ip: string) {
+  const hash = createHash('sha256').update(ip, 'utf8').digest('hex');
+  return hash.substring(0, 16);
+}
+
 function getBucketKey(request: Request, name: string) {
-  return `${name}:${getClientIp(request)}`;
+  const hashedIp = hashClientIp(getClientIp(request));
+  return `${name}:${hashedIp}`;
 }
 
 function shouldApplyToMethod(method: string, allowedMethods?: string[]) {
@@ -138,9 +145,14 @@ export function createRateLimitMiddleware(options: RateLimitOptions): RequestHan
           const persistentResult = await consumePersistentBucket(bucketKey, windowMs);
           bucket = persistentResult ?? consumeMemoryBucket(bucketKey, windowMs);
         } catch (persistentError) {
-          console.warn(
-            `[rateLimit] persistent bucket failed for "${name}", falling back to memory:`,
-            persistentError,
+          logger.warn(
+            `[rateLimit] persistent bucket failed for "${name}", falling back to memory`,
+            {
+              error:
+                persistentError instanceof Error
+                  ? persistentError.message
+                  : String(persistentError),
+            },
           );
           bucket = consumeMemoryBucket(bucketKey, windowMs);
         }

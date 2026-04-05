@@ -1,3 +1,4 @@
+import { colors } from '../theme/tokens';
 import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
@@ -372,7 +373,7 @@ function OwnerPortalReviewInboxScreenInner() {
                           }))
                         }
                         placeholder="Write a thoughtful owner reply"
-                        placeholderTextColor="#738680"
+                        placeholderTextColor={colors.textSoft}
                         multiline={true}
                         style={[styles.inputPremium, styles.textAreaPremium]}
                       />

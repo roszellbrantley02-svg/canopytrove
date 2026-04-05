@@ -22,7 +22,15 @@ export function OwnerLocationSwitcher({ locations, activeLocationId, onSelectLoc
 
   return (
     <View style={switcherStyles.container}>
-      <Pressable style={switcherStyles.activeRow} onPress={() => setExpanded(!expanded)}>
+      <Pressable
+        style={switcherStyles.activeRow}
+        onPress={() => setExpanded(!expanded)}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={activeLocation?.displayName ?? 'Select location'}
+        accessibilityHint={expanded ? 'Collapse location list' : 'Expand location list'}
+        accessibilityState={{ expanded }}
+      >
         <View style={switcherStyles.locationInfo}>
           <AppUiIcon name="location-outline" size={18} color={colors.accent} />
           <View style={switcherStyles.flexContent}>
@@ -57,6 +65,9 @@ export function OwnerLocationSwitcher({ locations, activeLocationId, onSelectLoc
                 onSelectLocation(location.storefrontId);
                 setExpanded(false);
               }}
+              accessibilityRole="button"
+              accessibilityLabel={location.displayName}
+              accessibilityHint={`${location.addressLine1}, ${location.city}${location.isPrimary ? ' Primary location' : ''}`}
             >
               <AppUiIcon name="location-outline" size={16} color={colors.textMuted} />
               <View style={switcherStyles.flexContent}>

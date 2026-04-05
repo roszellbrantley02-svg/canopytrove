@@ -1,3 +1,4 @@
+import { colors } from '../theme/tokens';
 import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -118,7 +119,7 @@ function OwnerPortalBusinessVerificationPreview() {
                   value={legalBusinessName}
                   onChangeText={setLegalBusinessName}
                   placeholder="Legal business name"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -128,7 +129,7 @@ function OwnerPortalBusinessVerificationPreview() {
                   value={storefrontName}
                   onChangeText={setStorefrontName}
                   placeholder="Storefront name"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -138,7 +139,7 @@ function OwnerPortalBusinessVerificationPreview() {
                   value={licenseNumber}
                   onChangeText={setLicenseNumber}
                   placeholder="License number"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -148,7 +149,7 @@ function OwnerPortalBusinessVerificationPreview() {
                   value={licenseType}
                   onChangeText={setLicenseType}
                   placeholder="License type"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -158,7 +159,7 @@ function OwnerPortalBusinessVerificationPreview() {
                   value={stateValue}
                   onChangeText={setStateValue}
                   placeholder="State"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -168,7 +169,7 @@ function OwnerPortalBusinessVerificationPreview() {
                   value={address}
                   onChangeText={setAddress}
                   placeholder="Business address"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={[styles.inputPremium, styles.textAreaPremium]}
                   multiline={true}
                 />
@@ -322,7 +323,7 @@ function OwnerPortalBusinessVerificationLive() {
                       value={model.legalBusinessName}
                       onChangeText={model.setLegalBusinessName}
                       placeholder="Legal business name"
-                      placeholderTextColor="#738680"
+                      placeholderTextColor={colors.textSoft}
                       style={styles.inputPremium}
                     />
                   </View>
@@ -332,7 +333,7 @@ function OwnerPortalBusinessVerificationLive() {
                       value={model.storefrontName}
                       onChangeText={model.setStorefrontName}
                       placeholder="Storefront name"
-                      placeholderTextColor="#738680"
+                      placeholderTextColor={colors.textSoft}
                       style={styles.inputPremium}
                     />
                   </View>
@@ -342,7 +343,7 @@ function OwnerPortalBusinessVerificationLive() {
                       value={model.licenseNumber}
                       onChangeText={model.setLicenseNumber}
                       placeholder="License number"
-                      placeholderTextColor="#738680"
+                      placeholderTextColor={colors.textSoft}
                       style={styles.inputPremium}
                     />
                   </View>
@@ -352,7 +353,7 @@ function OwnerPortalBusinessVerificationLive() {
                       value={model.licenseType}
                       onChangeText={model.setLicenseType}
                       placeholder="License type"
-                      placeholderTextColor="#738680"
+                      placeholderTextColor={colors.textSoft}
                       style={styles.inputPremium}
                     />
                   </View>
@@ -362,7 +363,7 @@ function OwnerPortalBusinessVerificationLive() {
                       value={model.stateValue}
                       onChangeText={model.setStateValue}
                       placeholder="State"
-                      placeholderTextColor="#738680"
+                      placeholderTextColor={colors.textSoft}
                       style={styles.inputPremium}
                     />
                   </View>
@@ -372,7 +373,7 @@ function OwnerPortalBusinessVerificationLive() {
                       value={model.address}
                       onChangeText={model.setAddress}
                       placeholder="Business address"
-                      placeholderTextColor="#738680"
+                      placeholderTextColor={colors.textSoft}
                       style={[styles.inputPremium, styles.textAreaPremium]}
                       multiline={true}
                     />

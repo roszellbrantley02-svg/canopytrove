@@ -43,6 +43,7 @@ function SearchFieldComponent({
           accessibilityRole="button"
           accessibilityLabel="Clear search"
           accessibilityHint="Clears the current search query."
+          hitSlop={{ top: 9, bottom: 9, left: 9, right: 9 }}
         >
           <AppUiIcon name="close" size={14} color={colors.text} />
         </Pressable>

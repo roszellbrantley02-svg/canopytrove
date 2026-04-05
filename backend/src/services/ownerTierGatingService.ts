@@ -5,7 +5,7 @@
  * feature access based on tier level.
  *
  * Tiers:
- *   verified ($79/mo)  — basic presence and analytics
+ *   verified ($49/mo)  — basic presence and analytics
  *   growth   ($149/mo) — full analytics, promotions, messaging
  *   pro      ($249/mo) — AI, multi-location, full suite
  */
@@ -152,7 +152,7 @@ export function assertTierAccess(
         ? 'Pro ($249/mo)'
         : requiredTier === 'growth'
           ? 'Growth ($149/mo)'
-          : 'Verified Presence ($79/mo)';
+          : 'Verified Presence ($49/mo)';
 
     throw new TierAccessError(
       `${featureLabel} requires the ${tierLabel} plan. Upgrade to unlock this feature.`,

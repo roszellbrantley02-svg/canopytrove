@@ -6,15 +6,17 @@ import {
 } from './reviewPhotoModerationService';
 import type { ReviewPhotoModerationQueueItem } from './reviewPhotoModerationService';
 import { appendPhotoIdToStorefrontAppReview } from './storefrontCommunityService';
+import {
+  OWNER_PROFILES_COLLECTION,
+  DISPENSARY_CLAIMS_COLLECTION,
+  BUSINESS_VERIFICATIONS_COLLECTION,
+  IDENTITY_VERIFICATIONS_COLLECTION,
+  STOREFRONT_REPORTS_COLLECTION,
+  DISPENSARIES_COLLECTION,
+} from '../constants/collections';
 
 type ReviewDecision = 'approved' | 'rejected' | 'needs_resubmission';
 type VerificationDecision = 'verified' | 'rejected' | 'needs_resubmission';
-
-const OWNER_PROFILES_COLLECTION = 'ownerProfiles';
-const DISPENSARY_CLAIMS_COLLECTION = 'dispensaryClaims';
-const BUSINESS_VERIFICATIONS_COLLECTION = 'businessVerifications';
-const IDENTITY_VERIFICATIONS_COLLECTION = 'identityVerifications';
-const STOREFRONT_REPORTS_COLLECTION = 'storefront_reports';
 
 type AdminReviewQueueDocument = Record<string, unknown>;
 
@@ -300,7 +302,7 @@ export async function reviewOwnerClaim(
     }
 
     updates.push(
-      db.collection('dispensaries').doc(claim.dispensaryId).set(
+      db.collection(DISPENSARIES_COLLECTION).doc(claim.dispensaryId).set(
         {
           ownerUid: claim.ownerUid,
           claimStatus: 'approved',

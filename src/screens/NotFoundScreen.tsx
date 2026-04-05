@@ -3,6 +3,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HapticPressable } from '../components/HapticPressable';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { BrandMarkIcon } from '../icons/BrandMarkIcon';
 import { colors, fontFamilies, radii, spacing, textStyles } from '../theme/tokens';
 
@@ -10,7 +11,7 @@ type NotFoundScreenProps = {
   onGoHome: () => void;
 };
 
-export function NotFoundScreen({ onGoHome }: NotFoundScreenProps) {
+function NotFoundScreenInner({ onGoHome }: NotFoundScreenProps) {
   const isWeb = Platform.OS === 'web';
 
   return (
@@ -41,6 +42,8 @@ export function NotFoundScreen({ onGoHome }: NotFoundScreenProps) {
     </LinearGradient>
   );
 }
+
+export const NotFoundScreen = withScreenErrorBoundary(NotFoundScreenInner, 'not-found-screen');
 
 const styles = StyleSheet.create({
   screen: {
@@ -76,7 +79,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   code: {
-    fontFamily: fontFamilies.displayBold,
+    fontFamily: fontFamilies.display,
     fontSize: 64,
     color: colors.gold,
     letterSpacing: 2,

@@ -4,6 +4,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
+import { colors } from '../theme/tokens';
 import {
   evaluateAdminRuntimePolicy,
   getAdminRuntimeAlertStatus,
@@ -506,7 +507,7 @@ export function AdminRuntimePanelScreen() {
                   value={reasonInput}
                   onChangeText={setReasonInput}
                   placeholder="Why are you changing runtime policy?"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={sharedStyles.inputPremium}
                 />
               </View>

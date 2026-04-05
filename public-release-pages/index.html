@@ -30,6 +30,15 @@
   <body>
     <div class="page-shell">
 
+      <!-- Web App Announcement Bar -->
+      <div class="webapp-bar" role="banner">
+        <div class="container webapp-bar-inner">
+          <span class="webapp-bar-badge">LIVE</span>
+          <span class="webapp-bar-text">Browse live dispensaries now &mdash; no download required</span>
+          <a class="webapp-bar-cta" href="https://app.canopytrove.com">Open Web App &rarr;</a>
+        </div>
+      </div>
+
       <header class="topbar">
         <div class="container topbar-inner">
           <a class="brand" href="/">
@@ -40,12 +49,13 @@
             </span>
           </a>
           <nav class="nav" aria-label="Canopy Trove site navigation">
+            <a class="pill-link webapp-nav-link" href="https://app.canopytrove.com">Web App</a>
             <a class="pill-link" href="#experience">Experience</a>
             <a class="pill-link" href="#notify">Coming Soon</a>
             <a class="pill-link" href="#shops">For Operators</a>
             <a class="pill-link" href="#pricing">Pricing</a>
             <a class="pill-link" href="/support">Support</a>
-            <a class="button-primary nav-cta" href="#notify">Get Notified</a>
+            <a class="button-primary nav-cta" href="https://app.canopytrove.com">Open Web App</a>
           </nav>
           <button class="nav-toggle" aria-label="Open navigation" aria-expanded="false">
             <span></span><span></span><span></span>
@@ -65,7 +75,7 @@
                     Real details. Community reviews. Trusted discovery without the marketplace noise.
                   </p>
                   <div class="hero-actions">
-                    <a class="button-primary" href="#notify">Get Notified</a>
+                    <a class="button-primary" href="https://app.canopytrove.com">Browse Live Dispensaries</a>
                     <a class="button-secondary" href="#experience">See how it works</a>
                   </div>
                   <div class="status-row" aria-label="Canopy Trove status">
@@ -291,7 +301,7 @@
               </p>
             </div>
 
-            <div class="pricing-grid">
+            <div class="pricing-grid pricing-grid-4col">
               <div class="pricing-card pricing-free">
                 <p class="eyebrow">Members</p>
                 <div class="pricing-amount">
@@ -308,24 +318,67 @@
                 <a class="button-secondary" href="#notify">Get Notified</a>
               </div>
 
-              <div class="pricing-card pricing-pro">
-                <div class="pricing-badge">Operator plan</div>
-                <p class="eyebrow">Verified Operators</p>
+              <div class="pricing-card pricing-verified">
+                <p class="eyebrow">Verified Presence</p>
                 <div class="pricing-amount">
-                  <span class="pricing-price">$79</span>
+                  <span class="pricing-price">$49</span>
                   <span class="pricing-period">/month</span>
                 </div>
-                <p class="pricing-alt">or $790/year &mdash; save two months free</p>
-                <p class="pricing-desc">Everything you need to manage your storefront presence, reviews, and promotions in one place.</p>
+                <p class="pricing-alt">or $490/year &mdash; save two months free</p>
+                <p class="pricing-desc">Get found. Get trusted. Everything you need to claim and manage your listing.</p>
                 <ul class="pricing-features">
-                  <li>Verified storefront listing</li>
-                  <li>Review inbox and response tools</li>
-                  <li>Promotions and performance signals</li>
-                  <li>AI-assisted drafts for replies and profile</li>
-                  <li>Billing portal and subscription management</li>
-                  <li>Runtime protection and owner alerting</li>
+                  <li>OCM verified badge on listing</li>
+                  <li>Claim and manage your storefront</li>
+                  <li>Hours management</li>
+                  <li>Basic profile editing</li>
+                  <li>License compliance tracking with renewal alerts</li>
+                  <li>Review replies (text only)</li>
+                  <li>Basic analytics: views, taps, and average rating</li>
                 </ul>
-                <a class="button-primary" href="mailto:support@canopytrove.com?subject=Canopy%20Trove%20Operator%20Pricing">Get started</a>
+                <a class="button-primary" href="mailto:support@canopytrove.com?subject=Canopy%20Trove%20Verified%20Presence">Get started</a>
+              </div>
+
+              <div class="pricing-card pricing-growth">
+                <div class="pricing-badge">Most popular</div>
+                <p class="eyebrow">Growth</p>
+                <div class="pricing-amount">
+                  <span class="pricing-price">$149</span>
+                  <span class="pricing-period">/month</span>
+                </div>
+                <p class="pricing-alt">or $1,490/year &mdash; save two months free</p>
+                <p class="pricing-desc">See what works. Grow your traffic with analytics, promotions, and messaging.</p>
+                <ul class="pricing-features">
+                  <li>Everything in Verified Presence</li>
+                  <li>Full ROI funnel analytics with trends</li>
+                  <li>Week-over-week and month-over-month comparisons</li>
+                  <li>Up to 2 active promotions with scheduling</li>
+                  <li>Featured photos on storefront card (up to 3)</li>
+                  <li>Badge customization</li>
+                  <li>Owner-to-follower messaging (up to 4/month)</li>
+                  <li>Weekly performance email</li>
+                </ul>
+                <a class="button-primary" href="mailto:support@canopytrove.com?subject=Canopy%20Trove%20Growth%20Plan">Get started</a>
+              </div>
+
+              <div class="pricing-card pricing-pro">
+                <p class="eyebrow">Pro</p>
+                <div class="pricing-amount">
+                  <span class="pricing-price">$249</span>
+                  <span class="pricing-period">/month</span>
+                </div>
+                <p class="pricing-alt">or $2,490/year &mdash; save two months free</p>
+                <p class="pricing-desc">AI-powered tools. Multiple locations. Full control over your dispensary presence.</p>
+                <ul class="pricing-features">
+                  <li>Everything in Growth</li>
+                  <li>Multi-location management from one dashboard</li>
+                  <li>AI review reply drafts</li>
+                  <li>AI weekly action plans</li>
+                  <li>AI promotion drafts and profile suggestions</li>
+                  <li>Up to 5 promotions per location with audience targeting</li>
+                  <li>Promotion-level analytics with attribution</li>
+                  <li>Unlimited featured photos</li>
+                </ul>
+                <a class="button-primary" href="mailto:support@canopytrove.com?subject=Canopy%20Trove%20Pro%20Plan">Get started</a>
               </div>
             </div>
           </div>
@@ -435,8 +488,8 @@
 
             <nav class="footer-nav" aria-label="Product links">
               <span class="footer-nav-label">Product</span>
+              <a href="https://app.canopytrove.com" style="color: #2ECC71; font-weight: 800;">Open Web App</a>
               <a href="#experience">Experience</a>
-              <a href="#notify">Coming Soon</a>
               <a href="#shops">For Operators</a>
               <a href="#pricing">Pricing</a>
               <a href="#trust">Trust</a>
@@ -456,7 +509,7 @@
               <span class="footer-nav-label">Contact</span>
               <a href="/support">Support</a>
               <a href="mailto:support@canopytrove.com">support@canopytrove.com</a>
-              <a class="button-primary footer-cta" href="#notify">Get Notified</a>
+              <a class="button-primary footer-cta" href="https://app.canopytrove.com">Open Web App</a>
             </div>
           </div>
         </div>

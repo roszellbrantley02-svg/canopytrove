@@ -405,8 +405,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   headerPill: {
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.xs,
     backgroundColor: 'rgba(14, 23, 30, 0.82)',
     borderWidth: 1,

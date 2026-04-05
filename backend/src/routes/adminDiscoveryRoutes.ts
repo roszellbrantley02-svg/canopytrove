@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import {
   getStorefrontDiscoveryCandidates,
   getStorefrontDiscoveryRunById,
@@ -103,7 +103,8 @@ adminDiscoveryRoutes.post('/sweep', async (request, response) => {
   if (mode === 'sync') {
     // Legacy synchronous path — waits for the entire sweep to finish.
     // Clear the global 30 s request timeout so the sweep can run to completion.
-    const timeoutTimer = (response as any).__requestTimeoutTimer;
+    const timeoutTimer = (response as Response & { __requestTimeoutTimer?: NodeJS.Timeout })
+      .__requestTimeoutTimer;
     if (timeoutTimer) {
       clearTimeout(timeoutTimer);
     }

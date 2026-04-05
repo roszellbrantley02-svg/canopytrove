@@ -245,7 +245,14 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
             <Text style={styles.eyebrow}>Visit follow-up</Text>
             <Text style={styles.title}>{title}</Text>
           </View>
-          <HapticPressable onPress={handleDismiss} style={styles.dismissButton}>
+          <HapticPressable
+            onPress={handleDismiss}
+            style={styles.dismissButton}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss visit follow-up prompt"
+            accessibilityHint="Closes the post-visit feedback card."
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <AppUiIcon name="close" size={18} color={colors.textSoft} />
           </HapticPressable>
         </View>
@@ -255,6 +262,10 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
             disabled={isSaved}
             onPress={handleSave}
             style={[styles.secondaryButton, isSaved && styles.buttonDisabled]}
+            accessibilityRole="button"
+            accessibilityLabel={isSaved ? 'Storefront saved' : 'Save storefront'}
+            accessibilityHint="Saves this storefront to your collection."
+            accessibilityState={{ disabled: isSaved }}
           >
             <AppUiIcon
               name={isSaved ? 'bookmark' : 'bookmark-outline'}
@@ -263,12 +274,24 @@ export function PostVisitPromptHost({ navigationRef }: PostVisitPromptHostProps)
             />
             <Text style={styles.secondaryButtonText}>{isSaved ? 'Saved' : 'Save Storefront'}</Text>
           </HapticPressable>
-          <HapticPressable onPress={handleLeaveReview} style={styles.primaryButton}>
+          <HapticPressable
+            onPress={handleLeaveReview}
+            style={styles.primaryButton}
+            accessibilityRole="button"
+            accessibilityLabel="Leave review"
+            accessibilityHint="Opens the review form for this storefront."
+          >
             <AppUiIcon name="chatbubble-ellipses-outline" size={16} color={colors.backgroundDeep} />
             <Text style={styles.primaryButtonText}>Leave Review</Text>
           </HapticPressable>
         </View>
-        <HapticPressable onPress={handleOpenBadges} style={styles.tertiaryButton}>
+        <HapticPressable
+          onPress={handleOpenBadges}
+          style={styles.tertiaryButton}
+          accessibilityRole="button"
+          accessibilityLabel={hasBadges ? 'View profile progress' : 'Open profile'}
+          accessibilityHint="Opens your profile to view badges and progress."
+        >
           <AppUiIcon name="person-circle-outline" size={16} color={colors.textSoft} />
           <Text style={styles.tertiaryButtonText}>
             {hasBadges ? 'View Profile Progress' : 'Open Profile'}

@@ -1,5 +1,8 @@
-import { RequestHandler } from 'express';
+import { Response, RequestHandler } from 'express';
 import { logger } from '../observability/logger';
+
+// WeakMap to store timeout timers with proper type safety
+const requestTimeoutTimers = new WeakMap<Response, ReturnType<typeof setTimeout>>();
 
 /**
  * Aborts requests that exceed the given timeout.
@@ -21,8 +24,8 @@ export function createRequestTimeoutMiddleware(timeoutMs = 30_000): RequestHandl
       }
     }, timeoutMs);
 
-    // Expose the timer so long-running admin routes can clear it.
-    (response as any).__requestTimeoutTimer = timer;
+    // Store the timer in a type-safe WeakMap
+    requestTimeoutTimers.set(response, timer);
 
     // Clear timeout when response finishes
     response.on('close', () => clearTimeout(timer));
@@ -39,9 +42,10 @@ export function createRequestTimeoutMiddleware(timeoutMs = 30_000): RequestHandl
  */
 export function disableRequestTimeout(): RequestHandler {
   return (_request, response, next) => {
-    const timer = (response as any).__requestTimeoutTimer;
+    const timer = requestTimeoutTimers.get(response);
     if (timer) {
       clearTimeout(timer);
+      requestTimeoutTimers.delete(response);
     }
     next();
   };

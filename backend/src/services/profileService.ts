@@ -68,14 +68,31 @@ export async function deleteProfile(profileId: string) {
   return profileStore.delete(profileId);
 }
 
-export async function listProfiles() {
+export async function listProfiles(limit = 100, startAfter?: string) {
   const collectionRef = getProfileCollection();
   if (collectionRef) {
-    const snapshot = await collectionRef.get();
+    let query = collectionRef.orderBy('__name__').limit(limit);
+
+    if (startAfter) {
+      const startAfterDoc = await collectionRef.doc(startAfter).get();
+      if (startAfterDoc.exists) {
+        query = query.startAfter(startAfterDoc);
+      }
+    }
+
+    const snapshot = await query.get();
     return snapshot.docs.map((documentSnapshot) =>
       normalizeProfile(documentSnapshot.data() as AppProfileApiDocument),
     );
   }
 
-  return Array.from(profileStore.values()).map(normalizeProfile);
+  const profiles = Array.from(profileStore.values());
+  let filtered = profiles.sort((a, b) => a.id.localeCompare(b.id));
+
+  if (startAfter) {
+    const startIndex = filtered.findIndex((p) => p.id === startAfter);
+    filtered = filtered.slice(startIndex + 1);
+  }
+
+  return filtered.slice(0, limit).map(normalizeProfile);
 }

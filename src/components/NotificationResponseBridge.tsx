@@ -96,9 +96,16 @@ export function NotificationResponseBridge({
       void processResponse(response);
     });
 
-    void Notifications.getLastNotificationResponseAsync()
-      .then((response) => processResponse(response))
-      .catch(() => undefined);
+    const initializeLastResponse = async () => {
+      try {
+        const response = await Notifications.getLastNotificationResponseAsync();
+        await processResponse(response);
+      } catch {
+        // Ignore errors
+      }
+    };
+
+    void initializeLastResponse();
 
     return () => {
       subscription.remove();

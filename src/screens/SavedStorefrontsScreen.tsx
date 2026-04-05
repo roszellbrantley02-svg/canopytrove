@@ -1,16 +1,17 @@
 import React from 'react';
-import { StyleSheet, Text, View, FlatList } from 'react-native';
+import { FlatList, Platform, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { StorefrontRouteCard } from '../components/StorefrontRouteCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { useStorefrontRouteController } from '../context/StorefrontController';
 import { useSavedSummaries } from '../hooks/useStorefrontSummaryData';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing, textStyles, motion } from '../theme/tokens';
 
-export function SavedStorefrontsScreen() {
+function SavedStorefrontsScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { savedStorefrontIds } = useStorefrontRouteController();
   const { data: savedStorefronts, isLoading } = useSavedSummaries(savedStorefrontIds);
@@ -55,6 +56,12 @@ export function SavedStorefrontsScreen() {
             <Text style={styles.emptyBody}>Save storefronts while browsing to see them here.</Text>
           </View>
         </MotionInView>
+      ) : Platform.OS === 'web' ? (
+        <View style={styles.list}>
+          {savedStorefronts.map((item, index) => (
+            <React.Fragment key={item.id}>{renderStorefrontCard({ item, index })}</React.Fragment>
+          ))}
+        </View>
       ) : (
         <FlatList
           data={savedStorefronts}
@@ -71,6 +78,11 @@ export function SavedStorefrontsScreen() {
     </ScreenShell>
   );
 }
+
+export const SavedStorefrontsScreen = withScreenErrorBoundary(
+  SavedStorefrontsScreenInner,
+  'saved-storefronts-screen',
+);
 
 const styles = StyleSheet.create({
   list: {

@@ -5,6 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import {
   useGamificationLeaderboard,
   useGamificationLeaderboardRank,
@@ -27,7 +28,7 @@ type LeaderboardRoute = RouteProp<RootStackParamList, 'Leaderboard'>;
 
 const PAGE_SIZE = 20;
 
-export function LeaderboardScreen() {
+function LeaderboardScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<LeaderboardRoute>();
   const { highlightProfileId } = route.params ?? {};
@@ -114,3 +115,8 @@ export function LeaderboardScreen() {
     </ScreenShell>
   );
 }
+
+export const LeaderboardScreen = withScreenErrorBoundary(
+  LeaderboardScreenInner,
+  'leaderboard-screen',
+);

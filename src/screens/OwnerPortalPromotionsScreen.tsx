@@ -1,3 +1,4 @@
+import { colors } from '../theme/tokens';
 import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
@@ -375,7 +376,7 @@ function OwnerPortalPromotionsScreenInner() {
                   value={title}
                   onChangeText={setTitle}
                   placeholder={Platform.OS === 'android' ? 'Update title' : 'Promotion title'}
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -391,7 +392,7 @@ function OwnerPortalPromotionsScreenInner() {
                   value={description}
                   onChangeText={setDescription}
                   placeholder="What should customers see on the card?"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   multiline={true}
                   style={[styles.inputPremium, styles.textAreaPremium]}
                 />
@@ -410,7 +411,7 @@ function OwnerPortalPromotionsScreenInner() {
                   value={badgesInput}
                   onChangeText={setBadgesInput}
                   placeholder="Badges, comma separated"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>
@@ -445,7 +446,7 @@ function OwnerPortalPromotionsScreenInner() {
                   value={startsAt}
                   onChangeText={setStartsAt}
                   placeholder="Starts at"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
                 <TextInput
@@ -456,7 +457,7 @@ function OwnerPortalPromotionsScreenInner() {
                   value={endsAt}
                   onChangeText={setEndsAt}
                   placeholder="Ends at"
-                  placeholderTextColor="#738680"
+                  placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
                 />
               </View>

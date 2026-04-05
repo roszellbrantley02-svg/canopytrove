@@ -67,10 +67,19 @@ export async function deleteGamificationState(profileId: string) {
   return gamificationStateStore.delete(profileId);
 }
 
-export async function listGamificationStates() {
+export async function listGamificationStates(limit = 100, startAfter?: string) {
   const collectionRef = getGamificationStateCollection();
   if (collectionRef) {
-    const snapshot = await collectionRef.get();
+    let query = collectionRef.orderBy('__name__').limit(limit);
+
+    if (startAfter) {
+      const startAfterDoc = await collectionRef.doc(startAfter).get();
+      if (startAfterDoc.exists) {
+        query = query.startAfter(startAfterDoc);
+      }
+    }
+
+    const snapshot = await query.get();
     return snapshot.docs.map((documentSnapshot) =>
       normalizeGamificationStateDocument(
         documentSnapshot.id,
@@ -79,7 +88,15 @@ export async function listGamificationStates() {
     );
   }
 
-  return Array.from(gamificationStateStore.values()).map((state) =>
-    normalizeGamificationStateDocument(state.profileId, state),
-  );
+  const states = Array.from(gamificationStateStore.values());
+  let filtered = states.sort((a, b) => a.profileId.localeCompare(b.profileId));
+
+  if (startAfter) {
+    const startIndex = filtered.findIndex((s) => s.profileId === startAfter);
+    filtered = filtered.slice(startIndex + 1);
+  }
+
+  return filtered
+    .slice(0, limit)
+    .map((state) => normalizeGamificationStateDocument(state.profileId, state));
 }

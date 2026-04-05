@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, FlatList } from 'react-native';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { useStorefrontRewardsController } from '../context/StorefrontController';
 import { useProfileDerivedState } from './profile/useProfileDerivedState';
 import { useStorefrontProfileController } from '../context/StorefrontController';
@@ -9,7 +10,7 @@ import type { AppUiIconName } from '../icons/AppUiIcon';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { colors, spacing, textStyles, motion, radii } from '../theme/tokens';
 
-export function BadgeGalleryScreen() {
+function BadgeGalleryScreenInner() {
   const { badgeDefinitions, gamificationState, levelTitle } = useStorefrontRewardsController();
   const { appProfile, profileId } = useStorefrontProfileController();
 
@@ -150,6 +151,11 @@ export function BadgeGalleryScreen() {
     </ScreenShell>
   );
 }
+
+export const BadgeGalleryScreen = withScreenErrorBoundary(
+  BadgeGalleryScreenInner,
+  'badge-gallery-screen',
+);
 
 const styles = StyleSheet.create({
   container: {

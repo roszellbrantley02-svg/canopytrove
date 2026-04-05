@@ -9,6 +9,7 @@ import {
 import { StorefrontDetailApiDocument, StorefrontSummaryApiDocument } from '../types';
 import { backendStorefrontSourceStatus, backendStorefrontSource } from '../sources';
 import { getBackendFirebaseDb } from '../firebase';
+import { ROUTE_STATE_COLLECTION } from '../constants/collections';
 import {
   listStorefrontAppReviews,
   listStorefrontReports,
@@ -323,7 +324,7 @@ async function sumStorefrontFollowers(storefrontId: string) {
     return followerCount;
   }
 
-  const routeStateCollection = db.collection('route_state');
+  const routeStateCollection = db.collection(ROUTE_STATE_COLLECTION);
   const snapshot = await routeStateCollection
     .where('savedStorefrontIds', 'array-contains', storefrontId)
     .get();

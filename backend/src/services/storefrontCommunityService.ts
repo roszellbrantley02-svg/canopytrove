@@ -319,7 +319,11 @@ async function getStoredStorefrontAppReviewById(reviewId: string) {
   return null;
 }
 
-async function getStoredStorefrontAppReviewByProfile(storefrontId: string, profileId: string) {
+async function getStoredStorefrontAppReviewByProfile(
+  storefrontId: string,
+  profileId: string,
+  withinHours?: number,
+) {
   const collectionRef = getAppReviewCollection();
   if (collectionRef) {
     const snapshot = await collectionRef
@@ -331,12 +335,33 @@ async function getStoredStorefrontAppReviewByProfile(storefrontId: string, profi
       return null;
     }
 
-    return normalizeStoredReviewRecord(snapshot.docs[0].data() as StoredAppReviewRecord);
+    const review = snapshot.docs[0].data() as StoredAppReviewRecord;
+    if (withinHours !== undefined && withinHours > 0) {
+      const reviewTime = new Date(review.createdAt).getTime();
+      const cutoffTime = Date.now() - withinHours * 60 * 60 * 1000;
+      if (reviewTime < cutoffTime) {
+        return null; // Review is older than the window
+      }
+    }
+
+    return normalizeStoredReviewRecord(review);
   }
 
   const reviews = appReviewStore.get(storefrontId) ?? [];
   const review = reviews.find((candidate) => candidate.profileId === profileId);
-  return review ? normalizeStoredReviewRecord(review) : null;
+  if (!review) {
+    return null;
+  }
+
+  if (withinHours !== undefined && withinHours > 0) {
+    const reviewTime = new Date(review.createdAt).getTime();
+    const cutoffTime = Date.now() - withinHours * 60 * 60 * 1000;
+    if (reviewTime < cutoffTime) {
+      return null; // Review is older than the window
+    }
+  }
+
+  return normalizeStoredReviewRecord(review);
 }
 
 export async function listStorefrontReports(storefrontId: string) {
@@ -359,13 +384,15 @@ export async function listStorefrontReports(storefrontId: string) {
 export async function submitStorefrontAppReview(
   input: StorefrontReviewSubmissionInput & { photoUploadIds?: string[] },
 ): Promise<StorefrontReviewSubmissionResult> {
-  const existingReview = await getStoredStorefrontAppReviewByProfile(
+  // Prevent duplicate reviews: check if user has a review for this storefront within the last 24 hours
+  const recentReview = await getStoredStorefrontAppReviewByProfile(
     input.storefrontId,
     input.profileId,
+    24, // Check within last 24 hours
   );
-  if (existingReview) {
+  if (recentReview) {
     throw new StorefrontCommunityError(
-      'You already reviewed this storefront. Edit your existing review instead of posting a second one.',
+      'You already reviewed this storefront recently. Edit your existing review or wait before submitting a new one.',
       409,
     );
   }
