@@ -82,6 +82,7 @@ function SettingsRow({
     return (
       <HapticPressable
         hapticType="selection"
+        enableScale={false}
         onPress={onPress}
         disabled={isLoading}
         style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
@@ -164,14 +165,14 @@ function SettingsScreenInner() {
               value={memberEmail || 'Not signed in'}
             />
 
-            {isAuthenticated ? (
-              <SettingsRow
-                icon="log-out-outline"
-                title="Sign out"
-                onPress={handleSignOut}
-                isDanger
-              />
-            ) : null}
+            <SettingsRow
+              icon={isAuthenticated ? 'log-out-outline' : 'log-in-outline'}
+              title={isAuthenticated ? 'Sign out' : 'Sign in'}
+              onPress={
+                isAuthenticated ? handleSignOut : () => navigation.navigate('CanopyTroveSignIn')
+              }
+              isDanger={isAuthenticated}
+            />
           </View>
         </View>
       </MotionInView>
