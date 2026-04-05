@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+    <!-- Primary Meta Tags -->
+    <title>Canopy Trove — Licensed Dispensary Discovery</title>
+    <meta name="title" content="Canopy Trove — Licensed Dispensary Discovery" />
+    <meta name="description" content="Discover licensed dispensaries, hot deals, and real reviews near you. Verified storefronts only." />
+    <meta name="theme-color" content="#121614" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Canopy Trove" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://app.canopytrove.com/" />
+    <meta property="og:title" content="Canopy Trove — Licensed Dispensary Discovery" />
+    <meta property="og:description" content="Discover licensed dispensaries, hot deals, and real reviews near you. Verified storefronts only." />
+    <meta property="og:image" content="https://app.canopytrove.com/og-image.png" />
+    <meta property="og:site_name" content="Canopy Trove" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://app.canopytrove.com/" />
+    <meta property="twitter:title" content="Canopy Trove — Licensed Dispensary Discovery" />
+    <meta property="twitter:description" content="Discover licensed dispensaries, hot deals, and real reviews near you. Verified storefronts only." />
+    <meta property="twitter:image" content="https://app.canopytrove.com/og-image.png" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Expo recommended reset -->
+    <style id="expo-reset">
+      html, body { height: 100%; margin: 0; padding: 0; }
+      body { overflow: hidden; background-color: #121614; }
+      #root { display: flex; height: 100%; flex: 1; }
+    </style>
+
+    <!-- Loading screen styles -->
+    <style id="splash-screen">
+      #ct-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #0a100d 0%, #121614 50%, #151d19 100%);
+        transition: opacity 0.4s ease-out;
+      }
+      #ct-splash.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #ct-splash-logo {
+        width: 72px;
+        height: 72px;
+        border-radius: 20px;
+        background: rgba(0, 245, 140, 0.08);
+        border: 1.5px solid rgba(143, 255, 209, 0.22);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+        animation: ct-pulse 2s ease-in-out infinite;
+      }
+      #ct-splash-logo svg {
+        width: 36px;
+        height: 36px;
+      }
+      #ct-splash-name {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: rgba(255, 251, 247, 0.5);
+        margin-bottom: 32px;
+      }
+      #ct-splash-bar-track {
+        width: 120px;
+        height: 3px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+      }
+      #ct-splash-bar-fill {
+        width: 0%;
+        height: 100%;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #2ECC71, #E8A000);
+        animation: ct-load 3s ease-out forwards;
+      }
+      @keyframes ct-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.04); opacity: 0.85; }
+      }
+      @keyframes ct-load {
+        0% { width: 0%; }
+        30% { width: 40%; }
+        60% { width: 70%; }
+        90% { width: 85%; }
+        100% { width: 95%; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Splash screen shown while JS bundle loads -->
+    <div id="ct-splash">
+      <div id="ct-splash-logo">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#2ECC71"/>
+        </svg>
+      </div>
+      <div id="ct-splash-name">Canopy Trove</div>
+      <div id="ct-splash-bar-track">
+        <div id="ct-splash-bar-fill"></div>
+      </div>
+    </div>
+
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+
+    <script>
+      // Hide splash once React mounts
+      const observer = new MutationObserver(() => {
+        const root = document.getElementById('root');
+        if (root && root.children.length > 0) {
+          const splash = document.getElementById('ct-splash');
+          if (splash) {
+            splash.classList.add('hidden');
+            setTimeout(() => splash.remove(), 500);
+          }
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.getElementById('root'), { childList: true });
+    </script>
+  </body>
+</html>

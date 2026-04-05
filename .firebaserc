@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "canopy-trove"
+  },
+  "targets": {
+    "canopy-trove": {
+      "hosting": {
+        "legal": ["canopy-trove"],
+        "webapp": ["canopytrove-webapp"]
+      }
+    }
   }
 }
