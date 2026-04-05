@@ -22,35 +22,35 @@ service firebase.storage {
     }
 
     function storefrontDoc(dispensaryId) {
-      return firestore.get(/databases/canopytrove/documents/dispensaries/$(dispensaryId));
+      return firestore.get(/databases/(default)/documents/dispensaries/$(dispensaryId));
     }
 
     function businessVerificationDoc(ownerUid) {
-      return firestore.get(/databases/canopytrove/documents/businessVerifications/$(ownerUid));
+      return firestore.get(/databases/(default)/documents/businessVerifications/$(ownerUid));
     }
 
     function identityVerificationDoc(ownerUid) {
-      return firestore.get(/databases/canopytrove/documents/identityVerifications/$(ownerUid));
+      return firestore.get(/databases/(default)/documents/identityVerifications/$(ownerUid));
     }
 
     function subscriptionDoc(ownerUid) {
-      return firestore.get(/databases/canopytrove/documents/subscriptions/$(ownerUid));
+      return firestore.get(/databases/(default)/documents/subscriptions/$(ownerUid));
     }
 
     function ownsDispensary(dispensaryId, ownerUid) {
-      return firestore.exists(/databases/canopytrove/documents/dispensaries/$(dispensaryId)) &&
+      return firestore.exists(/databases/(default)/documents/dispensaries/$(dispensaryId)) &&
         storefrontDoc(dispensaryId).data.ownerUid == ownerUid;
     }
 
     function ownerVerified(ownerUid) {
-      return firestore.exists(/databases/canopytrove/documents/businessVerifications/$(ownerUid)) &&
-        firestore.exists(/databases/canopytrove/documents/identityVerifications/$(ownerUid)) &&
+      return firestore.exists(/databases/(default)/documents/businessVerifications/$(ownerUid)) &&
+        firestore.exists(/databases/(default)/documents/identityVerifications/$(ownerUid)) &&
         businessVerificationDoc(ownerUid).data.verificationStatus in ['verified', 'approved'] &&
         identityVerificationDoc(ownerUid).data.verificationStatus in ['verified', 'approved'];
     }
 
     function ownerSubscribed(ownerUid, dispensaryId) {
-      return firestore.exists(/databases/canopytrove/documents/subscriptions/$(ownerUid)) &&
+      return firestore.exists(/databases/(default)/documents/subscriptions/$(ownerUid)) &&
         subscriptionDoc(ownerUid).data.status in ['trial', 'active'] &&
         subscriptionDoc(ownerUid).data.dispensaryId == dispensaryId;
     }

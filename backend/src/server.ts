@@ -54,7 +54,8 @@ process.on('uncaughtException', (error) => {
     stack: error.stack,
   });
   // Give a brief window for async reporters, then hard exit
-  setTimeout(() => process.exit(1), 2_000).unref();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DOM lib types setTimeout as number; Node returns Timeout
+  (setTimeout(() => process.exit(1), 2_000) as any).unref?.();
 });
 
 function stopBackgroundSchedulers(options: {
@@ -89,11 +90,13 @@ function registerShutdownHandlers(server: Server, cleanup: () => void) {
       logger.info('Server closed');
     });
 
-    const timeout = setTimeout(() => {
-      logger.error('Graceful shutdown timeout exceeded, forcing exit');
-      process.exit(1);
-    }, 9_000);
-    timeout.unref();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DOM lib types setTimeout as number; Node returns Timeout
+    (
+      setTimeout(() => {
+        logger.error('Graceful shutdown timeout exceeded, forcing exit');
+        process.exit(1);
+      }, 9_000) as any
+    ).unref?.();
   };
 
   process.once('SIGINT', shutdown);
@@ -201,6 +204,7 @@ void (async () => {
     // Give async reporters (Sentry flush) a brief window, then exit definitively so
     // Cloud Run sees a non-zero exit code and restarts the container.
     process.exitCode = 1;
-    setTimeout(() => process.exit(1), 2_000).unref();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DOM lib types setTimeout as number; Node returns Timeout
+    (setTimeout(() => process.exit(1), 2_000) as any).unref?.();
   }
 })();

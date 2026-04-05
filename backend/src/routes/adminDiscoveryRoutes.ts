@@ -1,4 +1,5 @@
-import { Router, type Response } from 'express';
+import { Router } from 'express';
+import { disableRequestTimeout } from '../http/requestTimeout';
 import {
   getStorefrontDiscoveryCandidates,
   getStorefrontDiscoveryRunById,
@@ -97,17 +98,12 @@ adminDiscoveryRoutes.get('/runs/:runId', async (request, response) => {
  *
  * Pass ?mode=sync to wait for the full result (legacy behavior).
  */
-adminDiscoveryRoutes.post('/sweep', async (request, response) => {
+adminDiscoveryRoutes.post('/sweep', disableRequestTimeout(), async (request, response) => {
   const mode = typeof request.query.mode === 'string' ? request.query.mode : 'async';
 
   if (mode === 'sync') {
     // Legacy synchronous path — waits for the entire sweep to finish.
-    // Clear the global 30 s request timeout so the sweep can run to completion.
-    const timeoutTimer = (response as Response & { __requestTimeoutTimer?: NodeJS.Timeout })
-      .__requestTimeoutTimer;
-    if (timeoutTimer) {
-      clearTimeout(timeoutTimer);
-    }
+    // The disableRequestTimeout() middleware above already cleared the 30s timer.
     try {
       response.json(
         await runStorefrontDiscoverySweep({

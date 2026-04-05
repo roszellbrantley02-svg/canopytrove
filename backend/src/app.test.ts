@@ -369,7 +369,7 @@ test('blocks duplicate reviews from the same profile on one storefront', async (
   assert.equal(duplicateResponse.status, 409);
   assert.equal(
     duplicateResponse.json?.error,
-    'You already reviewed this storefront. Edit your existing review instead of posting a second one.',
+    'You already reviewed this storefront recently. Edit your existing review or wait before submitting a new one.',
   );
 });
 
