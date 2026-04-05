@@ -308,27 +308,31 @@ function BadgeShowcase({ badges }: { badges: Array<{ icon?: string; name?: strin
 /** Owner Claim CTA: visible banner linking to the Owner Portal */
 function OwnerClaimCard({ onPress }: { onPress: () => void }) {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Claim your dispensary"
-      accessibilityHint="Opens the owner portal to claim and manage your dispensary listing."
-      style={({ pressed }) => [
-        internalStyles.ownerCard,
-        pressed && internalStyles.ownerCardPressed,
-      ]}
-    >
+    <View style={internalStyles.ownerCard}>
       <View style={internalStyles.ownerCardIcon}>
         <AppUiIcon name="storefront-outline" size={22} color={colors.gold} />
       </View>
       <View style={internalStyles.ownerCardContent}>
         <Text style={internalStyles.ownerCardTitle}>Own a dispensary?</Text>
         <Text style={internalStyles.ownerCardBody}>
-          Claim your listing, manage reviews, and publish deals.
+          Claim your listing, manage reviews, and publish deals on Canopy Trove.
         </Text>
       </View>
-      <AppUiIcon name="chevron-forward" size={16} color={colors.textSoft} />
-    </Pressable>
+      <View style={internalStyles.ownerCardActions}>
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel="Claim your dispensary"
+          accessibilityHint="Opens the owner portal to claim and manage your dispensary listing."
+          style={({ pressed }) => [
+            internalStyles.ownerCardButton,
+            pressed && internalStyles.ownerCardButtonPressed,
+          ]}
+        >
+          <Text style={internalStyles.ownerCardButtonText}>Claim Your Dispensary</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -486,18 +490,13 @@ const internalStyles = StyleSheet.create({
     fontSize: 14,
   },
   ownerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
+    borderColor: colors.gold,
     borderRadius: radii.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
     gap: spacing.md,
-  },
-  ownerCardPressed: {
-    opacity: 0.7,
   },
   ownerCardIcon: {
     width: 40,
@@ -506,10 +505,10 @@ const internalStyles = StyleSheet.create({
     backgroundColor: 'rgba(232, 160, 0, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'flex-start',
   },
   ownerCardContent: {
-    flex: 1,
-    gap: 2,
+    gap: 4,
   },
   ownerCardTitle: {
     ...textStyles.bodyStrong,
@@ -518,5 +517,28 @@ const internalStyles = StyleSheet.create({
   ownerCardBody: {
     ...textStyles.caption,
     color: colors.textMuted,
+    lineHeight: 20,
+  },
+  ownerCardActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  ownerCardButton: {
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gold,
+  },
+  ownerCardButtonPressed: {
+    opacity: 0.7,
+  },
+  ownerCardButtonText: {
+    ...textStyles.bodyStrong,
+    color: colors.background,
+    fontSize: 14,
   },
 });
