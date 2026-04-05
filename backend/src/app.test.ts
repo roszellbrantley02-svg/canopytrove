@@ -57,6 +57,8 @@ afterEach(async () => {
   clearOwnerWelcomeEmailMemoryStateForTests();
   const { clearResendWebhookMemoryStateForTests } = await import('./services/resendWebhookService');
   clearResendWebhookMemoryStateForTests();
+  const { clearRouteStateMemoryStateForTests } = await import('./services/routeStateService');
+  clearRouteStateMemoryStateForTests();
   const { clearReviewPhotoModerationMemoryStateForTests } =
     await import('./services/reviewPhotoModerationService');
   clearReviewPhotoModerationMemoryStateForTests();
@@ -703,6 +705,10 @@ test('treats invalid bearer auth on public storefront browse routes as guest acc
 });
 
 test('hides the full active promotion stack from signed-out storefront detail payloads', async () => {
+  // Start the server FIRST so that the module instances (and their in-memory
+  // Maps) created during import are the same ones we populate below.
+  const { baseUrl } = await startTestServer();
+
   const {
     ownerStorefrontPromotionStore,
     ownerStorefrontPromotionCache,
@@ -730,7 +736,6 @@ test('hides the full active promotion stack from signed-out storefront detail pa
   ownerStorefrontPromotionCache.clear();
   storefrontDetailEnhancementCache.clear();
 
-  const { baseUrl } = await startTestServer();
   const response = await request(baseUrl, `/storefront-details/${testStorefrontId}`);
 
   assert.equal(response.status, 200);
@@ -748,6 +753,11 @@ test('hides the full active promotion stack from signed-out storefront detail pa
 
 test('publishes the full active promotion stack onto member storefront detail payloads', async () => {
   process.env.NODE_ENV = 'test';
+
+  // Start the server FIRST so that the module instances (and their in-memory
+  // Maps) created during import are the same ones we populate below.
+  const { baseUrl } = await startTestServer();
+
   const {
     ownerStorefrontPromotionStore,
     ownerStorefrontPromotionCache,
@@ -775,7 +785,6 @@ test('publishes the full active promotion stack onto member storefront detail pa
   ownerStorefrontPromotionCache.clear();
   storefrontDetailEnhancementCache.clear();
 
-  const { baseUrl } = await startTestServer();
   const response = await request(baseUrl, `/storefront-details/${testStorefrontId}`, {
     headers: {
       'x-canopy-test-account-id': 'member-1',

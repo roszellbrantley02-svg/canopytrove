@@ -104,3 +104,8 @@ export async function deleteRouteState(profileId: string) {
 
   return routeStateStore.delete(profileId);
 }
+
+/** Clear in-memory route state — test use only. */
+export function clearRouteStateMemoryStateForTests() {
+  routeStateStore.clear();
+}

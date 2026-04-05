@@ -33,16 +33,25 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Unknown owner billing failure.';
 }
 
+function parseCheckoutBody(body: unknown): { billingCycle: unknown; tier: unknown } {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return { billingCycle: undefined, tier: undefined };
+  }
+
+  const record = body as Record<string, unknown>;
+  const billingCycle = typeof record.billingCycle === 'string' ? record.billingCycle : undefined;
+  const tier = typeof record.tier === 'string' ? record.tier : undefined;
+
+  return { billingCycle, tier };
+}
+
 ownerBillingRoutes.post(
   '/owner-billing/checkout-session',
   ownerBillingSessionRateLimiter,
   async (request, response) => {
     try {
-      const body =
-        typeof request.body === 'object' && request.body
-          ? (request.body as Record<string, unknown>)
-          : {};
-      response.json(await createOwnerBillingCheckoutSession(request, body.billingCycle));
+      const { billingCycle, tier } = parseCheckoutBody(request.body);
+      response.json(await createOwnerBillingCheckoutSession(request, billingCycle, tier));
     } catch (error) {
       response.status(getErrorStatus(error)).json({
         ok: false,

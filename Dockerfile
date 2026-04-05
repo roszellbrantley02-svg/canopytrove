@@ -22,6 +22,11 @@ RUN npm --prefix backend ci --omit=dev && npm cache clean --force
 
 COPY --from=build /app/backend/dist ./backend/dist
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:8080/livez || exit 1
 
 CMD ["npm", "--prefix", "backend", "run", "start"]

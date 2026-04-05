@@ -61,6 +61,10 @@ export function SavedStorefrontsScreen() {
           renderItem={renderStorefrontCard}
           keyExtractor={(item) => item.id}
           scrollEnabled={false}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          removeClippedSubviews
           contentContainerStyle={styles.list}
         />
       )}

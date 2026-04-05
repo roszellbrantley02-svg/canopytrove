@@ -11,6 +11,7 @@ export type QuickAction = {
   iconName: AppUiIconName;
   onPress: () => void;
   badge?: number; // optional notification count
+  locked?: boolean; // tier-gated feature
 };
 
 type QuickActionsRowProps = {
@@ -29,14 +30,24 @@ export function QuickActionsRow({ actions }: QuickActionsRowProps) {
           key={action.key}
           onPress={action.onPress}
           hapticType="impact"
-          style={styles.actionButton}
+          style={[styles.actionButton, action.locked && styles.actionButtonLocked]}
           accessible
           accessibilityRole="button"
-          accessibilityLabel={action.badge ? `${action.label}, ${action.badge} new` : action.label}
+          accessibilityLabel={
+            action.locked
+              ? `${action.label}, upgrade required`
+              : action.badge
+                ? `${action.label}, ${action.badge} new`
+                : action.label
+          }
         >
-          <View style={styles.iconCircle}>
-            <AppUiIcon name={action.iconName} size={22} color={colors.accent} />
-            {action.badge != null && action.badge > 0 ? (
+          <View style={[styles.iconCircle, action.locked && styles.iconCircleLocked]}>
+            <AppUiIcon
+              name={action.locked ? 'lock-closed-outline' : action.iconName}
+              size={22}
+              color={action.locked ? colors.textMuted : colors.accent}
+            />
+            {!action.locked && action.badge != null && action.badge > 0 ? (
               <View style={styles.badgeDot}>
                 <Text style={styles.badgeText} maxFontSizeMultiplier={1}>
                   {action.badge > 9 ? '9+' : String(action.badge)}
@@ -44,7 +55,11 @@ export function QuickActionsRow({ actions }: QuickActionsRowProps) {
               </View>
             ) : null}
           </View>
-          <Text style={styles.label} maxFontSizeMultiplier={1.2} numberOfLines={1}>
+          <Text
+            style={[styles.label, action.locked && styles.labelLocked]}
+            maxFontSizeMultiplier={1.2}
+            numberOfLines={1}
+          >
             {action.label}
           </Text>
         </HapticPressable>
@@ -98,5 +113,14 @@ const styles = StyleSheet.create({
     ...textStyles.caption,
     color: colors.textMuted,
     textAlign: 'center',
+  },
+  actionButtonLocked: {
+    opacity: 0.5,
+  },
+  iconCircleLocked: {
+    borderColor: 'rgba(196, 184, 176, 0.2)',
+  },
+  labelLocked: {
+    color: colors.textMuted,
   },
 });

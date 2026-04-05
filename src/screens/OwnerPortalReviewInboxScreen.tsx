@@ -2,6 +2,7 @@ import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
@@ -33,7 +34,7 @@ function getReviewRuntimeMessage(reviewRepliesEnabled: boolean, safeModeEnabled:
   return null;
 }
 
-export function OwnerPortalReviewInboxScreen() {
+function OwnerPortalReviewInboxScreenInner() {
   const _route = useRoute<OwnerPortalReviewInboxRoute>();
   const preview = false;
   const {
@@ -512,3 +513,8 @@ export function OwnerPortalReviewInboxScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalReviewInboxScreen = withScreenErrorBoundary(
+  OwnerPortalReviewInboxScreenInner,
+  'owner-portal-reviews',
+);

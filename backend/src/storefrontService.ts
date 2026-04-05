@@ -123,6 +123,7 @@ async function enhanceSummary(
   summary: StorefrontSummaryApiDocument,
   includeMemberDeals: boolean,
   viewerContext?: ViewerContext,
+  clientPlatform?: 'android' | 'ios' | 'web',
 ) {
   const enhanced = await applyOwnerWorkspaceSummaryEnhancements(summary, viewerContext);
   const googleEnrichment = hasGooglePlacesConfig()
@@ -148,18 +149,48 @@ async function enhanceSummary(
       }
     : enhanced;
 
-  return includeMemberDeals
+  let finalResult = includeMemberDeals
     ? runtimeEnhanced
     : stripMemberOnlySummaryPromotionFields(runtimeEnhanced);
+
+  // Android filtering: strip all promotion-related fields if content isn't eligible
+  // The enhancement layer already computed promotionAndroidEligible from the stored
+  // promotion data (which includes platformVisibility), so trust that persisted state.
+  if (clientPlatform === 'android' && enhanced.promotionAndroidEligible === false) {
+    finalResult = {
+      ...finalResult,
+      promotionText: null,
+      promotionBadges: [],
+      promotionExpiresAt: null,
+      activePromotionId: null,
+      activePromotionCount: 0,
+      premiumCardVariant: finalResult.ownerFeaturedBadges?.length ? 'owner_featured' : 'standard',
+    };
+  }
+
+  return finalResult;
 }
 
 async function enhanceDetail(
   detail: StorefrontDetailApiDocument,
   includeMemberDeals: boolean,
   viewerContext?: ViewerContext,
+  clientPlatform?: 'android' | 'ios' | 'web',
 ) {
   const enhanced = await applyOwnerWorkspaceDetailEnhancements(detail, viewerContext);
-  return includeMemberDeals ? enhanced : stripMemberOnlyDetailPromotionFields(enhanced);
+  let result = includeMemberDeals ? enhanced : stripMemberOnlyDetailPromotionFields(enhanced);
+
+  // Android filtering: strip promotions that aren't eligible for Android
+  // The enhancement layer already computed androidEligible on each promotion,
+  // so trust that persisted state instead of reclassifying at read time.
+  if (clientPlatform === 'android' && result.activePromotions) {
+    result = {
+      ...result,
+      activePromotions: result.activePromotions.filter((promo) => promo.androidEligible !== false),
+    };
+  }
+
+  return result;
 }
 
 export async function getStorefrontSummaries(
@@ -176,10 +207,12 @@ export async function getStorefrontSummaries(
   options?: {
     includeMemberDeals?: boolean;
     viewerContext?: ViewerContext;
+    clientPlatform?: 'android' | 'ios' | 'web';
   },
 ) {
   const includeMemberDeals = options?.includeMemberDeals === true;
   const viewerContext = options?.viewerContext;
+  const clientPlatform = options?.clientPlatform;
   const prioritySurface = includeMemberDeals ? query.prioritySurface : undefined;
   const baseQuery = {
     areaId: query.areaId,
@@ -202,7 +235,9 @@ export async function getStorefrontSummaries(
           backendStorefrontSource.getSummaryPage(fullQuery),
         );
         const enhancedResults = await Promise.allSettled(
-          fullPayload.items.map((item) => enhanceSummary(item, includeMemberDeals, viewerContext)),
+          fullPayload.items.map((item) =>
+            enhanceSummary(item, includeMemberDeals, viewerContext, clientPlatform),
+          ),
         );
         const enhancedItems = enhancedResults
           .filter(
@@ -226,7 +261,7 @@ export async function getStorefrontSummaries(
           items: (
             await Promise.allSettled(
               basePayload.items.map((item) =>
-                enhanceSummary(item, includeMemberDeals, viewerContext),
+                enhanceSummary(item, includeMemberDeals, viewerContext, clientPlatform),
               ),
             )
           )
@@ -256,15 +291,17 @@ export async function getStorefrontSummariesByIds(
   options?: {
     includeMemberDeals?: boolean;
     viewerContext?: ViewerContext;
+    clientPlatform?: 'android' | 'ios' | 'web';
   },
 ) {
   const includeMemberDeals = options?.includeMemberDeals === true;
   const viewerContext = options?.viewerContext;
+  const clientPlatform = options?.clientPlatform;
   const cached = await getCachedStorefrontSummariesByIds(ids, () =>
     backendStorefrontSource.getSummariesByIds(ids),
   );
   const enhancedResults = await Promise.allSettled(
-    cached.map((item) => enhanceSummary(item, includeMemberDeals, viewerContext)),
+    cached.map((item) => enhanceSummary(item, includeMemberDeals, viewerContext, clientPlatform)),
   );
   return enhancedResults
     .filter(
@@ -279,10 +316,12 @@ export async function getStorefrontDetail(
   options?: {
     includeMemberDeals?: boolean;
     viewerContext?: ViewerContext;
+    clientPlatform?: 'android' | 'ios' | 'web';
   },
 ) {
   const includeMemberDeals = options?.includeMemberDeals === true;
   const viewerContext = options?.viewerContext;
+  const clientPlatform = options?.clientPlatform;
   const summary = await backendStorefrontSource
     .getSummariesByIds([storefrontId])
     .then((items) => items[0] ?? null);
@@ -365,7 +404,7 @@ export async function getStorefrontDetail(
     };
 
     return withTimeoutFallback(
-      enhanceDetail(detail, includeMemberDeals, viewerContext),
+      enhanceDetail(detail, includeMemberDeals, viewerContext, clientPlatform),
       includeMemberDeals ? detail : stripMemberOnlyDetailPromotionFields(detail),
       DETAIL_ENHANCEMENT_TIMEOUT_MS,
     );
@@ -373,6 +412,13 @@ export async function getStorefrontDetail(
 
   if (summary && hasGooglePlacesConfig() && !shouldAwaitGoogleEnrichment) {
     return loadDetail('background');
+  }
+
+  // Viewer-specific results (member requests) include audience-filtered
+  // promotions, so they must not be served from or stored in the shared
+  // storefront-level detail cache.  Only anonymous requests are cacheable.
+  if (viewerContext) {
+    return loadDetail(shouldAwaitGoogleEnrichment ? 'await' : 'background');
   }
 
   return getCachedStorefrontDetail(

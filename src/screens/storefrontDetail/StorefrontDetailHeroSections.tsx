@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { LocationPinIcon } from '../../icons/AppIcons';
 import type { AppUiIconName } from '../../icons/AppUiIcon';
 import { AppUiIcon } from '../../icons/AppUiIcon';
@@ -295,13 +295,21 @@ export function DetailPrimaryActions({
       {hasMenu ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Open storefront menu"
-          accessibilityHint="Opens the menu link for this storefront."
+          accessibilityLabel={
+            Platform.OS === 'android' ? 'Open storefront website' : 'Open storefront menu'
+          }
+          accessibilityHint={
+            Platform.OS === 'android'
+              ? 'Opens the website link for this storefront.'
+              : 'Opens the menu link for this storefront.'
+          }
           onPress={onOpenMenu}
           style={styles.primaryButton}
         >
           <AppUiIcon name="restaurant-outline" size={16} color={colors.backgroundDeep} />
-          <Text style={styles.primaryButtonText}>Menu</Text>
+          <Text style={styles.primaryButtonText}>
+            {Platform.OS === 'android' ? 'Website' : 'Menu'}
+          </Text>
         </Pressable>
       ) : null}
       {hasWebsite ? (

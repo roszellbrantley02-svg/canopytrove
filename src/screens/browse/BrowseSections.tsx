@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, Text, View, useWindowDimensions } from 'react-native';
+import React, { useCallback } from 'react';
+import { FlatList, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { MotionInView } from '../../components/MotionInView';
 import { StorefrontRouteCard } from '../../components/StorefrontRouteCard';
@@ -219,43 +219,59 @@ export function BrowseStoreList({
   total: number;
   onLoadMore: () => void;
 }) {
-  return (
-    <View style={styles.list}>
-      {items.map((item, index) => (
-        <MotionInView key={item.id} delay={180 + index * 65}>
-          <StorefrontRouteCard
-            storefront={item}
-            variant="feature"
-            primaryActionLabel="Directions"
-            secondaryActionLabel="Details"
-            isSaved={isSavedStorefront(item.id)}
-            isVisited={visitedStorefrontIds.includes(item.id)}
-            showPromotionText={Boolean(item.promotionText?.trim())}
-            onPressIn={() => onPrepareStorefront(item.id)}
-            onPrimaryActionPressIn={() => onPrepareStorefront(item.id)}
-            onSecondaryActionPressIn={() => onPrepareStorefront(item.id)}
-            onPress={() => onOpenStorefront(item)}
-            onPrimaryActionPress={() => onGoNow(item)}
-            onSecondaryActionPress={() => onOpenStorefront(item)}
-          />
-        </MotionInView>
-      ))}
+  const renderItem = useCallback(
+    ({ item, index }: { item: StorefrontSummary; index: number }) => (
+      <MotionInView key={item.id} delay={Math.min(index, 8) * 65}>
+        <StorefrontRouteCard
+          storefront={item}
+          variant="feature"
+          primaryActionLabel="Directions"
+          secondaryActionLabel="Details"
+          isSaved={isSavedStorefront(item.id)}
+          isVisited={visitedStorefrontIds.includes(item.id)}
+          showPromotionText={Boolean(item.promotionText?.trim())}
+          onPressIn={() => onPrepareStorefront(item.id)}
+          onPrimaryActionPressIn={() => onPrepareStorefront(item.id)}
+          onSecondaryActionPressIn={() => onPrepareStorefront(item.id)}
+          onPress={() => onOpenStorefront(item)}
+          onPrimaryActionPress={() => onGoNow(item)}
+          onSecondaryActionPress={() => onOpenStorefront(item)}
+        />
+      </MotionInView>
+    ),
+    [isSavedStorefront, visitedStorefrontIds, onPrepareStorefront, onOpenStorefront, onGoNow],
+  );
 
-      {hasMore ? (
-        <MotionInView delay={220 + items.length * 20}>
-          <Pressable
-            disabled={isLoading}
-            onPress={onLoadMore}
-            style={[styles.loadMoreButton, isLoading && styles.loadMoreButtonDisabled]}
-          >
-            <Text style={styles.loadMoreButtonText}>
-              {isLoading
-                ? `Loading More Storefronts (${items.length} of ${total})`
-                : `Load More Storefronts (${items.length} of ${total})`}
-            </Text>
-          </Pressable>
-        </MotionInView>
-      ) : null}
-    </View>
+  const keyExtractor = useCallback((item: StorefrontSummary) => item.id, []);
+
+  const listFooter = hasMore ? (
+    <MotionInView delay={220 + Math.min(items.length, 8) * 20}>
+      <Pressable
+        disabled={isLoading}
+        onPress={onLoadMore}
+        style={[styles.loadMoreButton, isLoading && styles.loadMoreButtonDisabled]}
+      >
+        <Text style={styles.loadMoreButtonText}>
+          {isLoading
+            ? `Loading More Storefronts (${items.length} of ${total})`
+            : `Load More Storefronts (${items.length} of ${total})`}
+        </Text>
+      </Pressable>
+    </MotionInView>
+  ) : null;
+
+  return (
+    <FlatList
+      data={items}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      scrollEnabled={false}
+      initialNumToRender={8}
+      maxToRenderPerBatch={6}
+      windowSize={5}
+      removeClippedSubviews
+      contentContainerStyle={styles.list}
+      ListFooterComponent={listFooter}
+    />
   );
 }

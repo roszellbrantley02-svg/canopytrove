@@ -13,6 +13,7 @@ import {
 import { resolveOwnerLaunchTrialOffer } from './launchProgramService';
 
 type OwnerBillingCycle = 'monthly' | 'annual';
+type OwnerSubscriptionTier = 'verified' | 'growth' | 'pro';
 type OwnerSubscriptionStatus =
   | 'inactive'
   | 'trial'
@@ -35,6 +36,7 @@ type OwnerSubscriptionRecord = {
   externalCustomerId?: string | null;
   externalSubscriptionId: string | null;
   planId: string;
+  tier: OwnerSubscriptionTier;
   status: OwnerSubscriptionStatus;
   billingCycle: OwnerBillingCycle;
   currentPeriodStart: string;
@@ -102,6 +104,83 @@ const OWNER_PROFILES_COLLECTION = 'ownerProfiles';
 const SUBSCRIPTIONS_COLLECTION = 'subscriptions';
 const STRIPE_API_BASE_URL = 'https://api.stripe.com/v1';
 const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
+
+function getStripeTierPriceId(
+  tier: OwnerSubscriptionTier,
+  cycle: OwnerBillingCycle,
+): string | null {
+  const {
+    stripeVerifiedMonthlyPriceId,
+    stripeVerifiedAnnualPriceId,
+    stripeGrowthMonthlyPriceId,
+    stripeGrowthAnnualPriceId,
+    stripeProMonthlyPriceId,
+    stripeProAnnualPriceId,
+    stripeOwnerMonthlyPriceId,
+    stripeOwnerAnnualPriceId,
+  } = serverConfig;
+
+  const tierPriceMap: Record<
+    OwnerSubscriptionTier,
+    { monthly: string | null; annual: string | null }
+  > = {
+    verified: {
+      monthly: stripeVerifiedMonthlyPriceId ?? stripeOwnerMonthlyPriceId,
+      annual: stripeVerifiedAnnualPriceId ?? stripeOwnerAnnualPriceId,
+    },
+    growth: {
+      monthly: stripeGrowthMonthlyPriceId,
+      annual: stripeGrowthAnnualPriceId,
+    },
+    pro: {
+      monthly: stripeProMonthlyPriceId,
+      annual: stripeProAnnualPriceId,
+    },
+  };
+
+  return tierPriceMap[tier]?.[cycle] ?? null;
+}
+
+function resolveTierFromPriceId(priceId: string): OwnerSubscriptionTier {
+  const {
+    stripeVerifiedMonthlyPriceId,
+    stripeVerifiedAnnualPriceId,
+    stripeGrowthMonthlyPriceId,
+    stripeGrowthAnnualPriceId,
+    stripeProMonthlyPriceId,
+    stripeProAnnualPriceId,
+    stripeOwnerMonthlyPriceId,
+    stripeOwnerAnnualPriceId,
+  } = serverConfig;
+
+  if (priceId === stripeProMonthlyPriceId || priceId === stripeProAnnualPriceId) {
+    return 'pro';
+  }
+
+  if (priceId === stripeGrowthMonthlyPriceId || priceId === stripeGrowthAnnualPriceId) {
+    return 'growth';
+  }
+
+  if (
+    priceId === stripeVerifiedMonthlyPriceId ||
+    priceId === stripeVerifiedAnnualPriceId ||
+    priceId === stripeOwnerMonthlyPriceId ||
+    priceId === stripeOwnerAnnualPriceId
+  ) {
+    return 'verified';
+  }
+
+  // Default: legacy subscriptions without tier-specific price IDs
+  return 'verified';
+}
+
+function parseOwnerSubscriptionTier(value: unknown): OwnerSubscriptionTier {
+  if (value === 'verified' || value === 'growth' || value === 'pro') {
+    return value;
+  }
+
+  return 'verified';
+}
 
 export class OwnerBillingError extends Error {
   constructor(
@@ -416,6 +495,11 @@ async function persistStripeSubscriptionUpdate(subscription: StripeSubscription)
     );
   }
 
+  const resolvedPlanId = getStripePlanId(subscription);
+  const resolvedTier = subscription.metadata?.tier
+    ? parseOwnerSubscriptionTier(subscription.metadata.tier)
+    : resolveTierFromPriceId(resolvedPlanId);
+
   const nextSubscription: OwnerSubscriptionRecord = {
     ownerUid,
     dispensaryId,
@@ -425,7 +509,8 @@ async function persistStripeSubscriptionUpdate(subscription: StripeSubscription)
         ? subscription.customer
         : (existingSubscription?.externalCustomerId ?? null),
     externalSubscriptionId: subscription.id,
-    planId: getStripePlanId(subscription),
+    planId: resolvedPlanId,
+    tier: resolvedTier,
     status: subscriptionStatus,
     billingCycle,
     currentPeriodStart: toIsoFromUnixSeconds(
@@ -601,8 +686,13 @@ async function handleInvoicePaymentFailed(stripeSecretKey: string, invoice: Stri
   return persistStripeSubscriptionUpdate(subscription);
 }
 
-export async function createOwnerBillingCheckoutSession(request: Request, cycleInput: unknown) {
+export async function createOwnerBillingCheckoutSession(
+  request: Request,
+  cycleInput: unknown,
+  tierInput?: unknown,
+) {
   const cycle = parseOwnerBillingCycle(cycleInput);
+  const tier = parseOwnerSubscriptionTier(tierInput);
   const {
     stripeSecretKey,
     stripeOwnerAnnualPriceId,
@@ -626,7 +716,17 @@ export async function createOwnerBillingCheckoutSession(request: Request, cycleI
   });
 
   const currentSubscription = await getOwnerSubscription(ownerUid);
-  const priceId = cycle === 'annual' ? stripeOwnerAnnualPriceId : stripeOwnerMonthlyPriceId;
+  const tierPriceId = getStripeTierPriceId(tier, cycle);
+  const priceId =
+    tierPriceId ?? (cycle === 'annual' ? stripeOwnerAnnualPriceId : stripeOwnerMonthlyPriceId);
+
+  if (!priceId) {
+    throw new OwnerBillingError(
+      `No Stripe price is configured for the ${tier} tier (${cycle}). Contact support.`,
+      503,
+    );
+  }
+
   const now = createNow();
   const launchTrialOffer = await resolveOwnerLaunchTrialOffer({
     ownerUid,
@@ -646,8 +746,10 @@ export async function createOwnerBillingCheckoutSession(request: Request, cycleI
   params.set('billing_address_collection', 'required');
   params.set('metadata[ownerUid]', ownerUid);
   params.set('metadata[dispensaryId]', storefrontId ?? '');
+  params.set('metadata[tier]', tier);
   params.set('subscription_data[metadata][ownerUid]', ownerUid);
   params.set('subscription_data[metadata][dispensaryId]', storefrontId ?? '');
+  params.set('subscription_data[metadata][tier]', tier);
   if (launchTrialOffer.trialDays > 0) {
     params.set('subscription_data[trial_period_days]', String(launchTrialOffer.trialDays));
     params.set('metadata[launchTrialDays]', String(launchTrialOffer.trialDays));
@@ -679,6 +781,7 @@ export async function createOwnerBillingCheckoutSession(request: Request, cycleI
         ownerUid,
         dispensaryId: storefrontId,
         provider: 'stripe',
+        tier,
         externalCustomerId:
           (typeof session.customer === 'string' ? session.customer : null) ??
           currentSubscription?.externalCustomerId ??

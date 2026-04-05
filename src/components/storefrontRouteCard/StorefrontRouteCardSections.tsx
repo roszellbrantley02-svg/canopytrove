@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { MapGridPreview } from '../MapGridPreview';
 import type { PreviewStatusTone } from '../mapGridPreview/mapGridPreviewTones';
 import { LocationPinIcon } from '../../icons/AppIcons';
@@ -118,6 +118,7 @@ export function StorefrontRouteCardBody({
   const activePromotionCount =
     storefront.activePromotionCount ?? (promotionBadges.length || promotionText ? 1 : 0);
   const hasLiveDeals = activePromotionCount > 0;
+  const isAndroid = Platform.OS === 'android';
   const ownerFeaturedBadges = (storefront.ownerFeaturedBadges ?? []).slice(0, 4);
   const heatLevel = routeStartsToHeatLevel(storefront.routeStartsPerHour ?? 0);
   const heatLabel = getHeatLabel(heatLevel);
@@ -306,8 +307,12 @@ export function StorefrontRouteCardBody({
             <AppUiIcon name="lock-closed-outline" size={14} color={colors.text} />
             <Text numberOfLines={2} style={styles.promotionTeaserText}>
               {activePromotionCount > 1
-                ? `Members unlock ${activePromotionCount} live specials`
-                : 'Members unlock this live special'}
+                ? isAndroid
+                  ? `Members unlock ${activePromotionCount} recent updates`
+                  : `Members unlock ${activePromotionCount} live specials`
+                : isAndroid
+                  ? 'Members unlock this recent update'
+                  : 'Members unlock this live special'}
             </Text>
           </View>
         ) : null}

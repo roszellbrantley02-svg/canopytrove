@@ -2,6 +2,7 @@ import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { InlineFeedbackPanel } from '../components/InlineFeedbackPanel';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
@@ -166,7 +167,7 @@ function TimePicker({
   );
 }
 
-export function OwnerPortalHoursScreen() {
+function OwnerPortalHoursScreenInner() {
   const _route = useRoute<OwnerPortalHoursRoute>();
   const preview = false;
   const { workspace, isLoading, isSaving, errorText, saveProfileTools } =
@@ -263,6 +264,11 @@ export function OwnerPortalHoursScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalHoursScreen = withScreenErrorBoundary(
+  OwnerPortalHoursScreenInner,
+  'owner-portal-hours',
+);
 
 const hourStyles = StyleSheet.create({
   dayList: {

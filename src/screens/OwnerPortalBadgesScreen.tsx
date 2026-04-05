@@ -2,6 +2,7 @@ import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import { Pressable, Text, View } from 'react-native';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { InlineFeedbackPanel } from '../components/InlineFeedbackPanel';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
@@ -21,14 +22,17 @@ import type { GamificationBadgeDefinition } from '../types/storefront';
 import type { AppUiIconName } from '../icons/AppUiIcon';
 import { colors, spacing, textStyles } from '../theme/tokens';
 import { StyleSheet } from 'react-native';
+import { getOwnerTierDefinition } from '../types/ownerTiers';
 
 type OwnerPortalBadgesRoute = RouteProp<RootStackParamList, 'OwnerPortalBadges'>;
 
-export function OwnerPortalBadgesScreen() {
+function OwnerPortalBadgesScreenInner() {
   const _route = useRoute<OwnerPortalBadgesRoute>();
   const preview = false;
   const { workspace, isLoading, isSaving, errorText, saveProfileTools } =
     useOwnerPortalWorkspace(preview);
+  const tierDef = getOwnerTierDefinition(workspace?.tier);
+  const canCustomizeBadges = tierDef.badgeCustomizationEnabled;
 
   const ownerProfile = workspace?.ownerProfile ?? null;
   const earnedBadgeIds = React.useMemo(
@@ -135,13 +139,25 @@ export function OwnerPortalBadgesScreen() {
         />
       ) : null}
 
-      {/* Earned badges — toggleable */}
+      {/* Earned badges — toggleable (Growth+ only) */}
       <MotionInView delay={140}>
         <SectionCard
           title="Your earned badges"
-          body="Tap to toggle display on your storefront card."
+          body={
+            canCustomizeBadges
+              ? 'Tap to toggle display on your storefront card.'
+              : 'Upgrade to customize badge display.'
+          }
         >
-          {earnedBadges.length === 0 ? (
+          {!canCustomizeBadges ? (
+            <View style={badgeStyles.tierLockedState}>
+              <AppUiIcon name="lock-closed-outline" size={28} color={colors.textMuted} />
+              <Text style={badgeStyles.tierLockedText}>
+                Badge customization is available on the Growth plan or higher. Upgrade to choose
+                which badges display on your storefront.
+              </Text>
+            </View>
+          ) : earnedBadges.length === 0 ? (
             <View style={badgeStyles.emptyState}>
               <AppUiIcon name="ribbon-outline" size={28} color={colors.textMuted} />
               <Text style={badgeStyles.emptyText}>
@@ -197,11 +213,12 @@ export function OwnerPortalBadgesScreen() {
             accessibilityRole="button"
             accessibilityLabel="Save badge display settings"
             accessibilityHint="Updates which badges appear on your storefront card."
-            disabled={preview || isSaving || !hasUnsavedChanges}
+            disabled={preview || isSaving || !hasUnsavedChanges || !canCustomizeBadges}
             onPress={handleSave}
             style={[
               styles.primaryButton,
-              (preview || isSaving || !hasUnsavedChanges) && styles.buttonDisabled,
+              (preview || isSaving || !hasUnsavedChanges || !canCustomizeBadges) &&
+                styles.buttonDisabled,
             ]}
           >
             <Text style={styles.primaryButtonText}>
@@ -219,6 +236,11 @@ export function OwnerPortalBadgesScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalBadgesScreen = withScreenErrorBoundary(
+  OwnerPortalBadgesScreenInner,
+  'owner-portal-badges',
+);
 
 // ---------------------------------------------------------------------------
 // Badge toggle row component
@@ -430,6 +452,18 @@ const badgeStyles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     gap: spacing.md,
+  },
+  tierLockedState: {
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  tierLockedText: {
+    ...textStyles.body,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   emptyText: {
     ...textStyles.body,

@@ -3,6 +3,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Image, Pressable, Text, TextInput, View } from 'react-native';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { InlineFeedbackPanel } from '../components/InlineFeedbackPanel';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
@@ -142,7 +143,7 @@ function getProfileToolsRuntimeMessage(
   return null;
 }
 
-export function OwnerPortalProfileToolsScreen() {
+function OwnerPortalProfileToolsScreenInner() {
   const _route = useRoute<OwnerPortalProfileToolsRoute>();
   const { authSession } = useStorefrontProfileController();
   const preview = false;
@@ -801,3 +802,8 @@ export function OwnerPortalProfileToolsScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalProfileToolsScreen = withScreenErrorBoundary(
+  OwnerPortalProfileToolsScreenInner,
+  'owner-portal-profile-tools',
+);

@@ -2,6 +2,7 @@ import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { Linking, Pressable, Text, View } from 'react-native';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
@@ -9,7 +10,6 @@ import { useStorefrontProfileController } from '../context/StorefrontController'
 import { useSavedSummaries } from '../hooks/useStorefrontSummaryData';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
-import { ownerBillingConfig } from '../config/ownerBilling';
 import {
   createOwnerBillingCheckoutSession,
   createOwnerBillingPortalSession,
@@ -18,15 +18,16 @@ import {
 import { getOwnerProfile, getOwnerSubscription } from '../services/ownerPortalService';
 import { getRuntimeOpsStatus } from '../services/runtimeOpsService';
 import type { OwnerProfileDocument, OwnerPortalSubscriptionDocument } from '../types/ownerPortal';
+import type { OwnerSubscriptionTier } from '../types/ownerTiers';
+import type { OwnerTierBillingCycle } from '../types/ownerTiers';
 import type { RuntimeOpsPublicStatus } from '../types/runtimeOps';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 import {
   PREMIUM_FEATURE_COUNT,
-  OwnerPortalSubscriptionBillingSummary,
   OwnerPortalSubscriptionIntroNotes,
   OwnerPortalSubscriptionPlanDetails,
-  OwnerPortalSubscriptionPlanOptions,
   OwnerPortalSubscriptionReadinessList,
+  OwnerPortalTierCards,
   PremiumFeatureList,
   formatPlanValue,
   isVerifiedStatus,
@@ -34,7 +35,7 @@ import {
 
 type OwnerPortalSubscriptionRoute = RouteProp<RootStackParamList, 'OwnerPortalSubscription'>;
 
-export function OwnerPortalSubscriptionScreen() {
+function OwnerPortalSubscriptionScreenInner() {
   const _route = useRoute<OwnerPortalSubscriptionRoute>();
   const { authSession } = useStorefrontProfileController();
   const preview = false;
@@ -44,10 +45,11 @@ export function OwnerPortalSubscriptionScreen() {
   );
   const [runtimeStatus, setRuntimeStatus] = React.useState<RuntimeOpsPublicStatus | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isSubmitting, setIsSubmitting] = React.useState<null | 'monthly' | 'annual' | 'manage'>(
+  const [isSubmitting, setIsSubmitting] = React.useState<null | OwnerSubscriptionTier | 'manage'>(
     null,
   );
   const [statusText, setStatusText] = React.useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = React.useState<OwnerTierBillingCycle>('monthly');
 
   const loadBillingState = React.useCallback(async () => {
     if (preview) {
@@ -145,7 +147,7 @@ export function OwnerPortalSubscriptionScreen() {
     },
   ];
 
-  const handleOpenCheckout = async (billingCycle: 'monthly' | 'annual') => {
+  const handleOpenCheckout = async (tier: OwnerSubscriptionTier) => {
     if (!authSession.uid || !ownerProfile?.dispensaryId) {
       setStatusText('Sign in and claim a listing before starting a subscription.');
       return;
@@ -154,10 +156,10 @@ export function OwnerPortalSubscriptionScreen() {
       return;
     }
 
-    setIsSubmitting(billingCycle);
+    setIsSubmitting(tier);
     setStatusText(null);
     try {
-      const session = await createOwnerBillingCheckoutSession(billingCycle);
+      const session = await createOwnerBillingCheckoutSession(billingCycle, tier);
       await Linking.openURL(session.url);
       setStatusText(
         'Checkout opened. Complete billing, then return here and tap Refresh Billing Status.',
@@ -285,7 +287,7 @@ export function OwnerPortalSubscriptionScreen() {
       <MotionInView delay={270}>
         <SectionCard
           title="Choose your plan"
-          body="Select your billing cycle and proceed to checkout."
+          body="Select your tier and billing cycle, then proceed to checkout."
         >
           <View style={styles.sectionStack}>
             {statusText ? <Text style={styles.errorText}>{statusText}</Text> : null}
@@ -306,20 +308,9 @@ export function OwnerPortalSubscriptionScreen() {
                 Plan access is active. Use billing management to update or cancel this subscription.
               </Text>
             ) : null}
-            <OwnerPortalSubscriptionBillingSummary
-              billingConfigured={billingConfigured}
-              isBillingEligible={isBillingEligible}
-              premiumFeatureCount={PREMIUM_FEATURE_COUNT}
-            />
-            <OwnerPortalSubscriptionPlanOptions
-              annualButtonLabel={
-                billingTemporarilyPaused
-                  ? 'Billing Paused'
-                  : isSubmitting === 'annual'
-                    ? 'Opening...'
-                    : 'Start Annual Business Plan'
-              }
-              annualPriceLabel={ownerBillingConfig.annualPriceLabel ?? 'Configured in live billing'}
+            <OwnerPortalTierCards
+              billingCycle={billingCycle}
+              currentTier={subscription?.tier ?? null}
               disableButtons={
                 isLoading ||
                 !billingConfigured ||
@@ -327,21 +318,17 @@ export function OwnerPortalSubscriptionScreen() {
                 billingTemporarilyPaused ||
                 Boolean(isSubmitting)
               }
-              monthlyButtonLabel={
-                billingTemporarilyPaused
-                  ? 'Billing Paused'
-                  : isSubmitting === 'monthly'
-                    ? 'Opening...'
-                    : 'Start Monthly Business Plan'
+              isSubmitting={
+                typeof isSubmitting === 'string' && isSubmitting !== 'manage'
+                  ? (isSubmitting as OwnerSubscriptionTier)
+                  : null
               }
-              monthlyPriceLabel={
-                ownerBillingConfig.monthlyPriceLabel ?? 'Configured in live billing'
-              }
-              onOpenAnnual={() => {
-                void handleOpenCheckout('annual');
+              billingTemporarilyPaused={billingTemporarilyPaused}
+              onSelectTier={(tier) => {
+                void handleOpenCheckout(tier);
               }}
-              onOpenMonthly={() => {
-                void handleOpenCheckout('monthly');
+              onToggleBillingCycle={() => {
+                setBillingCycle((prev) => (prev === 'monthly' ? 'annual' : 'monthly'));
               }}
             />
           </View>
@@ -399,3 +386,8 @@ export function OwnerPortalSubscriptionScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalSubscriptionScreen = withScreenErrorBoundary(
+  OwnerPortalSubscriptionScreenInner,
+  'owner-portal-subscription',
+);

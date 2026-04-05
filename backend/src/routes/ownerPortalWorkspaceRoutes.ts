@@ -22,6 +22,7 @@ import {
   updateOwnerPortalPromotion,
 } from '../services/ownerPortalWorkspaceService';
 import { assertRuntimePolicyAllowsOwnerAction } from '../services/runtimeOpsService';
+import { requireTierAccess } from '../services/ownerTierGatingService';
 
 export const ownerPortalWorkspaceRoutes = Router();
 const ownerClaimSyncRateLimiter = createRateLimitMiddleware({
@@ -65,9 +66,11 @@ ownerPortalWorkspaceRoutes.use(
 
 ownerPortalWorkspaceRoutes.get(
   '/owner-portal/workspace',
-  createOwnerPortalJsonRoute('Unknown owner workspace failure', async ({ ownerUid }) =>
-    getOwnerPortalWorkspace(ownerUid),
-  ),
+  createOwnerPortalJsonRoute('Unknown owner workspace failure', async ({ ownerUid, request }) => {
+    const locationId =
+      typeof request.query.locationId === 'string' ? request.query.locationId.trim() || null : null;
+    return getOwnerPortalWorkspace(ownerUid, locationId);
+  }),
 );
 
 ownerPortalWorkspaceRoutes.post(
@@ -96,11 +99,17 @@ ownerPortalWorkspaceRoutes.put(
   ownerComplianceRateLimiter,
   createOwnerPortalJsonRoute(
     'Unknown owner license compliance failure',
-    async ({ ownerUid, request }) =>
-      saveOwnerPortalLicenseCompliance(
+    async ({ ownerUid, request }) => {
+      const locationId =
+        typeof request.body?.locationId === 'string'
+          ? request.body.locationId.trim() || null
+          : null;
+      return saveOwnerPortalLicenseCompliance(
         ownerUid,
         parseOwnerPortalLicenseComplianceBody(request.body),
-      ),
+        locationId,
+      );
+    },
   ),
 );
 
@@ -111,7 +120,15 @@ ownerPortalWorkspaceRoutes.put(
     'Unknown owner profile tools failure',
     async ({ ownerUid, request }) => {
       await assertRuntimePolicyAllowsOwnerAction('profile_tools');
-      return saveOwnerPortalProfileTools(ownerUid, parseOwnerPortalProfileToolsBody(request.body));
+      const locationId =
+        typeof request.body?.locationId === 'string'
+          ? request.body.locationId.trim() || null
+          : null;
+      return saveOwnerPortalProfileTools(
+        ownerUid,
+        parseOwnerPortalProfileToolsBody(request.body),
+        locationId,
+      );
     },
   ),
 );
@@ -120,8 +137,15 @@ ownerPortalWorkspaceRoutes.post(
   '/owner-portal/promotions',
   ownerPromotionRateLimiter,
   createOwnerPortalJsonRoute('Unknown owner promotion failure', async ({ ownerUid, request }) => {
+    await requireTierAccess(ownerUid, 'growth', 'Promotions');
     await assertRuntimePolicyAllowsOwnerAction('promotion');
-    return createOwnerPortalPromotion(ownerUid, parseOwnerPortalPromotionBody(request.body));
+    const locationId =
+      typeof request.body?.locationId === 'string' ? request.body.locationId.trim() || null : null;
+    return createOwnerPortalPromotion(
+      ownerUid,
+      parseOwnerPortalPromotionBody(request.body),
+      locationId,
+    );
   }),
 );
 
@@ -131,11 +155,17 @@ ownerPortalWorkspaceRoutes.put(
   createOwnerPortalJsonRoute(
     'Unknown owner promotion update failure',
     async ({ ownerUid, request }) => {
+      await requireTierAccess(ownerUid, 'growth', 'Promotions');
       await assertRuntimePolicyAllowsOwnerAction('promotion');
+      const locationId =
+        typeof request.body?.locationId === 'string'
+          ? request.body.locationId.trim() || null
+          : null;
       return updateOwnerPortalPromotion(
         ownerUid,
         parseOwnerPortalPromotionIdParam(request.params.promotionId),
         parseOwnerPortalPromotionBody(request.body),
+        locationId,
       );
     },
   ),
@@ -148,10 +178,15 @@ ownerPortalWorkspaceRoutes.post(
     'Unknown owner review reply failure',
     async ({ ownerUid, request }) => {
       await assertRuntimePolicyAllowsOwnerAction('review_reply');
+      const locationId =
+        typeof request.body?.locationId === 'string'
+          ? request.body.locationId.trim() || null
+          : null;
       return replyToOwnerPortalReview(
         ownerUid,
         parseReviewIdParam(request.params.reviewId),
         parseOwnerPortalReviewReplyBody(request.body).text,
+        locationId,
       );
     },
   ),

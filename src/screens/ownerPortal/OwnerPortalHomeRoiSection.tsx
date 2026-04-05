@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { InlineFeedbackPanel } from '../../components/InlineFeedbackPanel';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import type { OwnerPortalWorkspaceDocument } from '../../types/ownerPortal';
@@ -75,7 +75,8 @@ export function OwnerPortalHomeRoiSection({
           <Text style={styles.summaryTileValue}>{formatCount(metrics.totalActions7d)}</Text>
           <Text style={styles.summaryTileLabel}>Action Intent 7D</Text>
           <Text style={styles.summaryTileBody}>
-            Route, website, menu, and phone intent combined.
+            Route, website, {Platform.OS === 'android' ? 'website,' : 'menu,'} and phone intent
+            combined.
           </Text>
         </View>
         <View style={styles.summaryTile}>
@@ -177,7 +178,9 @@ export function OwnerPortalHomeRoiSection({
           </Text>
           <Text style={styles.analyticsSectionBody}>
             Use the mix below to see whether traffic is leaning toward navigation, website
-            exploration, menu browsing, or direct phone contact.
+            exploration,{' '}
+            {Platform.OS === 'android' ? 'additional website visits,' : 'menu browsing,'} or direct
+            phone contact.
           </Text>
         </View>
         <View style={styles.metricGrid}>
@@ -213,16 +216,23 @@ export function OwnerPortalHomeRoiSection({
             value={formatCount(workspace.metrics.websiteTapCount7d)}
           />
           <OwnerPortalAnalyticsCard
-            body="Shoppers choosing to inspect live menu inventory from the listing."
-            eyebrow="Menu intent"
+            body={
+              Platform.OS === 'android'
+                ? 'Customers choosing to visit the business website from the listing.'
+                : 'Shoppers choosing to inspect live menu inventory from the listing.'
+            }
+            eyebrow={Platform.OS === 'android' ? 'Website intent' : 'Menu intent'}
             icon="restaurant-outline"
             progress={getRelativeProgress(workspace.metrics.menuTapCount7d, metrics.actionMixMax)}
             progressLabel="Share of total action mix"
             stats={[
-              { label: 'Open to menu', value: formatRate(workspace.metrics.openToMenuRate) },
+              {
+                label: Platform.OS === 'android' ? 'Open to site' : 'Open to menu',
+                value: formatRate(workspace.metrics.openToMenuRate),
+              },
               { label: 'Followers', value: formatCount(workspace.metrics.followerCount) },
             ]}
-            title="Menu Taps 7D"
+            title={Platform.OS === 'android' ? 'Website Taps 7D' : 'Menu Taps 7D'}
             tone="success"
             value={formatCount(workspace.metrics.menuTapCount7d)}
           />
@@ -392,7 +402,8 @@ export function OwnerPortalHomeRoiSection({
           </View>
           <Text style={styles.resultMeta}>
             Route starts {metrics.topPromotion.metrics.redeemStarts} | Website taps{' '}
-            {metrics.topPromotion.metrics.websiteTaps} | Menu taps{' '}
+            {metrics.topPromotion.metrics.websiteTaps} |{' '}
+            {Platform.OS === 'android' ? 'Website' : 'Menu'} taps{' '}
             {metrics.topPromotion.metrics.menuTaps} | Phone taps{' '}
             {metrics.topPromotion.metrics.phoneTaps}
           </Text>

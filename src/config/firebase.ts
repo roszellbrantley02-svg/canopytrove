@@ -1,6 +1,6 @@
 import type { FirebaseApp } from 'firebase/app';
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { Auth } from 'firebase/auth';
 import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
@@ -59,6 +59,18 @@ export function getFirebaseDb(): Firestore | null {
   return cachedDb;
 }
 
+/**
+ * Adapter so expo-secure-store satisfies getReactNativePersistence.
+ * Firebase Auth only calls getItem / setItem / removeItem at runtime,
+ * but the SDK typings demand the full AsyncStorageStatic surface.
+ * Casting through unknown is the accepted community workaround.
+ */
+const secureStoreAdapter = {
+  getItem: (key: string) => SecureStore.getItemAsync(key),
+  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+  removeItem: (key: string) => SecureStore.deleteItemAsync(key),
+} as Parameters<typeof getReactNativePersistence>[0];
+
 export function getFirebaseAuth(): Auth | null {
   if (!hasFirebaseConfig) {
     return null;
@@ -80,7 +92,7 @@ export function getFirebaseAuth(): Auth | null {
 
   try {
     cachedAuth = initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
+      persistence: getReactNativePersistence(secureStoreAdapter),
     });
   } catch {
     cachedAuth = getAuth(app);

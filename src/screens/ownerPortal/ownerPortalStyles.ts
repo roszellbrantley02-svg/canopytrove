@@ -487,6 +487,10 @@ export const ownerPortalStyles = StyleSheet.create({
     borderColor: 'rgba(0, 245, 140, 0.18)',
     backgroundColor: 'rgba(0, 245, 140, 0.08)',
   },
+  statusPanelDanger: {
+    borderColor: 'rgba(244, 62, 62, 0.18)',
+    backgroundColor: 'rgba(244, 62, 62, 0.08)',
+  },
   splitHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -795,6 +799,46 @@ export const ownerPortalStyles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: typography.body,
     lineHeight: 20,
+  },
+  planFeatureTextLocked: {
+    color: '#666',
+  },
+  billingCycleRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  billingCycleTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  billingCycleTabActive: {
+    backgroundColor: 'rgba(46,204,113,0.15)',
+  },
+  billingCycleTabInactive: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  billingCycleTabTextActive: {
+    color: '#2ECC71',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  billingCycleTabTextInactive: {
+    color: '#C4B8B0',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  planTileCurrentTier: {
+    borderColor: '#2ECC71',
+    borderWidth: 2,
+  },
+  planPriceCaptionSmall: {
+    fontSize: 12,
+  },
+  buttonCurrentTier: {
+    backgroundColor: 'rgba(46,204,113,0.2)',
   },
   buttonRow: {
     flexDirection: 'row',

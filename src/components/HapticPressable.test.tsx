@@ -22,6 +22,17 @@ vi.mock('react-native', () => ({
     vibrate: mocks.vibrate,
     cancel: mocks.cancel,
   },
+  Animated: {
+    Value: class {
+      constructor(public _value: number) {}
+      interpolate() {
+        return this;
+      }
+    },
+    View: 'Animated.View',
+    timing: (_value: any, _config: any) => ({ start: (cb?: () => void) => cb?.() }),
+    spring: (_value: any, _config: any) => ({ start: (cb?: () => void) => cb?.() }),
+  },
   StyleSheet: {
     create: <T,>(styles: T): T => styles,
   },

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import type {
   OwnerAiPromotionDraft,
   OwnerPortalPromotionInput,
@@ -41,7 +42,7 @@ export const PROMOTION_AUDIENCE_OPTIONS: PromotionOption<OwnerPromotionAudience>
 ];
 
 export const PROMOTION_CARD_TONE_OPTIONS: PromotionOption<OwnerPromotionCardTone>[] = [
-  { value: 'hot_deal', label: 'Featured Special' },
+  { value: 'hot_deal', label: Platform.OS === 'android' ? 'Featured Update' : 'Featured Special' },
   { value: 'owner_featured', label: 'Owner Highlight' },
   { value: 'standard', label: 'Standard Card' },
 ];
@@ -50,7 +51,7 @@ export const PROMOTION_PLACEMENT_SURFACE_OPTIONS: PromotionOption<OwnerPromotion
   [
     { value: 'nearby', label: 'Nearby' },
     { value: 'browse', label: 'Browse' },
-    { value: 'hot_deals', label: 'Specials Lane' },
+    { value: 'hot_deals', label: Platform.OS === 'android' ? 'Updates Lane' : 'Specials Lane' },
   ];
 
 export const PROMOTION_PLACEMENT_SCOPE_OPTIONS: PromotionOption<OwnerPromotionPlacementScope>[] = [
@@ -205,7 +206,7 @@ export function getPromotionRuntimeMessage(
 export function formatPromotionValue(value: string) {
   const normalizedValue = value.trim().toLowerCase();
   if (normalizedValue === 'hot_deal') {
-    return 'Featured Special';
+    return Platform.OS === 'android' ? 'Featured Update' : 'Featured Special';
   }
 
   if (normalizedValue === 'owner_featured') {
@@ -217,7 +218,7 @@ export function formatPromotionValue(value: string) {
   }
 
   if (normalizedValue === 'hot_deals') {
-    return 'Specials Lane';
+    return Platform.OS === 'android' ? 'Updates Lane' : 'Specials Lane';
   }
 
   return value.replace(/_/g, ' ').replace(/\b\w/g, (segment) => segment.toUpperCase());
@@ -345,4 +346,126 @@ export function getPromotionSaveButtonLabel({
   }
 
   return editingPromotionId ? 'Update Promotion' : 'Create Promotion';
+}
+
+// ── Android moderation helpers (client-side pre-validation) ──────────
+
+const ANDROID_RED_PATTERNS = [
+  /\b\d{1,3}%\s*off\b/i,
+  /\$\d+\s*off\b/i,
+  /\bdiscount\b/i,
+  /\bdeal\b/i,
+  /\bdeals\b/i,
+  /\bsale\b/i,
+  /\bspecial\b/i,
+  /\bspecials\b/i,
+  /\bbogo\b/i,
+  /\bbuy one get one\b/i,
+  /\bdoorbuster\b/i,
+  /\bflower\b/i,
+  /\bpre[- ]?rolls?\b/i,
+  /\bedibles?\b/i,
+  /\bcarts?\b/i,
+  /\bvapes?\b/i,
+  /\bconcentrates?\b/i,
+  /\bthc\b/i,
+  /\bindica\b/i,
+  /\bsativa\b/i,
+  /\bhybrid\b/i,
+  /\bounces?\b/i,
+  /\bgrams?\b/i,
+  /\border now\b/i,
+  /\bbuy now\b/i,
+  /\bshop now\b/i,
+  /\breserve\b/i,
+  /\bpre[- ]?order\b/i,
+  /\bpickup\b/i,
+  /\bcurbside\b/i,
+  /\bdelivery\b/i,
+  /\bshop our menu\b/i,
+];
+
+const ANDROID_YELLOW_PATTERNS = [
+  /\blimited[- ]?time\b/i,
+  /\bexclusive\b/i,
+  /\bfeatured\b/i,
+  /\bmember appreciation\b/i,
+  /\bcelebration\b/i,
+  /\bvendor day\b/i,
+  /\bguest vendor\b/i,
+  /\b4[\/ ]?20\b/i,
+  /\bdrop\b/i,
+  /\blaunch\b/i,
+  /\bmenu spotlight\b/i,
+  /\bsamples?\b/i,
+  /\bpop[- ]?up\b/i,
+];
+
+export type AndroidModerationPrecheck = {
+  level: 'green' | 'yellow' | 'red';
+  message: string | null;
+};
+
+/**
+ * Client-side pre-validation for Android compliance.
+ * Mirrors the backend classifier so owners get immediate feedback
+ * in the composer before hitting the server.
+ */
+export function precheckAndroidModeration(
+  title: string,
+  description: string,
+  badges: string[],
+): AndroidModerationPrecheck {
+  const text = [title, description, ...badges]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!text) {
+    return { level: 'green', message: null };
+  }
+
+  for (const pattern of ANDROID_RED_PATTERNS) {
+    if (pattern.test(text)) {
+      return {
+        level: 'red',
+        message:
+          'This content includes cannabis sales or deal language and will not appear on Android. Announcements and events are allowed.',
+      };
+    }
+  }
+
+  for (const pattern of ANDROID_YELLOW_PATTERNS) {
+    if (pattern.test(text)) {
+      return {
+        level: 'yellow',
+        message:
+          'This content may require review before appearing on Android. Avoid deal-like language for faster approval.',
+      };
+    }
+  }
+
+  return { level: 'green', message: null };
+}
+
+/**
+ * Short helper text for the owner composer explaining Android rules.
+ */
+export const ANDROID_COMPOSER_HELP_TEXT =
+  'Announcements and events can appear on Android. Discounts, product deals, and order-driving language are not allowed on Android.';
+
+/**
+ * Status line for the owner composer showing current Android eligibility.
+ */
+export function getAndroidEligibilityLabel(precheck: AndroidModerationPrecheck): string {
+  switch (precheck.level) {
+    case 'green':
+      return 'Eligible for Android, iOS, and web.';
+    case 'yellow':
+      return 'Pending review for Android. Visible on iOS and web.';
+    case 'red':
+      return 'This content will appear on iOS and web only.';
+  }
 }

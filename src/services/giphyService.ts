@@ -1,8 +1,6 @@
-import { giphyApiKey } from '../config/giphy';
+import { hasGiphyConfig } from '../config/giphy';
 import { reactionGifCatalog } from '../data/reactionGifCatalog';
-
-const GIPHY_BASE_URL = 'https://api.giphy.com/v1/gifs';
-const GIPHY_LIMIT = 18;
+import { storefrontApiBaseUrl } from '../config/storefrontSourceConfig';
 
 type GiphyApiResponse = {
   data?: Array<{
@@ -42,12 +40,11 @@ function searchFallbackCatalog(query: string): GiphyGifResult[] {
   return items.map(({ keywords: _keywords, ...item }) => item);
 }
 
-function assertConfiguredApiKey() {
-  if (!giphyApiKey) {
-    throw new Error('GIPHY API key is not configured.');
+function createGatewayUrl(pathname: string) {
+  if (!storefrontApiBaseUrl) {
+    throw new Error('Storefront API base URL is not configured.');
   }
-
-  return giphyApiKey;
+  return `${storefrontApiBaseUrl.replace(/\/+$/, '')}${pathname}`;
 }
 
 function toStringValue(value: unknown) {
@@ -74,34 +71,30 @@ function mapGiphyResponse(payload: GiphyApiResponse): GiphyGifResult[] {
     .filter((item): item is GiphyGifResult => item !== null);
 }
 
-async function requestGiphy(path: string, params: Record<string, string> = {}) {
-  if (!giphyApiKey) {
+async function requestGiphyGateway(gatewayPath: string, params: Record<string, string> = {}) {
+  if (!storefrontApiBaseUrl) {
     return searchFallbackCatalog(params.q ?? '');
   }
 
-  const apiKey = assertConfiguredApiKey();
-  const searchParams = new URLSearchParams({
-    api_key: apiKey,
-    rating: 'g',
-    limit: String(GIPHY_LIMIT),
-    bundle: 'messaging_non_clips',
-    ...params,
-  });
-  const response = await fetch(`${GIPHY_BASE_URL}${path}?${searchParams.toString()}`);
+  const searchParams = new URLSearchParams(params);
+  const url = createGatewayUrl(
+    `${gatewayPath}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`,
+  );
+  const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error(`GIPHY request failed with status ${response.status}`);
+    throw new Error(`GIPHY gateway request failed with status ${response.status}`);
   }
 
   return mapGiphyResponse((await response.json()) as GiphyApiResponse);
 }
 
 export function getTrendingGifs() {
-  if (!giphyApiKey) {
+  if (!hasGiphyConfig && !storefrontApiBaseUrl) {
     return Promise.resolve(searchFallbackCatalog(''));
   }
 
-  return requestGiphy('/trending');
+  return requestGiphyGateway('/giphy/trending');
 }
 
 export function searchGifs(query: string) {
@@ -110,8 +103,7 @@ export function searchGifs(query: string) {
     return getTrendingGifs();
   }
 
-  return requestGiphy('/search', {
+  return requestGiphyGateway('/giphy/search', {
     q: normalizedQuery,
-    lang: 'en',
   });
 }

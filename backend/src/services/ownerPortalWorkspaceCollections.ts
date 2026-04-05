@@ -11,6 +11,8 @@ export type OwnerProfileRecord = {
   displayName?: string | null;
   companyName: string;
   dispensaryId: string | null;
+  /** Additional storefront IDs beyond the primary (Pro tier multi-location). */
+  additionalLocationIds?: string[];
   businessVerificationStatus: string;
   identityVerificationStatus: string;
   subscriptionStatus: string;

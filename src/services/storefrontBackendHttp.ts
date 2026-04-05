@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { storefrontApiBaseUrl } from '../config/storefrontSourceConfig';
 import type { Coordinates, MarketArea } from '../types/storefront';
 import { getCanopyTroveAuthCacheKey, getCanopyTroveAuthIdToken } from './canopyTroveAuthService';
@@ -32,6 +33,28 @@ export type StorefrontBackendLocationResolution = {
 
 export type StorefrontBackendMarketArea = MarketArea;
 
+export type TierAccessErrorPayload = {
+  code: 'TIER_ACCESS_DENIED';
+  requiredTier: string;
+  currentTier: string;
+};
+
+export class BackendTierAccessError extends Error {
+  public readonly code = 'TIER_ACCESS_DENIED' as const;
+  public readonly requiredTier: string;
+  public readonly currentTier: string;
+
+  constructor(message: string, requiredTier: string, currentTier: string) {
+    super(message);
+    this.requiredTier = requiredTier;
+    this.currentTier = currentTier;
+  }
+}
+
+export function isBackendTierAccessError(error: unknown): error is BackendTierAccessError {
+  return error instanceof BackendTierAccessError;
+}
+
 type CacheEntry<T> = {
   expiresAt: number;
   value: T;
@@ -39,6 +62,7 @@ type CacheEntry<T> = {
 
 const backendGetCache = new Map<string, CacheEntry<unknown>>();
 const backendGetInFlight = new Map<string, Promise<unknown>>();
+const backendMutationInFlight = new Set<string>();
 const BACKEND_REQUEST_TIMEOUT_MS = 6_000;
 const BACKEND_GET_CACHE_LIMIT = 96;
 
@@ -106,12 +130,19 @@ export function clearCachedValue(cacheKeyPrefix: string) {
   });
 }
 
+function getClientPlatformHeader(): string {
+  if (Platform.OS === 'android') return 'android';
+  if (Platform.OS === 'ios') return 'ios';
+  return 'web';
+}
+
 async function buildRequestHeaders(headers?: HeadersInit) {
   const nextHeaders = new Headers(headers);
   const idToken = await getCanopyTroveAuthIdToken();
   if (idToken) {
     nextHeaders.set('Authorization', `Bearer ${idToken}`);
   }
+  nextHeaders.set('X-Client-Platform', getClientPlatformHeader());
 
   return nextHeaders;
 }
@@ -128,12 +159,29 @@ export function createLeaderboardRankCacheKey(profileId: string) {
   return `leaderboard-rank:${profileId}`;
 }
 
-async function getBackendErrorMessage(response: Response) {
+async function throwBackendError(response: Response): Promise<never> {
   try {
     const payload = (await response.json()) as {
       error?: unknown;
+      code?: unknown;
+      requiredTier?: unknown;
+      currentTier?: unknown;
       requestId?: unknown;
     };
+
+    // Detect tier access errors and throw a typed error
+    if (
+      payload.code === 'TIER_ACCESS_DENIED' &&
+      typeof payload.requiredTier === 'string' &&
+      typeof payload.currentTier === 'string'
+    ) {
+      const errorText =
+        typeof payload.error === 'string' && payload.error.trim()
+          ? payload.error.trim()
+          : 'This feature requires a higher plan.';
+      throw new BackendTierAccessError(errorText, payload.requiredTier, payload.currentTier);
+    }
+
     const errorText =
       typeof payload.error === 'string' && payload.error.trim()
         ? payload.error.trim()
@@ -142,9 +190,16 @@ async function getBackendErrorMessage(response: Response) {
       typeof payload.requestId === 'string' && payload.requestId.trim()
         ? payload.requestId.trim()
         : null;
-    return requestId ? `${errorText} (request ${requestId})` : errorText;
-  } catch {
-    return `Backend request failed with ${response.status}`;
+    throw new Error(requestId ? `${errorText} (request ${requestId})` : errorText);
+  } catch (parseError) {
+    if (
+      parseError instanceof BackendTierAccessError ||
+      (parseError instanceof Error &&
+        parseError.message !== `Backend request failed with ${response.status}`)
+    ) {
+      throw parseError;
+    }
+    throw new Error(`Backend request failed with ${response.status}`);
   }
 }
 
@@ -155,6 +210,16 @@ export async function requestJson<T>(
 ): Promise<T> {
   const cacheKey = !init?.method || init.method === 'GET' ? options?.cacheKey : undefined;
   const ttlMs = options?.ttlMs ?? 0;
+  const method = init?.method || 'GET';
+  const isMutation = method !== 'GET';
+
+  // For mutations (POST, PUT, DELETE), check if a request is already in-flight
+  if (isMutation) {
+    const mutationKey = `${method}:${pathname}`;
+    if (backendMutationInFlight.has(mutationKey)) {
+      throw new Error(`Request already in progress: ${method} ${pathname}`);
+    }
+  }
 
   if (cacheKey && ttlMs > 0) {
     pruneBackendGetCache();
@@ -183,7 +248,7 @@ export async function requestJson<T>(
         signal: controller.signal,
       });
       if (!response.ok) {
-        throw new Error(await getBackendErrorMessage(response));
+        await throwBackendError(response);
       }
 
       const payload = (await response.json()) as T;
@@ -195,6 +260,16 @@ export async function requestJson<T>(
       clearTimeout(timeoutId);
     }
   })();
+
+  if (isMutation) {
+    const mutationKey = `${method}:${pathname}`;
+    backendMutationInFlight.add(mutationKey);
+    try {
+      return await request;
+    } finally {
+      backendMutationInFlight.delete(mutationKey);
+    }
+  }
 
   if (cacheKey && ttlMs > 0) {
     backendGetInFlight.set(cacheKey, request);

@@ -127,10 +127,19 @@ export async function getCanopyTroveAuthIdToken(options?: {
 
   try {
     return await getIdToken(auth.currentUser);
-  } catch {
+  } catch (tokenError) {
+    if (__DEV__) {
+      console.warn(
+        '[canopyTroveAuth] Token refresh failed, retrying with force refresh',
+        tokenError,
+      );
+    }
     try {
       return await getIdToken(auth.currentUser, true);
-    } catch {
+    } catch (retryError) {
+      if (__DEV__) {
+        console.warn('[canopyTroveAuth] Force token refresh also failed', retryError);
+      }
       if (options?.failIfAuthenticatedSession) {
         throw new Error('Could not refresh the signed-in Canopy Trove session.');
       }

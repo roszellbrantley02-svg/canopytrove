@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
@@ -39,11 +39,11 @@ async function persistDevicePushToken(token: string | null) {
 
   try {
     if (memoryPushToken) {
-      await AsyncStorage.setItem(DEVICE_PUSH_TOKEN_KEY, memoryPushToken);
+      await SecureStore.setItemAsync(DEVICE_PUSH_TOKEN_KEY, memoryPushToken);
       return;
     }
 
-    await AsyncStorage.removeItem(DEVICE_PUSH_TOKEN_KEY);
+    await SecureStore.deleteItemAsync(DEVICE_PUSH_TOKEN_KEY);
   } catch {
     // Push token persistence should never block app startup.
   }
@@ -78,7 +78,7 @@ export async function initializeDevicePushNotifications() {
     if (Platform.OS === 'android') {
       try {
         await Notifications.setNotificationChannelAsync(CUSTOMER_DEAL_NOTIFICATION_CHANNEL_ID, {
-          name: 'Favorite store deals',
+          name: 'Favorite store updates',
           importance: Notifications.AndroidImportance.HIGH,
           vibrationPattern: [0, 180, 80, 180],
         });
@@ -93,7 +93,7 @@ export async function initializeDevicePushNotifications() {
     }
 
     try {
-      const rawToken = await AsyncStorage.getItem(DEVICE_PUSH_TOKEN_KEY);
+      const rawToken = await SecureStore.getItemAsync(DEVICE_PUSH_TOKEN_KEY);
       memoryPushToken = rawToken?.trim() || null;
     } catch {
       memoryPushToken = null;

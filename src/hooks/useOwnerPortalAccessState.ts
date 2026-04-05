@@ -29,7 +29,9 @@ export function useOwnerPortalAccessState(authSession: CanopyTroveAuthSession) {
 
         setClaimRole(nextClaimRole);
       } catch (error) {
-        console.warn('[useOwnerPortalAccessState] failed to fetch claim role:', error);
+        if (__DEV__) {
+          console.warn('[useOwnerPortalAccessState] failed to fetch claim role:', error);
+        }
       } finally {
         if (active) {
           setIsCheckingAccess(false);

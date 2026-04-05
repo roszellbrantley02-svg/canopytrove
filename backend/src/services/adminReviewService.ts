@@ -245,6 +245,17 @@ export async function reviewOwnerClaim(
   }
 
   const claim = claimSnapshot.data() as { ownerUid: string; dispensaryId: string };
+
+  // Check if this owner already has a primary location (multi-location scenario)
+  const ownerProfileSnapshot = await db
+    .collection(OWNER_PROFILES_COLLECTION)
+    .doc(claim.ownerUid)
+    .get();
+  const existingProfile = ownerProfileSnapshot.exists ? ownerProfileSnapshot.data() : null;
+  const hasPrimaryLocation = Boolean(existingProfile?.dispensaryId);
+  const isAdditionalLocation =
+    hasPrimaryLocation && existingProfile?.dispensaryId !== claim.dispensaryId;
+
   const updates: Array<Promise<unknown>> = [
     claimRef.set(
       {
@@ -254,30 +265,65 @@ export async function reviewOwnerClaim(
       },
       { merge: true },
     ),
-    db
-      .collection(OWNER_PROFILES_COLLECTION)
-      .doc(claim.ownerUid)
-      .set(
-        {
-          dispensaryId: body.status === 'approved' ? claim.dispensaryId : null,
-          onboardingStep: body.status === 'approved' ? 'business_verification' : 'claim_listing',
-          updatedAt: now,
-        },
-        { merge: true },
-      ),
   ];
 
   if (body.status === 'approved') {
+    if (isAdditionalLocation) {
+      // Multi-location: add to additionalLocationIds instead of overwriting dispensaryId
+      const currentAdditional: string[] = existingProfile?.additionalLocationIds ?? [];
+      if (!currentAdditional.includes(claim.dispensaryId)) {
+        updates.push(
+          db
+            .collection(OWNER_PROFILES_COLLECTION)
+            .doc(claim.ownerUid)
+            .set(
+              {
+                additionalLocationIds: [...currentAdditional, claim.dispensaryId],
+                updatedAt: now,
+              },
+              { merge: true },
+            ),
+        );
+      }
+    } else {
+      // Primary location: set dispensaryId as before
+      updates.push(
+        db.collection(OWNER_PROFILES_COLLECTION).doc(claim.ownerUid).set(
+          {
+            dispensaryId: claim.dispensaryId,
+            onboardingStep: 'business_verification',
+            updatedAt: now,
+          },
+          { merge: true },
+        ),
+      );
+    }
+
     updates.push(
       db.collection('dispensaries').doc(claim.dispensaryId).set(
         {
           ownerUid: claim.ownerUid,
           claimStatus: 'approved',
           ownerClaimReviewedAt: now,
+          isAdditionalLocation,
         },
         { merge: true },
       ),
     );
+  } else {
+    // Rejection/resubmission — only reset if this was the primary location claim
+    if (!isAdditionalLocation) {
+      updates.push(
+        db.collection(OWNER_PROFILES_COLLECTION).doc(claim.ownerUid).set(
+          {
+            dispensaryId: null,
+            onboardingStep: 'claim_listing',
+            updatedAt: now,
+          },
+          { merge: true },
+        ),
+      );
+    }
   }
 
   await Promise.all(updates);

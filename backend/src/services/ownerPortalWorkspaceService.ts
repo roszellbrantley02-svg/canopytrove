@@ -56,6 +56,10 @@ import {
   preparePromotionForSave,
 } from './ownerPortalPromotionSchedulerService';
 import {
+  classifyOwnerContent,
+  isPromotionAndroidVisible,
+} from './ownerPortalPromotionModerationService';
+import {
   assertAuthorizedOwnerStorefront,
   getOwnerAuthorizationState,
 } from './ownerPortalAuthorizationService';
@@ -64,12 +68,28 @@ import {
   saveOwnerLicenseCompliance,
 } from './ownerPortalLicenseComplianceService';
 import { hydrateOwnerStorefrontProfileToolsMedia } from './storefrontMediaAccessService';
-import {
-  computeOpenNowFromOwnerHours,
-  ownerHoursToDisplayStrings,
-} from './ownerHoursService';
+import { computeOpenNowFromOwnerHours, ownerHoursToDisplayStrings } from './ownerHoursService';
 import { isActiveOwnerSubscriptionStatus } from './ownerPortalAuthorizationService';
 import { getOwnerProfile } from './ownerPortalWorkspaceData';
+import { resolveOwnerTier, getTierLimits, TierAccessError } from './ownerTierGatingService';
+import type { OwnerSubscriptionTier, TierFeatureLimits } from './ownerTierGatingService';
+import { resolveOwnerActiveLocation } from './ownerMultiLocationService';
+
+const TARGETED_AUDIENCES = new Set(['all_followers', 'frequent_visitors', 'new_customers']);
+
+function assertAudienceTargetingAccess(
+  audience: string | undefined | null,
+  tierLimits: TierFeatureLimits,
+  currentTier: OwnerSubscriptionTier,
+) {
+  if (audience && TARGETED_AUDIENCES.has(audience) && !tierLimits.audienceTargetingEnabled) {
+    throw new TierAccessError(
+      'Audience targeting requires the Pro ($249/mo) plan. Upgrade to target specific customer segments.',
+      'pro',
+      currentTier,
+    );
+  }
+}
 
 async function pickVisiblePromotion(
   promotions: OwnerStorefrontPromotionDocument[],
@@ -171,10 +191,9 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
   const subscriptionActive = await isOwnerSubscriptionActive(rawProfileTools);
 
   // Owner hours persist even after subscription lapse — always apply when present.
-  const ownerHoursOpenNow =
-    rawProfileTools?.ownerHours?.length
-      ? computeOpenNowFromOwnerHours(rawProfileTools.ownerHours)
-      : null;
+  const ownerHoursOpenNow = rawProfileTools?.ownerHours?.length
+    ? computeOpenNowFromOwnerHours(rawProfileTools.ownerHours)
+    : null;
 
   // When subscription has lapsed, strip all owner-added content except hours.
   const activePromotion = subscriptionActive
@@ -197,8 +216,10 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
       activePromotion?.placementSurfaces ?? summary.promotionPlacementSurfaces ?? [],
     promotionPlacementScope:
       activePromotion?.placementScope ?? summary.promotionPlacementScope ?? null,
-    thumbnailUrl:
-      collectProfileAttachmentUrls(liveProfileTools)[0] ?? summary.thumbnailUrl ?? null,
+    promotionAndroidEligible: activePromotion
+      ? isPromotionAndroidVisible(activePromotion)
+      : undefined,
+    thumbnailUrl: collectProfileAttachmentUrls(liveProfileTools)[0] ?? summary.thumbnailUrl ?? null,
   };
 
   // Owner hours override openNow regardless of subscription status.
@@ -279,9 +300,7 @@ export async function applyOwnerWorkspaceDetailEnhancements(
   const subscriptionActive = await isOwnerSubscriptionActive(rawProfileTools);
 
   // Owner hours persist even after subscription lapse.
-  const ownerHoursEntries = rawProfileTools?.ownerHours?.length
-    ? rawProfileTools.ownerHours
-    : null;
+  const ownerHoursEntries = rawProfileTools?.ownerHours?.length ? rawProfileTools.ownerHours : null;
   const ownerHoursOpenNow = ownerHoursEntries
     ? computeOpenNowFromOwnerHours(ownerHoursEntries)
     : null;
@@ -305,8 +324,7 @@ export async function applyOwnerWorkspaceDetailEnhancements(
     verifiedOwnerBadgeLabel:
       liveProfileTools?.verifiedBadgeLabel ?? detail.verifiedOwnerBadgeLabel ?? null,
     favoriteFollowerCount: subscriptionActive ? followerCount : (detail.favoriteFollowerCount ?? 0),
-    ownerFeaturedBadges:
-      liveProfileTools?.featuredBadges ?? detail.ownerFeaturedBadges ?? [],
+    ownerFeaturedBadges: liveProfileTools?.featuredBadges ?? detail.ownerFeaturedBadges ?? [],
     activePromotions: visiblePromotions.slice(0, 5).map((promotion) => ({
       id: promotion.id,
       title: promotion.title,
@@ -315,6 +333,7 @@ export async function applyOwnerWorkspaceDetailEnhancements(
       startsAt: promotion.startsAt,
       endsAt: promotion.endsAt,
       cardTone: promotion.cardTone,
+      androidEligible: isPromotionAndroidVisible(promotion),
     })),
     photoUrls: collectProfileAttachmentUrls(liveProfileTools).length
       ? Array.from(
@@ -346,6 +365,7 @@ export async function applyOwnerWorkspaceDetailEnhancements(
 
 export async function getOwnerPortalWorkspace(
   ownerUid: string,
+  requestedLocationId?: string | null,
 ): Promise<OwnerPortalWorkspaceDocument> {
   const runtimeStatus = await getRuntimeOpsStatus();
   const ownerState = await getOwnerAuthorizationState(ownerUid);
@@ -367,7 +387,17 @@ export async function getOwnerPortalWorkspace(
     return buildEmptyOwnerPortalWorkspace(runtimeStatus);
   }
 
-  const storefrontId = ownerState.storefrontId;
+  // Resolve active location: if a locationId was requested and the owner manages it, use that
+  const primaryStorefrontId = ownerState.storefrontId;
+  const additionalLocationIds = ownerState.ownerProfile?.additionalLocationIds ?? [];
+  const allOwnerLocationIds = [
+    ...(primaryStorefrontId ? [primaryStorefrontId] : []),
+    ...additionalLocationIds,
+  ];
+  const storefrontId =
+    requestedLocationId && allOwnerLocationIds.includes(requestedLocationId)
+      ? requestedLocationId
+      : primaryStorefrontId;
   const [
     ownerClaimResult,
     baseSummaryResult,
@@ -456,37 +486,114 @@ export async function getOwnerPortalWorkspace(
     activePromotion,
   });
 
+  // Resolve tier and apply analytics gating
+  const ownerTier = await resolveOwnerTier(ownerUid);
+  const tierLimits = getTierLimits(ownerTier);
+
+  // For verified-tier owners: only show headline numbers (views, taps, avg rating)
+  // Full funnel analytics (conversion rates, pattern flags, promotion performance) require Growth+
+  const gatedMetrics: typeof metrics = tierLimits.fullAnalyticsEnabled
+    ? metrics
+    : {
+        ...metrics,
+        // Keep headline numbers
+        // followerCount, storefrontImpressions7d, storefrontOpenCount7d, averageRating — visible
+        // Redact conversion funnel and deep analytics
+        openToRouteRate: 0,
+        openToWebsiteRate: 0,
+        openToPhoneRate: 0,
+        openToMenuRate: 0,
+        replyRate: 0,
+      };
+
+  const gatedPatternFlags = tierLimits.fullAnalyticsEnabled ? patternFlags : [];
+  const gatedPromotionPerformance = tierLimits.promotionAnalyticsEnabled
+    ? promotionPerformance
+    : promotionPerformance.map((pp) => ({
+        ...pp,
+        metrics: {
+          impressions: 0,
+          opens: 0,
+          saves: 0,
+          redeemStarts: 0,
+          redeemed: 0,
+          websiteTaps: 0,
+          phoneTaps: 0,
+          menuTaps: 0,
+          clickThroughRate: 0,
+          actionRate: 0,
+        },
+      }));
+
   return {
     ownerProfile: ownerProfile as OwnerPortalWorkspaceDocument['ownerProfile'],
     ownerClaim: ownerClaim as OwnerPortalWorkspaceDocument['ownerClaim'],
     storefrontSummary: storefrontSummary
       ? buildOwnerWorkspaceSummarySnapshot(storefrontSummary)
       : null,
-    metrics,
-    patternFlags,
+    metrics: gatedMetrics,
+    patternFlags: gatedPatternFlags,
     recentReviews: ownerWorkspaceReviews,
     recentReports: ownerWorkspaceReports,
     promotions,
-    promotionPerformance,
+    promotionPerformance: gatedPromotionPerformance,
     profileTools,
     licenseCompliance,
     ownerAlertStatus,
     runtimeStatus,
+    tier: ownerTier,
+    activeLocationId: storefrontId,
+    locations:
+      allOwnerLocationIds.length > 1
+        ? await buildLocationSummaries(allOwnerLocationIds, primaryStorefrontId)
+        : undefined,
   };
+}
+
+async function buildLocationSummaries(
+  locationIds: string[],
+  primaryId: string | null,
+): Promise<
+  Array<{
+    storefrontId: string;
+    displayName: string;
+    addressLine1: string;
+    city: string;
+    state: string;
+    isPrimary: boolean;
+  }>
+> {
+  if (locationIds.length === 0) return [];
+  const summaries = await backendStorefrontSource.getSummariesByIds(locationIds);
+  return locationIds.map((id) => {
+    const summary = summaries.find((s) => s.id === id);
+    return {
+      storefrontId: id,
+      displayName: summary?.displayName ?? id,
+      addressLine1: summary?.addressLine1 ?? '',
+      city: summary?.city ?? '',
+      state: summary?.state ?? '',
+      isPrimary: id === primaryId,
+    };
+  });
 }
 
 export async function saveOwnerPortalLicenseCompliance(
   ownerUid: string,
   input: OwnerPortalLicenseComplianceInput,
+  locationId?: string | null,
 ) {
   const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
     missingStorefrontMessage:
       'Claim the correct storefront before adding a license renewal record.',
   });
 
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
+
   return saveOwnerLicenseCompliance({
     ownerUid,
-    dispensaryId: ownerState.storefrontId!,
+    dispensaryId: targetStorefrontId,
     input,
     source: 'owner_input',
   });
@@ -495,6 +602,7 @@ export async function saveOwnerPortalLicenseCompliance(
 export async function saveOwnerPortalProfileTools(
   ownerUid: string,
   input: OwnerPortalProfileToolsInput,
+  locationId?: string | null,
 ) {
   await assertRuntimePolicyAllowsOwnerAction('profile_tools');
   const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
@@ -502,7 +610,41 @@ export async function saveOwnerPortalProfileTools(
     requireActiveSubscription: true,
   });
 
-  const nextRecord = normalizeProfileTools(ownerState.storefrontId!, ownerUid, input);
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
+
+  // Enforce tier-based limits on profile tools
+  const ownerTier = await resolveOwnerTier(ownerUid);
+  const tierLimits = getTierLimits(ownerTier);
+
+  // Badge customization requires Growth+
+  const hasBadgeChanges =
+    (input.featuredBadges && input.featuredBadges.length > 0) ||
+    (input.verifiedBadgeLabel !== undefined && input.verifiedBadgeLabel !== null);
+  if (hasBadgeChanges && !tierLimits.badgeCustomizationEnabled) {
+    throw new TierAccessError(
+      'Badge customization requires the Growth ($149/mo) plan. Upgrade to unlock this feature.',
+      'growth',
+      ownerTier,
+    );
+  }
+
+  // Featured photos: enforce count limit per tier
+  const photoCount = input.featuredPhotoUrls?.length ?? 0;
+  if (photoCount > 0 && tierLimits.maxFeaturedPhotos === 0) {
+    throw new TierAccessError(
+      'Featured photos require the Growth ($149/mo) plan. Upgrade to unlock this feature.',
+      'growth',
+      ownerTier,
+    );
+  }
+  if (tierLimits.maxFeaturedPhotos > 0 && photoCount > tierLimits.maxFeaturedPhotos) {
+    throw new Error(
+      `Your plan allows up to ${tierLimits.maxFeaturedPhotos} featured photos. Upgrade to Pro for unlimited.`,
+    );
+  }
+
+  const nextRecord = normalizeProfileTools(targetStorefrontId, ownerUid, input);
   return hydrateOwnerStorefrontProfileToolsMedia(
     await saveOwnerStorefrontProfileToolsDocument(nextRecord),
   );
@@ -511,6 +653,7 @@ export async function saveOwnerPortalProfileTools(
 export async function createOwnerPortalPromotion(
   ownerUid: string,
   input: OwnerPortalPromotionInput,
+  locationId?: string | null,
 ) {
   await assertRuntimePolicyAllowsOwnerAction('promotion');
   const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
@@ -518,15 +661,37 @@ export async function createOwnerPortalPromotion(
     requireActiveSubscription: true,
   });
 
-  const existingPromotions = await listOwnerStorefrontPromotions(ownerState.storefrontId!);
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
+
+  const [existingPromotions, ownerTier] = await Promise.all([
+    listOwnerStorefrontPromotions(targetStorefrontId),
+    resolveOwnerTier(ownerUid),
+  ]);
+  const tierLimits = getTierLimits(ownerTier);
+
+  // Audience targeting requires Pro tier
+  assertAudienceTargetingAccess(input.audience, tierLimits, ownerTier);
+
   const promotion = preparePromotionForSave({
     existingPromotion: null,
-    nextPromotion: normalizePromotion(ownerUid, ownerState.storefrontId!, input),
+    nextPromotion: normalizePromotion(ownerUid, targetStorefrontId, input),
   });
+
+  // Android moderation: classify content and attach moderation result
+  const { moderation, platformVisibility } = classifyOwnerContent({
+    title: promotion.title,
+    description: promotion.description,
+    badges: promotion.badges,
+    contentCategory: input.contentCategory,
+  });
+  promotion.moderation = moderation;
+  promotion.platformVisibility = platformVisibility;
 
   assertOwnerPromotionConstraints({
     nextPromotion: promotion,
     existingPromotions,
+    maxPromotions: tierLimits.maxPromotions,
   });
 
   const savedPromotion = await saveOwnerStorefrontPromotionDocument(promotion);
@@ -537,6 +702,7 @@ export async function updateOwnerPortalPromotion(
   ownerUid: string,
   promotionId: string,
   input: OwnerPortalPromotionInput,
+  locationId?: string | null,
 ) {
   await assertRuntimePolicyAllowsOwnerAction('promotion');
   const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
@@ -544,7 +710,18 @@ export async function updateOwnerPortalPromotion(
     requireActiveSubscription: true,
   });
 
-  const existingPromotions = await listOwnerStorefrontPromotions(ownerState.storefrontId!);
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
+
+  const [existingPromotions, ownerTier] = await Promise.all([
+    listOwnerStorefrontPromotions(targetStorefrontId),
+    resolveOwnerTier(ownerUid),
+  ]);
+  const tierLimits = getTierLimits(ownerTier);
+
+  // Audience targeting requires Pro tier
+  assertAudienceTargetingAccess(input.audience, tierLimits, ownerTier);
+
   const existingPromotion = existingPromotions.find((promotion) => promotion.id === promotionId);
   if (!existingPromotion) {
     throw new Error('Promotion not found.');
@@ -552,7 +729,7 @@ export async function updateOwnerPortalPromotion(
 
   const nextPromotion = preparePromotionForSave({
     existingPromotion,
-    nextPromotion: normalizePromotion(ownerUid, ownerState.storefrontId!, {
+    nextPromotion: normalizePromotion(ownerUid, targetStorefrontId, {
       ...existingPromotion,
       ...input,
       id: promotionId,
@@ -560,26 +737,45 @@ export async function updateOwnerPortalPromotion(
     }),
   });
 
+  // Android moderation: re-classify on update
+  const { moderation, platformVisibility } = classifyOwnerContent({
+    title: nextPromotion.title,
+    description: nextPromotion.description,
+    badges: nextPromotion.badges,
+    contentCategory: input.contentCategory,
+  });
+  nextPromotion.moderation = moderation;
+  nextPromotion.platformVisibility = platformVisibility;
+
   assertOwnerPromotionConstraints({
     nextPromotion,
     existingPromotions,
     currentPromotionId: promotionId,
+    maxPromotions: tierLimits.maxPromotions,
   });
 
   const savedPromotion = await saveOwnerStorefrontPromotionDocument(nextPromotion);
   return (await maybeDispatchPromotionStartAlert(savedPromotion)).promotion;
 }
 
-export async function replyToOwnerPortalReview(ownerUid: string, reviewId: string, text: string) {
+export async function replyToOwnerPortalReview(
+  ownerUid: string,
+  reviewId: string,
+  text: string,
+  locationId?: string | null,
+) {
   await assertRuntimePolicyAllowsOwnerAction('review_reply');
   const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
     requireVerified: true,
     requireActiveSubscription: true,
   });
+
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
   const ownerProfile = ownerState.ownerProfile;
 
   return replyToStorefrontAppReview({
-    storefrontId: ownerState.storefrontId!,
+    storefrontId: targetStorefrontId,
     reviewId,
     ownerUid,
     ownerDisplayName: ownerProfile?.companyName || ownerProfile?.legalName || null,

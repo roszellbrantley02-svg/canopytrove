@@ -26,8 +26,12 @@ function getBearerToken(request: Request) {
   return token;
 }
 
+function isTestEnvironment() {
+  return process.env.NODE_ENV === 'test' && !process.env.K_SERVICE;
+}
+
 function getTestRequestAccountId(request: Request, allowTestHeader: boolean) {
-  if (!allowTestHeader || process.env.NODE_ENV !== 'test') {
+  if (!allowTestHeader || !isTestEnvironment()) {
     return null;
   }
 
@@ -36,7 +40,7 @@ function getTestRequestAccountId(request: Request, allowTestHeader: boolean) {
 }
 
 function getTestBearerAccountId(request: Request) {
-  if (process.env.NODE_ENV !== 'test') {
+  if (!isTestEnvironment()) {
     return undefined;
   }
 

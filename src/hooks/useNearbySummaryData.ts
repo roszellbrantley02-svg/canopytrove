@@ -178,7 +178,9 @@ export function useNearbyWarmSnapshot() {
           setData(snapshot);
         });
       } catch (error) {
-        console.warn('[useNearbyWarmSnapshot] failed to load nearby summary snapshot:', error);
+        if (__DEV__) {
+          console.warn('[useNearbyWarmSnapshot] failed to load nearby summary snapshot:', error);
+        }
       }
     })();
 

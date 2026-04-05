@@ -11,6 +11,12 @@ import type {
   OwnerProfileDocument,
   OwnerPortalSubscriptionDocument,
 } from '../../types/ownerPortal';
+import type { OwnerSubscriptionTier, OwnerTierBillingCycle } from '../../types/ownerTiers';
+import {
+  OWNER_TIERS,
+  OWNER_TIER_ORDER,
+  ADDITIONAL_LOCATION_MONTHLY_PRICE,
+} from '../../types/ownerTiers';
 import { ownerPortalStyles as styles } from './ownerPortalStyles';
 import {
   formatDateLabel as formatOwnerDateLabel,
@@ -350,6 +356,161 @@ export function OwnerPortalSubscriptionPlanOptions({
         >
           <Text style={styles.primaryButtonText}>{annualButtonLabel}</Text>
         </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function TierFeatureList({ features }: { features: string[] }) {
+  return (
+    <View style={styles.planFeatureList}>
+      {features.map((feature) => (
+        <View key={feature} style={styles.planFeatureRow}>
+          <AppUiIcon name="checkmark-circle" size={18} color="#00F58C" />
+          <Text style={styles.planFeatureText}>{feature}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function TierLockedFeature({ label }: { label: string }) {
+  return (
+    <View style={styles.planFeatureRow}>
+      <AppUiIcon name="lock-closed-outline" size={18} color="#666" />
+      <Text style={[styles.planFeatureText, styles.planFeatureTextLocked]}>{label}</Text>
+    </View>
+  );
+}
+
+export function OwnerPortalTierCards({
+  billingCycle,
+  currentTier,
+  disableButtons,
+  isSubmitting,
+  billingTemporarilyPaused,
+  onSelectTier,
+  onToggleBillingCycle,
+}: {
+  billingCycle: OwnerTierBillingCycle;
+  currentTier: OwnerSubscriptionTier | null;
+  disableButtons: boolean;
+  isSubmitting: OwnerSubscriptionTier | null;
+  billingTemporarilyPaused: boolean;
+  onSelectTier: (tier: OwnerSubscriptionTier) => void;
+  onToggleBillingCycle: () => void;
+}) {
+  return (
+    <View style={styles.sectionStack}>
+      <View style={styles.billingCycleRow}>
+        <Pressable
+          onPress={onToggleBillingCycle}
+          style={[
+            styles.billingCycleTab,
+            billingCycle === 'monthly'
+              ? styles.billingCycleTabActive
+              : styles.billingCycleTabInactive,
+          ]}
+        >
+          <Text
+            style={
+              billingCycle === 'monthly'
+                ? styles.billingCycleTabTextActive
+                : styles.billingCycleTabTextInactive
+            }
+          >
+            Monthly
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={onToggleBillingCycle}
+          style={[
+            styles.billingCycleTab,
+            billingCycle === 'annual'
+              ? styles.billingCycleTabActive
+              : styles.billingCycleTabInactive,
+          ]}
+        >
+          <Text
+            style={
+              billingCycle === 'annual'
+                ? styles.billingCycleTabTextActive
+                : styles.billingCycleTabTextInactive
+            }
+          >
+            Annual (save ~17%)
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.planGrid}>
+        {OWNER_TIER_ORDER.map((tierKey) => {
+          const tierDef = OWNER_TIERS[tierKey];
+          const isCurrentTier = currentTier === tierKey;
+          const isFeatured = tierKey === 'pro';
+          const price =
+            billingCycle === 'annual'
+              ? `$${Math.round(tierDef.annualPrice / 12)}/mo`
+              : `$${tierDef.monthlyPrice}/mo`;
+          const billedNote =
+            billingCycle === 'annual' ? `Billed $${tierDef.annualPrice}/yr` : 'Billed monthly';
+
+          const buttonLabel = billingTemporarilyPaused
+            ? 'Billing Paused'
+            : isSubmitting === tierKey
+              ? 'Opening...'
+              : isCurrentTier
+                ? 'Current Plan'
+                : `Start ${tierDef.label}`;
+
+          return (
+            <View
+              key={tierKey}
+              style={[
+                styles.planTile,
+                isFeatured && styles.planTileFeatured,
+                isCurrentTier && styles.planTileCurrentTier,
+              ]}
+            >
+              <Text style={styles.sectionEyebrow}>{tierDef.label}</Text>
+              <Text style={styles.planPriceCaption}>{tierDef.tagline}</Text>
+              <Text style={styles.planPrice}>{price}</Text>
+              <Text style={[styles.planPriceCaption, styles.planPriceCaptionSmall]}>
+                {billedNote}
+              </Text>
+              {tierKey === 'pro' ? (
+                <Text style={styles.valueCallout}>
+                  +${ADDITIONAL_LOCATION_MONTHLY_PRICE}/mo per additional location
+                </Text>
+              ) : null}
+              <TierFeatureList features={tierDef.features} />
+              {tierKey === 'verified' ? (
+                <View style={styles.planFeatureList}>
+                  <TierLockedFeature label="Promotions (Growth+)" />
+                  <TierLockedFeature label="Full analytics (Growth+)" />
+                  <TierLockedFeature label="AI tools (Pro)" />
+                </View>
+              ) : null}
+              {tierKey === 'growth' ? (
+                <View style={styles.planFeatureList}>
+                  <TierLockedFeature label="AI tools (Pro)" />
+                  <TierLockedFeature label="Multi-location (Pro)" />
+                </View>
+              ) : null}
+              <Pressable
+                disabled={disableButtons || isCurrentTier}
+                onPress={() => onSelectTier(tierKey)}
+                style={[
+                  styles.primaryButton,
+                  (disableButtons || isCurrentTier) && styles.buttonDisabled,
+                  isCurrentTier && styles.buttonCurrentTier,
+                ]}
+              >
+                <Text style={styles.primaryButtonText}>{buttonLabel}</Text>
+              </Pressable>
+            </View>
+          );
+        })}
       </View>
     </View>
   );

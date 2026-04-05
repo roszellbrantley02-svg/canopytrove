@@ -1,6 +1,7 @@
 import { RequestHandler } from 'express';
 import { serverConfig } from '../config';
 import { backendStorefrontSourceStatus } from '../sources';
+import { logger } from './logger';
 
 function createRequestId() {
   return `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
@@ -31,20 +32,17 @@ export const requestTelemetryMiddleware: RequestHandler = (request, response, ne
     }
 
     const responseTimeMs = response.getHeader('X-CanopyTrove-Response-Time-Ms');
-    console.log(
-      JSON.stringify({
-        type: 'http_request',
-        requestId,
-        correlationId,
-        method: request.method,
-        path: request.originalUrl,
-        statusCode: response.statusCode,
-        responseTimeMs:
-          typeof responseTimeMs === 'string' ? Number(responseTimeMs) : (responseTimeMs ?? null),
-        ip: getClientIpHeaderValue(request.ip),
-        sourceMode: backendStorefrontSourceStatus.activeMode,
-      }),
-    );
+    logger.info('http_request', {
+      requestId,
+      correlationId,
+      method: request.method,
+      path: request.originalUrl,
+      statusCode: response.statusCode,
+      responseTimeMs:
+        typeof responseTimeMs === 'string' ? Number(responseTimeMs) : (responseTimeMs ?? null),
+      ip: getClientIpHeaderValue(request.ip),
+      sourceMode: backendStorefrontSourceStatus.activeMode,
+    });
   });
 
   next();

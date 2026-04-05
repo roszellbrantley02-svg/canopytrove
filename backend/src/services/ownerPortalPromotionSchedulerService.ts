@@ -78,6 +78,8 @@ export function assertOwnerPromotionConstraints(options: {
   existingPromotions: OwnerStorefrontPromotionDocument[];
   currentPromotionId?: string | null;
   nowIso?: string;
+  /** Override the max promotion limit (for tier-based gating). Defaults to MAX_OWNER_PROMOTIONS_PER_STOREFRONT. */
+  maxPromotions?: number;
 }) {
   const nowIso = options.nowIso ?? getNowIso();
   const durationMs = getPromotionDurationMs(options.nextPromotion);
@@ -90,6 +92,7 @@ export function assertOwnerPromotionConstraints(options: {
     return;
   }
 
+  const maxAllowed = options.maxPromotions ?? MAX_OWNER_PROMOTIONS_PER_STOREFRONT;
   const livePromotionCount = options.existingPromotions.filter((promotion) => {
     if (promotion.id === options.currentPromotionId) {
       return false;
@@ -98,9 +101,9 @@ export function assertOwnerPromotionConstraints(options: {
     return shouldCountAgainstPromotionLimit(promotion, nowIso);
   }).length;
 
-  if (livePromotionCount >= MAX_OWNER_PROMOTIONS_PER_STOREFRONT) {
+  if (livePromotionCount >= maxAllowed) {
     throw new OwnerPromotionValidationError(
-      `You can keep at most ${MAX_OWNER_PROMOTIONS_PER_STOREFRONT} scheduled or active promotions at once.`,
+      `You can keep at most ${maxAllowed} scheduled or active promotions at once.${maxAllowed < MAX_OWNER_PROMOTIONS_PER_STOREFRONT ? ' Upgrade your plan for more.' : ''}`,
     );
   }
 }

@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parse } from 'dotenv';
+import { logger } from './observability/logger';
 
 const initialEnvKeys = new Set(Object.keys(process.env));
 
@@ -147,20 +148,21 @@ void (async () => {
       nextServer.once('error', reject);
     });
 
-    console.log(`CanopyTrove backend listening on http://localhost:${serverConfig.port}`);
+    const { logger } = require('./observability/logger');
+    logger.info(`CanopyTrove backend listening on http://localhost:${serverConfig.port}`);
 
     // Start schedulers with graceful degradation - one failing doesn't block others
     try {
       startRuntimeHealthMonitorScheduler();
     } catch (error) {
-      console.warn('Failed to start runtime health monitor scheduler', error);
+      logger.warn('Failed to start runtime health monitor scheduler', { error: String(error) });
     }
 
     if (serverConfig.ownerLicenseComplianceSchedulerEnabled) {
       try {
         startOwnerLicenseComplianceScheduler(serverConfig.ownerLicenseComplianceIntervalHours);
       } catch (error) {
-        console.warn('Failed to start owner license compliance scheduler', error);
+        logger.warn('Failed to start owner license compliance scheduler', { error: String(error) });
       }
     }
 
@@ -168,14 +170,14 @@ void (async () => {
       try {
         startOwnerPromotionScheduler(serverConfig.ownerPromotionSweepIntervalMinutes);
       } catch (error) {
-        console.warn('Failed to start owner promotion scheduler', error);
+        logger.warn('Failed to start owner promotion scheduler', { error: String(error) });
       }
     }
 
     try {
       void startStorefrontDiscoveryScheduler();
     } catch (error) {
-      console.warn('Failed to start storefront discovery scheduler', error);
+      logger.warn('Failed to start storefront discovery scheduler', { error: String(error) });
     }
 
     server.once('error', (error) => {
@@ -193,7 +195,9 @@ void (async () => {
     captureBackendException(error, {
       source: 'server-startup',
     });
-    console.error('CanopyTrove backend failed to start', error);
+    logger.error('CanopyTrove backend failed to start', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     // Give async reporters (Sentry flush) a brief window, then exit definitively so
     // Cloud Run sees a non-zero exit code and restarts the container.
     process.exitCode = 1;

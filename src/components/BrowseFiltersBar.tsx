@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -183,8 +184,12 @@ function BrowseFiltersBarComponent({
           onPress={onToggleHotDeals}
           style={[styles.sortChip, hotDealsOnly && styles.hotDealsChipActive]}
           accessibilityRole="button"
-          accessibilityLabel="Toggle specials"
-          accessibilityHint="Shows only storefronts with live specials."
+          accessibilityLabel={Platform.OS === 'android' ? 'Toggle updates' : 'Toggle specials'}
+          accessibilityHint={
+            Platform.OS === 'android'
+              ? 'Shows only storefronts with recent updates.'
+              : 'Shows only storefronts with live specials.'
+          }
           accessibilityState={{ selected: hotDealsOnly }}
         >
           <AppUiIcon
@@ -193,7 +198,7 @@ function BrowseFiltersBarComponent({
             color={hotDealsOnly ? colors.backgroundDeep : colors.danger}
           />
           <Text style={[styles.sortChipText, hotDealsOnly && styles.hotDealsChipTextActive]}>
-            Specials
+            {Platform.OS === 'android' ? 'Updates' : 'Specials'}
           </Text>
         </Pressable>
       </View>

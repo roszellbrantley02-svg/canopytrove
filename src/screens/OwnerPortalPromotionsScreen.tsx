@@ -1,7 +1,8 @@
 import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
@@ -31,6 +32,7 @@ import {
   formatPromotionPlacementScope,
   formatPromotionPlacementSurfaces,
   formatPromotionValue,
+  getAndroidEligibilityLabel,
   getPromotionAnalyticsSummary,
   getPromotionPerformancePresentation,
   getPromotionPlannerBody,
@@ -41,6 +43,7 @@ import {
   getPromotionRuntimeMessage,
   getPromotionSaveButtonLabel,
   getPromotionTrackedActions,
+  precheckAndroidModeration,
   PROMOTION_AUDIENCE_OPTIONS,
   PROMOTION_CARD_TONE_OPTIONS,
   PROMOTION_PLACEMENT_SCOPE_OPTIONS,
@@ -48,12 +51,13 @@ import {
 } from './ownerPortal/ownerPortalPromotionUtils';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 import { useOwnerPortalWorkspace } from './ownerPortal/useOwnerPortalWorkspace';
+import { getOwnerTierDefinition } from '../types/ownerTiers';
 
 type OwnerPortalPromotionsRoute = RouteProp<RootStackParamList, 'OwnerPortalPromotions'>;
 const ignoreAsyncError = () => undefined;
 const metricGridMinWidthStyle = { minWidth: 920 } as const;
 
-export function OwnerPortalPromotionsScreen() {
+function OwnerPortalPromotionsScreenInner() {
   const _route = useRoute<OwnerPortalPromotionsRoute>();
   const preview = false;
   const {
@@ -106,9 +110,11 @@ export function OwnerPortalPromotionsScreen() {
     () => workspace?.promotionPerformance ?? [],
     [workspace?.promotionPerformance],
   );
-  const MAX_PROMOTIONS = 5;
+  const tierDef = getOwnerTierDefinition(workspace?.tier);
+  const maxPromotions = tierDef.maxPromotions;
   const nonExpiredPromotionCount = promotions.filter((p) => p.status !== 'expired').length;
-  const isAtPromotionLimit = !editingPromotionId && nonExpiredPromotionCount >= MAX_PROMOTIONS;
+  const isAtPromotionLimit =
+    !editingPromotionId && (maxPromotions === 0 || nonExpiredPromotionCount >= maxPromotions);
   const {
     activePromotions,
     totalImpressions,
@@ -144,32 +150,57 @@ export function OwnerPortalPromotionsScreen() {
     !startsAt.trim() ||
     !endsAt.trim();
 
+  const androidPrecheck =
+    Platform.OS === 'android'
+      ? precheckAndroidModeration(
+          title,
+          description,
+          badgesInput
+            .split(',')
+            .map((b) => b.trim())
+            .filter(Boolean),
+        )
+      : null;
+
   return (
     <ScreenShell
       eyebrow="Owner Portal"
-      title="Promotions and results."
-      subtitle="Plan the lead specials lane, reserve owner highlights for premium placement, and compare offer performance over time."
-      headerPill={'Specials'}
+      title={Platform.OS === 'android' ? 'Updates and results.' : 'Promotions and results.'}
+      subtitle={
+        Platform.OS === 'android'
+          ? 'Plan updates, reserve owner highlights for premium placement, and compare performance over time.'
+          : 'Plan the lead specials lane, reserve owner highlights for premium placement, and compare offer performance over time.'
+      }
+      headerPill={Platform.OS === 'android' ? 'Updates' : 'Specials'}
     >
       <MotionInView delay={70}>
         <View style={styles.portalHeroCard}>
           <View style={styles.portalHeroGlow} />
-          <Text style={styles.portalHeroKicker}>Offer studio</Text>
+          <Text style={styles.portalHeroKicker}>
+            {Platform.OS === 'android' ? 'Update studio' : 'Offer studio'}
+          </Text>
           <Text style={styles.portalHeroTitle}>
-            Lead with specials. Save owner highlights for premium placement.
+            {Platform.OS === 'android'
+              ? 'Lead with updates. Save owner highlights for premium placement.'
+              : 'Lead with specials. Save owner highlights for premium placement.'}
           </Text>
           <Text style={styles.portalHeroBody}>
-            The planner now treats specials as the primary urgency lane while keeping
-            owner-highlight cards reserved for curated premium storytelling.
+            {Platform.OS === 'android'
+              ? 'The planner now treats updates as the primary content lane while keeping owner-highlight cards reserved for curated premium storytelling.'
+              : 'The planner now treats specials as the primary urgency lane while keeping owner-highlight cards reserved for curated premium storytelling.'}
           </Text>
           <View style={styles.portalHeroMetricRow}>
             <View style={styles.portalHeroMetricCard}>
               <Text style={styles.portalHeroMetricValue}>{activePromotions}</Text>
-              <Text style={styles.portalHeroMetricLabel}>Active Offers</Text>
+              <Text style={styles.portalHeroMetricLabel}>
+                {Platform.OS === 'android' ? 'Active Updates' : 'Active Offers'}
+              </Text>
             </View>
             <View style={styles.portalHeroMetricCard}>
               <Text style={styles.portalHeroMetricValue}>{promotionPerformance.length}</Text>
-              <Text style={styles.portalHeroMetricLabel}>Tracked Offers</Text>
+              <Text style={styles.portalHeroMetricLabel}>
+                {Platform.OS === 'android' ? 'Tracked Updates' : 'Tracked Offers'}
+              </Text>
             </View>
             <View style={styles.portalHeroMetricCard}>
               <Text style={styles.portalHeroMetricValue}>
@@ -184,7 +215,9 @@ export function OwnerPortalPromotionsScreen() {
             </View>
             <View style={styles.metaChip}>
               <Text style={styles.metaChipText}>
-                Hot deals lead, owner highlights stay selective
+                {Platform.OS === 'android'
+                  ? 'Updates lead, owner highlights stay selective'
+                  : 'Hot deals lead, owner highlights stay selective'}
               </Text>
             </View>
           </View>
@@ -193,8 +226,12 @@ export function OwnerPortalPromotionsScreen() {
 
       <MotionInView delay={120}>
         <SectionCard
-          title="Promotion planner"
-          body="Use ISO-style dates for exact scheduling. Default to a featured special when the card should drive urgency, then switch to owner highlight only when the message should read as a premium curated feature. Each storefront can keep up to five scheduled or active offers at once."
+          title={Platform.OS === 'android' ? 'Update planner' : 'Promotion planner'}
+          body={
+            Platform.OS === 'android'
+              ? 'Use ISO-style dates for exact scheduling. Default to a featured update when the card should drive engagement, then switch to owner highlight when the message should read as a premium curated feature. Each storefront can keep up to five scheduled or active updates at once.'
+              : 'Use ISO-style dates for exact scheduling. Default to a featured special when the card should drive urgency, then switch to owner highlight only when the message should read as a premium curated feature. Each storefront can keep up to five scheduled or active offers at once.'
+          }
         >
           <View style={styles.sectionStack}>
             {runtimeMessage ? (
@@ -233,17 +270,25 @@ export function OwnerPortalPromotionsScreen() {
                   <Text style={styles.summaryTileLabel}>Mode</Text>
                   <Text style={styles.summaryTileBody}>
                     {editingPromotionId
-                      ? 'A saved promotion is loaded into the planner.'
+                      ? Platform.OS === 'android'
+                        ? 'A saved update is loaded into the planner.'
+                        : 'A saved promotion is loaded into the planner.'
                       : preview
-                        ? 'Preview promotion changes save locally to this workspace.'
-                        : 'No saved promotion is loaded yet.'}
+                        ? Platform.OS === 'android'
+                          ? 'Preview update changes save locally to this workspace.'
+                          : 'Preview promotion changes save locally to this workspace.'
+                        : Platform.OS === 'android'
+                          ? 'No saved update is loaded yet.'
+                          : 'No saved promotion is loaded yet.'}
                   </Text>
                 </View>
                 <View style={styles.summaryTile}>
                   <Text style={styles.summaryTileValue}>{formatPromotionValue(audience)}</Text>
                   <Text style={styles.summaryTileLabel}>Audience</Text>
                   <Text style={styles.summaryTileBody}>
-                    Which customer segment should see this offer first.
+                    {Platform.OS === 'android'
+                      ? 'Which customer segment should see this update first.'
+                      : 'Which customer segment should see this offer first.'}
                   </Text>
                 </View>
                 <View style={styles.summaryTile}>
@@ -257,8 +302,14 @@ export function OwnerPortalPromotionsScreen() {
               {aiErrorText ? <Text style={styles.errorText}>{aiErrorText}</Text> : null}
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Draft promotion with AI"
-                accessibilityHint="Generates suggested promotion copy and placement settings."
+                accessibilityLabel={
+                  Platform.OS === 'android' ? 'Draft update with AI' : 'Draft promotion with AI'
+                }
+                accessibilityHint={
+                  Platform.OS === 'android'
+                    ? 'Generates suggested update copy and placement settings.'
+                    : 'Generates suggested promotion copy and placement settings.'
+                }
                 disabled={preview || isAiLoading}
                 onPress={() => {
                   void draftPromotionWithAi({
@@ -285,7 +336,11 @@ export function OwnerPortalPromotionsScreen() {
               </Pressable>
             </View>
 
-            {isLoading ? <Text style={styles.helperText}>Loading promotions...</Text> : null}
+            {isLoading ? (
+              <Text style={styles.helperText}>
+                {Platform.OS === 'android' ? 'Loading updates...' : 'Loading promotions...'}
+              </Text>
+            ) : null}
             {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
 
             <View style={styles.plannerPanel}>
@@ -293,23 +348,33 @@ export function OwnerPortalPromotionsScreen() {
                 <View style={styles.splitHeaderCopy}>
                   <Text style={styles.sectionEyebrow}>Creative</Text>
                   <Text style={styles.splitHeaderTitle}>
-                    Offer headline and storefront card copy
+                    {Platform.OS === 'android'
+                      ? 'Update headline and storefront card copy'
+                      : 'Offer headline and storefront card copy'}
                   </Text>
                   <Text style={styles.splitHeaderBody}>
-                    Keep the message tight enough to scan in one pass whether it lands as a featured
-                    special or an owner highlight.
+                    Keep the message tight enough to scan in one pass whether it lands as a featured{' '}
+                    {Platform.OS === 'android' ? 'update' : 'special'} or an owner highlight.
                   </Text>
                 </View>
                 <AppUiIcon name="megaphone-outline" size={20} color="#F5C86A" />
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Promotion title</Text>
+                <Text style={styles.fieldLabel}>
+                  {Platform.OS === 'android' ? 'Update title' : 'Promotion title'}
+                </Text>
                 <TextInput
-                  accessibilityLabel="Promotion title"
-                  accessibilityHint="Sets the headline shown for this promotion."
+                  accessibilityLabel={
+                    Platform.OS === 'android' ? 'Update title' : 'Promotion title'
+                  }
+                  accessibilityHint={
+                    Platform.OS === 'android'
+                      ? 'Sets the headline shown for this update.'
+                      : 'Sets the headline shown for this promotion.'
+                  }
                   value={title}
                   onChangeText={setTitle}
-                  placeholder="Promotion title"
+                  placeholder={Platform.OS === 'android' ? 'Update title' : 'Promotion title'}
                   placeholderTextColor="#738680"
                   style={styles.inputPremium}
                 />
@@ -318,7 +383,11 @@ export function OwnerPortalPromotionsScreen() {
                 <Text style={styles.fieldLabel}>Customer-facing card copy</Text>
                 <TextInput
                   accessibilityLabel="Customer-facing card copy"
-                  accessibilityHint="Sets the deal text customers see on the storefront card."
+                  accessibilityHint={
+                    Platform.OS === 'android'
+                      ? 'Sets the text customers see on the storefront card.'
+                      : 'Sets the deal text customers see on the storefront card.'
+                  }
                   value={description}
                   onChangeText={setDescription}
                   placeholder="What should customers see on the card?"
@@ -330,8 +399,14 @@ export function OwnerPortalPromotionsScreen() {
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>Badge set</Text>
                 <TextInput
-                  accessibilityLabel="Promotion badges"
-                  accessibilityHint="Enter comma-separated badges for this promotion."
+                  accessibilityLabel={
+                    Platform.OS === 'android' ? 'Update badges' : 'Promotion badges'
+                  }
+                  accessibilityHint={
+                    Platform.OS === 'android'
+                      ? 'Enter comma-separated badges for this update.'
+                      : 'Enter comma-separated badges for this promotion.'
+                  }
                   value={badgesInput}
                   onChangeText={setBadgesInput}
                   placeholder="Badges, comma separated"
@@ -349,8 +424,9 @@ export function OwnerPortalPromotionsScreen() {
                     Control the lane, reach, and extra weight
                   </Text>
                   <Text style={styles.splitHeaderBody}>
-                    Hot deals are the main promotional state. Owner highlights stay reserved for
-                    premium placement without deal urgency.
+                    {Platform.OS === 'android'
+                      ? 'Featured updates are the main content state. Owner highlights stay reserved for premium placement.'
+                      : 'Hot deals are the main promotional state. Owner highlights stay reserved for premium placement without deal urgency.'}
                   </Text>
                 </View>
                 <AppUiIcon name="options-outline" size={20} color="#8EDCFF" />
@@ -362,7 +438,9 @@ export function OwnerPortalPromotionsScreen() {
                   ISO-style timestamps are still used so scheduling stays exact.
                 </Text>
                 <TextInput
-                  accessibilityLabel="Promotion start time"
+                  accessibilityLabel={
+                    Platform.OS === 'android' ? 'Update start time' : 'Promotion start time'
+                  }
                   accessibilityHint="Enter the start time in ISO format."
                   value={startsAt}
                   onChangeText={setStartsAt}
@@ -371,7 +449,9 @@ export function OwnerPortalPromotionsScreen() {
                   style={styles.inputPremium}
                 />
                 <TextInput
-                  accessibilityLabel="Promotion end time"
+                  accessibilityLabel={
+                    Platform.OS === 'android' ? 'Update end time' : 'Promotion end time'
+                  }
                   accessibilityHint="Enter the end time in ISO format."
                   value={endsAt}
                   onChangeText={setEndsAt}
@@ -389,7 +469,11 @@ export function OwnerPortalPromotionsScreen() {
                       key={option.value}
                       accessibilityRole="button"
                       accessibilityLabel={`Set audience to ${option.label}`}
-                      accessibilityHint={`Selects the ${option.label.toLowerCase()} audience for this promotion.`}
+                      accessibilityHint={
+                        Platform.OS === 'android'
+                          ? `Selects the ${option.label.toLowerCase()} audience for this update.`
+                          : `Selects the ${option.label.toLowerCase()} audience for this promotion.`
+                      }
                       accessibilityState={audience === option.value ? { selected: true } : {}}
                       onPress={() => setAudience(option.value)}
                       style={[
@@ -418,7 +502,11 @@ export function OwnerPortalPromotionsScreen() {
                       key={option.value}
                       accessibilityRole="button"
                       accessibilityLabel={`Set card tone to ${option.label}`}
-                      accessibilityHint={`Applies the ${option.label.toLowerCase()} card tone to this promotion.`}
+                      accessibilityHint={
+                        Platform.OS === 'android'
+                          ? `Applies the ${option.label.toLowerCase()} card tone to this update.`
+                          : `Applies the ${option.label.toLowerCase()} card tone to this promotion.`
+                      }
                       accessibilityState={cardTone === option.value ? { selected: true } : {}}
                       onPress={() => setCardTone(option.value)}
                       style={[
@@ -439,10 +527,16 @@ export function OwnerPortalPromotionsScreen() {
                 </View>
                 <Text style={styles.fieldHint}>
                   {cardTone === 'hot_deal'
-                    ? 'Use Featured Special when this offer should own the urgency lane and feel time-sensitive.'
+                    ? Platform.OS === 'android'
+                      ? 'Use Featured Update when this content should drive engagement and feel timely.'
+                      : 'Use Featured Special when this offer should own the urgency lane and feel time-sensitive.'
                     : cardTone === 'owner_featured'
-                      ? 'Use Owner Highlight when the card should feel premium, curated, and less discount-driven.'
-                      : 'Standard Card keeps the offer visible without special urgency or premium framing.'}
+                      ? Platform.OS === 'android'
+                        ? 'Use Owner Highlight when the card should feel premium, curated, and showcase value over promotions.'
+                        : 'Use Owner Highlight when the card should feel premium, curated, and less discount-driven.'
+                      : Platform.OS === 'android'
+                        ? 'Standard Card keeps the update visible without special urgency or premium framing.'
+                        : 'Standard Card keeps the offer visible without special urgency or premium framing.'}
                 </Text>
               </View>
 
@@ -456,7 +550,11 @@ export function OwnerPortalPromotionsScreen() {
                         key={option.value}
                         accessibilityRole="button"
                         accessibilityLabel={`${isSelected ? 'Remove' : 'Add'} placement surface ${option.label}`}
-                        accessibilityHint={`Toggles promotion placement on the ${option.label} surface.`}
+                        accessibilityHint={
+                          Platform.OS === 'android'
+                            ? `Toggles update placement on the ${option.label} surface.`
+                            : `Toggles promotion placement on the ${option.label} surface.`
+                        }
                         accessibilityState={isSelected ? { selected: true } : {}}
                         onPress={() =>
                           setPlacementSurfaces((current) =>
@@ -480,8 +578,9 @@ export function OwnerPortalPromotionsScreen() {
                   })}
                 </View>
                 <Text style={styles.fieldHint}>
-                  Specials is the primary promotions lane. Nearby and Browse keep the campaign
-                  visible in the standard discovery feeds.
+                  {Platform.OS === 'android'
+                    ? 'Updates is the primary content lane. Nearby and Browse keep the update visible in the standard discovery feeds.'
+                    : 'Specials is the primary promotions lane. Nearby and Browse keep the campaign visible in the standard discovery feeds.'}
                 </Text>
               </View>
 
@@ -493,7 +592,11 @@ export function OwnerPortalPromotionsScreen() {
                       key={option.value}
                       accessibilityRole="button"
                       accessibilityLabel={`Set placement scope to ${option.label}`}
-                      accessibilityHint={`Sets the promotion scope to ${option.label.toLowerCase()}.`}
+                      accessibilityHint={
+                        Platform.OS === 'android'
+                          ? `Sets the update scope to ${option.label.toLowerCase()}.`
+                          : `Sets the promotion scope to ${option.label.toLowerCase()}.`
+                      }
                       accessibilityState={placementScope === option.value ? { selected: true } : {}}
                       onPress={() => setPlacementScope(option.value)}
                       style={[
@@ -515,6 +618,24 @@ export function OwnerPortalPromotionsScreen() {
               </View>
             </View>
 
+            {androidPrecheck ? (
+              <View
+                style={[
+                  styles.statusPanel,
+                  androidPrecheck.level === 'red'
+                    ? styles.statusPanelDanger
+                    : androidPrecheck.level === 'yellow'
+                      ? styles.statusPanelWarm
+                      : styles.statusPanelSuccess,
+                ]}
+              >
+                <Text style={styles.helperText}>{getAndroidEligibilityLabel(androidPrecheck)}</Text>
+                {androidPrecheck.message ? (
+                  <Text style={styles.helperText}>{androidPrecheck.message}</Text>
+                ) : null}
+              </View>
+            ) : null}
+
             <View style={styles.ctaPanel}>
               <View style={styles.splitHeaderRow}>
                 <View style={styles.splitHeaderCopy}>
@@ -534,8 +655,16 @@ export function OwnerPortalPromotionsScreen() {
 
               <Pressable
                 accessibilityRole="switch"
-                accessibilityLabel="Alert followers when promotion starts"
-                accessibilityHint="Turns follower notifications on or off for this promotion."
+                accessibilityLabel={
+                  Platform.OS === 'android'
+                    ? 'Alert followers when update starts'
+                    : 'Alert followers when promotion starts'
+                }
+                accessibilityHint={
+                  Platform.OS === 'android'
+                    ? 'Turns follower notifications on or off for this update.'
+                    : 'Turns follower notifications on or off for this promotion.'
+                }
                 accessibilityState={{ checked: alertFollowersOnStart }}
                 onPress={() => setAlertFollowersOnStart((current) => !current)}
                 style={[
@@ -550,7 +679,9 @@ export function OwnerPortalPromotionsScreen() {
                       {alertFollowersOnStart ? 'Alert Followers On Start' : 'No Follower Alert'}
                     </Text>
                     <Text style={styles.actionTileBody}>
-                      Trigger owner follower notifications when this promotion starts.
+                      {Platform.OS === 'android'
+                        ? 'Trigger owner follower notifications when this update starts.'
+                        : 'Trigger owner follower notifications when this promotion starts.'}
                     </Text>
                   </View>
                   <AppUiIcon
@@ -563,8 +694,13 @@ export function OwnerPortalPromotionsScreen() {
 
               {isAtPromotionLimit ? (
                 <Text style={styles.limitNotice}>
-                  You've reached the limit of {MAX_PROMOTIONS} active or scheduled promotions. Let
-                  one expire or remove it to create a new deal.
+                  {maxPromotions === 0
+                    ? Platform.OS === 'android'
+                      ? 'Updates require the Growth plan or higher. Upgrade to create updates.'
+                      : 'Promotions require the Growth plan or higher. Upgrade to create specials.'
+                    : Platform.OS === 'android'
+                      ? `You've reached the limit of ${maxPromotions} active or scheduled updates. Let one expire or remove it to create a new one.`
+                      : `You've reached the limit of ${maxPromotions} active or scheduled promotions. Let one expire or remove it to create a new deal.`}
                 </Text>
               ) : null}
 
@@ -572,12 +708,24 @@ export function OwnerPortalPromotionsScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={
-                    isAtPromotionLimit ? 'Promotion limit reached' : saveButtonLabel
+                    isAtPromotionLimit
+                      ? Platform.OS === 'android'
+                        ? 'Update limit reached'
+                        : 'Promotion limit reached'
+                      : saveButtonLabel
                   }
                   accessibilityHint={
                     isAtPromotionLimit
-                      ? 'You have reached the maximum of 5 promotions.'
-                      : 'Saves the current promotion planner changes.'
+                      ? maxPromotions === 0
+                        ? Platform.OS === 'android'
+                          ? 'Updates require a plan upgrade.'
+                          : 'Promotions require a plan upgrade.'
+                        : Platform.OS === 'android'
+                          ? `You have reached the maximum of ${maxPromotions} updates.`
+                          : `You have reached the maximum of ${maxPromotions} promotions.`
+                      : Platform.OS === 'android'
+                        ? 'Saves the current update planner changes.'
+                        : 'Saves the current promotion planner changes.'
                   }
                   disabled={ctaDisabled}
                   onPress={() => {
@@ -610,7 +758,9 @@ export function OwnerPortalPromotionsScreen() {
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Reset promotion form"
+                  accessibilityLabel={
+                    Platform.OS === 'android' ? 'Reset update form' : 'Reset promotion form'
+                  }
                   accessibilityHint="Clears the planner and returns it to the default state."
                   onPress={resetForm}
                   style={styles.secondaryButton}
@@ -625,8 +775,16 @@ export function OwnerPortalPromotionsScreen() {
 
       <MotionInView delay={220}>
         <SectionCard
-          title="Live and scheduled promotions"
-          body="Load any promotion into the planner to edit timing, placement, badge mix, or move it between the featured specials lane and the owner-highlight lane."
+          title={
+            Platform.OS === 'android'
+              ? 'Live and scheduled updates'
+              : 'Live and scheduled promotions'
+          }
+          body={
+            Platform.OS === 'android'
+              ? 'Load any update into the planner to edit timing, placement, badge mix, or move it between the featured updates lane and the owner-highlight lane.'
+              : 'Load any promotion into the planner to edit timing, placement, badge mix, or move it between the featured specials lane and the owner-highlight lane.'
+          }
         >
           {promotions.length ? (
             <View style={styles.cardStack}>
@@ -673,8 +831,16 @@ export function OwnerPortalPromotionsScreen() {
 
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Edit promotion ${promotion.title}`}
-                    accessibilityHint="Loads this promotion into the planner for editing."
+                    accessibilityLabel={
+                      Platform.OS === 'android'
+                        ? `Edit update ${promotion.title}`
+                        : `Edit promotion ${promotion.title}`
+                    }
+                    accessibilityHint={
+                      Platform.OS === 'android'
+                        ? 'Loads this update into the planner for editing.'
+                        : 'Loads this promotion into the planner for editing.'
+                    }
                     onPress={() => {
                       setEditingPromotionId(promotion.id);
                       applyPlannerState(getPromotionPlannerStateFromPromotion(promotion));
@@ -688,10 +854,15 @@ export function OwnerPortalPromotionsScreen() {
             </View>
           ) : (
             <View style={styles.emptyStateCard}>
-              <Text style={styles.emptyStateTitle}>No promotions scheduled yet</Text>
+              <Text style={styles.emptyStateTitle}>
+                {Platform.OS === 'android'
+                  ? 'No updates scheduled yet'
+                  : 'No promotions scheduled yet'}
+              </Text>
               <Text style={styles.emptyStateBody}>
-                Build the first campaign in the planner above. Once an offer is saved, it will
-                appear here with a calmer summary card and a quick path back into editing.
+                {Platform.OS === 'android'
+                  ? 'Build the first update in the planner above. Once an update is saved, it will appear here with a calmer summary card and a quick path back into editing.'
+                  : 'Build the first campaign in the planner above. Once an offer is saved, it will appear here with a calmer summary card and a quick path back into editing.'}
               </Text>
             </View>
           )}
@@ -700,8 +871,12 @@ export function OwnerPortalPromotionsScreen() {
 
       <MotionInView delay={300}>
         <SectionCard
-          title="Offer performance"
-          body="These results use the live promotion analytics tied to promotion IDs, so you can compare featured specials against owner highlights by visibility, taps, and route intent."
+          title={Platform.OS === 'android' ? 'Update performance' : 'Offer performance'}
+          body={
+            Platform.OS === 'android'
+              ? 'These results use the live update analytics tied to update IDs, so you can compare featured updates against owner highlights by visibility, taps, and route intent.'
+              : 'These results use the live promotion analytics tied to promotion IDs, so you can compare featured specials against owner highlights by visibility, taps, and route intent.'
+          }
         >
           {promotionPerformance.length ? (
             <View style={styles.sectionStack}>
@@ -710,16 +885,22 @@ export function OwnerPortalPromotionsScreen() {
                   <Text style={styles.summaryTileValue}>
                     {formatCount(promotionPerformance.length)}
                   </Text>
-                  <Text style={styles.summaryTileLabel}>Tracked Offers</Text>
+                  <Text style={styles.summaryTileLabel}>
+                    {Platform.OS === 'android' ? 'Tracked Updates' : 'Tracked Offers'}
+                  </Text>
                   <Text style={styles.summaryTileBody}>
-                    Offers with measurable performance data.
+                    {Platform.OS === 'android'
+                      ? 'Updates with measurable performance data.'
+                      : 'Offers with measurable performance data.'}
                   </Text>
                 </View>
                 <View style={styles.summaryTile}>
                   <Text style={styles.summaryTileValue}>{formatCount(totalImpressions)}</Text>
                   <Text style={styles.summaryTileLabel}>Total Impressions</Text>
                   <Text style={styles.summaryTileBody}>
-                    Combined visibility across tracked promotions.
+                    {Platform.OS === 'android'
+                      ? 'Combined visibility across tracked updates.'
+                      : 'Combined visibility across tracked promotions.'}
                   </Text>
                 </View>
                 <View style={styles.summaryTile}>
@@ -733,7 +914,9 @@ export function OwnerPortalPromotionsScreen() {
                   <Text style={styles.summaryTileValue}>{formatRate(bestActionRate)}</Text>
                   <Text style={styles.summaryTileLabel}>Best Action Rate</Text>
                   <Text style={styles.summaryTileBody}>
-                    Highest offer-level action rate in the set.
+                    {Platform.OS === 'android'
+                      ? 'Highest update-level action rate in the set.'
+                      : 'Highest offer-level action rate in the set.'}
                   </Text>
                 </View>
               </View>
@@ -745,8 +928,9 @@ export function OwnerPortalPromotionsScreen() {
                       <Text style={styles.sectionEyebrow}>Current leader</Text>
                       <Text style={styles.splitHeaderTitle}>{topPerformance.title}</Text>
                       <Text style={styles.analyticsSpotlightBody}>
-                        This promotion is setting the pace on action rate right now while still
-                        carrying meaningful storefront visibility.
+                        {Platform.OS === 'android'
+                          ? 'This update is setting the pace on action rate right now while still carrying meaningful storefront visibility.'
+                          : 'This promotion is setting the pace on action rate right now while still carrying meaningful storefront visibility.'}
                       </Text>
                     </View>
                     <AppUiIcon name="ribbon-outline" size={22} color="#F5C86A" />
@@ -766,7 +950,9 @@ export function OwnerPortalPromotionsScreen() {
                     />
                   </View>
                   <Text style={styles.metricProgressLabel}>
-                    Action rate against the best promotion in the current set
+                    {Platform.OS === 'android'
+                      ? 'Action rate against the best update in the current set'
+                      : 'Action rate against the best promotion in the current set'}
                   </Text>
                   <View style={styles.analyticsInlineStats}>
                     <View style={styles.analyticsInlineStat}>
@@ -799,13 +985,16 @@ export function OwnerPortalPromotionsScreen() {
 
               <View style={styles.analyticsSectionCard}>
                 <View style={styles.analyticsSectionHeader}>
-                  <Text style={styles.analyticsSectionEyebrow}>Offer comparison grid</Text>
+                  <Text style={styles.analyticsSectionEyebrow}>
+                    {Platform.OS === 'android' ? 'Update comparison grid' : 'Offer comparison grid'}
+                  </Text>
                   <Text style={styles.analyticsSectionTitle}>
                     Each card balances visibility, click-through strength, and downstream action.
                   </Text>
                   <Text style={styles.analyticsSectionBody}>
-                    The cards stay horizontal so the owner can compare multiple promotions quickly
-                    without changing how metrics are calculated.
+                    {Platform.OS === 'android'
+                      ? 'The cards stay horizontal so the owner can compare multiple updates quickly without changing how metrics are calculated.'
+                      : 'The cards stay horizontal so the owner can compare multiple promotions quickly without changing how metrics are calculated.'}
                   </Text>
                 </View>
 
@@ -817,9 +1006,9 @@ export function OwnerPortalPromotionsScreen() {
 
                         return (
                           <OwnerPortalAnalyticsCard
-                            body={`${formatCount(performance.metrics.impressions)} impressions, ${formatCount(performance.metrics.opens)} opens, and ${formatCount(performance.metrics.saves)} saves across the selected offer window.`}
+                            body={`${formatCount(performance.metrics.impressions)} impressions, ${formatCount(performance.metrics.opens)} opens, and ${formatCount(performance.metrics.saves)} saves across the selected ${Platform.OS === 'android' ? 'update' : 'offer'} window.`}
                             eyebrow={`#${index + 1} / ${performance.status.toUpperCase()}`}
-                            footer={`Website ${formatCount(performance.metrics.websiteTaps)} | Menu ${formatCount(performance.metrics.menuTaps)} | Phone ${formatCount(performance.metrics.phoneTaps)} | Redemptions ${formatCount(performance.metrics.redeemed)}`}
+                            footer={`Website ${formatCount(performance.metrics.websiteTaps)} | ${Platform.OS === 'android' ? 'Website' : 'Menu'} ${formatCount(performance.metrics.menuTaps)} | Phone ${formatCount(performance.metrics.phoneTaps)} | Redemptions ${formatCount(performance.metrics.redeemed)}`}
                             icon={presentation.icon}
                             key={performance.promotionId}
                             progress={clampProgress(performance.metrics.actionRate / 100)}
@@ -865,8 +1054,9 @@ export function OwnerPortalPromotionsScreen() {
                 Analytics will populate after live activity
               </Text>
               <Text style={styles.emptyStateBody}>
-                Once promotions begin receiving visibility and customer interaction, this section
-                will show a calmer analytics overview first and then the deeper per-offer cards.
+                {Platform.OS === 'android'
+                  ? 'Once updates begin receiving visibility and customer interaction, this section will show a calmer analytics overview first and then the deeper per-update cards.'
+                  : 'Once promotions begin receiving visibility and customer interaction, this section will show a calmer analytics overview first and then the deeper per-offer cards.'}
               </Text>
             </View>
           )}
@@ -875,3 +1065,8 @@ export function OwnerPortalPromotionsScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalPromotionsScreen = withScreenErrorBoundary(
+  OwnerPortalPromotionsScreenInner,
+  'owner-portal-promotions',
+);

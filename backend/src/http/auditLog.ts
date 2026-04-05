@@ -1,5 +1,6 @@
 import type { Request } from 'express';
 import { RequestHandler } from 'express';
+import { logger } from '../observability/logger';
 
 /**
  * Audit log entry for write operations
@@ -71,7 +72,7 @@ export function createAuditLogMiddleware(): RequestHandler {
           statusCode: response.statusCode,
         };
 
-        console.log(JSON.stringify(auditEntry));
+        logger.info('audit_log', auditEntry as unknown as Record<string, unknown>);
       }
 
       return originalEnd(...args);

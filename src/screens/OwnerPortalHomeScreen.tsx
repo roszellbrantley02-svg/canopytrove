@@ -3,6 +3,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
@@ -22,6 +23,7 @@ import { OwnerPortalHomeRoiSection } from './ownerPortal/OwnerPortalHomeRoiSecti
 import { OwnerPortalStageList } from './ownerPortal/OwnerPortalStageList';
 import { useOwnerPortalHomeScreenModel } from './ownerPortal/useOwnerPortalHomeScreenModel';
 import { useOwnerPortalWorkspace } from './ownerPortal/useOwnerPortalWorkspace';
+import { OwnerLocationSwitcher } from '../components/OwnerLocationSwitcher';
 import type { OwnerPortalWorkspaceDocument } from '../types/ownerPortal';
 import type { AppUiIconName } from '../icons/AppUiIcon';
 
@@ -86,7 +88,7 @@ function getAttentionItems(workspace: OwnerPortalWorkspaceDocument | null): Atte
   return items;
 }
 
-export function OwnerPortalHomeScreen() {
+function OwnerPortalHomeScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const _route = useRoute<OwnerPortalHomeRoute>();
   const preview = false;
@@ -107,7 +109,15 @@ export function OwnerPortalHomeScreen() {
     saveLicenseCompliance,
     workspace,
     isLoading: isWorkspaceLoading,
+    activeLocationId,
+    locations,
+    switchLocation,
+    tierUpgradePrompt,
+    dismissTierUpgradePrompt,
   } = useOwnerPortalWorkspace(preview);
+  const ownerTier = workspace?.tier ?? 'verified';
+  const isProTier = ownerTier === 'pro';
+  const isGrowthOrAbove = ownerTier === 'growth' || ownerTier === 'pro';
   const homeMetrics = getOwnerHomeDerivedMetrics(workspace);
   const attentionItems = getAttentionItems(workspace);
 
@@ -126,8 +136,13 @@ export function OwnerPortalHomeScreen() {
       key: 'create-special',
       label: 'Create Special',
       iconName: 'megaphone-outline',
+      locked: !isGrowthOrAbove,
       onPress: () => {
-        navigation.navigate('OwnerPortalPromotions', undefined);
+        if (isGrowthOrAbove) {
+          navigation.navigate('OwnerPortalPromotions', undefined);
+        } else {
+          navigation.navigate('OwnerPortalSubscription', undefined);
+        }
       },
     },
     {
@@ -142,8 +157,13 @@ export function OwnerPortalHomeScreen() {
       key: 'badges',
       label: 'Badges',
       iconName: 'ribbon-outline',
+      locked: !isGrowthOrAbove,
       onPress: () => {
-        navigation.navigate('OwnerPortalBadges', undefined);
+        if (isGrowthOrAbove) {
+          navigation.navigate('OwnerPortalBadges', undefined);
+        } else {
+          navigation.navigate('OwnerPortalSubscription', undefined);
+        }
       },
     },
     {
@@ -203,12 +223,53 @@ export function OwnerPortalHomeScreen() {
         <MotionInView delay={70}>
           <OwnerPortalHomeHero
             chips={ownerStatusChips}
-            managedStorefrontCount={ownerProfile?.dispensaryId ? 1 : 0}
+            managedStorefrontCount={
+              locations.length > 0 ? locations.length : ownerProfile?.dispensaryId ? 1 : 0
+            }
             preview={preview}
             savedFollowers={workspace?.metrics.followerCount ?? 0}
             trackedActions7d={workspace ? homeMetrics.totalActions7d : 0}
           />
         </MotionInView>
+
+        {/* 1b. Location Switcher (multi-location Pro owners only) */}
+        {locations.length > 1 ? (
+          <MotionInView delay={80}>
+            <OwnerLocationSwitcher
+              locations={locations}
+              activeLocationId={activeLocationId}
+              onSelectLocation={switchLocation}
+            />
+          </MotionInView>
+        ) : null}
+
+        {/* 1c. Tier Upgrade Prompt */}
+        {tierUpgradePrompt ? (
+          <MotionInView delay={85}>
+            <View style={localStyles.tierUpgradeBanner}>
+              <View style={localStyles.tierUpgradeContent}>
+                <AppUiIcon name="lock-closed-outline" size={20} color="#E8A000" />
+                <Text style={localStyles.tierUpgradeText}>{tierUpgradePrompt.message}</Text>
+              </View>
+              <View style={localStyles.tierUpgradeActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => navigation.navigate('OwnerPortalSubscription', undefined)}
+                  style={localStyles.upgradeButton}
+                >
+                  <Text style={localStyles.upgradeButtonText}>View Plans</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={dismissTierUpgradePrompt}
+                  style={localStyles.dismissButton}
+                >
+                  <Text style={localStyles.dismissButtonText}>Dismiss</Text>
+                </Pressable>
+              </View>
+            </View>
+          </MotionInView>
+        ) : null}
 
         {/* 2. Attention Bar - only show if there are items */}
         {attentionItems.length > 0 ? (
@@ -280,7 +341,7 @@ export function OwnerPortalHomeScreen() {
                       : 'ongoing'}
                   </Text>
                 </View>
-              ) : (
+              ) : isGrowthOrAbove ? (
                 <View style={localStyles.emptyState}>
                   <AppUiIcon name="megaphone-outline" size={32} color="#9CC5B4" />
                   <Text style={localStyles.emptyStateText}>
@@ -296,43 +357,77 @@ export function OwnerPortalHomeScreen() {
                     <Text style={localStyles.primaryButtonText}>Create Special</Text>
                   </Pressable>
                 </View>
+              ) : (
+                <View style={localStyles.lockedFeature}>
+                  <AppUiIcon name="lock-closed-outline" size={24} color="#C4B8B0" />
+                  <Text style={localStyles.lockedFeatureText}>
+                    Specials and deals require the Growth plan or higher.
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => navigation.navigate('OwnerPortalSubscription', undefined)}
+                    style={localStyles.upgradeButton}
+                  >
+                    <Text style={localStyles.upgradeButtonText}>Upgrade to Growth</Text>
+                  </Pressable>
+                </View>
               )}
             </SectionCard>
           </MotionInView>
         ) : null}
 
-        {/* 6. AI Insights Card - only show in live mode with action plan */}
-        {!preview && actionPlan && ownerProfile?.dispensaryId ? (
+        {/* 6. AI Insights Card */}
+        {!preview && ownerProfile?.dispensaryId ? (
           <MotionInView delay={220}>
-            <SectionCard title="AI Insights" body="Weekly priorities.">
-              <View style={localStyles.aiCard}>
-                <View style={localStyles.aiCardHeader}>
-                  <AppUiIcon name="sparkles-outline" size={20} color="#F5C86A" />
-                  <Text style={localStyles.aiCardTitle}>{actionPlan.headline}</Text>
-                </View>
-                {actionPlan.priorities?.[0] ? (
-                  <View style={localStyles.aiPriority}>
-                    <Text style={localStyles.aiPriorityLabel}>Top priority</Text>
-                    <Text style={localStyles.aiPriorityTitle}>
-                      {actionPlan.priorities[0].title}
-                    </Text>
-                    <Text style={localStyles.aiPriorityBody}>{actionPlan.priorities[0].body}</Text>
+            {isProTier && actionPlan ? (
+              <SectionCard title="AI Insights" body="Weekly priorities.">
+                <View style={localStyles.aiCard}>
+                  <View style={localStyles.aiCardHeader}>
+                    <AppUiIcon name="sparkles-outline" size={20} color="#F5C86A" />
+                    <Text style={localStyles.aiCardTitle}>{actionPlan.headline}</Text>
                   </View>
-                ) : null}
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => {
-                    void refreshActionPlan().catch(ignoreAsyncError);
-                  }}
-                  style={localStyles.secondaryButton}
-                  disabled={isAiLoading}
-                >
-                  <Text style={localStyles.secondaryButtonText}>
-                    {isAiLoading ? 'Loading...' : 'View Full Plan'}
+                  {actionPlan.priorities?.[0] ? (
+                    <View style={localStyles.aiPriority}>
+                      <Text style={localStyles.aiPriorityLabel}>Top priority</Text>
+                      <Text style={localStyles.aiPriorityTitle}>
+                        {actionPlan.priorities[0].title}
+                      </Text>
+                      <Text style={localStyles.aiPriorityBody}>
+                        {actionPlan.priorities[0].body}
+                      </Text>
+                    </View>
+                  ) : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      void refreshActionPlan().catch(ignoreAsyncError);
+                    }}
+                    style={localStyles.secondaryButton}
+                    disabled={isAiLoading}
+                  >
+                    <Text style={localStyles.secondaryButtonText}>
+                      {isAiLoading ? 'Loading...' : 'View Full Plan'}
+                    </Text>
+                  </Pressable>
+                </View>
+              </SectionCard>
+            ) : !isProTier ? (
+              <SectionCard title="AI Insights" body="Unlock with the Pro plan.">
+                <View style={localStyles.lockedFeature}>
+                  <AppUiIcon name="lock-closed-outline" size={24} color="#C4B8B0" />
+                  <Text style={localStyles.lockedFeatureText}>
+                    AI-powered action plans and review replies are available on the Pro plan.
                   </Text>
-                </Pressable>
-              </View>
-            </SectionCard>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => navigation.navigate('OwnerPortalSubscription', undefined)}
+                    style={localStyles.upgradeButton}
+                  >
+                    <Text style={localStyles.upgradeButtonText}>Upgrade to Pro</Text>
+                  </Pressable>
+                </View>
+              </SectionCard>
+            ) : null}
           </MotionInView>
         ) : null}
 
@@ -384,6 +479,11 @@ export function OwnerPortalHomeScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalHomeScreen = withScreenErrorBoundary(
+  OwnerPortalHomeScreenInner,
+  'owner-portal-home',
+);
 
 const localStyles = StyleSheet.create({
   scrollContent: {
@@ -511,5 +611,62 @@ const localStyles = StyleSheet.create({
     color: '#9CC5B4',
     fontSize: 13,
     fontWeight: '600',
+  },
+  lockedFeature: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 12,
+  },
+  lockedFeatureText: {
+    fontSize: 13,
+    color: '#C4B8B0',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  upgradeButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#E8A000',
+    alignItems: 'center',
+  },
+  upgradeButtonText: {
+    color: '#121614',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  tierUpgradeBanner: {
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(232, 160, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 160, 0, 0.25)',
+    gap: 12,
+  },
+  tierUpgradeContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  tierUpgradeText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#FFFBF7',
+    lineHeight: 18,
+  },
+  tierUpgradeActions: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  dismissButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  dismissButtonText: {
+    color: '#C4B8B0',
+    fontSize: 13,
+    fontWeight: '500',
   },
 });

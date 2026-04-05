@@ -24,11 +24,13 @@ import { ownerBillingRoutes, ownerBillingWebhookHandler } from './routes/ownerBi
 import { ownerPortalAiRoutes } from './routes/ownerPortalAiRoutes';
 import { ownerWelcomeEmailRoutes } from './routes/ownerWelcomeEmailRoutes';
 import { ownerPortalWorkspaceRoutes } from './routes/ownerPortalWorkspaceRoutes';
+import { ownerMultiLocationRoutes } from './routes/ownerMultiLocationRoutes';
 import { opsRoutes } from './routes/opsRoutes';
 import { profileRoutes } from './routes/profileRoutes';
 import { profileStateRoutes } from './routes/profileStateRoutes';
 import { resendWebhookHandler } from './routes/resendWebhookRoutes';
 import { routeStateRoutes } from './routes/routeStateRoutes';
+import { giphyGatewayRoutes } from './routes/giphyGatewayRoutes';
 import { storefrontRoutes } from './routes/storefrontRoutes';
 import { assertSecureServerConfig, serverConfig } from './config';
 import { hasBackendFirebaseConfig } from './firebase';
@@ -141,10 +143,12 @@ export function createApp() {
   app.use('/', ownerPortalAiRoutes);
   app.use('/', ownerWelcomeEmailRoutes);
   app.use('/', ownerPortalWorkspaceRoutes);
+  app.use('/', ownerMultiLocationRoutes);
   app.use('/', opsRoutes);
   app.use('/', adminRoutes);
   app.use('/', profileRoutes);
   app.use('/', profileStateRoutes);
+  app.use('/', giphyGatewayRoutes);
   app.use('/', routeStateRoutes);
   app.use('/', storefrontRoutes);
   setupExpressErrorMonitoring(app);

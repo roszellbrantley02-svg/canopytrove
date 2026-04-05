@@ -146,6 +146,8 @@ export type StorefrontSummaryApiDocument = {
   promotionPlacementScope?: 'storefront_area' | 'statewide' | null;
   placeId?: string;
   thumbnailUrl?: string | null;
+  /** Android moderation: platform visibility for this storefront's active promotion. */
+  promotionAndroidEligible?: boolean;
 };
 
 export type StorefrontDetailApiDocument = {
@@ -167,6 +169,7 @@ export type StorefrontDetailApiDocument = {
     startsAt: string;
     endsAt: string;
     cardTone: 'standard' | 'owner_featured' | 'hot_deal';
+    androidEligible?: boolean;
   }>;
   photoCount?: number;
   appReviewCount: number;

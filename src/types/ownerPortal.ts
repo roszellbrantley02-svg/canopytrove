@@ -1,4 +1,5 @@
 import type { RuntimeOpsStatus } from './runtimeOps';
+import type { OwnerSubscriptionTier } from './ownerTiers';
 
 export type OwnerPortalUserRole = 'customer' | 'owner' | 'admin';
 
@@ -50,6 +51,8 @@ export type OwnerProfileDocument = {
   identityVerificationStatus: VerificationStatus;
   businessVerificationStatus: VerificationStatus;
   dispensaryId: string | null;
+  /** Additional storefront IDs beyond the primary (Pro tier multi-location). */
+  additionalLocationIds?: string[];
   onboardingStep: OwnerOnboardingStep;
   subscriptionStatus: OwnerSubscriptionStatus;
   badgeLevel: number;
@@ -148,6 +151,7 @@ export type OwnerPortalSubscriptionDocument = {
   externalCustomerId?: string | null;
   externalSubscriptionId: string | null;
   planId: string;
+  tier?: OwnerSubscriptionTier | null;
   status: OwnerSubscriptionStatus;
   billingCycle: 'monthly' | 'annual';
   currentPeriodStart: string;
@@ -208,6 +212,69 @@ export type OwnerLicenseComplianceDocument = {
   updatedAt: string;
 };
 
+// ── Android moderation & compliance types ────────────────────────────
+
+export type ClientPlatform = 'android' | 'ios' | 'web';
+
+export type ContentCategory =
+  | 'announcement'
+  | 'event'
+  | 'community'
+  | 'hours_update'
+  | 'amenity_update'
+  | 'education'
+  | 'promotion';
+
+export type ModerationDecision = 'allowed' | 'review_required' | 'blocked';
+
+export type ModerationReasonCode =
+  | 'PRICE_OR_DISCOUNT'
+  | 'PRODUCT_TERM'
+  | 'TRANSACTION_CTA'
+  | 'ORDER_FLOW_LANGUAGE'
+  | 'DELIVERY_OR_PICKUP'
+  | 'MENU_SHOPPING_LANGUAGE'
+  | 'AMBIGUOUS_EVENT_PROMO'
+  | 'IMAGE_TEXT_REVIEW_REQUIRED'
+  | 'UNKNOWN_RISK';
+
+export type PlatformModeration = {
+  decision: ModerationDecision;
+  reasons: ModerationReasonCode[];
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+};
+
+export type OwnerCardModeration = {
+  category: ContentCategory;
+  overallDecision: ModerationDecision;
+  android: PlatformModeration;
+  ios: PlatformModeration;
+  web: PlatformModeration;
+  classifierVersion: string;
+};
+
+export type PlatformVisibility = {
+  android: boolean;
+  ios: boolean;
+  web: boolean;
+};
+
+export type ModerationQueueEntry = {
+  contentId: string;
+  storefrontId: string;
+  submittedByOwnerId: string;
+  submittedAt: string;
+  platform: ClientPlatform;
+  normalizedText: string;
+  matchedRules: ModerationReasonCode[];
+  imageOcrText: string | null;
+  reviewStatus: 'pending_review' | 'approved' | 'rejected' | 'published' | 'removed';
+  reviewNotes: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+};
+
 export type OwnerPromotionAudience = 'all_followers' | 'frequent_visitors' | 'new_customers';
 
 export type OwnerPromotionStatus = 'draft' | 'scheduled' | 'active' | 'expired';
@@ -236,6 +303,9 @@ export type OwnerStorefrontPromotionDocument = {
   followersAlertedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  // Android moderation
+  moderation?: OwnerCardModeration;
+  platformVisibility?: PlatformVisibility;
 };
 
 export type OwnerStorefrontProfileToolsDocument = {
@@ -365,6 +435,21 @@ export type OwnerPortalWorkspaceDocument = {
     updatedAt: string | null;
   };
   runtimeStatus: RuntimeOpsStatus;
+  tier?: OwnerSubscriptionTier | null;
+  /** The storefront ID the workspace is currently loaded for. */
+  activeLocationId?: string | null;
+  /** All locations this owner manages (primary + additional). Empty for single-location owners. */
+  locations?: OwnerLocationSummary[];
+};
+
+/** Summary of a location for the multi-location switcher. */
+export type OwnerLocationSummary = {
+  storefrontId: string;
+  displayName: string;
+  addressLine1: string;
+  city: string;
+  state: string;
+  isPrimary: boolean;
 };
 
 export type OwnerPortalProfileToolsInput = {
@@ -399,6 +484,7 @@ export type OwnerPortalPromotionInput = {
   cardTone: OwnerPromotionCardTone;
   placementSurfaces: OwnerPromotionPlacementSurface[];
   placementScope: OwnerPromotionPlacementScope;
+  contentCategory?: ContentCategory;
 };
 
 export type OwnerAiPriority = {

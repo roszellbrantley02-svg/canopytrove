@@ -7,6 +7,7 @@ import {
   hasConfiguredOwnerBillingPublicCheckoutLinks,
   ownerBillingConfig,
 } from '../config/ownerBilling';
+import type { OwnerSubscriptionTier } from '../types/ownerTiers';
 import { requestJson } from './storefrontBackendHttp';
 
 type OwnerBillingSessionSource = 'backend_stripe' | 'payment_link';
@@ -28,7 +29,10 @@ export function hasConfiguredOwnerBillingFlow() {
   return Boolean(storefrontApiBaseUrl || hasConfiguredOwnerBillingPublicCheckoutLinks());
 }
 
-export async function createOwnerBillingCheckoutSession(billingCycle: OwnerBillingCycle) {
+export async function createOwnerBillingCheckoutSession(
+  billingCycle: OwnerBillingCycle,
+  tier?: OwnerSubscriptionTier,
+) {
   const fallbackUrl = getOwnerBillingPublicCheckoutUrl(billingCycle);
 
   if (storefrontApiBaseUrl) {
@@ -42,6 +46,7 @@ export async function createOwnerBillingCheckoutSession(billingCycle: OwnerBilli
           },
           body: JSON.stringify({
             billingCycle,
+            ...(tier ? { tier } : {}),
           }),
         },
       );

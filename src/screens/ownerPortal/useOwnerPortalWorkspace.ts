@@ -37,6 +37,7 @@ import {
   clearStorefrontRepositoryCache,
   storefrontRepository,
 } from '../../repositories/storefrontRepository';
+import { isBackendTierAccessError } from '../../services/storefrontBackendHttp';
 
 const PREVIEW_AI_MESSAGE = 'AI assistant tools only run in the live owner workspace.';
 const ignoreAsyncError = () => undefined;
@@ -50,36 +51,60 @@ export function useOwnerPortalWorkspace(preview = false) {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
   const [errorText, setErrorText] = React.useState<string | null>(null);
+  const [tierUpgradePrompt, setTierUpgradePrompt] = React.useState<{
+    message: string;
+    requiredTier: string;
+    currentTier: string;
+  } | null>(null);
   const [actionPlan, setActionPlan] = React.useState<OwnerAiActionPlan | null>(null);
   const [isAiLoading, setIsAiLoading] = React.useState(false);
   const [aiErrorText, setAiErrorText] = React.useState<string | null>(null);
   const hasRequestedActionPlanRef = React.useRef(false);
+  const [activeLocationId, setActiveLocationId] = React.useState<string | null>(null);
 
-  const refresh = React.useCallback(async () => {
-    if (preview) {
-      const nextWorkspace = await getOwnerPortalPreviewWorkspace();
-      setWorkspace(nextWorkspace);
-      setIsLoading(false);
+  const refresh = React.useCallback(
+    async (locationOverride?: string | null) => {
+      if (preview) {
+        const nextWorkspace = await getOwnerPortalPreviewWorkspace();
+        setWorkspace(nextWorkspace);
+        setIsLoading(false);
+        setErrorText(null);
+        setActionPlan(null);
+        hasRequestedActionPlanRef.current = false;
+        return nextWorkspace;
+      }
+
+      setIsLoading(true);
       setErrorText(null);
+      try {
+        const targetLocation = locationOverride !== undefined ? locationOverride : activeLocationId;
+        const nextWorkspace = await getOwnerPortalWorkspace(targetLocation);
+        setWorkspace(nextWorkspace);
+        // Sync active location from what the server resolved
+        if (nextWorkspace.activeLocationId) {
+          setActiveLocationId(nextWorkspace.activeLocationId);
+        }
+        return nextWorkspace;
+      } catch (error) {
+        const nextError = getWorkspaceErrorMessage(error, 'Unable to load owner workspace.');
+        setErrorText(nextError);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [preview, activeLocationId],
+  );
+
+  const switchLocation = React.useCallback(
+    async (locationId: string) => {
+      setActiveLocationId(locationId);
       setActionPlan(null);
       hasRequestedActionPlanRef.current = false;
-      return nextWorkspace;
-    }
-
-    setIsLoading(true);
-    setErrorText(null);
-    try {
-      const nextWorkspace = await getOwnerPortalWorkspace();
-      setWorkspace(nextWorkspace);
-      return nextWorkspace;
-    } catch (error) {
-      const nextError = getWorkspaceErrorMessage(error, 'Unable to load owner workspace.');
-      setErrorText(nextError);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [preview]);
+      await refresh(locationId).catch(ignoreAsyncError);
+    },
+    [refresh],
+  );
 
   React.useEffect(() => {
     void refresh().catch(ignoreAsyncError);
@@ -94,11 +119,23 @@ export function useOwnerPortalWorkspace(preview = false) {
 
       setIsAiLoading(true);
       setAiErrorText(null);
+      setTierUpgradePrompt(null);
       try {
         return await task();
       } catch (error) {
-        const nextError = getWorkspaceErrorMessage(error, 'Unable to run the owner AI assistant.');
-        setAiErrorText(nextError);
+        if (isBackendTierAccessError(error)) {
+          setTierUpgradePrompt({
+            message: error.message,
+            requiredTier: error.requiredTier,
+            currentTier: error.currentTier,
+          });
+        } else {
+          const nextError = getWorkspaceErrorMessage(
+            error,
+            'Unable to run the owner AI assistant.',
+          );
+          setAiErrorText(nextError);
+        }
         throw error;
       } finally {
         setIsAiLoading(false);
@@ -126,6 +163,7 @@ export function useOwnerPortalWorkspace(preview = false) {
     async <T>(task: () => Promise<T>) => {
       setIsSaving(true);
       setErrorText(null);
+      setTierUpgradePrompt(null);
       try {
         const result = await task();
         if (preview) {
@@ -147,7 +185,15 @@ export function useOwnerPortalWorkspace(preview = false) {
         }
         return result;
       } catch (error) {
-        setErrorText(getWorkspaceErrorMessage(error, 'Unable to save owner changes.'));
+        if (isBackendTierAccessError(error)) {
+          setTierUpgradePrompt({
+            message: error.message,
+            requiredTier: error.requiredTier,
+            currentTier: error.currentTier,
+          });
+        } else {
+          setErrorText(getWorkspaceErrorMessage(error, 'Unable to save owner changes.'));
+        }
         throw error;
       } finally {
         setIsSaving(false);
@@ -162,36 +208,45 @@ export function useOwnerPortalWorkspace(preview = false) {
     isLoading,
     isSaving,
     errorText,
+    tierUpgradePrompt,
+    dismissTierUpgradePrompt: () => setTierUpgradePrompt(null),
     actionPlan,
     isAiLoading,
     aiErrorText,
-    refresh,
+    activeLocationId,
+    locations: workspace?.locations ?? [],
+    refresh: () => refresh(),
+    switchLocation,
     refreshActionPlan,
     saveLicenseCompliance: (input: OwnerPortalLicenseComplianceInput) =>
       runMutation(() =>
         preview
           ? saveOwnerPortalPreviewLicenseCompliance(input)
-          : saveOwnerPortalLicenseCompliance(input),
+          : saveOwnerPortalLicenseCompliance(input, activeLocationId),
       ),
     saveProfileTools: (input: OwnerPortalProfileToolsInput) =>
       runMutation(() =>
-        preview ? saveOwnerPortalPreviewProfileTools(input) : saveOwnerPortalProfileTools(input),
+        preview
+          ? saveOwnerPortalPreviewProfileTools(input)
+          : saveOwnerPortalProfileTools(input, activeLocationId),
       ),
     createPromotion: (input: OwnerPortalPromotionInput) =>
       runMutation(() =>
-        preview ? createOwnerPortalPreviewPromotion(input) : createOwnerPortalPromotion(input),
+        preview
+          ? createOwnerPortalPreviewPromotion(input)
+          : createOwnerPortalPromotion(input, activeLocationId),
       ),
     updatePromotion: (promotionId: string, input: OwnerPortalPromotionInput) =>
       runMutation(() =>
         preview
           ? updateOwnerPortalPreviewPromotion(promotionId, input)
-          : updateOwnerPortalPromotion(promotionId, input),
+          : updateOwnerPortalPromotion(promotionId, input, activeLocationId),
       ),
     replyToReview: (reviewId: string, text: string) =>
       runMutation(() =>
         preview
           ? replyToOwnerPortalPreviewReview(reviewId, text)
-          : replyToOwnerPortalReview(reviewId, text),
+          : replyToOwnerPortalReview(reviewId, text, activeLocationId),
       ),
     suggestProfileToolsWithAi: (input: OwnerAiDraftRequest = {}) =>
       runAiTask(() =>

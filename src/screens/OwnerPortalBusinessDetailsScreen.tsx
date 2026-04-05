@@ -3,6 +3,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
@@ -21,7 +22,7 @@ type BusinessDetailsRoute = RouteProp<RootStackParamList, 'OwnerPortalBusinessDe
 
 const ONBOARDING_STEPS = ['Account', 'Business Details', 'Claim Listing', 'Verification'];
 
-export function OwnerPortalBusinessDetailsScreen() {
+function OwnerPortalBusinessDetailsScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<BusinessDetailsRoute>();
   const preview = false;
@@ -161,3 +162,8 @@ export function OwnerPortalBusinessDetailsScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalBusinessDetailsScreen = withScreenErrorBoundary(
+  OwnerPortalBusinessDetailsScreenInner,
+  'owner-portal-business-details',
+);

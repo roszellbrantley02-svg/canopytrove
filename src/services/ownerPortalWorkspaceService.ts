@@ -33,54 +33,73 @@ function requestOwnerPortalJson<T>(
   });
 }
 
-export function getOwnerPortalWorkspace() {
-  return requestOwnerPortalJson<OwnerPortalWorkspaceDocument>('/owner-portal/workspace');
+export function getOwnerPortalWorkspace(locationId?: string | null) {
+  const query = locationId ? `?locationId=${encodeURIComponent(locationId)}` : '';
+  return requestOwnerPortalJson<OwnerPortalWorkspaceDocument>(`/owner-portal/workspace${query}`);
 }
 
-export function saveOwnerPortalLicenseCompliance(input: OwnerPortalLicenseComplianceInput) {
+export function saveOwnerPortalLicenseCompliance(
+  input: OwnerPortalLicenseComplianceInput,
+  locationId?: string | null,
+) {
   return requestOwnerPortalJson<OwnerPortalWorkspaceDocument['licenseCompliance']>(
     '/owner-portal/license-compliance',
     {
       method: 'PUT',
-      body: input,
+      body: { ...input, ...(locationId ? { locationId } : {}) },
     },
   );
 }
 
-export function saveOwnerPortalProfileTools(input: OwnerPortalProfileToolsInput) {
+export function saveOwnerPortalProfileTools(
+  input: OwnerPortalProfileToolsInput,
+  locationId?: string | null,
+) {
   return requestOwnerPortalJson<OwnerStorefrontProfileToolsDocument>(
     '/owner-portal/profile-tools',
     {
       method: 'PUT',
-      body: input,
+      body: { ...input, ...(locationId ? { locationId } : {}) },
     },
   );
 }
 
-export function createOwnerPortalPromotion(input: OwnerPortalPromotionInput) {
+export function createOwnerPortalPromotion(
+  input: OwnerPortalPromotionInput,
+  locationId?: string | null,
+) {
   return requestOwnerPortalJson<OwnerStorefrontPromotionDocument>('/owner-portal/promotions', {
     method: 'POST',
-    body: input,
+    body: { ...input, ...(locationId ? { locationId } : {}) },
   });
 }
 
-export function updateOwnerPortalPromotion(promotionId: string, input: OwnerPortalPromotionInput) {
+export function updateOwnerPortalPromotion(
+  promotionId: string,
+  input: OwnerPortalPromotionInput,
+  locationId?: string | null,
+) {
   return requestOwnerPortalJson<OwnerStorefrontPromotionDocument>(
     `/owner-portal/promotions/${encodeURIComponent(promotionId)}`,
     {
       method: 'PUT',
-      body: input,
+      body: { ...input, ...(locationId ? { locationId } : {}) },
     },
   );
 }
 
-export function replyToOwnerPortalReview(reviewId: string, text: string) {
+export function replyToOwnerPortalReview(
+  reviewId: string,
+  text: string,
+  locationId?: string | null,
+) {
   return requestOwnerPortalJson<OwnerPortalWorkspaceDocument['recentReviews'][number]>(
     `/owner-portal/reviews/${encodeURIComponent(reviewId)}/reply`,
     {
       method: 'POST',
       body: {
         text,
+        ...(locationId ? { locationId } : {}),
       },
     },
   );

@@ -109,6 +109,13 @@ export const serverConfig = {
   stripeWebhookSecret: readConfiguredValue(process.env.STRIPE_WEBHOOK_SECRET),
   stripeOwnerMonthlyPriceId: readConfiguredValue(process.env.STRIPE_OWNER_MONTHLY_PRICE_ID),
   stripeOwnerAnnualPriceId: readConfiguredValue(process.env.STRIPE_OWNER_ANNUAL_PRICE_ID),
+  // Tier-specific Stripe price IDs (override the generic ones above when set)
+  stripeVerifiedMonthlyPriceId: readConfiguredValue(process.env.STRIPE_VERIFIED_MONTHLY_PRICE_ID),
+  stripeVerifiedAnnualPriceId: readConfiguredValue(process.env.STRIPE_VERIFIED_ANNUAL_PRICE_ID),
+  stripeGrowthMonthlyPriceId: readConfiguredValue(process.env.STRIPE_GROWTH_MONTHLY_PRICE_ID),
+  stripeGrowthAnnualPriceId: readConfiguredValue(process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID),
+  stripeProMonthlyPriceId: readConfiguredValue(process.env.STRIPE_PRO_MONTHLY_PRICE_ID),
+  stripeProAnnualPriceId: readConfiguredValue(process.env.STRIPE_PRO_ANNUAL_PRICE_ID),
   stripeOwnerSuccessUrl: readConfiguredValue(process.env.OWNER_BILLING_SUCCESS_URL),
   stripeOwnerCancelUrl: readConfiguredValue(process.env.OWNER_BILLING_CANCEL_URL),
   stripeOwnerPortalReturnUrl: readConfiguredValue(process.env.OWNER_BILLING_PORTAL_RETURN_URL),

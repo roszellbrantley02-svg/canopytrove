@@ -54,3 +54,9 @@ build-artifacts/
 # stray / generated files
 dy
 *.docx
+npx
+
+# Claude Code
+.claude/
+# Generated artifacts
+competitive-brief-*.md
