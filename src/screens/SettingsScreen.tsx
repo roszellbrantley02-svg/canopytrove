@@ -1,8 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View, Switch } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { HapticPressable } from '../components/HapticPressable';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
@@ -80,9 +79,7 @@ function SettingsRow({
 
   if (onPress) {
     return (
-      <HapticPressable
-        hapticType="selection"
-        enableScale={false}
+      <Pressable
         onPress={onPress}
         disabled={isLoading}
         style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
@@ -91,7 +88,7 @@ function SettingsRow({
         accessibilityHint={subtitle}
       >
         {content}
-      </HapticPressable>
+      </Pressable>
     );
   }
 
