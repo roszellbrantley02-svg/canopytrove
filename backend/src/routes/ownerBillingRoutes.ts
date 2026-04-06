@@ -31,7 +31,7 @@ const billingUserRateLimiter = createUserRateLimitMiddleware({
 
 ownerBillingRoutes.use(
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'billing-write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],

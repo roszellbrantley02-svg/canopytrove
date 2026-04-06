@@ -45,7 +45,7 @@ const storefrontReportRateLimiter = createRateLimitMiddleware({
 });
 communityRoutes.use(
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'community-ip-write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST', 'PUT', 'DELETE'],

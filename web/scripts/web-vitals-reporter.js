@@ -17,9 +17,11 @@
         navigationType: metric.navigationType,
       });
 
-      // Use sendBeacon if available (doesn't block unload), else fetch
+      // Use sendBeacon if available (doesn't block unload), else fetch.
+      // Wrap in a Blob with application/json so express.json() can parse it.
       if (navigator.sendBeacon) {
-        navigator.sendBeacon('https://api.canopytrove.com/v1/web-vitals', body);
+        var blob = new Blob([body], { type: 'application/json' });
+        navigator.sendBeacon('https://api.canopytrove.com/v1/web-vitals', blob);
       }
     }
 

@@ -137,10 +137,13 @@ afterEach(() => {
 test('summary enhancements keep existing profile fields when profile tools loading fails', async () => {
   const summary = createSummary('summary-partial');
   const promotion = createPromotion(summary.id);
-  const originalWarn = console.warn;
+  const originalLog = console.log;
   const warnings: string[] = [];
-  console.warn = (...args: unknown[]) => {
-    warnings.push(args.map((value) => String(value)).join(' '));
+  console.log = (...args: unknown[]) => {
+    const line = args.map((value) => String(value)).join(' ');
+    if (line.includes('"WARNING"')) {
+      warnings.push(line);
+    }
   };
 
   try {
@@ -163,17 +166,20 @@ test('summary enhancements keep existing profile fields when profile tools loadi
     assert.equal(warnings.length, 1);
     assert.match(warnings[0] ?? '', /profileTools/);
   } finally {
-    console.warn = originalWarn;
+    console.log = originalLog;
   }
 });
 
 test('detail enhancements keep the existing follower count when follower loading fails', async () => {
   const detail = createDetail('detail-partial');
   const profileTools = createProfileTools(detail.storefrontId);
-  const originalWarn = console.warn;
+  const originalLog = console.log;
   const warnings: string[] = [];
-  console.warn = (...args: unknown[]) => {
-    warnings.push(args.map((value) => String(value)).join(' '));
+  console.log = (...args: unknown[]) => {
+    const line = args.map((value) => String(value)).join(' ');
+    if (line.includes('"WARNING"')) {
+      warnings.push(line);
+    }
   };
 
   try {
@@ -198,17 +204,20 @@ test('detail enhancements keep the existing follower count when follower loading
     assert.equal(warnings.length, 1);
     assert.match(warnings[0] ?? '', /followerCount/);
   } finally {
-    console.warn = originalWarn;
+    console.log = originalLog;
   }
 });
 
 test('detail enhancements keep existing media fields when profile tool hydration fails', async () => {
   const detail = createDetail('detail-hydration-failure');
   const profileTools = createProfileTools(detail.storefrontId);
-  const originalWarn = console.warn;
+  const originalLog = console.log;
   const warnings: string[] = [];
-  console.warn = (...args: unknown[]) => {
-    warnings.push(args.map((value) => String(value)).join(' '));
+  console.log = (...args: unknown[]) => {
+    const line = args.map((value) => String(value)).join(' ');
+    if (line.includes('"WARNING"')) {
+      warnings.push(line);
+    }
   };
 
   try {
@@ -229,6 +238,6 @@ test('detail enhancements keep existing media fields when profile tool hydration
     assert.equal(warnings.length, 1);
     assert.match(warnings[0] ?? '', /profileToolsMedia/);
   } finally {
-    console.warn = originalWarn;
+    console.log = originalLog;
   }
 });

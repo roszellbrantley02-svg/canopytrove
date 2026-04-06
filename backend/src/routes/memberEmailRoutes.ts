@@ -13,7 +13,7 @@ import {
 export const memberEmailRoutes = Router();
 memberEmailRoutes.use(
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'member-email-write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['PUT'],

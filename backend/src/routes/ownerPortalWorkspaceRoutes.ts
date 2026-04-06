@@ -58,7 +58,7 @@ const ownerReviewReplyRateLimiter = createRateLimitMiddleware({
 });
 ownerPortalWorkspaceRoutes.use(
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'owner-workspace-write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST', 'PUT'],

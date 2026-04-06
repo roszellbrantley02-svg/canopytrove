@@ -9,7 +9,7 @@ import { sendOwnerWelcomeEmailIfNeeded } from '../services/ownerWelcomeEmailServ
 export const ownerWelcomeEmailRoutes = Router();
 ownerWelcomeEmailRoutes.use(
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'owner-welcome-email-write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],

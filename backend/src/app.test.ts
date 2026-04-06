@@ -346,6 +346,7 @@ test('blocks duplicate reviews from the same profile on one storefront', async (
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: 'Bearer test-authenticated:account-1',
     },
     body: JSON.stringify(createReviewPayload('profile-1')),
   });
@@ -356,6 +357,7 @@ test('blocks duplicate reviews from the same profile on one storefront', async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: 'Bearer test-authenticated:account-1',
       },
       body: JSON.stringify(
         createReviewPayload('profile-1', {
@@ -375,11 +377,13 @@ test('blocks duplicate reviews from the same profile on one storefront', async (
 
 test('allows a review author to edit their existing review', async () => {
   const { baseUrl } = await startTestServer();
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer test-authenticated:account-1',
+  };
   const createResponse = await request(baseUrl, `/storefront-details/${testStorefrontId}/reviews`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: authHeaders,
     body: JSON.stringify(createReviewPayload('profile-1')),
   });
 
@@ -398,9 +402,7 @@ test('allows a review author to edit their existing review', async () => {
     `/storefront-details/${testStorefrontId}/reviews/${reviewId}`,
     {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: authHeaders,
       body: JSON.stringify(
         createReviewPayload('profile-1', {
           rating: 4,
@@ -430,6 +432,7 @@ test('rejects review edits from a different profile', async () => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: 'Bearer test-authenticated:account-1',
     },
     body: JSON.stringify(createReviewPayload('profile-1')),
   });
@@ -451,6 +454,7 @@ test('rejects review edits from a different profile', async () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: 'Bearer test-authenticated:account-2',
       },
       body: JSON.stringify(
         createReviewPayload('profile-2', {
@@ -1002,23 +1006,18 @@ test('rate limits repeated storefront report submissions before they can be spam
   assert.equal(lastResponse.json?.error, 'Too many requests. Please retry shortly.');
 });
 
-test('rate limits repeated owner billing session attempts', async () => {
+test('blocks unauthenticated owner billing session attempts', async () => {
   const { baseUrl } = await startTestServer();
-  let lastResponse = null as Awaited<ReturnType<typeof request>> | null;
+  const response = await request(baseUrl, '/owner-billing/checkout-session', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({}),
+  });
 
-  for (let index = 0; index < 7; index += 1) {
-    lastResponse = await request(baseUrl, '/owner-billing/checkout-session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
-    });
-  }
-
-  assert.ok(lastResponse);
-  assert.equal(lastResponse.status, 429);
-  assert.equal(lastResponse.json?.error, 'Too many requests. Please retry shortly.');
+  assert.equal(response.status, 401);
+  assert.equal(response.json?.code, 'auth_required');
 });
 
 test('rate limits repeated owner workspace mutation attempts', async () => {

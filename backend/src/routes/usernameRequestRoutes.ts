@@ -16,7 +16,7 @@ export const usernameRequestRoutes = Router();
 
 usernameRequestRoutes.use(
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'username-write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST', 'PUT'],

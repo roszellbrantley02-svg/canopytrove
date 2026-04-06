@@ -15,7 +15,7 @@ export const ownerPortalAiRoutes = Router();
 ownerPortalAiRoutes.use(
   '/owner-portal/ai',
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'owner-ai-write',
     windowMs: 60_000,
     max: Math.max(10, Math.floor(serverConfig.writeRateLimitPerMinute / 3)),
     methods: ['GET', 'POST'],

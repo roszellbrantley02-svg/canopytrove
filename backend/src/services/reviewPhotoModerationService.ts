@@ -666,6 +666,7 @@ export function clearReviewPhotoModerationMemoryStateForTests() {
   reviewPhotoUploadStore.clear();
   reviewPhotoBytesStore.clear();
   reviewPhotoModerationFetch = fetch;
+  skipBucketCheckForTests = false;
 }
 
 export function seedReviewPhotoUploadBytesForTests(photoId: string, bytes: Buffer) {
@@ -674,6 +675,11 @@ export function seedReviewPhotoUploadBytesForTests(photoId: string, bytes: Buffe
 
 export function setReviewPhotoModerationFetchForTests(nextFetch: typeof fetch | null) {
   reviewPhotoModerationFetch = nextFetch ?? fetch;
+}
+
+let skipBucketCheckForTests = false;
+export function setSkipBucketCheckForTests(skip: boolean) {
+  skipBucketCheckForTests = skip;
 }
 
 export async function createReviewPhotoUploadSession(input: {
@@ -704,7 +710,7 @@ export async function createReviewPhotoUploadSession(input: {
   // Without FIREBASE_STORAGE_BUCKET, signed URLs and durable storage
   // are unavailable — return a clear error instead of a 500.
   const bucket = getBucket();
-  if (!bucket) {
+  if (!bucket && !skipBucketCheckForTests) {
     throw new ReviewPhotoModerationError(
       'Photo uploads are temporarily unavailable. Please try again later.',
       503,

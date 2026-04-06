@@ -19,7 +19,7 @@ import { AppProfileApiDocument } from '../types';
 export const profileRoutes = Router();
 profileRoutes.use(
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'profile-ip-write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['PUT', 'DELETE'],

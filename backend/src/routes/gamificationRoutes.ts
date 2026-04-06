@@ -8,7 +8,7 @@ import { ensureProfileWriteAccess } from '../services/profileAccessService';
 export const gamificationRoutes = Router();
 gamificationRoutes.use(
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'gamification-write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],

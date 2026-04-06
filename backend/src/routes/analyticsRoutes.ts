@@ -8,7 +8,7 @@ export const analyticsRoutes = Router();
 
 analyticsRoutes.use(
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'analytics-write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],

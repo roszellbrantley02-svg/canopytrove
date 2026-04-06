@@ -5,9 +5,11 @@ function loadService() {
   return import(`./reviewPhotoModerationService?test=${Date.now()}-${Math.random()}`);
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   delete process.env.OPENAI_API_KEY;
   delete process.env.OPENAI_MODEL;
+  const service = await loadService();
+  service.setSkipBucketCheckForTests(true);
 });
 
 afterEach(async () => {

@@ -10,7 +10,7 @@ import { syncFavoriteDealAlerts } from '../services/favoriteDealAlertService';
 export const favoriteDealAlertRoutes = Router();
 favoriteDealAlertRoutes.use(
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'favorite-alert-write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],

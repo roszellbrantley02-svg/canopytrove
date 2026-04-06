@@ -11,7 +11,7 @@ import {
 export const profileStateRoutes = Router();
 profileStateRoutes.use(
   createRateLimitMiddleware({
-    name: 'write',
+    name: 'profile-state-write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['PUT'],
