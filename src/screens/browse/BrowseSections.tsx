@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { MotionInView } from '../../components/MotionInView';
@@ -196,6 +196,34 @@ export function BrowseEmptyState({
   );
 }
 
+/**
+ * Progressively reveals items on web to avoid painting all cards in one frame.
+ * Renders `initialBatch` items immediately, then adds `batchSize` more per
+ * animation frame until all items are visible. Resets when the items array
+ * reference changes (new search, filter change, etc.).
+ */
+function useProgressiveItems<T>(items: T[], initialBatch: number, batchSize: number): T[] {
+  const [visibleCount, setVisibleCount] = useState(initialBatch);
+
+  useEffect(() => {
+    setVisibleCount(Math.min(initialBatch, items.length));
+  }, [items, initialBatch]);
+
+  useEffect(() => {
+    if (visibleCount >= items.length) {
+      return;
+    }
+
+    const frameId = requestAnimationFrame(() => {
+      setVisibleCount((current) => Math.min(current + batchSize, items.length));
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [visibleCount, items.length, batchSize]);
+
+  return items.slice(0, visibleCount);
+}
+
 export function BrowseStoreList({
   items,
   isSavedStorefront,
@@ -265,6 +293,11 @@ export function BrowseStoreList({
     </MotionInView>
   ) : null;
 
+  // Progressive rendering: paint 3 cards immediately for fast first paint,
+  // then add 2 more per animation frame to avoid a single-frame layout spike.
+  // On native the hook runs but is unused (FlatList handles virtualization).
+  const progressiveItems = useProgressiveItems(items, 3, 2);
+
   // On web, FlatList's removeClippedSubviews and nested scroll container
   // cause items to vanish permanently and block parent scroll/touch input
   // after navigating back. Plain View rendering avoids both issues and
@@ -272,7 +305,7 @@ export function BrowseStoreList({
   if (Platform.OS === 'web') {
     return (
       <View style={styles.list}>
-        {items.map((item, index) => (
+        {progressiveItems.map((item, index) => (
           <React.Fragment key={item.id}>
             {renderItem({ item, index } as { item: StorefrontSummary; index: number })}
           </React.Fragment>
