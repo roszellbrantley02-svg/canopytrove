@@ -22,7 +22,7 @@ export const opsRoutes = Router();
 opsRoutes.use(
   '/admin/runtime',
   createRateLimitMiddleware({
-    name: 'admin',
+    name: 'admin-runtime',
     windowMs: 10 * 60_000,
     max: serverConfig.adminRateLimitPerTenMinutes,
   }),

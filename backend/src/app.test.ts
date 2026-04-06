@@ -42,6 +42,8 @@ afterEach(async () => {
 
   const { clearRateLimitState } = await import('./http/rateLimit');
   clearRateLimitState();
+  const { clearAbuseState } = await import('./http/abuseScoring');
+  clearAbuseState();
   const { clearStorefrontBackendCache } = await import('./services/storefrontCacheService');
   clearStorefrontBackendCache();
   const { clearAnalyticsEventState } = await import('./services/analyticsEventService');
@@ -488,7 +490,7 @@ test('requires signed-in access for review photo uploads', async () => {
   );
 
   assert.equal(response.status, 403);
-  assert.equal(response.json?.error, 'Signed-in access is required to upload review photos.');
+  assert.equal(response.json?.error, 'Signed-in access is required for this profile.');
 });
 
 test('applies stricter rate limits to admin routes', async () => {
