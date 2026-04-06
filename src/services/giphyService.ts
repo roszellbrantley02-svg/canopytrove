@@ -76,17 +76,23 @@ async function requestGiphyGateway(gatewayPath: string, params: Record<string, s
     return searchFallbackCatalog(params.q ?? '');
   }
 
-  const searchParams = new URLSearchParams(params);
-  const url = createGatewayUrl(
-    `${gatewayPath}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`,
-  );
-  const response = await fetch(url);
+  try {
+    const searchParams = new URLSearchParams(params);
+    const url = createGatewayUrl(
+      `${gatewayPath}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`,
+    );
+    const response = await fetch(url);
 
-  if (!response.ok) {
-    throw new Error(`GIPHY gateway request failed with status ${response.status}`);
+    if (!response.ok) {
+      // Gateway unavailable (e.g. GIPHY_API_KEY not configured) — fall back to built-in catalog
+      return searchFallbackCatalog(params.q ?? '');
+    }
+
+    return mapGiphyResponse((await response.json()) as GiphyApiResponse);
+  } catch {
+    // Network error or gateway unreachable — fall back to built-in catalog
+    return searchFallbackCatalog(params.q ?? '');
   }
-
-  return mapGiphyResponse((await response.json()) as GiphyApiResponse);
 }
 
 export function getTrendingGifs() {

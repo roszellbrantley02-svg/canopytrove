@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { crossPlatformAlert } from '../../utils/crossPlatformAlert';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
@@ -445,10 +446,15 @@ export function useWriteReviewScreenModel(input: {
     }
 
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        setReviewPhotoError('Media library permission is required to add review photos.');
-        return;
+      // On web, skip the async permission check — browsers auto-grant media library
+      // access and the await breaks the synchronous user gesture chain, causing the
+      // programmatic file-input click to be silently blocked.
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          setReviewPhotoError('Media library permission is required to add review photos.');
+          return;
+        }
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -483,10 +489,14 @@ export function useWriteReviewScreenModel(input: {
     }
 
     try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        setReviewPhotoError('Camera permission is required to take review photos.');
-        return;
+      // On web, skip the async permission check — browsers handle camera access
+      // via their own permission prompt and the await breaks the user gesture chain.
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          setReviewPhotoError('Camera permission is required to take review photos.');
+          return;
+        }
       }
 
       const result = await ImagePicker.launchCameraAsync({

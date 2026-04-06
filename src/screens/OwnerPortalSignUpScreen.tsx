@@ -112,6 +112,8 @@ export function OwnerPortalSignUpScreen() {
                   placeholder="Display name"
                   placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
+                  accessibilityLabel="Display name"
+                  autoComplete="name"
                 />
               </View>
               <View style={styles.fieldGroup}>
@@ -122,6 +124,8 @@ export function OwnerPortalSignUpScreen() {
                   placeholder="Legal name"
                   placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
+                  accessibilityLabel="Legal name"
+                  autoComplete="name"
                 />
               </View>
               <View style={styles.fieldGroup}>
@@ -132,6 +136,8 @@ export function OwnerPortalSignUpScreen() {
                   placeholder="Company name"
                   placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
+                  accessibilityLabel="Company name"
+                  autoComplete="organization"
                 />
               </View>
               <View style={styles.fieldGroup}>
@@ -144,6 +150,8 @@ export function OwnerPortalSignUpScreen() {
                   keyboardType="email-address"
                   placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
+                  accessibilityLabel="Business email"
+                  autoComplete="email"
                 />
               </View>
               <View style={styles.fieldGroup}>
@@ -155,6 +163,8 @@ export function OwnerPortalSignUpScreen() {
                   secureTextEntry={true}
                   placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
+                  accessibilityLabel="Password"
+                  autoComplete="new-password"
                 />
               </View>
               <View style={styles.fieldGroup}>
@@ -166,9 +176,19 @@ export function OwnerPortalSignUpScreen() {
                   secureTextEntry={true}
                   placeholderTextColor={colors.textSoft}
                   style={styles.inputPremium}
+                  accessibilityLabel="Confirm password"
+                  autoComplete="new-password"
                 />
               </View>
-              {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
+              {errorText ? (
+                <Text
+                  style={styles.errorText}
+                  accessibilityLiveRegion="polite"
+                  accessibilityRole="alert"
+                >
+                  {errorText}
+                </Text>
+              ) : null}
             </View>
 
             <View style={styles.ctaPanel}>

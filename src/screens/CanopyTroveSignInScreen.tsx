@@ -120,6 +120,7 @@ function CanopyTroveSignInScreenInner() {
                         style={styles.inputPremium}
                         accessibilityLabel="Email"
                         accessibilityHint="Enter your member account email address."
+                        autoComplete="email"
                       />
                     </View>
                     <View style={styles.fieldGroup}>
@@ -133,13 +134,18 @@ function CanopyTroveSignInScreenInner() {
                         style={styles.inputPremium}
                         accessibilityLabel="Password"
                         accessibilityHint="Enter your member account password."
+                        autoComplete="current-password"
                       />
                       <Text style={styles.fieldHint}>
                         Use the same member email you use for saved storefronts and reviews.
                       </Text>
                     </View>
                     {errorText ? (
-                      <View style={[styles.helperCard, styles.helperCardDanger]}>
+                      <View
+                        style={[styles.helperCard, styles.helperCardDanger]}
+                        accessibilityLiveRegion="polite"
+                        accessibilityRole="alert"
+                      >
                         <Text style={[styles.helperTitle, styles.helperTitleDanger]}>
                           Could not sign you in
                         </Text>

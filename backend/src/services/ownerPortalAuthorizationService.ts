@@ -167,16 +167,10 @@ export async function getOwnerAuthorizationState(
     ? (canonicalStorefront?.storefrontId ?? null)
     : (canonicalStorefront?.storefrontId ?? ownerProfile?.dispensaryId ?? null);
   const ownerClaim = await getLatestOwnerClaimRecord(ownerUid, storefrontId);
-  const businessVerificationStatus = hasBackendDb
-    ? (businessVerification?.verificationStatus ?? null)
-    : (businessVerification?.verificationStatus ??
-      ownerProfile?.businessVerificationStatus ??
-      null);
-  const identityVerificationStatus = hasBackendDb
-    ? (identityVerification?.verificationStatus ?? null)
-    : (identityVerification?.verificationStatus ??
-      ownerProfile?.identityVerificationStatus ??
-      null);
+  const businessVerificationStatus =
+    businessVerification?.verificationStatus ?? ownerProfile?.businessVerificationStatus ?? null;
+  const identityVerificationStatus =
+    identityVerification?.verificationStatus ?? ownerProfile?.identityVerificationStatus ?? null;
   const effectiveSubscription =
     subscription ??
     (!hasBackendDb && ownerProfile?.subscriptionStatus

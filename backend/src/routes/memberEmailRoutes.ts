@@ -1,6 +1,7 @@
 import { Request, Router } from 'express';
 import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
+import { createUserRateLimitMiddleware } from '../http/userRateLimit';
 import { RequestValidationError } from '../http/errors';
 import { getBackendFirebaseAuth, hasBackendFirebaseConfig } from '../firebase';
 import {
@@ -18,6 +19,11 @@ memberEmailRoutes.use(
     methods: ['PUT'],
   }),
 );
+const emailSubUserRateLimiter = createUserRateLimitMiddleware({
+  name: 'member-email-sub',
+  windowMs: 60_000,
+  max: 10,
+});
 
 function parseMemberEmailSubscriptionBody(value: unknown) {
   if (typeof value !== 'object' || !value || Array.isArray(value)) {
@@ -136,30 +142,34 @@ memberEmailRoutes.get('/member-email-subscription', async (request, response) =>
   }
 });
 
-memberEmailRoutes.put('/member-email-subscription', async (request, response) => {
-  try {
-    const member = await getAuthenticatedMember(request);
-    const body = parseMemberEmailSubscriptionBody(request.body);
-    response.json(
-      await syncMemberEmailSubscription({
-        ...member,
-        subscribed: body.subscribed,
-        source: body.source,
-      }),
-    );
-  } catch (error) {
-    const statusCode =
-      error instanceof MemberEmailSubscriptionAccessError
-        ? error.statusCode
-        : error instanceof RequestValidationError
-          ? 400
-          : 500;
-    response.status(statusCode).json({
-      ok: false,
-      error: error instanceof Error ? error.message : 'Unknown email subscription failure.',
-    });
-  }
-});
+memberEmailRoutes.put(
+  '/member-email-subscription',
+  emailSubUserRateLimiter,
+  async (request, response) => {
+    try {
+      const member = await getAuthenticatedMember(request);
+      const body = parseMemberEmailSubscriptionBody(request.body);
+      response.json(
+        await syncMemberEmailSubscription({
+          ...member,
+          subscribed: body.subscribed,
+          source: body.source,
+        }),
+      );
+    } catch (error) {
+      const statusCode =
+        error instanceof MemberEmailSubscriptionAccessError
+          ? error.statusCode
+          : error instanceof RequestValidationError
+            ? 400
+            : 500;
+      response.status(statusCode).json({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Unknown email subscription failure.',
+      });
+    }
+  },
+);
 class MemberEmailSubscriptionAccessError extends Error {
   constructor(
     message: string,

@@ -244,10 +244,12 @@ export function StorefrontRouteCardBody({
             <AppUiIcon name="people-outline" size={12} color={colors.cyan} />
             <Text style={styles.metaChipText}>{ratingDisplay.countLabel}</Text>
           </View>
-          <View style={styles.metaChip}>
-            <LocationPinIcon size={14} color={colors.goldSoft} />
-            <Text style={styles.metaChipText}>{storefront.distanceMiles.toFixed(1)} mi</Text>
-          </View>
+          {storefront.distanceMiles > 0 ? (
+            <View style={styles.metaChip}>
+              <LocationPinIcon size={14} color={colors.goldSoft} />
+              <Text style={styles.metaChipText}>{storefront.distanceMiles.toFixed(1)} mi</Text>
+            </View>
+          ) : null}
         </View>
 
         {ratingDisplay.helperLabel ? (
@@ -330,7 +332,7 @@ export function StorefrontRouteCardBody({
               accessibilityLabel={`${secondaryActionLabel} for ${storefront.displayName}`}
               accessibilityHint="Runs the secondary storefront card action."
               onPressIn={(event) => {
-                event.stopPropagation();
+                if (Platform.OS !== 'web') event.stopPropagation();
                 (onSecondaryActionPressIn ?? onPressIn)?.();
               }}
               onPress={(event) => {
@@ -349,7 +351,7 @@ export function StorefrontRouteCardBody({
             accessibilityLabel={`${primaryActionLabel} for ${storefront.displayName}`}
             accessibilityHint="Runs the primary storefront card action."
             onPressIn={(event) => {
-              event.stopPropagation();
+              if (Platform.OS !== 'web') event.stopPropagation();
               (onPrimaryActionPressIn ?? onPressIn)?.();
             }}
             onPress={(event) => {

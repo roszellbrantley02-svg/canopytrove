@@ -13,6 +13,7 @@ import {
   shouldKeepCachedBrowseResults,
   shouldPersistBrowseSnapshot,
 } from './storefrontSummarySnapshotGuards';
+import { deriveAuthFetchKey } from './authFetchKey';
 
 export function useBrowseSummaries(
   query: StorefrontListQuery,
@@ -21,6 +22,7 @@ export function useBrowseSummaries(
   offset: number,
 ) {
   const { authSession } = useStorefrontProfileController();
+  const authFetchKey = deriveAuthFetchKey(authSession);
   const promotionRevision = useStorefrontPromotionRevision();
   const resolvedQuery = useMemo<StorefrontListQuery>(
     () => ({
@@ -139,16 +141,7 @@ export function useBrowseSummaries(
     return () => {
       alive = false;
     };
-  }, [
-    authSession.status,
-    authSession.uid,
-    emptyPage,
-    limit,
-    offset,
-    promotionRevision,
-    resolvedQuery,
-    sortKey,
-  ]);
+  }, [authFetchKey, emptyPage, limit, offset, promotionRevision, resolvedQuery, sortKey]);
 
   return { data, error, isLoading };
 }

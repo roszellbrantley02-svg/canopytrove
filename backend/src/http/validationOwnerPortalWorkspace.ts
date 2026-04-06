@@ -13,6 +13,7 @@ import {
 import { RequestValidationError } from './errors';
 import {
   OwnerPortalLicenseComplianceInput,
+  OwnerPromotionAudience,
   OwnerPromotionPlacementScope,
   OwnerPromotionPlacementSurface,
   OwnerPortalProfileToolsInput,
@@ -181,7 +182,12 @@ export function parseOwnerPortalPromotionBody(body: unknown): OwnerPortalPromoti
       }) ?? [],
     startsAt: parseIsoDateString(payload.startsAt, 'body.startsAt'),
     endsAt: parseIsoDateString(payload.endsAt, 'body.endsAt'),
-    audience: parseEnumValue(payload.audience, 'body.audience', OWNER_PROMOTION_AUDIENCES),
+    audiences: (Array.isArray(payload.audiences)
+      ? payload.audiences
+      : [payload.audience ?? payload.audiences]
+    ).map((value: unknown, index: number) =>
+      parseEnumValue(value, `body.audiences[${index}]`, OWNER_PROMOTION_AUDIENCES),
+    ) as OwnerPromotionAudience[],
     alertFollowersOnStart: payload.alertFollowersOnStart === true,
     cardTone: parseEnumValue(payload.cardTone, 'body.cardTone', OWNER_PROMOTION_CARD_TONES),
     placementSurfaces: placementSurfaces.map((value, index) =>

@@ -2,6 +2,8 @@ import { Request } from 'express';
 import { hasBackendFirebaseConfig, getBackendFirebaseAuth } from '../firebase';
 import { AppProfileApiDocument } from '../types';
 import { getProfile, saveProfile } from './profileService';
+import { logSecurityEvent } from '../http/securityEventLogger';
+import { recordAbuseSignal } from '../http/abuseScoring';
 
 export class ProfileAccessError extends Error {
   constructor(
@@ -96,6 +98,15 @@ export async function resolveVerifiedRequestAccountId(
       return null;
     }
 
+    logSecurityEvent({
+      event: 'auth_failure',
+      ip: request.ip || 'unknown',
+      path: request.originalUrl,
+      method: request.method,
+      detail: 'Invalid Firebase auth token',
+    });
+    recordAbuseSignal(request.ip || 'unknown', 3, request.originalUrl);
+
     throw new ProfileAccessError('Invalid authentication token.', 401);
   }
 }
@@ -125,6 +136,15 @@ export async function ensureProfileReadAccess(request: Request, profileId: strin
   ensureAnonymousAccessAllowed(profile, accountId);
 
   if (accountId && profile.accountId && profile.accountId !== accountId) {
+    logSecurityEvent({
+      event: 'suspicious_payload',
+      ip: request.ip || 'unknown',
+      path: request.originalUrl,
+      method: request.method,
+      userId: accountId,
+      detail: `BOLA: profile ${profileId} owned by ${profile.accountId}, accessed by ${accountId}`,
+    });
+    recordAbuseSignal(request.ip || 'unknown', 5, request.originalUrl);
     throw new ProfileAccessError('This profile belongs to a different account.', 403);
   }
 
@@ -141,6 +161,15 @@ export async function ensureProfileWriteAccess(request: Request, profileId: stri
   ensureAnonymousAccessAllowed(currentProfile, accountId);
 
   if (accountId && currentProfile.accountId && currentProfile.accountId !== accountId) {
+    logSecurityEvent({
+      event: 'suspicious_payload',
+      ip: request.ip || 'unknown',
+      path: request.originalUrl,
+      method: request.method,
+      userId: accountId,
+      detail: `BOLA: profile ${profileId} owned by ${currentProfile.accountId}, modified by ${accountId}`,
+    });
+    recordAbuseSignal(request.ip || 'unknown', 5, request.originalUrl);
     throw new ProfileAccessError('This profile belongs to a different account.', 403);
   }
 

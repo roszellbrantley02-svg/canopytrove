@@ -32,6 +32,7 @@ export const ownerPortalStyles = StyleSheet.create({
   },
   inlineActionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.sm,
   },
@@ -39,7 +40,8 @@ export const ownerPortalStyles = StyleSheet.create({
     flex: 1,
   },
   inlineButton: {
-    minWidth: 120,
+    minWidth: 100,
+    flexShrink: 1,
   },
   inlineButtonPrimary: {
     flex: 1,
@@ -101,8 +103,9 @@ export const ownerPortalStyles = StyleSheet.create({
     gap: spacing.md,
   },
   metricCard: {
-    minWidth: '47%',
+    minWidth: '44%',
     flexGrow: 1,
+    flexShrink: 1,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.borderSoft,
@@ -499,6 +502,7 @@ export const ownerPortalStyles = StyleSheet.create({
   },
   splitHeaderCopy: {
     flex: 1,
+    flexShrink: 1,
     gap: spacing.xs,
   },
   splitHeaderTitle: {
@@ -955,13 +959,15 @@ export const ownerPortalStyles = StyleSheet.create({
     gap: spacing.md,
   },
   summaryTile: {
-    minWidth: 136,
+    minWidth: 100,
     flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: '40%',
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     backgroundColor: 'rgba(8, 14, 19, 0.76)',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     gap: spacing.xs,
   },
@@ -1157,5 +1163,20 @@ export const ownerPortalStyles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+  },
+  promotionActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  promotionActionFlex: {
+    flex: 1,
+  },
+  promotionDeleteButton: {
+    flex: 0,
+    paddingHorizontal: 16,
+    borderColor: '#FF6B6B',
+  },
+  promotionDeleteText: {
+    color: '#FF6B6B',
   },
 });

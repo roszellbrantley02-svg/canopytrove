@@ -15,9 +15,11 @@ import {
   shouldKeepWarmNearbyResults,
   shouldPersistNearbySnapshot,
 } from './storefrontSummarySnapshotGuards';
+import { deriveAuthFetchKey } from './authFetchKey';
 
 export function useNearbySummaries(query: StorefrontListQuery | null) {
   const { authSession } = useStorefrontProfileController();
+  const authFetchKey = deriveAuthFetchKey(authSession);
   const promotionRevision = useStorefrontPromotionRevision();
   const hasQuery = Boolean(query);
   const areaId = query?.areaId;
@@ -148,13 +150,14 @@ export function useNearbySummaries(query: StorefrontListQuery | null) {
     return () => {
       alive = false;
     };
-  }, [authSession.status, authSession.uid, promotionRevision, stableQuery]);
+  }, [authFetchKey, promotionRevision, stableQuery]);
 
   return { data, error, isLoading };
 }
 
 export function useNearbyWarmSnapshot() {
   const { authSession } = useStorefrontProfileController();
+  const authFetchKey = deriveAuthFetchKey(authSession);
   const promotionRevision = useStorefrontPromotionRevision();
   const [data, setData] = useState<StorefrontSummary[]>(
     () => getCachedLatestNearbySummarySnapshot() ?? [],
@@ -187,7 +190,7 @@ export function useNearbyWarmSnapshot() {
     return () => {
       alive = false;
     };
-  }, [authSession.status, authSession.uid, promotionRevision]);
+  }, [authFetchKey, promotionRevision]);
 
   return data;
 }

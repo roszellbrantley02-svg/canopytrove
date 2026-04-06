@@ -23,7 +23,7 @@ export function SectionHeader({
     <View style={styles.container}>
       <View style={styles.titleArea}>
         <View style={styles.titleRow}>
-          <Text style={styles.title} maxFontSizeMultiplier={1.2}>
+          <Text style={styles.title} maxFontSizeMultiplier={1.2} accessibilityRole="header">
             {title}
           </Text>
           {count != null ? (

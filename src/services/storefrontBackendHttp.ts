@@ -64,6 +64,7 @@ const backendGetCache = new Map<string, CacheEntry<unknown>>();
 const backendGetInFlight = new Map<string, Promise<unknown>>();
 const backendMutationInFlight = new Set<string>();
 const BACKEND_REQUEST_TIMEOUT_MS = 6_000;
+const _BACKEND_AI_REQUEST_TIMEOUT_MS = 25_000;
 const BACKEND_GET_CACHE_LIMIT = 96;
 
 export const backendCacheTtls = {
@@ -206,7 +207,7 @@ async function throwBackendError(response: Response): Promise<never> {
 export async function requestJson<T>(
   pathname: string,
   init?: RequestInit,
-  options?: { cacheKey?: string; ttlMs?: number },
+  options?: { cacheKey?: string; ttlMs?: number; timeoutMs?: number },
 ): Promise<T> {
   const cacheKey = !init?.method || init.method === 'GET' ? options?.cacheKey : undefined;
   const ttlMs = options?.ttlMs ?? 0;
@@ -236,9 +237,10 @@ export async function requestJson<T>(
 
   const request = (async () => {
     const controller = new AbortController();
+    const effectiveTimeout = options?.timeoutMs ?? BACKEND_REQUEST_TIMEOUT_MS;
     const timeoutId = setTimeout(() => {
       controller.abort();
-    }, BACKEND_REQUEST_TIMEOUT_MS);
+    }, effectiveTimeout);
 
     try {
       const headers = await buildRequestHeaders(init?.headers);

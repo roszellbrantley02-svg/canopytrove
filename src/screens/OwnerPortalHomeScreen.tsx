@@ -2,12 +2,13 @@ import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
+import { signOutCanopyTroveSession } from '../services/canopyTroveAuthService';
 
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { AttentionCard } from '../components/AttentionCard';
@@ -29,7 +30,13 @@ import type { AppUiIconName } from '../icons/AppUiIcon';
 
 type OwnerPortalHomeRoute = RouteProp<RootStackParamList, 'OwnerPortalHome'>;
 
-const ignoreAsyncError = () => undefined;
+function logSilentError(label: string) {
+  return (error: unknown) => {
+    if (__DEV__) {
+      console.warn(`[OwnerPortalHome] ${label}:`, error);
+    }
+  };
+}
 
 interface AttentionItem {
   key: string;
@@ -78,7 +85,7 @@ function getAttentionItems(workspace: OwnerPortalWorkspaceDocument | null): Atte
   if (followers > 0) {
     items.push({
       key: 'followers',
-      title: `${followers} followers`,
+      title: `${followers} ${followers === 1 ? 'follower' : 'followers'}`,
       body: 'Your storefront community is growing.',
       iconName: 'people-outline',
       tone: 'success',
@@ -400,7 +407,7 @@ function OwnerPortalHomeScreenInner() {
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => {
-                      void refreshActionPlan().catch(ignoreAsyncError);
+                      void refreshActionPlan().catch(logSilentError('refreshActionPlan'));
                     }}
                     style={localStyles.secondaryButton}
                     disabled={isAiLoading}
@@ -475,6 +482,32 @@ function OwnerPortalHomeScreenInner() {
             </SectionCard>
           </MotionInView>
         ) : null}
+
+        {/* 10. Sign Out */}
+        <MotionInView delay={340}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Sign out of owner portal"
+            onPress={() => {
+              Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Sign Out',
+                  style: 'destructive',
+                  onPress: () => {
+                    void signOutCanopyTroveSession().then(() => {
+                      navigation.reset({ index: 0, routes: [{ name: 'Tabs' }] });
+                    });
+                  },
+                },
+              ]);
+            }}
+            style={localStyles.signOutButton}
+          >
+            <AppUiIcon name="log-out-outline" size={18} color="#C4B8B0" />
+            <Text style={localStyles.signOutText}>Sign Out</Text>
+          </Pressable>
+        </MotionInView>
       </ScrollView>
     </ScreenShell>
   );
@@ -667,6 +700,23 @@ const localStyles = StyleSheet.create({
   dismissButtonText: {
     color: '#C4B8B0',
     fontSize: 13,
+    fontWeight: '500',
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(196, 184, 176, 0.25)',
+  },
+  signOutText: {
+    color: '#C4B8B0',
+    fontSize: 14,
     fontWeight: '500',
   },
 });

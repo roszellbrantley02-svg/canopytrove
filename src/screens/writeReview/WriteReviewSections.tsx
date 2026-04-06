@@ -1,7 +1,6 @@
 import React from 'react';
 import { Text, TextInput, View } from 'react-native';
-// TODO: Replace with `import { Image } from 'expo-image'` after running `npx expo install expo-image`
-import { Image } from 'react-native';
+import { Image } from 'expo-image';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { HapticPressable } from '../../components/HapticPressable';
 import { MotionInView } from '../../components/MotionInView';
@@ -190,7 +189,11 @@ export function WriteReviewPhotosSection({ model }: { model: WriteReviewScreenMo
               <View style={styles.reviewPhotoGrid}>
                 {model.existingReviewPhotoUrls.map((photoUrl, index) => (
                   <View key={`${photoUrl}-${index}`} style={styles.reviewPhotoTile}>
-                    <Image source={{ uri: photoUrl }} style={styles.reviewPhotoImage} />
+                    <Image
+                      source={{ uri: photoUrl }}
+                      style={styles.reviewPhotoImage}
+                      accessibilityLabel={`Review photo ${index + 1}`}
+                    />
                     <View style={styles.reviewPhotoTileOverlay}>
                       <Text style={styles.reviewPhotoStatusText}>Attached</Text>
                     </View>
@@ -246,7 +249,11 @@ export function WriteReviewPhotosSection({ model }: { model: WriteReviewScreenMo
               <View style={styles.reviewPhotoGrid}>
                 {model.reviewPhotos.map((photo) => (
                   <View key={photo.id} style={styles.reviewPhotoTile}>
-                    <Image source={{ uri: photo.previewUri }} style={styles.reviewPhotoImage} />
+                    <Image
+                      source={{ uri: photo.previewUri }}
+                      style={styles.reviewPhotoImage}
+                      accessibilityLabel={`Review photo, ${photo.uploadStatus === 'uploading' ? 'uploading' : photo.moderationStatus}`}
+                    />
                     <View style={styles.reviewPhotoTileOverlay}>
                       <Text style={styles.reviewPhotoStatusText}>
                         {photo.uploadStatus === 'uploading'
@@ -364,7 +371,13 @@ export function WriteReviewGifSection({ model }: { model: WriteReviewScreenModel
             note="You can still attach a reaction GIF and finish the review normally."
           />
         ) : null}
-        {model.gifUrl ? <Image source={{ uri: model.gifUrl }} style={styles.gifPreview} /> : null}
+        {model.gifUrl ? (
+          <Image
+            source={{ uri: model.gifUrl }}
+            style={styles.gifPreview}
+            accessibilityLabel="Selected reaction GIF"
+          />
+        ) : null}
         <Text style={styles.attributionText}>{model.gifPickerProviderText}</Text>
       </SectionCard>
     </MotionInView>

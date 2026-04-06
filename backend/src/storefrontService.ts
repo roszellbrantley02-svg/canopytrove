@@ -5,9 +5,9 @@ import {
   StorefrontSummaryApiDocument,
   StorefrontSummarySortKey,
 } from './types';
-import type { OwnerPromotionPlacementSurface } from '../../src/types/ownerPortal';
-import { sortSummariesByPriorityPlacement } from '../../src/utils/ownerPromotionPlacement';
-import { resolveStorefrontOpenNow } from '../../src/utils/storefrontOperationalStatus';
+import type { OwnerPromotionPlacementSurface } from './utils/ownerPromotionPlacement';
+import { sortSummariesByPriorityPlacement } from './utils/ownerPromotionPlacement';
+import { resolveStorefrontOpenNow } from './utils/storefrontOperationalStatus';
 import {
   getCachedStorefrontDetail,
   getCachedStorefrontSummariesByIds,
@@ -311,6 +311,17 @@ export async function getStorefrontSummariesByIds(
     .map((r) => r.value);
 }
 
+export async function resolveStorefrontBySlug(slug: string) {
+  const allSummaries = await backendStorefrontSource.getAllSummaries();
+  // Exact match first
+  const exact = allSummaries.find((s) => s.id === slug);
+  if (exact) return exact.id;
+  // Prefix match: slug is a prefix of the full ID (e.g. "the-coughie-shop" matches "the-coughie-shop-new-york-10001")
+  const prefixMatch = allSummaries.find((s) => s.id.startsWith(slug + '-'));
+  if (prefixMatch) return prefixMatch.id;
+  return null;
+}
+
 export async function getStorefrontDetail(
   storefrontId: string,
   options?: {
@@ -393,6 +404,11 @@ export async function getStorefrontDetail(
           ? googleEnrichment.hours
           : [],
       openNow: resolveStorefrontOpenNow({
+        hours: hasMeaningfulHours(baseDetail.hours)
+          ? baseDetail.hours
+          : googleEnrichment?.hours?.length
+            ? googleEnrichment.hours
+            : [],
         liveOpenNow: googleEnrichment?.openNow,
         summaryOpenNow: summary?.openNow,
         detailOpenNow: baseDetail.openNow,

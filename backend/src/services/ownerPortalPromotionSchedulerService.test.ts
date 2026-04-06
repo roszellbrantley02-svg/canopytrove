@@ -29,7 +29,7 @@ function createPromotion(
     startsAt: overrides?.startsAt ?? startsAt,
     endsAt: overrides?.endsAt ?? endsAt,
     status: overrides?.status ?? 'active',
-    audience: overrides?.audience ?? 'all_followers',
+    audiences: overrides?.audiences ?? ['all_followers'],
     alertFollowersOnStart: overrides?.alertFollowersOnStart ?? true,
     cardTone: overrides?.cardTone ?? 'owner_featured',
     placementSurfaces: overrides?.placementSurfaces ?? ['browse'],

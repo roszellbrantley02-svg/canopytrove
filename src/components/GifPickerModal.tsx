@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { CustomerStateCard } from './CustomerStateCard';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import { HapticPressable } from './HapticPressable';
@@ -114,7 +114,12 @@ export function GifPickerModal({
                 accessibilityLabel="GIF selection"
                 accessibilityHint="Selects this GIF to add to the review."
               >
-                <Image source={{ uri: result.previewUrl }} style={styles.gifTileImage} />
+                <Image
+                  source={{ uri: result.previewUrl }}
+                  style={styles.gifTileImage}
+                  contentFit="cover"
+                  transition={150}
+                />
               </HapticPressable>
             ))}
             {!isLoading && !error && results.length === 0 ? (

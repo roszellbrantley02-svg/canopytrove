@@ -529,4 +529,15 @@ export const styles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 24,
   },
+  displayNameInput: {
+    ...textStyles.body,
+    color: colors.text,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.md,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    minHeight: 48,
+  },
 });

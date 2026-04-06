@@ -5,6 +5,7 @@ import {
 } from '../../../src/types/storefront';
 import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
+import { createUserRateLimitMiddleware } from '../http/userRateLimit';
 import { getSafeErrorMessage } from '../http/errors';
 import {
   parseHelpfulVoteBody,
@@ -32,12 +33,14 @@ import {
   getReviewPhotoUploadSession,
 } from '../services/reviewPhotoModerationService';
 import { getStorefrontDetail } from '../storefrontService';
+import { checkContentQuality } from '../http/contentQualityGuard';
+import { checkCommunityVelocity } from '../http/communityVelocityGuard';
 
 export const communityRoutes = Router();
 const storefrontReportRateLimiter = createRateLimitMiddleware({
   name: 'storefront-report',
   windowMs: 60_000,
-  max: 10,
+  max: 5,
   methods: ['POST'],
 });
 communityRoutes.use(
@@ -48,110 +51,196 @@ communityRoutes.use(
     methods: ['POST', 'PUT', 'DELETE'],
   }),
 );
+const communityUserRateLimiter = createUserRateLimitMiddleware({
+  name: 'community-write',
+  windowMs: 60_000,
+  max: 30,
+});
 
-communityRoutes.post('/storefront-details/:storefrontId/reviews', async (request, response) => {
-  const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
-  const body = parseReviewSubmissionBody(request.body);
-  const { accountId } = await ensureProfileWriteAccess(request, body.profileId);
+communityRoutes.post(
+  '/storefront-details/:storefrontId/reviews',
+  communityUserRateLimiter,
+  async (request, response) => {
+    const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
+    const body = parseReviewSubmissionBody(request.body);
+    const { accountId } = await ensureProfileWriteAccess(request, body.profileId);
 
-  const input: StorefrontReviewSubmissionInput = {
-    storefrontId,
-    profileId: body.profileId,
-    authorName: body.authorName || 'Canopy Trove user',
-    rating: body.rating,
-    text: body.text,
-    gifUrl: body.gifUrl,
-    tags: body.tags,
-    photoCount: body.photoCount,
-  };
-  const reviewInput = {
-    ...input,
-    photoUploadIds: body.photoUploadIds,
-  };
-
-  if (reviewInput.photoUploadIds.length && !accountId) {
-    response.status(403).json({
-      ok: false,
-      error: 'Signed-in access is required to attach review photos.',
-    });
-    return;
-  }
-
-  let reviewSubmission: Awaited<ReturnType<typeof submitStorefrontAppReview>>;
-  try {
-    reviewSubmission = await submitStorefrontAppReview(reviewInput);
-  } catch (error) {
-    if (error instanceof StorefrontCommunityError) {
-      const requestId = response.getHeader('X-CanopyTrove-Request-Id');
-      response.status(error.statusCode).json({
+    // Reviews require a signed-in account.
+    if (!accountId) {
+      response.status(403).json({
         ok: false,
-        error: getSafeErrorMessage(
-          error,
-          error.statusCode,
-          typeof requestId === 'string' ? requestId : null,
-        ),
+        error: 'You must be signed in to leave a review.',
       });
       return;
     }
 
-    throw error;
-  }
-  const review = reviewSubmission.review;
-  invalidateCachedStorefrontDetail(storefrontId);
+    // Content quality check
+    const qualityResult = checkContentQuality(body.text, {
+      minLength: 10,
+      maxUrls: 1,
+      context: 'review',
+      ip: request.ip || 'unknown',
+      path: request.originalUrl,
+    });
+    if (!qualityResult.pass) {
+      response.status(422).json({
+        ok: false,
+        error:
+          'Your review needs a bit more detail. Please write at least a couple sentences about your experience.',
+      });
+      return;
+    }
 
-  void notifyOwnersOfStorefrontActivity({
-    storefrontId,
-    title: 'New review on your storefront',
-    body: `${review.authorName} left a ${review.rating.toFixed(1)} star review.`,
-    data: {
-      kind: 'owner_review',
-      reviewId: review.id,
-    },
-  });
-
-  // Detail refresh is a convenience — must not fail the primary write response
-  let detail: Awaited<ReturnType<typeof getStorefrontDetail>> | null = null;
-  try {
-    detail = await getStorefrontDetail(storefrontId);
-  } catch (detailError) {
-    console.error(
-      '[community] post-write detail refresh failed for review_submitted:',
-      detailError,
+    // Per-profile velocity check
+    const velocityResult = checkCommunityVelocity(
+      body.profileId,
+      'review_submit',
+      request.ip || 'unknown',
     );
-  }
+    if (!velocityResult.allowed) {
+      response.status(429).json({
+        ok: false,
+        error: velocityResult.reason,
+      });
+      return;
+    }
 
-  // Gamification is a side effect — must not fail the primary write response
-  let rewardResult: Awaited<ReturnType<typeof applyGamificationEvent>> | null = null;
-  try {
-    rewardResult = await applyGamificationEvent(input.profileId, {
-      activityType: 'review_submitted',
-      payload: {
-        rating: input.rating,
-        textLength: input.text.length,
-        photoCount: reviewSubmission.photoModeration?.submittedCount ?? review.photoCount,
+    const input: StorefrontReviewSubmissionInput = {
+      storefrontId,
+      profileId: body.profileId,
+      authorName: body.authorName || 'Canopy Trove user',
+      rating: body.rating,
+      text: body.text,
+      gifUrl: body.gifUrl,
+      tags: body.tags,
+      photoCount: body.photoCount,
+    };
+    const reviewInput = {
+      ...input,
+      photoUploadIds: body.photoUploadIds,
+    };
+
+    if (reviewInput.photoUploadIds.length && !accountId) {
+      response.status(403).json({
+        ok: false,
+        error: 'Signed-in access is required to attach review photos.',
+      });
+      return;
+    }
+
+    let reviewSubmission: Awaited<ReturnType<typeof submitStorefrontAppReview>>;
+    try {
+      reviewSubmission = await submitStorefrontAppReview(reviewInput);
+    } catch (error) {
+      if (error instanceof StorefrontCommunityError) {
+        const requestId = response.getHeader('X-CanopyTrove-Request-Id');
+        response.status(error.statusCode).json({
+          ok: false,
+          error: getSafeErrorMessage(
+            error,
+            error.statusCode,
+            typeof requestId === 'string' ? requestId : null,
+          ),
+        });
+        return;
+      }
+
+      throw error;
+    }
+    const review = reviewSubmission.review;
+    invalidateCachedStorefrontDetail(storefrontId);
+
+    void notifyOwnersOfStorefrontActivity({
+      storefrontId,
+      title: 'New review on your storefront',
+      body: `${review.authorName} left a ${review.rating.toFixed(1)} star review.`,
+      data: {
+        kind: 'owner_review',
+        reviewId: review.id,
       },
     });
-  } catch (gamificationError) {
-    console.error(
-      '[community] gamification side effect failed for review_submitted:',
-      gamificationError,
-    );
-  }
 
-  response.json({
-    detail,
-    rewardResult,
-    photoModeration: reviewSubmission.photoModeration,
-  });
-});
+    // Detail refresh is a convenience — must not fail the primary write response
+    let detail: Awaited<ReturnType<typeof getStorefrontDetail>> | null = null;
+    try {
+      detail = await getStorefrontDetail(storefrontId);
+    } catch (detailError) {
+      console.error(
+        '[community] post-write detail refresh failed for review_submitted:',
+        detailError,
+      );
+    }
+
+    // Gamification is a side effect — must not fail the primary write response
+    let rewardResult: Awaited<ReturnType<typeof applyGamificationEvent>> | null = null;
+    try {
+      rewardResult = await applyGamificationEvent(
+        input.profileId,
+        {
+          activityType: 'review_submitted',
+          payload: {
+            rating: input.rating,
+            textLength: input.text.length,
+            photoCount: reviewSubmission.photoModeration?.submittedCount ?? review.photoCount,
+          },
+        },
+        {
+          clientIp: request.ip || 'unknown',
+        },
+      );
+    } catch (gamificationError) {
+      console.error(
+        '[community] gamification side effect failed for review_submitted:',
+        gamificationError,
+      );
+    }
+
+    response.json({
+      detail,
+      rewardResult,
+      photoModeration: reviewSubmission.photoModeration,
+    });
+  },
+);
 
 communityRoutes.put(
   '/storefront-details/:storefrontId/reviews/:reviewId',
+  communityUserRateLimiter,
   async (request, response) => {
     const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
     const reviewId = parseReviewIdParam(request.params.reviewId);
     const body = parseReviewSubmissionBody(request.body);
     const { accountId } = await ensureProfileWriteAccess(request, body.profileId);
+
+    // Content quality check on update
+    const qualityResult = checkContentQuality(body.text, {
+      minLength: 10,
+      maxUrls: 1,
+      context: 'review_update',
+      ip: request.ip || 'unknown',
+      path: request.originalUrl,
+    });
+    if (!qualityResult.pass) {
+      response.status(422).json({
+        ok: false,
+        error:
+          'Your review needs a bit more detail. Please write at least a couple sentences about your experience.',
+      });
+      return;
+    }
+
+    const velocityResult = checkCommunityVelocity(
+      body.profileId,
+      'review_update',
+      request.ip || 'unknown',
+    );
+    if (!velocityResult.allowed) {
+      response.status(429).json({
+        ok: false,
+        error: velocityResult.reason,
+      });
+      return;
+    }
 
     const input: StorefrontReviewSubmissionInput = {
       storefrontId,
@@ -229,6 +318,20 @@ communityRoutes.post(
       response.status(403).json({
         ok: false,
         error: 'Signed-in access is required to upload review photos.',
+      });
+      return;
+    }
+
+    // Per-profile velocity check for photo uploads
+    const velocityResult = checkCommunityVelocity(
+      body.profileId,
+      'photo_upload',
+      request.ip || 'unknown',
+    );
+    if (!velocityResult.allowed) {
+      response.status(429).json({
+        ok: false,
+        error: velocityResult.reason,
       });
       return;
     }
@@ -333,6 +436,7 @@ communityRoutes.delete(
 communityRoutes.post(
   '/storefront-details/:storefrontId/reports',
   storefrontReportRateLimiter,
+  communityUserRateLimiter,
   async (request, response) => {
     const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
     const body = parseReportSubmissionBody(request.body);
@@ -351,14 +455,35 @@ communityRoutes.post(
     };
 
     await ensureProfileWriteAccess(request, input.profileId);
+
+    // Per-profile velocity check for reports
+    const velocityResult = checkCommunityVelocity(
+      input.profileId,
+      'report_submit',
+      request.ip || 'unknown',
+    );
+    if (!velocityResult.allowed) {
+      response.status(429).json({
+        ok: false,
+        error: velocityResult.reason,
+      });
+      return;
+    }
+
     const report = await submitStorefrontReport(input);
 
     // Gamification is a side effect — must not fail the primary write response
     let rewardResult: Awaited<ReturnType<typeof applyGamificationEvent>> | null = null;
     try {
-      rewardResult = await applyGamificationEvent(input.profileId, {
-        activityType: 'report_submitted',
-      });
+      rewardResult = await applyGamificationEvent(
+        input.profileId,
+        {
+          activityType: 'report_submitted',
+        },
+        {
+          clientIp: request.ip || 'unknown',
+        },
+      );
     } catch (gamificationError) {
       console.error(
         '[community] gamification side effect failed for report_submitted:',
@@ -397,6 +522,21 @@ communityRoutes.post(
     const body = parseHelpfulVoteBody(request.body);
 
     await ensureProfileWriteAccess(request, body.profileId);
+
+    // Per-profile velocity check for helpful votes
+    const velocityResult = checkCommunityVelocity(
+      body.profileId,
+      'helpful_vote',
+      request.ip || 'unknown',
+    );
+    if (!velocityResult.allowed) {
+      response.status(429).json({
+        ok: false,
+        error: velocityResult.reason,
+      });
+      return;
+    }
+
     const helpfulResult = await markStorefrontAppReviewHelpful({
       storefrontId,
       reviewId,
@@ -412,12 +552,18 @@ communityRoutes.post(
       helpfulResult.reviewAuthorProfileId !== body.profileId
     ) {
       try {
-        await applyGamificationEvent(helpfulResult.reviewAuthorProfileId, {
-          activityType: 'helpful_vote_received',
-          payload: {
-            count: 1,
+        await applyGamificationEvent(
+          helpfulResult.reviewAuthorProfileId,
+          {
+            activityType: 'helpful_vote_received',
+            payload: {
+              count: 1,
+            },
           },
-        });
+          {
+            clientIp: request.ip || 'unknown',
+          },
+        );
       } catch (gamificationError) {
         console.error(
           '[community] gamification side effect failed for helpful_vote_received:',

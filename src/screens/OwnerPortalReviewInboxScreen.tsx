@@ -2,7 +2,7 @@ import { colors } from '../theme/tokens';
 import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
@@ -21,7 +21,6 @@ import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 import { useOwnerPortalWorkspace } from './ownerPortal/useOwnerPortalWorkspace';
 
 type OwnerPortalReviewInboxRoute = RouteProp<RootStackParamList, 'OwnerPortalReviewInbox'>;
-const ignoreAsyncError = () => undefined;
 
 function getReviewRuntimeMessage(reviewRepliesEnabled: boolean, safeModeEnabled: boolean) {
   if (!reviewRepliesEnabled) {
@@ -258,20 +257,32 @@ function OwnerPortalReviewInboxScreenInner() {
           >
             <Text style={styles.helperText}>
               {workspace?.ownerAlertStatus.pushEnabled
-                ? `Owner and incident alerts are live${workspace.ownerAlertStatus.updatedAt ? ` as of ${new Date(workspace.ownerAlertStatus.updatedAt).toLocaleString()}.` : '.'}`
+                ? `Owner and incident alerts are live${workspace.ownerAlertStatus.updatedAt ? ` as of ${new Date(workspace.ownerAlertStatus.updatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}.` : '.'}`
                 : 'Owner alerts are currently off for this device.'}
             </Text>
-            <Pressable
-              disabled={preview || isSaving}
-              onPress={() => {
-                void enableAlerts().catch(ignoreAsyncError);
-              }}
-              style={[styles.primaryButton, (preview || isSaving) && styles.buttonDisabled]}
-            >
-              <Text style={styles.primaryButtonText}>
-                {preview ? 'Preview Only' : isSaving ? 'Enabling...' : 'Enable Fast Alerts'}
+            {Platform.OS === 'web' ? (
+              <Text style={styles.helperText}>
+                Push alerts require the native iOS or Android app. Download the app to receive
+                instant review, report, and incident alerts on your device.
               </Text>
-            </Pressable>
+            ) : (
+              <Pressable
+                disabled={preview || isSaving}
+                onPress={() => {
+                  void enableAlerts().catch((err: unknown) => {
+                    const message = err instanceof Error ? err.message : 'Failed to enable alerts.';
+                    if (typeof alert === 'function') {
+                      alert(message);
+                    }
+                  });
+                }}
+                style={[styles.primaryButton, (preview || isSaving) && styles.buttonDisabled]}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {preview ? 'Preview Only' : isSaving ? 'Enabling...' : 'Enable Fast Alerts'}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </SectionCard>
       </MotionInView>
@@ -390,7 +401,13 @@ function OwnerPortalReviewInboxScreenInner() {
                                   [review.id]: draft.text,
                                 }));
                               })
-                              .catch(ignoreAsyncError);
+                              .catch((err: unknown) => {
+                                const message =
+                                  err instanceof Error ? err.message : 'Failed to draft reply.';
+                                if (typeof alert === 'function') {
+                                  alert(message);
+                                }
+                              });
                           }}
                           style={[
                             styles.secondaryButton,
@@ -422,7 +439,13 @@ function OwnerPortalReviewInboxScreenInner() {
                                 [review.id]: '',
                               }));
                             })
-                            .catch(ignoreAsyncError);
+                            .catch((err: unknown) => {
+                              const message =
+                                err instanceof Error ? err.message : 'Failed to send reply.';
+                              if (typeof alert === 'function') {
+                                alert(message);
+                              }
+                            });
                         }}
                         style={[
                           styles.primaryButton,
@@ -480,7 +503,14 @@ function OwnerPortalReviewInboxScreenInner() {
                       <Text style={styles.actionTileMeta}>Moderation report</Text>
                       <Text style={styles.actionTileTitle}>{report.reason}</Text>
                       <Text style={styles.actionTileBody}>
-                        {report.authorName} | {new Date(report.createdAt).toLocaleString()}
+                        {report.authorName} |{' '}
+                        {new Date(report.createdAt).toLocaleString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true,
+                        })}
                       </Text>
                     </View>
                     <AppUiIcon

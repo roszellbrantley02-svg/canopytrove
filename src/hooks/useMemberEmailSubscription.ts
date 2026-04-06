@@ -7,6 +7,17 @@ import {
 } from '../services/memberEmailSubscriptionService';
 import type { CanopyTroveAuthSession } from '../types/identity';
 
+const SUBSCRIPTION_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_resolve, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
+    ),
+  ]);
+}
+
 function createSignedOutStatus(email: string | null): MemberEmailSubscriptionStatus {
   return {
     accountId: '',
@@ -46,7 +57,11 @@ export function useMemberEmailSubscription(authSession: CanopyTroveAuthSession) 
 
     void (async () => {
       try {
-        const nextStatus = await getMemberEmailSubscription();
+        const nextStatus = await withTimeout(
+          getMemberEmailSubscription(),
+          SUBSCRIPTION_TIMEOUT_MS,
+          'getMemberEmailSubscription',
+        );
         if (!alive) {
           return;
         }
@@ -82,10 +97,11 @@ export function useMemberEmailSubscription(authSession: CanopyTroveAuthSession) 
       setActionStatus(null);
 
       try {
-        const nextStatus = await syncMemberEmailSubscription({
-          subscribed,
-          source: 'profile',
-        });
+        const nextStatus = await withTimeout(
+          syncMemberEmailSubscription({ subscribed, source: 'profile' }),
+          SUBSCRIPTION_TIMEOUT_MS,
+          'syncMemberEmailSubscription',
+        );
         setStatus(nextStatus);
         setActionStatus(
           subscribed

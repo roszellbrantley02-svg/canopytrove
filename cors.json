@@ -1,0 +1,15 @@
+[
+  {
+    "origin": [
+      "https://app.canopytrove.com",
+      "https://canopytrove.com",
+      "https://canopy-trove.web.app",
+      "https://canopy-trove.firebaseapp.com",
+      "http://localhost:8081",
+      "http://localhost:19006"
+    ],
+    "method": ["GET", "HEAD", "PUT", "OPTIONS"],
+    "responseHeader": ["Content-Type", "Content-Length", "x-goog-resumable"],
+    "maxAgeSeconds": 3600
+  }
+]

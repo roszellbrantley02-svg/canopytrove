@@ -11,10 +11,10 @@ import { AppUiIcon } from '../icons/AppUiIcon';
 
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import type {
-  OwnerPromotionAudience,
   OwnerPromotionCardTone,
   OwnerPromotionPlacementScope,
   OwnerPromotionPlacementSurface,
+  OwnerPromotionAudience,
 } from '../types/ownerPortal';
 import { OwnerPortalAnalyticsCard } from './ownerPortal/OwnerPortalAnalyticsCard';
 import {
@@ -71,6 +71,7 @@ function OwnerPortalPromotionsScreenInner() {
     aiErrorText,
     createPromotion,
     updatePromotion,
+    deletePromotion,
     draftPromotionWithAi,
   } = useOwnerPortalWorkspace(preview);
   const [editingPromotionId, setEditingPromotionId] = React.useState<string | null>(null);
@@ -79,7 +80,7 @@ function OwnerPortalPromotionsScreenInner() {
   const [badgesInput, setBadgesInput] = React.useState('');
   const [startsAt, setStartsAt] = React.useState(createDefaultPromotionStart());
   const [endsAt, setEndsAt] = React.useState(createDefaultPromotionEnd());
-  const [audience, setAudience] = React.useState<OwnerPromotionAudience>('all_followers');
+  const [audiences, setAudiences] = React.useState<OwnerPromotionAudience[]>(['all_followers']);
   const [cardTone, setCardTone] = React.useState<OwnerPromotionCardTone>('hot_deal');
   const [alertFollowersOnStart, setAlertFollowersOnStart] = React.useState(true);
   const [placementSurfaces, setPlacementSurfaces] = React.useState<
@@ -94,7 +95,7 @@ function OwnerPortalPromotionsScreenInner() {
     setBadgesInput(nextState.badgesInput);
     setStartsAt(nextState.startsAt);
     setEndsAt(nextState.endsAt);
-    setAudience(nextState.audience);
+    setAudiences(nextState.audiences);
     setCardTone(nextState.cardTone);
     setAlertFollowersOnStart(nextState.alertFollowersOnStart);
     setPlacementSurfaces(nextState.placementSurfaces);
@@ -284,12 +285,14 @@ function OwnerPortalPromotionsScreenInner() {
                   </Text>
                 </View>
                 <View style={styles.summaryTile}>
-                  <Text style={styles.summaryTileValue}>{formatPromotionValue(audience)}</Text>
+                  <Text style={styles.summaryTileValue}>
+                    {audiences.map((a) => formatPromotionValue(a)).join(', ') || 'None'}
+                  </Text>
                   <Text style={styles.summaryTileLabel}>Audience</Text>
                   <Text style={styles.summaryTileBody}>
                     {Platform.OS === 'android'
-                      ? 'Which customer segment should see this update first.'
-                      : 'Which customer segment should see this offer first.'}
+                      ? 'Which customer segments should see this update.'
+                      : 'Which customer segments should see this offer.'}
                   </Text>
                 </View>
                 <View style={styles.summaryTile}>
@@ -322,7 +325,7 @@ function OwnerPortalPromotionsScreenInner() {
                       setTitle(nextDraftState.title);
                       setDescription(nextDraftState.description);
                       setBadgesInput(nextDraftState.badgesInput);
-                      setAudience(nextDraftState.audience);
+                      setAudiences(nextDraftState.audiences);
                       setCardTone(nextDraftState.cardTone);
                       setPlacementSurfaces(nextDraftState.placementSurfaces);
                       setPlacementScope(nextDraftState.placementScope);
@@ -465,33 +468,39 @@ function OwnerPortalPromotionsScreenInner() {
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>Audience</Text>
                 <View style={styles.wrapRow}>
-                  {PROMOTION_AUDIENCE_OPTIONS.map((option) => (
-                    <Pressable
-                      key={option.value}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Set audience to ${option.label}`}
-                      accessibilityHint={
-                        Platform.OS === 'android'
-                          ? `Selects the ${option.label.toLowerCase()} audience for this update.`
-                          : `Selects the ${option.label.toLowerCase()} audience for this promotion.`
-                      }
-                      accessibilityState={audience === option.value ? { selected: true } : {}}
-                      onPress={() => setAudience(option.value)}
-                      style={[
-                        styles.choiceChip,
-                        audience === option.value && styles.choiceChipSelected,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.choiceChipText,
-                          audience === option.value && styles.choiceChipTextSelected,
-                        ]}
+                  {PROMOTION_AUDIENCE_OPTIONS.map((option) => {
+                    const isSelected = audiences.includes(option.value);
+                    return (
+                      <Pressable
+                        key={option.value}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${isSelected ? 'Remove' : 'Add'} audience ${option.label}`}
+                        accessibilityHint={
+                          Platform.OS === 'android'
+                            ? `Toggles the ${option.label.toLowerCase()} audience for this update.`
+                            : `Toggles the ${option.label.toLowerCase()} audience for this promotion.`
+                        }
+                        accessibilityState={isSelected ? { selected: true } : {}}
+                        onPress={() =>
+                          setAudiences((current) =>
+                            isSelected
+                              ? current.filter((v) => v !== option.value)
+                              : [...current, option.value],
+                          )
+                        }
+                        style={[styles.choiceChip, isSelected && styles.choiceChipSelected]}
                       >
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  ))}
+                        <Text
+                          style={[
+                            styles.choiceChipText,
+                            isSelected && styles.choiceChipTextSelected,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </View>
 
@@ -736,7 +745,7 @@ function OwnerPortalPromotionsScreenInner() {
                       badgesInput,
                       startsAt,
                       endsAt,
-                      audience,
+                      audiences,
                       alertFollowersOnStart,
                       cardTone,
                       placementSurfaces,
@@ -751,7 +760,16 @@ function OwnerPortalPromotionsScreenInner() {
                       .then(() => {
                         resetForm();
                       })
-                      .catch(ignoreAsyncError);
+                      .catch((err: unknown) => {
+                        const message =
+                          err instanceof Error
+                            ? err.message
+                            : 'Something went wrong saving the promotion.';
+                        // Surface the error so the owner knows what happened
+                        if (typeof alert === 'function') {
+                          alert(message);
+                        }
+                      });
                   }}
                   style={[styles.primaryButton, ctaDisabled && styles.buttonDisabled]}
                 >
@@ -823,33 +841,83 @@ function OwnerPortalPromotionsScreenInner() {
                   </View>
 
                   <Text style={styles.resultMeta}>
-                    Starts {new Date(promotion.startsAt).toLocaleString()} and ends{' '}
-                    {new Date(promotion.endsAt).toLocaleString()}.
+                    Starts{' '}
+                    {new Date(promotion.startsAt).toLocaleString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                    })}{' '}
+                    and ends{' '}
+                    {new Date(promotion.endsAt).toLocaleString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                    })}
+                    .
                   </Text>
                   <Text style={styles.resultMeta}>
                     {formatPromotionPlacementSurfaces(promotion.placementSurfaces)}
                   </Text>
 
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      Platform.OS === 'android'
-                        ? `Edit update ${promotion.title}`
-                        : `Edit promotion ${promotion.title}`
-                    }
-                    accessibilityHint={
-                      Platform.OS === 'android'
-                        ? 'Loads this update into the planner for editing.'
-                        : 'Loads this promotion into the planner for editing.'
-                    }
-                    onPress={() => {
-                      setEditingPromotionId(promotion.id);
-                      applyPlannerState(getPromotionPlannerStateFromPromotion(promotion));
-                    }}
-                    style={styles.secondaryButton}
-                  >
-                    <Text style={styles.secondaryButtonText}>Load Into Planner</Text>
-                  </Pressable>
+                  <View style={styles.promotionActionsRow}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        Platform.OS === 'android'
+                          ? `Edit update ${promotion.title}`
+                          : `Edit promotion ${promotion.title}`
+                      }
+                      accessibilityHint={
+                        Platform.OS === 'android'
+                          ? 'Loads this update into the planner for editing.'
+                          : 'Loads this promotion into the planner for editing.'
+                      }
+                      onPress={() => {
+                        setEditingPromotionId(promotion.id);
+                        applyPlannerState(getPromotionPlannerStateFromPromotion(promotion));
+                      }}
+                      style={[styles.secondaryButton, styles.promotionActionFlex]}
+                    >
+                      <Text style={styles.secondaryButtonText}>Load Into Planner</Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        Platform.OS === 'android'
+                          ? `Delete update ${promotion.title}`
+                          : `Delete promotion ${promotion.title}`
+                      }
+                      accessibilityHint={
+                        Platform.OS === 'android'
+                          ? 'Permanently removes this update.'
+                          : 'Permanently removes this promotion.'
+                      }
+                      onPress={() => {
+                        if (
+                          typeof confirm === 'function' &&
+                          !confirm('Delete this promotion? This cannot be undone.')
+                        ) {
+                          return;
+                        }
+                        void deletePromotion(promotion.id).catch((err: unknown) => {
+                          const message =
+                            err instanceof Error ? err.message : 'Failed to delete promotion.';
+                          if (typeof alert === 'function') {
+                            alert(message);
+                          }
+                        });
+                      }}
+                      style={[styles.secondaryButton, styles.promotionDeleteButton]}
+                    >
+                      <Text style={[styles.secondaryButtonText, styles.promotionDeleteText]}>
+                        Delete
+                      </Text>
+                    </Pressable>
+                  </View>
                 </View>
               ))}
             </View>

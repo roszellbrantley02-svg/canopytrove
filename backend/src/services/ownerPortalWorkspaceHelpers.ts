@@ -222,7 +222,9 @@ export function normalizePromotion(
     startsAt: input.startsAt,
     endsAt: input.endsAt,
     status: input.status ?? 'draft',
-    audience: input.audience,
+    audiences: Array.isArray(input.audiences)
+      ? input.audiences
+      : [(input as any).audience].filter(Boolean),
     alertFollowersOnStart: input.alertFollowersOnStart === true,
     cardTone: input.cardTone ?? 'owner_featured',
     placementSurfaces: normalizeOwnerPromotionPlacementSurfaces(input.placementSurfaces),

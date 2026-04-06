@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, Switch } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, View, Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { MotionInView } from '../components/MotionInView';
@@ -130,6 +130,40 @@ function SettingsScreenInner() {
     void signOutSession();
   }, [signOutSession]);
 
+  const handleReportBug = React.useCallback(() => {
+    const subject = encodeURIComponent('Bug Report — Canopy Trove');
+    const body = encodeURIComponent(
+      [
+        '',
+        '--- Please describe the issue below ---',
+        '',
+        '',
+        '',
+        '--- Device info (auto-filled) ---',
+        `App version: ${appVersion}`,
+        `Platform: ${Platform.OS}`,
+        `Authenticated: ${isAuthenticated ? 'Yes' : 'No'}`,
+        `Date: ${new Date().toISOString()}`,
+      ].join('\n'),
+    );
+    const url = `mailto:${supportEmail}?subject=${subject}&body=${body}`;
+    if (Platform.OS === 'web') {
+      window.location.href = url;
+    } else {
+      void Linking.openURL(url);
+    }
+  }, [appVersion, isAuthenticated, supportEmail]);
+
+  const handleContactSupport = React.useCallback(() => {
+    const subject = encodeURIComponent('Support Request — Canopy Trove');
+    const url = `mailto:${supportEmail}?subject=${subject}`;
+    if (Platform.OS === 'web') {
+      window.location.href = url;
+    } else {
+      void Linking.openURL(url);
+    }
+  }, [supportEmail]);
+
   const handleSubscribeEmail = React.useCallback(() => {
     void emailSubscription.subscribe();
   }, [emailSubscription]);
@@ -220,7 +254,19 @@ function SettingsScreenInner() {
               value={String(blockedAuthorCount)}
             />
 
-            <SettingsRow icon="information-circle-outline" title="Support" value={supportEmail} />
+            <SettingsRow
+              icon="flag-outline"
+              title="Report a bug"
+              subtitle="Describe what went wrong and we'll look into it"
+              onPress={handleReportBug}
+            />
+
+            <SettingsRow
+              icon="help-buoy-outline"
+              title="Contact support"
+              value={supportEmail}
+              onPress={handleContactSupport}
+            />
           </View>
         </View>
       </MotionInView>

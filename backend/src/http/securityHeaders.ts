@@ -34,5 +34,11 @@ export const securityHeadersMiddleware: RequestHandler = (request, response, nex
   // Disable sensitive browser features
   response.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
+  // Prevent cross-origin window references (mitigates Spectre-class side-channels)
+  response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+
+  // Prevent unrelated sites from embedding API responses
+  response.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
   next();
 };

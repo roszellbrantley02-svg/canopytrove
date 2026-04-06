@@ -3,9 +3,8 @@ import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-// TODO: Replace with `import { Image } from 'expo-image'` after running `npx expo install expo-image`
-import { Image } from 'react-native';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { InlineFeedbackPanel } from '../components/InlineFeedbackPanel';
 import { MotionInView } from '../components/MotionInView';
@@ -27,7 +26,13 @@ type MediaStatusNotice = {
   title: string;
   body: string;
 };
-const ignoreAsyncError = () => undefined;
+function logSilentError(label: string) {
+  return (error: unknown) => {
+    if (__DEV__) {
+      console.warn(`[OwnerPortalProfileTools] ${label}:`, error);
+    }
+  };
+}
 
 function parseHttpUrl(value: string) {
   const normalizedValue = value.trim();
@@ -64,9 +69,11 @@ function extractHttpUrls(value: string) {
 }
 
 async function pickOwnerMediaImage() {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    throw new Error('Media library permission is required to upload storefront images.');
+  if (Platform.OS !== 'web') {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      throw new Error('Media library permission is required to upload storefront images.');
+    }
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({
@@ -649,7 +656,7 @@ function OwnerPortalProfileToolsScreenInner() {
                       setVerifiedBadgeLabel(suggestion.verifiedBadgeLabel ?? '');
                       setFeaturedBadgesInput(suggestion.featuredBadges.join(', '));
                     })
-                    .catch(ignoreAsyncError);
+                    .catch(logSilentError('suggestProfileTools'));
                 }}
                 style={[
                   styles.secondaryButton,
@@ -699,7 +706,7 @@ function OwnerPortalProfileToolsScreenInner() {
                   Boolean(validationError)
                 }
                 onPress={() => {
-                  void saveProfileTools(normalizedInput).catch(ignoreAsyncError);
+                  void saveProfileTools(normalizedInput).catch(logSilentError('saveProfileTools'));
                 }}
                 style={[
                   styles.primaryButton,

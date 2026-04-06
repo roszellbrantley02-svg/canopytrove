@@ -2,10 +2,19 @@ import React from 'react';
 import { Linking, Platform } from 'react-native';
 import { crossPlatformAlert } from '../../utils/crossPlatformAlert';
 
-/** Open a URL in a web-safe way. On web, use window.open; on native, use Linking. */
+/** Open a URL in a web-safe way. On web, use window.open with a
+ *  location.href fallback (mobile browsers block popups outside the
+ *  synchronous user-gesture context). On native, use Linking. */
 async function openUrl(url: string) {
   if (Platform.OS === 'web') {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    try {
+      const popup = window.open(url, '_blank', 'noopener,noreferrer');
+      if (!popup) {
+        window.location.href = url;
+      }
+    } catch {
+      window.location.href = url;
+    }
   } else {
     await Linking.openURL(url);
   }
@@ -314,7 +323,13 @@ export function useStorefrontDetailActions({
     callStore: () => {
       void callStore();
     },
-    goBack: () => navigation.goBack(),
+    goBack: () => {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('Tabs', { screen: 'Nearby' } as never);
+      }
+    },
     goNow: () => {
       void goNow();
     },
@@ -350,10 +365,25 @@ export function useStorefrontDetailActions({
         entryMode: 'general_report',
       });
     },
-    writeReview: () =>
+    writeReview: () => {
+      if (authSession.status !== 'authenticated') {
+        crossPlatformAlert(
+          'Sign in required',
+          'You need to sign in before you can leave a review.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Sign In',
+              onPress: () => navigation.navigate('Tabs', { screen: 'Profile' }),
+            },
+          ],
+        );
+        return;
+      }
       navigation.navigate('WriteReview', {
         storefront,
         existingReview: myReview ?? undefined,
-      }),
+      });
+    },
   };
 }

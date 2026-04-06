@@ -1,7 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-// TODO: Replace with `import { Image } from 'expo-image'` after running `npx expo install expo-image`
-import { Image } from 'react-native';
+import { Image } from 'expo-image';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { SectionCard } from '../../components/SectionCard';
@@ -107,7 +106,11 @@ export function DetailReviewsSection({
             <Text style={styles.reviewText}>{review.text}</Text>
 
             {review.gifUrl ? (
-              <Image source={{ uri: review.gifUrl }} style={styles.reviewGif} />
+              <Image
+                source={{ uri: review.gifUrl }}
+                style={styles.reviewGif}
+                accessibilityLabel="Reaction GIF from review"
+              />
             ) : null}
 
             {review.photoUrls?.length ? (
@@ -121,6 +124,7 @@ export function DetailReviewsSection({
                     key={`${review.id}-review-photo-${index}`}
                     source={{ uri: photoUrl }}
                     style={styles.reviewPhotoCard}
+                    accessibilityLabel={`Review photo ${index + 1}`}
                   />
                 ))}
               </ScrollView>
@@ -259,6 +263,7 @@ export function DetailPhotosSection({
             key={`${storefrontId}-photo-${index}`}
             source={{ uri: photoUrl }}
             style={styles.photoCard}
+            accessibilityLabel={`Storefront photo ${index + 1}`}
           />
         ))}
       </ScrollView>

@@ -22,7 +22,7 @@ export type OwnerPromotionPlannerFormState = {
   badgesInput: string;
   startsAt: string;
   endsAt: string;
-  audience: OwnerPromotionAudience;
+  audiences: OwnerPromotionAudience[];
   cardTone: OwnerPromotionCardTone;
   alertFollowersOnStart: boolean;
   placementSurfaces: OwnerPromotionPlacementSurface[];
@@ -102,7 +102,7 @@ export function createDefaultPromotionPlannerState(): OwnerPromotionPlannerFormS
     badgesInput: '',
     startsAt: createDefaultPromotionStart(),
     endsAt: createDefaultPromotionEnd(),
-    audience: 'all_followers',
+    audiences: ['all_followers'],
     cardTone: 'hot_deal',
     alertFollowersOnStart: true,
     placementSurfaces: DEFAULT_PROMOTION_PLACEMENT_SURFACES,
@@ -122,7 +122,7 @@ export function buildPromotionPlannerInput(
       .filter(Boolean),
     startsAt: parseLocalDateTimeInputValue(formState.startsAt) ?? formState.startsAt.trim(),
     endsAt: parseLocalDateTimeInputValue(formState.endsAt) ?? formState.endsAt.trim(),
-    audience: formState.audience,
+    audiences: formState.audiences,
     alertFollowersOnStart: formState.alertFollowersOnStart,
     cardTone: formState.cardTone,
     placementSurfaces: formState.placementSurfaces,
@@ -137,7 +137,7 @@ export function getPromotionPlannerStateFromDraft(
   | 'title'
   | 'description'
   | 'badgesInput'
-  | 'audience'
+  | 'audiences'
   | 'cardTone'
   | 'placementSurfaces'
   | 'placementScope'
@@ -146,7 +146,7 @@ export function getPromotionPlannerStateFromDraft(
     title: draft.title,
     description: draft.description,
     badgesInput: draft.badges.join(', '),
-    audience: draft.audience,
+    audiences: draft.audiences,
     cardTone: draft.cardTone,
     placementSurfaces: draft.placementSurfaces,
     placementScope: draft.placementScope,
@@ -162,7 +162,7 @@ export function getPromotionPlannerStateFromPromotion(
     badgesInput: promotion.badges.join(', '),
     startsAt: formatLocalDateTimeInputValue(promotion.startsAt),
     endsAt: formatLocalDateTimeInputValue(promotion.endsAt),
-    audience: promotion.audience,
+    audiences: promotion.audiences,
     cardTone: promotion.cardTone,
     alertFollowersOnStart: promotion.alertFollowersOnStart,
     placementSurfaces: promotion.placementSurfaces,
@@ -177,7 +177,7 @@ export function getPromotionPlannerTitle(editingPromotionId: string | null) {
 export function getPromotionPlannerBody(editingPromotionId: string | null) {
   return editingPromotionId
     ? 'Update timing, lane, placement, or highlight reach without losing the existing promotion state.'
-    : 'Lead with a hot deal by default, or switch to an owner highlight when the card should feel premium instead of urgent.';
+    : 'Choose a card tone that matches your offer. Hot Deal creates urgency. Owner Highlight feels premium and curated. Standard keeps it clean and neutral.';
 }
 
 export function getPromotionPlannerModeLabel(editingPromotionId: string | null) {

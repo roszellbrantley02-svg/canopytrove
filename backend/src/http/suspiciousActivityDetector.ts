@@ -1,5 +1,7 @@
 import type { Request } from 'express';
 import { RequestHandler } from 'express';
+import { logSecurityEvent } from './securityEventLogger';
+import { recordAbuseSignal } from './abuseScoring';
 
 /**
  * Track failed authentication attempts per IP
@@ -70,6 +72,19 @@ export function recordFailedAuth(ip: string): boolean {
   attempts.push(now);
   failedAuthAttempts.set(ip, attempts);
 
+  // Log security event for auth failure
+  logSecurityEvent({
+    event: 'auth_failure',
+    ip,
+    path: 'auth',
+    method: 'POST',
+    detail: `Failed auth attempt ${attempts.length} of ${MAX_FAILED_ATTEMPTS} within window`,
+    meta: { attemptCount: attempts.length },
+  });
+
+  // Record abuse signal for auth failure
+  recordAbuseSignal(ip, 3, 'auth');
+
   // Check if threshold exceeded
   if (attempts.length > MAX_FAILED_ATTEMPTS) {
     // Temporarily block this IP
@@ -87,6 +102,14 @@ export const suspiciousActivityMiddleware: RequestHandler = (request, response, 
   const clientIp = getClientIp(request);
 
   if (isIpBlocked(clientIp)) {
+    logSecurityEvent({
+      event: 'ip_blocked',
+      ip: clientIp,
+      path: request.originalUrl,
+      method: request.method,
+      detail: 'IP temporarily blocked due to repeated auth failures',
+    });
+
     response.status(429).json({
       error: 'Too many failed authentication attempts. Please try again later.',
     });

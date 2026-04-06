@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppIconStatCard } from '../../components/AppIconStatCard';
 import { SectionCard } from '../../components/SectionCard';
@@ -13,8 +13,9 @@ import {
 } from '../../icons/AppIcons';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import { brand } from '../../config/brand';
-import { colors } from '../../theme/tokens';
+import { colors, spacing, textStyles } from '../../theme/tokens';
 import type { AppProfile } from '../../types/storefront';
+import type { UsernameChangeRequestResponse } from '../../services/storefrontBackendService';
 import { styles } from './profileStyles';
 
 export function ProfileHeroCard({
@@ -48,13 +49,13 @@ export function ProfileHeroCard({
 }) {
   const heroMetaParts = [
     rank > 0 ? `Standing #${rank}` : null,
-    `${visitedCount} storefronts visited`,
-    `${joinedDays} days on ${brand.productName}`,
+    `${visitedCount} ${visitedCount === 1 ? 'storefront' : 'storefronts'} visited`,
+    `${joinedDays} ${joinedDays === 1 ? 'day' : 'days'} on ${brand.productName}`,
   ].filter(Boolean) as string[];
   const heroHighlights = [
     { label: 'Standing', value: rank > 0 ? `#${rank}` : 'New' },
     { label: 'Visited', value: String(visitedCount) },
-    { label: 'Member span', value: joinedDays > 0 ? `${joinedDays}d` : 'Today' },
+    { label: 'Member for', value: joinedDays > 0 ? `${joinedDays}d` : 'Today' },
   ];
 
   return (
@@ -326,6 +327,85 @@ export function ProfileAccountSection({
       {profileActionStatus ? (
         <Text style={styles.environmentNote}>{profileActionStatus}</Text>
       ) : null}
+    </SectionCard>
+  );
+}
+
+export function UsernameRequestSection({
+  displayNameInput,
+  onChangeDisplayNameInput,
+  pendingRequest,
+  isSubmitting,
+  isLoadingPending,
+  statusMessage,
+  onSubmit,
+}: {
+  displayNameInput: string;
+  onChangeDisplayNameInput: (value: string) => void;
+  pendingRequest: UsernameChangeRequestResponse | null;
+  isSubmitting: boolean;
+  isLoadingPending: boolean;
+  statusMessage: string | null;
+  onSubmit: () => void;
+}) {
+  const trimmed = displayNameInput.trim();
+  const canSubmit = trimmed.length >= 2 && trimmed.length <= 30 && !isSubmitting && !pendingRequest;
+
+  return (
+    <SectionCard title="Username" body="Request a custom username for your profile.">
+      {isLoadingPending ? (
+        <ActivityIndicator size="small" color={colors.primary} />
+      ) : pendingRequest ? (
+        <View style={styles.previewCard}>
+          <View style={styles.previewCardHeader}>
+            <View style={styles.progressText}>
+              <Text style={styles.previewCardTitle}>Request pending</Text>
+              <Text style={styles.previewCardBody}>
+                Your request to change your username to "{pendingRequest.requestedDisplayName}" is
+                being reviewed.
+              </Text>
+            </View>
+            <View style={styles.heroBadge}>
+              <AppUiIcon name="time-outline" size={12} color={colors.warning} />
+              <Text style={[styles.heroBadgeText, { color: colors.warning }]}>Pending</Text>
+            </View>
+          </View>
+        </View>
+      ) : (
+        <View style={{ gap: spacing.md }}>
+          <TextInput
+            value={displayNameInput}
+            onChangeText={onChangeDisplayNameInput}
+            placeholder="Enter your desired username"
+            placeholderTextColor={colors.textMuted}
+            maxLength={30}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.displayNameInput}
+          />
+          <Text style={{ ...textStyles.caption, color: colors.textMuted }}>
+            {trimmed.length}/30 characters. Username changes require approval.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Request username change"
+            disabled={!canSubmit}
+            onPress={onSubmit}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              !canSubmit && styles.buttonDisabled,
+              pressed && canSubmit && { opacity: 0.7 },
+            ]}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color={colors.backgroundDeep} />
+            ) : (
+              <Text style={styles.primaryButtonText}>Request Username Change</Text>
+            )}
+          </Pressable>
+        </View>
+      )}
+      {statusMessage ? <Text style={styles.environmentNote}>{statusMessage}</Text> : null}
     </SectionCard>
   );
 }

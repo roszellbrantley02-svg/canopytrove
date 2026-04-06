@@ -51,7 +51,7 @@ export function OwnerPortalAiActionPlanCard({
         ) : null}
         <Text style={styles.resultMeta}>
           {actionPlan
-            ? `${actionPlan.usedFallback ? 'Fallback' : 'Model'} draft generated ${new Date(actionPlan.generatedAt).toLocaleString()}.`
+            ? `${actionPlan.usedFallback ? 'Fallback' : 'Model'} draft generated ${new Date(actionPlan.generatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}.`
             : 'No AI action plan generated yet.'}
         </Text>
         <Pressable

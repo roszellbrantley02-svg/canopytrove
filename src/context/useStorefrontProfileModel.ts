@@ -101,6 +101,33 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
       return;
     }
 
+    // Display-name resolution priority:
+    //   1. Keep the user's explicit username if they chose one (non-email).
+    //   2. Use authSession.displayName if the auth provider supplied one.
+    //   3. Fall back to the authenticated email so the
+    //      leaderboard always shows a real name — never "anonymous".
+    //   4. If the user later picks a username it replaces all fallbacks.
+    const existingDisplayName = appProfile.displayName?.trim() || null;
+    const isExistingDisplayNameAnEmail =
+      existingDisplayName && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(existingDisplayName);
+    const authDisplayName =
+      authSession.status === 'authenticated' ? authSession.displayName?.trim() || null : null;
+    const authEmail = authSession.status === 'authenticated' ? (authSession.email ?? null) : null;
+
+    let nextDisplayName: string | null;
+    if (existingDisplayName && !isExistingDisplayNameAnEmail) {
+      // User chose a custom username — always keep it.
+      nextDisplayName = existingDisplayName;
+    } else if (authDisplayName) {
+      // Auth provider has a display name (e.g. from sign-up) — use it.
+      nextDisplayName = authDisplayName;
+    } else if (authEmail) {
+      // No custom username or auth display name — use email as fallback.
+      nextDisplayName = authEmail;
+    } else {
+      nextDisplayName = existingDisplayName;
+    }
+
     const nextProfile: AppProfile = {
       ...appProfile,
       kind: authSession.status === 'authenticated' ? 'authenticated' : 'anonymous',
@@ -108,11 +135,7 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
         authSession.status === 'authenticated' || authSession.status === 'anonymous'
           ? authSession.uid
           : null,
-      displayName: appProfile.displayName?.trim()
-        ? appProfile.displayName.trim()
-        : authSession.status === 'authenticated'
-          ? (authSession.displayName ?? authSession.email ?? null)
-          : (appProfile.displayName ?? null),
+      displayName: nextDisplayName,
       updatedAt: new Date().toISOString(),
     };
 

@@ -18,7 +18,7 @@ set -euo pipefail
 PROJECT="canopy-trove"
 REGION="us-east4"
 SERVICE="canopytrove-api"
-IMAGE="gcr.io/${PROJECT}/${SERVICE}:latest"
+IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${SERVICE}/${SERVICE}:latest"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -89,32 +89,32 @@ deploy_backend() {
     --min-instances 0 \
     --max-instances 10 \
     --timeout 300 \
-    --set-env-vars "\
-STOREFRONT_BACKEND_SOURCE=firestore,\
-CORS_ORIGIN=https://canopytrove.com,\
-ALLOW_DEV_SEED=false,\
-REQUEST_LOGGING_ENABLED=true,\
-READ_RATE_LIMIT_PER_MINUTE=600,\
-WRITE_RATE_LIMIT_PER_MINUTE=180,\
-ADMIN_RATE_LIMIT_PER_TEN_MINUTES=30,\
-FIREBASE_PROJECT_ID=canopy-trove,\
-FIREBASE_DATABASE_ID=canopytrove,\
-OPENAI_MODEL=gpt-4o-mini,\
-OWNER_PORTAL_PRELAUNCH_ENABLED=false,\
-RUNTIME_AUTO_MITIGATION_ENABLED=true,\
-RUNTIME_INCIDENT_THRESHOLD=3,\
-SENTRY_ENVIRONMENT=production,\
-SENTRY_TRACES_SAMPLE_RATE=0.15,\
-OPS_HEALTHCHECK_ENABLED=true,\
-OPS_HEALTHCHECK_INTERVAL_MINUTES=5,\
-OPS_HEALTHCHECK_TIMEOUT_MS=8000,\
-OPS_HEALTHCHECK_FAILURE_CONFIRMATION_SWEEPS=2,\
-OPS_ALERT_COOLDOWN_MINUTES=30,\
-WELCOME_EMAILS_ENABLED=true,\
-EMAIL_DELIVERY_PROVIDER=resend,\
-EMAIL_REPLY_TO_ADDRESS=askmehere@canopytrove.com,\
-OWNER_BILLING_SUCCESS_URL=https://canopytrove.com/owner/billing/success,\
-OWNER_BILLING_CANCEL_URL=https://canopytrove.com/owner/billing/cancel,\
+    --set-env-vars "^::^\
+STOREFRONT_BACKEND_SOURCE=firestore::\
+CORS_ORIGIN=https://canopytrove.com,https://app.canopytrove.com,https://canopytrove-webapp.web.app::\
+ALLOW_DEV_SEED=false::\
+REQUEST_LOGGING_ENABLED=true::\
+READ_RATE_LIMIT_PER_MINUTE=600::\
+WRITE_RATE_LIMIT_PER_MINUTE=180::\
+ADMIN_RATE_LIMIT_PER_TEN_MINUTES=30::\
+FIREBASE_PROJECT_ID=canopy-trove::\
+FIREBASE_DATABASE_ID=canopytrove::\
+OPENAI_MODEL=gpt-4o-mini::\
+OWNER_PORTAL_PRELAUNCH_ENABLED=false::\
+RUNTIME_AUTO_MITIGATION_ENABLED=true::\
+RUNTIME_INCIDENT_THRESHOLD=3::\
+SENTRY_ENVIRONMENT=production::\
+SENTRY_TRACES_SAMPLE_RATE=0.15::\
+OPS_HEALTHCHECK_ENABLED=true::\
+OPS_HEALTHCHECK_INTERVAL_MINUTES=5::\
+OPS_HEALTHCHECK_TIMEOUT_MS=8000::\
+OPS_HEALTHCHECK_FAILURE_CONFIRMATION_SWEEPS=2::\
+OPS_ALERT_COOLDOWN_MINUTES=30::\
+WELCOME_EMAILS_ENABLED=true::\
+EMAIL_DELIVERY_PROVIDER=resend::\
+EMAIL_REPLY_TO_ADDRESS=askmehere@canopytrove.com::\
+OWNER_BILLING_SUCCESS_URL=https://canopytrove.com/owner/billing/success::\
+OWNER_BILLING_CANCEL_URL=https://canopytrove.com/owner/billing/cancel::\
 OWNER_BILLING_PORTAL_RETURN_URL=https://canopytrove.com/owner/billing" \
     --set-secrets "\
 GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,\

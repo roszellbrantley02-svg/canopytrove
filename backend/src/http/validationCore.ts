@@ -94,7 +94,7 @@ export function parseOptionalTrimmedString(
   }
 
   if (normalizedValue === null) {
-    throw new RequestValidationError(`${field} must be a string.`);
+    return undefined;
   }
 
   const trimmed = parseTrimmedString(normalizedValue, field, {

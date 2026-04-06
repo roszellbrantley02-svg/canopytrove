@@ -20,6 +20,10 @@ module.exports = ({ config }) => {
   const sentryOrganization = process.env.SENTRY_ORG?.trim();
   const sentryProject = process.env.SENTRY_PROJECT?.trim();
 
+  if (!hasPlugin(plugins, 'expo-image')) {
+    plugins.push('expo-image');
+  }
+
   if (sentryOrganization && sentryProject && !hasPlugin(plugins, '@sentry/react-native/expo')) {
     plugins.push([
       '@sentry/react-native/expo',

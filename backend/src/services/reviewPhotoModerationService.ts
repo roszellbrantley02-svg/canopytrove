@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { getOptionalFirestoreCollection } from '../firestoreCollections';
 import { serverConfig } from '../config';
 import { getBackendFirebaseStorage } from '../firebase';
+import { stripImageMetadata } from './imageExifStripper';
 
 export type ReviewPhotoModerationStatus =
   | 'pending_upload'
@@ -221,7 +222,24 @@ function normalizeStoredRecord(
 }
 
 function getBucket() {
-  return getBackendFirebaseStorage()?.bucket() ?? null;
+  const storage = getBackendFirebaseStorage();
+  if (!storage) {
+    return null;
+  }
+
+  try {
+    const bucket = storage.bucket();
+    // bucket() returns an object even when no bucket name is configured.
+    // Verify the bucket has a valid name so downstream signed-URL calls
+    // don't blow up with a confusing 500.
+    if (!bucket.name) {
+      return null;
+    }
+
+    return bucket;
+  } catch {
+    return null;
+  }
 }
 
 function buildPendingStoragePath(input: {
@@ -376,9 +394,19 @@ async function uploadPhotoToApprovedPath(photo: StoredReviewPhotoUploadSession, 
     photoId: photo.id,
     fileName: photo.originalFileName,
   });
+
+  // Download → strip EXIF metadata (GPS, device info) → upload to approved path.
+  // This protects user privacy by removing location and camera data before
+  // the photo becomes publicly readable.
   const pendingFile = bucket.file(photo.pendingStoragePath);
+  const [rawBytes] = await pendingFile.download();
+  const strippedBytes = stripImageMetadata(rawBytes, photo.contentType);
+
   const approvedFile = bucket.file(approvedPath);
-  await pendingFile.copy(approvedFile);
+  await approvedFile.save(strippedBytes, {
+    metadata: { contentType: photo.contentType },
+  });
+
   await pendingFile.delete({ ignoreNotFound: true }).catch(() => undefined);
   return approvedPath;
 }
@@ -434,14 +462,21 @@ async function createSignedUploadUrl(photo: StoredReviewPhotoUploadSession) {
     return null;
   }
 
-  const [uploadUrl] = await bucket.file(photo.pendingStoragePath).getSignedUrl({
-    action: 'write',
-    version: 'v4',
-    expires: Date.now() + UPLOAD_URL_TTL_MS,
-    contentType: photo.contentType,
-  });
+  try {
+    const [uploadUrl] = await bucket.file(photo.pendingStoragePath).getSignedUrl({
+      action: 'write',
+      version: 'v4',
+      expires: Date.now() + UPLOAD_URL_TTL_MS,
+      contentType: photo.contentType,
+    });
 
-  return uploadUrl;
+    return uploadUrl;
+  } catch {
+    // Signed URL creation can fail if the service account lacks
+    // iam.serviceAccounts.signBlob permission or the bucket name
+    // is misconfigured. Fall back to memory upload mode.
+    return null;
+  }
 }
 
 async function createSignedReadUrl(storagePath: string) {
@@ -662,6 +697,17 @@ export async function createReviewPhotoUploadSession(input: {
     throw new ReviewPhotoModerationError(
       `Review photos must be smaller than ${Math.floor(MAX_REVIEW_PHOTO_BYTES / (1024 * 1024))}MB.`,
       400,
+    );
+  }
+
+  // Cloud Storage is required for photo uploads in production.
+  // Without FIREBASE_STORAGE_BUCKET, signed URLs and durable storage
+  // are unavailable — return a clear error instead of a 500.
+  const bucket = getBucket();
+  if (!bucket) {
+    throw new ReviewPhotoModerationError(
+      'Photo uploads are temporarily unavailable. Please try again later.',
+      503,
     );
   }
 

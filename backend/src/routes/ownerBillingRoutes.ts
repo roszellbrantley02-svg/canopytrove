@@ -1,6 +1,8 @@
 import { Request, Response, Router } from 'express';
 import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
+import { createRecentAuthGuard } from '../http/recentAuthGuard';
+import { createUserRateLimitMiddleware } from '../http/userRateLimit';
 import { getSafeErrorMessage } from '../http/errors';
 import {
   createOwnerBillingCheckoutSession,
@@ -15,6 +17,16 @@ const ownerBillingSessionRateLimiter = createRateLimitMiddleware({
   windowMs: 60_000,
   max: 6,
   methods: ['POST'],
+});
+const billingRecentAuthGuard = createRecentAuthGuard({
+  operationLabel: 'billing session',
+  maxAuthAgeSeconds: 300,
+});
+const billingUserRateLimiter = createUserRateLimitMiddleware({
+  name: 'billing-session',
+  windowMs: 60_000,
+  max: 6,
+  persistent: true,
 });
 
 ownerBillingRoutes.use(
@@ -48,7 +60,9 @@ function parseCheckoutBody(body: unknown): { billingCycle: unknown; tier: unknow
 
 ownerBillingRoutes.post(
   '/owner-billing/checkout-session',
+  billingRecentAuthGuard,
   ownerBillingSessionRateLimiter,
+  billingUserRateLimiter,
   async (request, response) => {
     try {
       const { billingCycle, tier } = parseCheckoutBody(request.body);
@@ -66,7 +80,9 @@ ownerBillingRoutes.post(
 
 ownerBillingRoutes.post(
   '/owner-billing/portal-session',
+  billingRecentAuthGuard,
   ownerBillingSessionRateLimiter,
+  billingUserRateLimiter,
   async (request, response) => {
     try {
       response.json(await createOwnerBillingPortalSession(request));

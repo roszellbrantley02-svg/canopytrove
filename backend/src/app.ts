@@ -8,6 +8,9 @@ import { securityHeadersMiddleware } from './http/securityHeaders';
 import { suspiciousActivityMiddleware } from './http/suspiciousActivityDetector';
 import { etagMiddleware } from './http/etag';
 import { createRequestTimeoutMiddleware } from './http/requestTimeout';
+import { responseValidatorMiddleware } from './http/responseValidator';
+import { isIpFlagged } from './http/abuseScoring';
+import { createOriginGuardMiddleware } from './http/originGuard';
 import { setupExpressErrorMonitoring } from './observability/sentry';
 import { requestTelemetryMiddleware } from './observability/requestTelemetry';
 import { adminRoutes } from './routes/adminRoutes';
@@ -32,6 +35,9 @@ import { resendWebhookHandler } from './routes/resendWebhookRoutes';
 import { routeStateRoutes } from './routes/routeStateRoutes';
 import { giphyGatewayRoutes } from './routes/giphyGatewayRoutes';
 import { storefrontRoutes } from './routes/storefrontRoutes';
+import { accountSecurityRoutes } from './routes/accountSecurityRoutes';
+import { usernameRequestRoutes } from './routes/usernameRequestRoutes';
+import { webBeaconRoutes } from './routes/webBeaconRoutes';
 import { assertSecureServerConfig, serverConfig } from './config';
 import { hasBackendFirebaseConfig } from './firebase';
 import { backendStorefrontSourceStatus } from './sources';
@@ -57,6 +63,8 @@ export function createApp() {
     }),
   );
   app.use(securityHeadersMiddleware);
+  app.use(createOriginGuardMiddleware());
+  app.use(responseValidatorMiddleware);
   app.use(etagMiddleware);
   const webhookRateLimiter = createRateLimitMiddleware({
     name: 'webhook',
@@ -76,10 +84,35 @@ export function createApp() {
     express.raw({ type: 'application/json', limit: '256kb' }),
     resendWebhookHandler,
   );
+  // Beacon routes (CSP reports, web vitals) must be mounted BEFORE the
+  // JSON-only content-type enforcement. Browsers send CSP violation reports
+  // with Content-Type: application/csp-report, which would be rejected by
+  // the enforcement middleware.
+  app.use(
+    '/',
+    express.json({
+      limit: '64kb',
+      type: ['application/json', 'application/csp-report', 'application/reports+json'],
+    }),
+    webBeaconRoutes,
+  );
+
   app.use(express.json({ limit: '128kb' }));
   app.use(contentTypeEnforcementMiddleware);
   app.use(createAuditLogMiddleware());
   app.use(suspiciousActivityMiddleware);
+
+  // Abuse-scored IP gate — flagged IPs get rejected before route handlers
+  app.use((request, response, next) => {
+    const ip = request.ip || request.socket.remoteAddress || 'unknown';
+    if (request.method !== 'OPTIONS' && isIpFlagged(ip)) {
+      response.status(429).json({
+        error: 'Request rate exceeded. Please slow down and try again later.',
+      });
+      return;
+    }
+    next();
+  });
 
   app.get('/livez', (_request, response) => {
     response.status(200).json({ status: 'alive' });
@@ -151,6 +184,9 @@ export function createApp() {
   app.use('/', giphyGatewayRoutes);
   app.use('/', routeStateRoutes);
   app.use('/', storefrontRoutes);
+  app.use('/', accountSecurityRoutes);
+  app.use('/', usernameRequestRoutes);
+  // webBeaconRoutes mounted earlier (before content-type enforcement)
   setupExpressErrorMonitoring(app);
   app.use(backendErrorHandler);
 

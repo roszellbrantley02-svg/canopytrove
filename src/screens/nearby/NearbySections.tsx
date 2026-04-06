@@ -1,5 +1,12 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  Pressable,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { InlineFeedbackPanel } from '../../components/InlineFeedbackPanel';
 import { MotionInView } from '../../components/MotionInView';
@@ -89,11 +96,16 @@ export function NearbyLocationPanel({
 
       <View style={[styles.locationActionRow, compactLayout && styles.locationActionRowCompact]}>
         <Pressable
-          onPress={handleApplyLocationQuery}
+          onPress={() => {
+            if (isResolvingLocation || !locationQuery.trim()) return;
+            Keyboard.dismiss();
+            handleApplyLocationQuery();
+          }}
+          disabled={isResolvingLocation || !locationQuery.trim()}
           style={[
             styles.secondaryButton,
             compactLayout && styles.fullWidthButton,
-            isResolvingLocation && styles.buttonDisabled,
+            (isResolvingLocation || !locationQuery.trim()) && styles.buttonDisabled,
           ]}
           accessibilityRole="button"
           accessibilityLabel="Apply search area"
@@ -106,7 +118,12 @@ export function NearbyLocationPanel({
         </Pressable>
 
         <Pressable
-          onPress={handleUseDeviceLocation}
+          onPress={() => {
+            if (isResolvingLocation) return;
+            Keyboard.dismiss();
+            handleUseDeviceLocation();
+          }}
+          disabled={isResolvingLocation}
           style={[
             styles.primaryButton,
             compactLayout && styles.fullWidthButton,
@@ -153,6 +170,8 @@ export function NearbyStoreList({
   onGoNow: (storefront: StorefrontSummary) => void;
   delayBase: number;
 }) {
+  const visitedSet = React.useMemo(() => new Set(visitedStorefrontIds), [visitedStorefrontIds]);
+
   return (
     <View style={styles.list}>
       {storefronts.map((store, index) => (
@@ -163,7 +182,7 @@ export function NearbyStoreList({
             primaryActionLabel="Directions"
             secondaryActionLabel="Details"
             isSaved={isSavedStorefront(store.id)}
-            isVisited={visitedStorefrontIds.includes(store.id)}
+            isVisited={visitedSet.has(store.id)}
             showPromotionText={Boolean(store.promotionText?.trim())}
             onPressIn={() => onPrepareStorefront(store.id)}
             onSecondaryActionPressIn={() => onPrepareStorefront(store.id)}

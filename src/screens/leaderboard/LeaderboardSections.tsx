@@ -10,6 +10,7 @@ import type {
   GamificationLeaderboardEntry,
   GamificationLeaderboardResponse,
 } from '../../types/storefront';
+import { getPublicDisplayName } from '../profile/profileUtils';
 import { styles } from './leaderboardStyles';
 
 export function LeaderboardHeaderRow({ onBack }: { onBack: () => void }) {
@@ -204,7 +205,7 @@ function LeaderboardEntryCard({
       </View>
       <View style={styles.entryMain}>
         <Text style={styles.entryName}>
-          {entry.displayName || `Canopy Trove ${entry.profileId.slice(-6)}`}
+          {getPublicDisplayName(entry.displayName, entry.profileId)}
         </Text>
         <Text style={styles.entryMeta}>
           {`${entry.profileKind === 'authenticated' ? 'Member' : 'Anonymous'} - ${entry.totalReviews} reviews - ${entry.badgeCount} badges`}

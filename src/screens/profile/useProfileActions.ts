@@ -5,7 +5,12 @@ import {
   getMockFirestoreSeedCounts,
 } from '../../services/firestoreSeedService';
 import { getFirebaseDb, hasFirebaseConfig } from '../../config/firebase';
-import { seedStorefrontBackendFirestore } from '../../services/storefrontBackendService';
+import {
+  seedStorefrontBackendFirestore,
+  submitUsernameChangeRequest,
+  getPendingUsernameRequest,
+} from '../../services/storefrontBackendService';
+import type { UsernameChangeRequestResponse } from '../../services/storefrontBackendService';
 import { storefrontSourceMode } from '../../config/storefrontSourceConfig';
 import { getOwnerPortalAccessState } from '../../services/ownerPortalService';
 import type { CanopyTroveAuthSession } from '../../types/identity';
@@ -30,18 +35,42 @@ type UseProfileActionsArgs = {
 export function useProfileActions({
   authSession: _authSession,
   backendHealth,
-  clearDisplayName,
+  clearDisplayName: _clearDisplayName,
   displayNameInput,
   navigation,
   profileId,
   signOutSession,
   startGuestSession,
-  updateDisplayName,
+  updateDisplayName: _updateDisplayName,
 }: UseProfileActionsArgs) {
   const [isSeeding, setIsSeeding] = React.useState(false);
   const [seedStatus, setSeedStatus] = React.useState<string | null>(null);
   const [isSavingDisplayName, setIsSavingDisplayName] = React.useState(false);
   const [profileActionStatus, setProfileActionStatus] = React.useState<string | null>(null);
+  const [pendingUsernameRequest, setPendingUsernameRequest] =
+    React.useState<UsernameChangeRequestResponse | null>(null);
+  const [isLoadingPendingRequest, setIsLoadingPendingRequest] = React.useState(false);
+
+  // Check for existing pending username request on mount and when profileId changes
+  React.useEffect(() => {
+    let alive = true;
+    setIsLoadingPendingRequest(true);
+    getPendingUsernameRequest(profileId)
+      .then((result) => {
+        if (alive) {
+          setPendingUsernameRequest(result.request);
+        }
+      })
+      .catch(() => {
+        // Silently fail — user can still submit a new request
+      })
+      .finally(() => {
+        if (alive) setIsLoadingPendingRequest(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [profileId]);
 
   const fallbackSeedCounts = React.useMemo(() => getMockFirestoreSeedCounts(), []);
   const canSeedViaBackend =
@@ -92,27 +121,31 @@ export function useProfileActions({
     }
   }, []);
 
-  const handleSaveDisplayName = React.useCallback(async () => {
-    setIsSavingDisplayName(true);
-    setProfileActionStatus(null);
-    try {
-      const didSave = await updateDisplayName(displayNameInput);
-      setProfileActionStatus(didSave ? 'Profile name updated.' : 'Profile name update failed.');
-    } finally {
-      setIsSavingDisplayName(false);
+  const handleSubmitUsernameRequest = React.useCallback(async () => {
+    const trimmed = displayNameInput.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setProfileActionStatus('Username must be at least 2 characters.');
+      return;
     }
-  }, [displayNameInput, updateDisplayName]);
+    if (trimmed.length > 30) {
+      setProfileActionStatus('Username must be 30 characters or fewer.');
+      return;
+    }
 
-  const handleClearDisplayName = React.useCallback(async () => {
     setIsSavingDisplayName(true);
     setProfileActionStatus(null);
     try {
-      const didClear = await clearDisplayName();
-      setProfileActionStatus(didClear ? 'Profile name cleared.' : 'Profile name clear failed.');
+      const result = await submitUsernameChangeRequest(profileId, trimmed);
+      setPendingUsernameRequest(result.request);
+      setProfileActionStatus('Username change request submitted. It will be reviewed shortly.');
+    } catch (error) {
+      setProfileActionStatus(
+        error instanceof Error ? error.message : 'Could not submit username request.',
+      );
     } finally {
       setIsSavingDisplayName(false);
     }
-  }, [clearDisplayName]);
+  }, [displayNameInput, profileId]);
 
   const handleSignOut = React.useCallback(async () => {
     setProfileActionStatus(null);
@@ -136,12 +169,11 @@ export function useProfileActions({
     fallbackSeedCounts,
     isSavingDisplayName,
     isSeeding,
+    isLoadingPendingRequest,
     ownerPortalAccess,
+    pendingUsernameRequest,
     profileActionStatus,
     seedStatus,
-    clearDisplayName: () => {
-      void handleClearDisplayName();
-    },
     openLeaderboard: () => navigation.navigate('Leaderboard', { highlightProfileId: profileId }),
     openMemberSignIn: () => navigation.navigate('CanopyTroveSignIn'),
     openMemberSignUp: () => navigation.navigate('CanopyTroveSignUp'),
@@ -151,8 +183,8 @@ export function useProfileActions({
       navigation.navigate('OwnerPortalAccess');
     },
     openOwnerPortal: () => navigation.navigate('OwnerPortalAccess'),
-    saveDisplayName: () => {
-      void handleSaveDisplayName();
+    submitUsernameRequest: () => {
+      void handleSubmitUsernameRequest();
     },
     seed: handleSeed,
     signOut: () => {

@@ -12,6 +12,7 @@ import type { StorefrontDetails, StorefrontSummary } from '../types/storefront';
 import { reportRuntimeError } from '../services/runtimeReportingService';
 import { createFallbackDetails } from '../screens/storefrontDetail/storefrontDetailHelpers';
 import { hasPublishedStorefrontHours } from '../utils/storefrontHours';
+import { deriveAuthFetchKey } from './authFetchKey';
 
 const FOLLOW_UP_REFRESH_DELAYS_MS = [1_250, 2_500];
 
@@ -60,6 +61,7 @@ export function useStorefrontDetails(
   storefront?: StorefrontSummary | null,
 ) {
   const { authSession } = useStorefrontProfileController();
+  const authFetchKey = deriveAuthFetchKey(authSession);
   const [data, setData] = useState<StorefrontDetails | null>(() => {
     if (!storefrontId) {
       return null;
@@ -242,8 +244,7 @@ export function useStorefrontDetails(
       clearFollowUpTimeoutHandles();
     };
   }, [
-    authSession.status,
-    authSession.uid,
+    authFetchKey,
     shouldRunOperationalFollowUp,
     storefrontId,
     storefrontOperationalDependencyKey,

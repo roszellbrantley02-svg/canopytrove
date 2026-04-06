@@ -1,3 +1,4 @@
+import { logger } from '../observability/logger';
 import {
   OwnerPortalWorkspaceDocument,
   OwnerPortalLicenseComplianceInput,
@@ -28,6 +29,7 @@ import {
   listOwnerStorefrontPromotions,
   saveOwnerStorefrontProfileToolsDocument,
   saveOwnerStorefrontPromotionDocument,
+  deleteOwnerStorefrontPromotionDocument,
   sumStorefrontFollowers,
   aggregateDealMetrics,
   aggregateStorefrontMetrics,
@@ -78,11 +80,11 @@ import { resolveOwnerActiveLocation } from './ownerMultiLocationService';
 const TARGETED_AUDIENCES = new Set(['all_followers', 'frequent_visitors', 'new_customers']);
 
 function assertAudienceTargetingAccess(
-  audience: string | undefined | null,
+  audiences: string[] | undefined | null,
   tierLimits: TierFeatureLimits,
   currentTier: OwnerSubscriptionTier,
 ) {
-  if (audience && TARGETED_AUDIENCES.has(audience) && !tierLimits.audienceTargetingEnabled) {
+  if (audiences?.some((a) => TARGETED_AUDIENCES.has(a)) && !tierLimits.audienceTargetingEnabled) {
     throw new TierAccessError(
       'Audience targeting requires the Pro ($249/mo) plan. Upgrade to target specific customer segments.',
       'pro',
@@ -102,30 +104,39 @@ async function pickVisiblePromotion(
   }
 
   for (const promotion of promotions) {
-    switch (promotion.audience) {
-      case 'all_followers':
-        if (await isFollowingStorefront(viewerContext.profileId, storefrontId)) {
-          return promotion;
-        }
-        break;
+    const promotionAudiences = Array.isArray(promotion.audiences)
+      ? promotion.audiences
+      : [(promotion as any).audience].filter(Boolean);
 
-      case 'frequent_visitors':
-        // Show to users who have recently viewed or routed to this storefront
-        if (await isFrequentVisitor(viewerContext.profileId, storefrontId)) {
-          return promotion;
-        }
-        break;
+    // If no audiences specified, show to everyone
+    if (!promotionAudiences.length) {
+      return promotion;
+    }
 
-      case 'new_customers':
-        // Show to users who have NOT saved the storefront (discovering it)
-        if (!(await isFollowingStorefront(viewerContext.profileId, storefrontId))) {
-          return promotion;
-        }
-        break;
+    for (const aud of promotionAudiences) {
+      switch (aud) {
+        case 'all_followers':
+          if (await isFollowingStorefront(viewerContext.profileId, storefrontId)) {
+            return promotion;
+          }
+          break;
 
-      default:
-        // Unrecognised audience — show to everyone
-        return promotion;
+        case 'frequent_visitors':
+          if (await isFrequentVisitor(viewerContext.profileId, storefrontId)) {
+            return promotion;
+          }
+          break;
+
+        case 'new_customers':
+          if (!(await isFollowingStorefront(viewerContext.profileId, storefrontId))) {
+            return promotion;
+          }
+          break;
+
+        default:
+          // Unrecognised audience — show to everyone
+          return promotion;
+      }
     }
   }
 
@@ -176,16 +187,16 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
   const activePromotions =
     activePromotionsResult.status === 'fulfilled' ? activePromotionsResult.value : [];
   if (rawProfileToolsResult.status === 'rejected') {
-    console.warn(
-      `[owner-workspace-service] summary enhancement: profileTools failed for ${summary.id}:`,
-      rawProfileToolsResult.reason,
-    );
+    logger.warn(`owner-workspace-service: profileTools enhancement failed for ${summary.id}`, {
+      storefrontId: summary.id,
+      error: String(rawProfileToolsResult.reason),
+    });
   }
   if (activePromotionsResult.status === 'rejected') {
-    console.warn(
-      `[owner-workspace-service] summary enhancement: activePromotions failed for ${summary.id}:`,
-      activePromotionsResult.reason,
-    );
+    logger.warn(`owner-workspace-service: activePromotions enhancement failed for ${summary.id}`, {
+      storefrontId: summary.id,
+      error: String(activePromotionsResult.reason),
+    });
   }
   const profileTools = await hydrateOwnerStorefrontProfileToolsMedia(rawProfileTools);
   const subscriptionActive = await isOwnerSubscriptionActive(rawProfileTools);
@@ -671,7 +682,7 @@ export async function createOwnerPortalPromotion(
   const tierLimits = getTierLimits(ownerTier);
 
   // Audience targeting requires Pro tier
-  assertAudienceTargetingAccess(input.audience, tierLimits, ownerTier);
+  assertAudienceTargetingAccess(input.audiences, tierLimits, ownerTier);
 
   const promotion = preparePromotionForSave({
     existingPromotion: null,
@@ -720,7 +731,7 @@ export async function updateOwnerPortalPromotion(
   const tierLimits = getTierLimits(ownerTier);
 
   // Audience targeting requires Pro tier
-  assertAudienceTargetingAccess(input.audience, tierLimits, ownerTier);
+  assertAudienceTargetingAccess(input.audiences, tierLimits, ownerTier);
 
   const existingPromotion = existingPromotions.find((promotion) => promotion.id === promotionId);
   if (!existingPromotion) {
@@ -756,6 +767,29 @@ export async function updateOwnerPortalPromotion(
 
   const savedPromotion = await saveOwnerStorefrontPromotionDocument(nextPromotion);
   return (await maybeDispatchPromotionStartAlert(savedPromotion)).promotion;
+}
+
+export async function deleteOwnerPortalPromotion(
+  ownerUid: string,
+  promotionId: string,
+  locationId?: string | null,
+) {
+  const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
+    requireVerified: true,
+    requireActiveSubscription: true,
+  });
+
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
+
+  const existingPromotions = await listOwnerStorefrontPromotions(targetStorefrontId);
+  const existingPromotion = existingPromotions.find((p) => p.id === promotionId);
+  if (!existingPromotion) {
+    throw new Error('Promotion not found.');
+  }
+
+  await deleteOwnerStorefrontPromotionDocument(targetStorefrontId, promotionId);
+  return { deleted: true, promotionId };
 }
 
 export async function replyToOwnerPortalReview(

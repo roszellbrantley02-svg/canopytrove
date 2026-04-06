@@ -1,13 +1,19 @@
 import { Router } from 'express';
 import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
+import { createRecentAuthGuard } from '../http/recentAuthGuard';
+import { createUserRateLimitMiddleware } from '../http/userRateLimit';
 import { parseProfileIdParam, parseProfileUpdateBody } from '../http/validation';
 import { deleteProfileAccountData } from '../services/accountCleanupService';
+import { sendSecurityNotification } from '../services/securityNotificationService';
+import { revokeAllUserSessions } from '../services/sessionRevocationService';
 import { saveProfile } from '../services/profileService';
 import {
   ensureProfileReadAccess,
   ensureProfileWriteAccess,
+  resolveVerifiedRequestAccountId,
 } from '../services/profileAccessService';
+import { getBackendFirebaseAuth } from '../firebase';
 import { AppProfileApiDocument } from '../types';
 
 export const profileRoutes = Router();
@@ -16,9 +22,18 @@ profileRoutes.use(
     name: 'write',
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
-    methods: ['PUT'],
+    methods: ['PUT', 'DELETE'],
   }),
 );
+const profileWriteUserRateLimiter = createUserRateLimitMiddleware({
+  name: 'profile-write',
+  windowMs: 60_000,
+  max: 20,
+});
+const profileDeleteRecentAuth = createRecentAuthGuard({
+  operationLabel: 'account deletion',
+  maxAuthAgeSeconds: 300,
+});
 
 profileRoutes.get('/profiles/:profileId', async (request, response) => {
   const profileId = parseProfileIdParam(request.params.profileId);
@@ -26,24 +41,48 @@ profileRoutes.get('/profiles/:profileId', async (request, response) => {
   response.json(profile);
 });
 
-profileRoutes.put('/profiles/:profileId', async (request, response) => {
-  const profileId = parseProfileIdParam(request.params.profileId);
-  const body = parseProfileUpdateBody(request.body, profileId);
-  const { accountId, profile } = await ensureProfileWriteAccess(request, profileId);
-  const now = new Date().toISOString();
-  const nextProfile: AppProfileApiDocument = {
-    id: profileId,
-    kind: accountId ? 'authenticated' : 'anonymous',
-    accountId: accountId ?? null,
-    displayName: body.displayName !== undefined ? body.displayName : (profile.displayName ?? null),
-    createdAt: profile.createdAt ?? body.createdAt ?? now,
-    updatedAt: now,
-  };
-  response.json(await saveProfile(nextProfile));
-});
+profileRoutes.put(
+  '/profiles/:profileId',
+  profileWriteUserRateLimiter,
+  async (request, response) => {
+    const profileId = parseProfileIdParam(request.params.profileId);
+    const body = parseProfileUpdateBody(request.body, profileId);
+    const { accountId, profile } = await ensureProfileWriteAccess(request, profileId);
+    const now = new Date().toISOString();
+    const nextProfile: AppProfileApiDocument = {
+      id: profileId,
+      kind: accountId ? 'authenticated' : 'anonymous',
+      accountId: accountId ?? null,
+      displayName:
+        body.displayName !== undefined ? body.displayName : (profile.displayName ?? null),
+      createdAt: profile.createdAt ?? body.createdAt ?? now,
+      updatedAt: now,
+    };
+    response.json(await saveProfile(nextProfile));
+  },
+);
 
-profileRoutes.delete('/profiles/:profileId', async (request, response) => {
+profileRoutes.delete('/profiles/:profileId', profileDeleteRecentAuth, async (request, response) => {
   const profileId = parseProfileIdParam(request.params.profileId);
-  await ensureProfileWriteAccess(request, profileId);
-  response.json(await deleteProfileAccountData(profileId));
+  const { accountId } = await ensureProfileWriteAccess(request, profileId);
+  const result = await deleteProfileAccountData(profileId);
+
+  // Send security notification and revoke sessions for account deletion
+  if (accountId) {
+    const auth = getBackendFirebaseAuth();
+    const email = auth ? (await auth.getUser(accountId).catch(() => null))?.email : null;
+    if (email) {
+      void sendSecurityNotification({
+        type: 'account_deleted',
+        recipientEmail: email,
+        details: { 'Profile ID': profileId },
+      });
+    }
+    void revokeAllUserSessions(accountId, 'account_deletion', {
+      ip: request.ip || 'unknown',
+      path: request.originalUrl,
+    });
+  }
+
+  response.json(result);
 });

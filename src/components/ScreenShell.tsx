@@ -78,13 +78,20 @@ export function ScreenShell({
     }, [resetScrollOnFocus]),
   );
 
+  const isWeb = Platform.OS === 'web';
+
   React.useEffect(() => {
+    if (isWeb) {
+      // Skip JS-driven ambient animation on web — avoids jank on mobile browsers.
+      shellProgress.setValue(1);
+      return;
+    }
     shellProgress.setValue(0);
     const animation = Animated.timing(shellProgress, {
       toValue: 1,
       duration: motion.ambient,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: Platform.OS !== 'web',
+      useNativeDriver: true,
     });
 
     animation.start();
@@ -92,9 +99,7 @@ export function ScreenShell({
     return () => {
       animation.stop();
     };
-  }, [shellProgress]);
-
-  const isWeb = Platform.OS === 'web';
+  }, [isWeb, shellProgress]);
 
   return (
     <LinearGradient
@@ -105,20 +110,22 @@ export function ScreenShell({
         pointerEvents="none"
         style={[
           styles.ambientWrap,
-          {
-            opacity: shellProgress.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.72, 1],
-            }),
-            transform: [
-              {
-                translateY: shellProgress.interpolate({
+          isWeb
+            ? undefined
+            : {
+                opacity: shellProgress.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [18, 0],
+                  outputRange: [0.72, 1],
                 }),
+                transform: [
+                  {
+                    translateY: shellProgress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [18, 0],
+                    }),
+                  },
+                ],
               },
-            ],
-          },
         ]}
       >
         {isAndroid ? <View style={[styles.ambientHalo, styles.ambientHaloPrimary]} /> : null}
@@ -132,7 +139,10 @@ export function ScreenShell({
           style={styles.ambientBeam}
         />
       </Animated.View>
-      <SafeAreaView style={[styles.safeArea, isWeb && styles.webSafeArea]}>
+      <SafeAreaView
+        edges={isWeb ? ['left', 'right', 'bottom'] : undefined}
+        style={[styles.safeArea, isWeb && styles.webSafeArea]}
+      >
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={[contentContainerStyle, isWeb && styles.webScrollContent]}
@@ -217,7 +227,12 @@ export function ScreenShell({
                   <Text style={styles.eyebrow}>{eyebrow}</Text>
                   <View style={styles.heroAccentLine} />
                 </View>
-                <Text style={[styles.title, compactHero && styles.titleCompact]}>{title}</Text>
+                <Text
+                  style={[styles.title, compactHero && styles.titleCompact]}
+                  accessibilityRole="header"
+                >
+                  {title}
+                </Text>
                 {subtitle ? (
                   <Text style={[styles.subtitle, compactHero && styles.subtitleCompact]}>
                     {subtitle}

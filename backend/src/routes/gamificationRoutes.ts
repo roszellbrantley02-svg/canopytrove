@@ -20,5 +20,9 @@ gamificationRoutes.post('/gamification/:profileId/events', async (request, respo
   const body = parseGamificationEventBody(request.body);
 
   await ensureProfileWriteAccess(request, profileId);
-  response.json(await applyGamificationEvent(profileId, body));
+  response.json(
+    await applyGamificationEvent(profileId, body, {
+      clientIp: request.ip || 'unknown',
+    }),
+  );
 });

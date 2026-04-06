@@ -93,6 +93,21 @@ export function HapticPressable({
     );
   }
 
+  // On web, skip the Animated.View scale wrapper — CSS transforms on wrapper
+  // elements can cause inconsistent click/press event handling across browsers.
+  // Web gets hover-opacity feedback instead, which is a better UX pattern anyway.
+  if (isWeb) {
+    return (
+      <Pressable
+        {...props}
+        {...webHoverProps}
+        style={[style, webCursorStyle, hoverOpacityStyle] as PressableProps['style']}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      />
+    );
+  }
+
   return (
     <Animated.View style={[{ transform: [{ scale: scaleValue }] }, hoverOpacityStyle]}>
       <Pressable

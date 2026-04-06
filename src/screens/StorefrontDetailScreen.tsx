@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView } from 'react-native';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { CustomerStateCard } from '../components/CustomerStateCard';
 import { MotionInView } from '../components/MotionInView';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { resolveStorefrontSlug } from '../sources/apiStorefrontSource';
 import { MapGridPreview } from '../components/MapGridPreview';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { useStorefrontSummariesByIds } from '../hooks/useStorefrontSummaryData';
@@ -35,6 +36,22 @@ import {
 import { useStorefrontDetailScreenModel } from './storefrontDetail/useStorefrontDetailScreenModel';
 
 type DetailRoute = RouteProp<RootStackParamList, 'StorefrontDetail'>;
+
+/**
+ * Validate that the storefront param is a real StorefrontSummary object,
+ * not a string artifact from URL serialization (e.g. "[object Object]").
+ * React Navigation serializes non-primitive route params to query strings
+ * on web, which deserialize back as plain strings — causing crashes when
+ * the code tries to access nested properties like .coordinates.latitude.
+ */
+function isValidStorefrontParam(value: unknown): value is StorefrontSummary {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as StorefrontSummary).id === 'string' &&
+    typeof (value as StorefrontSummary).displayName === 'string'
+  );
+}
 
 type StorefrontDetailContentProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
@@ -87,6 +104,20 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
             />
           </MotionInView>
 
+          {model.detailData.activePromotions?.length ? (
+            <MotionInView delay={120}>
+              <DetailLiveDealsSection promotions={model.detailData.activePromotions} />
+            </MotionInView>
+          ) : !canViewMemberLockedContent && visibleLiveDealCount > 0 ? (
+            <MotionInView delay={120}>
+              <DetailLockedLiveDealsSection
+                liveDealCount={visibleLiveDealCount}
+                onOpenMemberSignIn={() => navigation.navigate('CanopyTroveSignIn')}
+                onOpenMemberSignUp={() => navigation.navigate('CanopyTroveSignUp')}
+              />
+            </MotionInView>
+          ) : null}
+
           <MotionInView delay={180}>
             <DetailOperationalSection
               body={model.operationalCardBody}
@@ -117,20 +148,6 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
               onReportClosed={model.reportStorefrontClosed}
             />
           </MotionInView>
-
-          {model.detailData.activePromotions?.length ? (
-            <MotionInView delay={280}>
-              <DetailLiveDealsSection promotions={model.detailData.activePromotions} />
-            </MotionInView>
-          ) : !canViewMemberLockedContent && visibleLiveDealCount > 0 ? (
-            <MotionInView delay={280}>
-              <DetailLockedLiveDealsSection
-                liveDealCount={visibleLiveDealCount}
-                onOpenMemberSignIn={() => navigation.navigate('CanopyTroveSignIn')}
-                onOpenMemberSignUp={() => navigation.navigate('CanopyTroveSignUp')}
-              />
-            </MotionInView>
-          ) : null}
 
           {(model.isLoading || model.isOperationalDataPending) &&
           !model.hasAnySupplementalDetail ? (
@@ -218,14 +235,51 @@ function StorefrontDetailScreenInner() {
   const route = useRoute<DetailRoute>();
   const routeParams =
     (route.params as Partial<RootStackParamList['StorefrontDetail']> | undefined) ?? undefined;
-  const storefrontFromRoute = routeParams?.storefront ?? null;
-  const storefrontId = routeParams?.storefrontId ?? storefrontFromRoute?.id ?? null;
+  const storefrontFromRoute = isValidStorefrontParam(routeParams?.storefront)
+    ? routeParams.storefront
+    : null;
+  const rawStorefrontId = routeParams?.storefrontId ?? storefrontFromRoute?.id ?? null;
+
+  // Slug resolution: if the raw ID doesn't match a Firestore doc, try resolving it as a slug.
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
+  const [isResolvingSlug, setIsResolvingSlug] = useState(false);
+  const storefrontId = resolvedId ?? rawStorefrontId;
+
   const storefrontLookup = useStorefrontSummariesByIds(
     storefrontFromRoute || !storefrontId ? [] : [storefrontId],
   );
+
+  // If direct lookup returned nothing and we haven't tried slug resolution yet, try it.
+  const needsSlugResolution =
+    !storefrontFromRoute &&
+    rawStorefrontId &&
+    !resolvedId &&
+    !isResolvingSlug &&
+    !storefrontLookup.isLoading &&
+    storefrontLookup.data.length === 0;
+
+  useEffect(() => {
+    if (!needsSlugResolution || !rawStorefrontId) return;
+    let alive = true;
+    setIsResolvingSlug(true);
+    void resolveStorefrontSlug(rawStorefrontId).then((id) => {
+      if (!alive) return;
+      if (id && id !== rawStorefrontId) {
+        setResolvedId(id);
+      }
+      setIsResolvingSlug(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [needsSlugResolution, rawStorefrontId]);
+
   const storefront = storefrontFromRoute ?? storefrontLookup.data[0] ?? null;
   const isLinkHydrating =
-    !storefrontFromRoute && Boolean(storefrontId) && storefrontLookup.isLoading && !storefront;
+    !storefrontFromRoute &&
+    Boolean(storefrontId) &&
+    (storefrontLookup.isLoading || isResolvingSlug) &&
+    !storefront;
   const storefrontLookupError = storefrontLookup.error;
 
   if (isLinkHydrating) {

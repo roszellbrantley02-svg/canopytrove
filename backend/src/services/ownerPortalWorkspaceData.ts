@@ -1,3 +1,4 @@
+import { logger } from '../observability/logger';
 import {
   OwnerPortalWorkspaceDocument,
   OwnerWorkspaceMetrics,
@@ -97,8 +98,9 @@ function logOwnerWorkspaceEnhancementWarning(
   error: unknown,
 ) {
   const message = error instanceof Error ? error.message : String(error);
-  console.warn(
-    `[owner-workspace-${scope}] failed to load ${dependency} for ${storefrontId}: ${message}`,
+  logger.warn(
+    `owner-workspace-${scope}: failed to load ${dependency} for ${storefrontId}: ${message}`,
+    { scope, storefrontId, dependency },
   );
 }
 
@@ -229,27 +231,48 @@ async function isPromotionVisibleToViewer(
 ): Promise<boolean> {
   if (!viewerContext) {
     // Unauthenticated viewers only see promotions with no audience restriction
-    return !promotion.audience || promotion.audience === 'all_followers';
+    const unauthAudiences = Array.isArray(promotion.audiences)
+      ? promotion.audiences
+      : [(promotion as any).audience].filter(Boolean);
+    return !unauthAudiences.length || unauthAudiences.includes('all_followers');
   }
 
-  switch (promotion.audience) {
-    case 'all_followers':
-      // Show to users who saved/follow this storefront
-      return isFollowingStorefront(viewerContext.profileId, promotion.storefrontId);
+  const promotionAudiences = Array.isArray(promotion.audiences)
+    ? promotion.audiences
+    : [(promotion as any).audience].filter(Boolean);
 
-    case 'frequent_visitors':
-      // Show to users who have recently viewed or routed to this storefront
-      return isFrequentVisitor(viewerContext.profileId, promotion.storefrontId);
-
-    case 'new_customers':
-      // No purchase-history tracking yet — show to authenticated users who
-      // have NOT saved the storefront (i.e. they're likely discovering it)
-      return !(await isFollowingStorefront(viewerContext.profileId, promotion.storefrontId));
-
-    default:
-      // Unrecognised audience value — show to everyone as a safe default
-      return true;
+  // If no audiences specified, show to everyone
+  if (!promotionAudiences.length) {
+    return true;
   }
+
+  for (const aud of promotionAudiences) {
+    switch (aud) {
+      case 'all_followers':
+        if (await isFollowingStorefront(viewerContext.profileId, promotion.storefrontId)) {
+          return true;
+        }
+        break;
+
+      case 'frequent_visitors':
+        if (await isFrequentVisitor(viewerContext.profileId, promotion.storefrontId)) {
+          return true;
+        }
+        break;
+
+      case 'new_customers':
+        if (!(await isFollowingStorefront(viewerContext.profileId, promotion.storefrontId))) {
+          return true;
+        }
+        break;
+
+      default:
+        // Unrecognised audience value — show to everyone as a safe default
+        return true;
+    }
+  }
+
+  return false;
 }
 
 async function getActivePromotion(storefrontId: string, viewerContext?: ViewerContext) {
@@ -304,6 +327,24 @@ async function saveOwnerStorefrontPromotionDocument(record: OwnerStorefrontPromo
   nextPromotions.unshift(record);
   ownerStorefrontPromotionStore.set(record.storefrontId, nextPromotions);
   return record;
+}
+
+async function deleteOwnerStorefrontPromotionDocument(storefrontId: string, promotionId: string) {
+  storefrontSummaryEnhancementCache.delete(storefrontId);
+  storefrontDetailEnhancementCache.delete(storefrontId);
+  ownerStorefrontPromotionCache.delete(storefrontId);
+
+  const collectionRef = getOwnerStorefrontPromotionsCollection();
+  if (collectionRef) {
+    await collectionRef.doc(promotionId).delete();
+    return;
+  }
+
+  const currentPromotions = ownerStorefrontPromotionStore.get(storefrontId) ?? [];
+  ownerStorefrontPromotionStore.set(
+    storefrontId,
+    currentPromotions.filter((p) => p.id !== promotionId),
+  );
 }
 
 async function sumStorefrontFollowers(storefrontId: string) {
@@ -686,6 +727,7 @@ export {
   getActivePromotion,
   saveOwnerStorefrontProfileToolsDocument,
   saveOwnerStorefrontPromotionDocument,
+  deleteOwnerStorefrontPromotionDocument,
   sumStorefrontFollowers,
   aggregateStorefrontMetrics,
   aggregateDealMetrics,

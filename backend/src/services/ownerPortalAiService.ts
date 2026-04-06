@@ -167,7 +167,16 @@ function validateOwnerAiPromotionDraftPayload(
   const title = parseRequiredString(payload.title);
   const description = parseRequiredString(payload.description);
   const badges = parseStringArray(payload.badges, { maxItems: 5 });
-  const audience = parseEnumValue(payload.audience, OWNER_AI_PROMOTION_AUDIENCES);
+  const audienceRaw = Array.isArray(payload.audiences)
+    ? payload.audiences
+    : payload.audience
+      ? [payload.audience]
+      : null;
+  const audiences = audienceRaw
+    ? ((audienceRaw as string[]).filter((a) =>
+        OWNER_AI_PROMOTION_AUDIENCES.has(a as any),
+      ) as OwnerPromotionAudience[])
+    : null;
   const cardTone = parseEnumValue(payload.cardTone, OWNER_AI_PROMOTION_CARD_TONES);
   const placementSurfacesRaw = parseStringArray(payload.placementSurfaces, { maxItems: 3 });
   const placementScope = parseEnumValue(
@@ -180,7 +189,7 @@ function validateOwnerAiPromotionDraftPayload(
     !title ||
     !description ||
     !badges ||
-    !audience ||
+    !audiences?.length ||
     !cardTone ||
     !placementSurfacesRaw ||
     !placementScope ||
@@ -204,7 +213,7 @@ function validateOwnerAiPromotionDraftPayload(
     title,
     description,
     badges,
-    audience,
+    audiences,
     cardTone,
     placementSurfaces,
     placementScope,
@@ -455,7 +464,7 @@ export async function generateOwnerAiPromotionDraft(
       workspace.metrics.followerCount >= 10
         ? ['Featured', 'Follower favorite', 'Limited time']
         : ['Featured', 'Fresh drop', 'Staff pick'],
-    audience: 'all_followers',
+    audiences: ['all_followers'],
     cardTone: workspace.metrics.followerCount >= 10 ? 'hot_deal' : 'owner_featured',
     placementSurfaces: ['nearby', 'browse', 'hot_deals'],
     placementScope: 'storefront_area',

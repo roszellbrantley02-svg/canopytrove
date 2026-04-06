@@ -15,6 +15,7 @@ import { syncOwnerPortalAlerts } from '../services/ownerPortalAlertService';
 import { syncOwnerPortalAuthClaims } from '../services/ownerPortalAuthClaimsService';
 import {
   createOwnerPortalPromotion,
+  deleteOwnerPortalPromotion,
   getOwnerPortalWorkspace,
   replyToOwnerPortalReview,
   saveOwnerPortalLicenseCompliance,
@@ -165,6 +166,25 @@ ownerPortalWorkspaceRoutes.put(
         ownerUid,
         parseOwnerPortalPromotionIdParam(request.params.promotionId),
         parseOwnerPortalPromotionBody(request.body),
+        locationId,
+      );
+    },
+  ),
+);
+
+ownerPortalWorkspaceRoutes.delete(
+  '/owner-portal/promotions/:promotionId',
+  createOwnerPortalJsonRoute(
+    'Unknown owner promotion delete failure',
+    async ({ ownerUid, request }) => {
+      await requireTierAccess(ownerUid, 'growth', 'Promotions');
+      const locationId =
+        typeof request.body?.locationId === 'string'
+          ? request.body.locationId.trim() || null
+          : null;
+      return deleteOwnerPortalPromotion(
+        ownerUid,
+        parseOwnerPortalPromotionIdParam(request.params.promotionId),
         locationId,
       );
     },

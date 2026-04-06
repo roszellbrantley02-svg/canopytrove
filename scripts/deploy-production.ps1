@@ -21,7 +21,7 @@ $ErrorActionPreference = "Stop"
 $PROJECT = "canopy-trove"
 $REGION  = "us-east4"
 $SERVICE = "canopytrove-api"
-$IMAGE   = "gcr.io/$PROJECT/${SERVICE}:latest"
+$IMAGE   = "$REGION-docker.pkg.dev/$PROJECT/$SERVICE/${SERVICE}:latest"
 
 function Log($msg)  { Write-Host "[deploy] $msg" -ForegroundColor Green }
 function Warn($msg) { Write-Host "[deploy] $msg" -ForegroundColor Yellow }
@@ -87,9 +87,10 @@ function Deploy-Backend {
 
     Log "Deploying to Cloud Run ($SERVICE in $REGION)..."
 
+    # Use ^::^ as delimiter so commas inside CORS_ORIGIN are preserved
     $envVars = @(
         "STOREFRONT_BACKEND_SOURCE=firestore",
-        "CORS_ORIGIN=https://canopytrove.com",
+        "CORS_ORIGIN=https://canopytrove.com,https://app.canopytrove.com,https://canopytrove-webapp.web.app",
         "ALLOW_DEV_SEED=false",
         "REQUEST_LOGGING_ENABLED=true",
         "READ_RATE_LIMIT_PER_MINUTE=600",
@@ -114,7 +115,8 @@ function Deploy-Backend {
         "OWNER_BILLING_SUCCESS_URL=https://canopytrove.com/owner/billing/success",
         "OWNER_BILLING_CANCEL_URL=https://canopytrove.com/owner/billing/cancel",
         "OWNER_BILLING_PORTAL_RETURN_URL=https://canopytrove.com/owner/billing"
-    ) -join ","
+    ) -join "::"
+    $envVars = "^::^$envVars"
 
     $secrets = @(
         "GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest",

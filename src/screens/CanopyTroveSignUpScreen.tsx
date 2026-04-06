@@ -161,6 +161,7 @@ function CanopyTroveSignUpScreenInner() {
                         style={styles.inputPremium}
                         accessibilityLabel="Email"
                         accessibilityHint="Enter your email address for your member account."
+                        autoComplete="email"
                       />
                     </View>
                     <View style={styles.fieldGroup}>
@@ -174,6 +175,7 @@ function CanopyTroveSignUpScreenInner() {
                         style={styles.inputPremium}
                         accessibilityLabel="Password"
                         accessibilityHint="Enter a password for your member account."
+                        autoComplete="new-password"
                       />
                       {passwordTooShort ? (
                         <Text style={[styles.fieldHint, styles.fieldHintDanger]}>
@@ -192,6 +194,7 @@ function CanopyTroveSignUpScreenInner() {
                         style={styles.inputPremium}
                         accessibilityLabel="Confirm password"
                         accessibilityHint="Re-enter your password to confirm."
+                        autoComplete="new-password"
                       />
                       <Text style={styles.fieldHint}>
                         Your member profile is separate from any owner or business access.
@@ -230,7 +233,11 @@ function CanopyTroveSignUpScreenInner() {
                       </View>
                     </Pressable>
                     {errorText ? (
-                      <View style={[styles.helperCard, styles.helperCardDanger]}>
+                      <View
+                        style={[styles.helperCard, styles.helperCardDanger]}
+                        accessibilityLiveRegion="polite"
+                        accessibilityRole="alert"
+                      >
                         <Text style={[styles.helperTitle, styles.helperTitleDanger]}>
                           Create account issue
                         </Text>

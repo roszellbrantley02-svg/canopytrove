@@ -10,15 +10,17 @@ import { reportRuntimeError } from '../services/runtimeReportingService';
 import type { StorefrontSummary } from '../types/storefront';
 import { useAsyncResource } from './useAsyncResource';
 import { useStorefrontPromotionRevision } from './useStorefrontPromotionRevision';
+import { deriveAuthFetchKey } from './authFetchKey';
 
 export function useStorefrontSummariesByIds(storefrontIds: string[]) {
   const { authSession } = useStorefrontProfileController();
+  const authFetchKey = deriveAuthFetchKey(authSession);
   const promotionRevision = useStorefrontPromotionRevision();
   const savedKey = useMemo(() => storefrontIds.join('|'), [storefrontIds]);
 
   return useAsyncResource<StorefrontSummary[]>(
     () => storefrontRepository.getSavedSummaries(storefrontIds),
-    [authSession.status, authSession.uid, savedKey, promotionRevision],
+    [authFetchKey, savedKey, promotionRevision],
     [],
     {
       resetDataOnChange: true,

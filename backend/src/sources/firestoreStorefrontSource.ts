@@ -20,7 +20,7 @@ import { StorefrontBackendSource, StorefrontSummaryQuery } from './types';
 const SUMMARY_COLLECTION = 'storefront_summaries';
 const DETAILS_COLLECTION = 'storefront_details';
 const SCOPED_SUMMARY_TTL_MS = 20_000;
-const MATERIALIZED_SUMMARY_TTL_MS = 5 * 60_000;
+const MATERIALIZED_SUMMARY_TTL_MS = 15 * 60_000;
 const NEARBY_SUMMARY_TTL_MS = 90_000;
 const scopedSummaryCache = new Map<
   string,

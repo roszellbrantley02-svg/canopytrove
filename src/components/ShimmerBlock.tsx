@@ -11,7 +11,23 @@ type ShimmerBlockProps = {
   testID?: string;
 };
 
-export function ShimmerBlock({
+/**
+ * CSS-only shimmer for web avoids JS-driven Animated.timing that causes
+ * main-thread jitter on mobile browsers (INP regression).
+ */
+function WebShimmerBlock({ style, borderRadius = radii.md, testID }: ShimmerBlockProps) {
+  return (
+    <View testID={testID} style={[styles.base, { borderRadius }, style]}>
+      <View
+        // @ts-expect-error – RNW supports className for injecting CSS animations
+        className="ct-shimmer-sweep"
+        style={styles.webShimmerStrip}
+      />
+    </View>
+  );
+}
+
+function NativeShimmerBlock({
   style,
   shimmerWidth = 132,
   borderRadius = radii.md,
@@ -25,7 +41,7 @@ export function ShimmerBlock({
         toValue: 1,
         duration: 1400,
         easing: Easing.inOut(Easing.ease),
-        useNativeDriver: Platform.OS !== 'web',
+        useNativeDriver: true,
       }),
     );
 
@@ -67,6 +83,13 @@ export function ShimmerBlock({
   );
 }
 
+export function ShimmerBlock(props: ShimmerBlockProps) {
+  if (Platform.OS === 'web') {
+    return <WebShimmerBlock {...props} />;
+  }
+  return <NativeShimmerBlock {...props} />;
+}
+
 const styles = StyleSheet.create({
   base: {
     overflow: 'hidden',
@@ -79,5 +102,12 @@ const styles = StyleSheet.create({
   },
   shimmer: {
     flex: 1,
+  },
+  webShimmerStrip: {
+    position: 'absolute',
+    top: -24,
+    bottom: -24,
+    width: 132,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
 });

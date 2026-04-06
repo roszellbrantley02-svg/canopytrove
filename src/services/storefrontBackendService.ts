@@ -25,4 +25,7 @@ export {
   submitStorefrontBackendReview,
   submitStorefrontBackendReviewHelpful,
   updateStorefrontBackendReview,
+  submitUsernameChangeRequest,
+  getPendingUsernameRequest,
 } from './storefrontBackendWriteApi';
+export type { UsernameChangeRequestResponse } from './storefrontBackendWriteApi';

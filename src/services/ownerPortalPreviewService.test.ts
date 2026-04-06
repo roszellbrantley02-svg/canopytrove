@@ -51,7 +51,7 @@ describe('ownerPortalPreviewService', () => {
       badges: ['Fresh Drop', 'Today Only'],
       startsAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
       endsAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      audience: 'all_followers',
+      audiences: ['all_followers'],
       alertFollowersOnStart: true,
       cardTone: 'hot_deal',
       placementSurfaces: ['browse', 'nearby', 'hot_deals'],

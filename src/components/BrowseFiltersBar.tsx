@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   Platform,
   Pressable,
   StyleSheet,
@@ -19,6 +20,7 @@ type BrowseFiltersBarProps = {
   locationQuery: string;
   onLocationQueryChange: (value: string) => void;
   onApplyLocationQuery: () => void;
+  onUseDeviceLocation?: () => void;
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   onClearSearch: () => void;
@@ -44,6 +46,7 @@ function BrowseFiltersBarComponent({
   locationQuery,
   onLocationQueryChange,
   onApplyLocationQuery,
+  onUseDeviceLocation,
   searchQuery,
   onSearchQueryChange,
   onClearSearch,
@@ -97,25 +100,56 @@ function BrowseFiltersBarComponent({
           Use a New York ZIP code, city, or full address, then narrow the feed by store name or
           keyword.
         </Text>
-        <Pressable
-          onPress={onApplyLocationQuery}
-          style={[styles.searchActionButton, compactLayout && styles.searchActionButtonCompact]}
-          accessibilityRole="button"
-          accessibilityLabel="Apply location"
-          accessibilityHint="Applies the entered location to filter storefronts."
-        >
-          <AppUiIcon
-            name={isResolvingLocation ? 'time-outline' : 'compass-outline'}
-            size={15}
-            color={colors.backgroundDeep}
-          />
-          {isResolvingLocation ? (
-            <ActivityIndicator size="small" color={colors.backgroundDeep} />
+        <View style={[styles.locationButtonRow, compactLayout && styles.locationButtonRowCompact]}>
+          {onUseDeviceLocation ? (
+            <Pressable
+              onPress={() => {
+                if (isResolvingLocation) return;
+                Keyboard.dismiss();
+                onUseDeviceLocation();
+              }}
+              disabled={isResolvingLocation}
+              style={({ pressed }) => [
+                styles.deviceLocationButton,
+                compactLayout && styles.fullWidthButton,
+                isResolvingLocation && styles.buttonDisabled,
+                pressed && !isResolvingLocation && styles.buttonPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Use my location"
+              accessibilityHint="Uses your device location to filter storefronts."
+            >
+              <AppUiIcon name="navigate-outline" size={15} color={colors.text} />
+              <Text style={styles.deviceLocationButtonText}>Use My Location</Text>
+            </Pressable>
           ) : null}
-          <Text style={styles.searchActionButtonText}>
-            {isResolvingLocation ? 'Applying...' : 'Apply Location'}
-          </Text>
-        </Pressable>
+          <Pressable
+            onPress={() => {
+              if (isResolvingLocation) return;
+              Keyboard.dismiss();
+              onApplyLocationQuery();
+            }}
+            disabled={isResolvingLocation || !locationQuery.trim()}
+            style={({ pressed }) => [
+              styles.searchActionButton,
+              compactLayout && styles.fullWidthButton,
+              (isResolvingLocation || !locationQuery.trim()) && styles.buttonDisabled,
+              pressed && !isResolvingLocation && locationQuery.trim() && styles.applyButtonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Apply location"
+            accessibilityHint="Applies the entered location to filter storefronts."
+          >
+            {isResolvingLocation ? (
+              <ActivityIndicator size="small" color={colors.backgroundDeep} />
+            ) : (
+              <AppUiIcon name="compass-outline" size={15} color={colors.backgroundDeep} />
+            )}
+            <Text style={styles.searchActionButtonText}>
+              {isResolvingLocation ? 'Applying...' : 'Apply Location'}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {activeSearchQuery ? (
@@ -267,9 +301,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   searchActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    alignItems: 'stretch',
     gap: spacing.md,
   },
   searchActionRowCompact: {
@@ -281,6 +314,37 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     fontSize: typography.caption,
     lineHeight: 18,
+  },
+  locationButtonRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    flexShrink: 0,
+  },
+  locationButtonRowCompact: {
+    flexDirection: 'column',
+    alignSelf: 'stretch',
+  },
+  fullWidthButton: {
+    alignSelf: 'stretch',
+  },
+  deviceLocationButton: {
+    minHeight: 48,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceGlass,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  deviceLocationButtonText: {
+    color: colors.text,
+    fontSize: typography.caption,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   searchActionButton: {
     minHeight: 48,
@@ -296,15 +360,22 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
   },
-  searchActionButtonCompact: {
-    alignSelf: 'stretch',
-  },
   searchActionButtonText: {
     color: colors.backgroundDeep,
     fontSize: typography.caption,
     fontWeight: '900',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonPressed: {
+    opacity: 0.7,
+  },
+  applyButtonPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.97 }],
   },
   activeSearchRow: {
     flexDirection: 'row',

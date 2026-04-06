@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { Request, RequestHandler, Response } from 'express';
 import { getBackendFirebaseDb } from '../firebase';
 import { logger } from '../observability/logger';
+import { recordAbuseSignal } from './abuseScoring';
 
 type RateLimitOptions = {
   name: string;
@@ -169,7 +170,13 @@ export function createRateLimitMiddleware(options: RateLimitOptions): RequestHan
       response.setHeader('X-RateLimit-Reset', String(retryAfterSeconds));
 
       if (bucket.count > max) {
-        response.setHeader('Retry-After', String(retryAfterSeconds));
+        const jitter = Math.floor(Math.random() * Math.min(5, retryAfterSeconds));
+        response.setHeader('Retry-After', String(retryAfterSeconds + jitter));
+
+        // Record abuse signal for this rate limit hit
+        const ip = getClientIp(request);
+        recordAbuseSignal(ip, 2, request.originalUrl);
+
         const payload = {
           error: 'Too many requests. Please retry shortly.',
         };

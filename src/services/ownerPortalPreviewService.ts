@@ -785,7 +785,7 @@ export async function createOwnerPortalPreviewPromotion(input: OwnerPortalPromot
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       status: derivePromotionStatus(input),
-      audience: input.audience,
+      audiences: input.audiences,
       alertFollowersOnStart: input.alertFollowersOnStart,
       cardTone: input.cardTone,
       placementSurfaces: [...input.placementSurfaces],
@@ -826,7 +826,7 @@ export async function updateOwnerPortalPreviewPromotion(
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       status: derivePromotionStatus(input),
-      audience: input.audience,
+      audiences: input.audiences,
       alertFollowersOnStart: input.alertFollowersOnStart,
       cardTone: input.cardTone,
       placementSurfaces: [...input.placementSurfaces],
@@ -843,6 +843,18 @@ export async function updateOwnerPortalPreviewPromotion(
     );
 
     return cloneValue(nextPromotion);
+  });
+}
+
+export async function deleteOwnerPortalPreviewPromotion(promotionId: string) {
+  return updatePreviewState(async (state) => {
+    const promotionIndex = state.promotions.findIndex((p) => p.id === promotionId);
+    if (promotionIndex < 0) {
+      throw new Error('Unable to find that preview promotion.');
+    }
+
+    state.promotions.splice(promotionIndex, 1);
+    return { deleted: true, promotionId };
   });
 }
 

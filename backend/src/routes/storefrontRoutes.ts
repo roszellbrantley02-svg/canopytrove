@@ -3,6 +3,7 @@ import {
   getStorefrontDetail,
   getStorefrontSummaries,
   getStorefrontSummariesByIds,
+  resolveStorefrontBySlug,
 } from '../storefrontService';
 import {
   parseStorefrontIdParam,
@@ -81,6 +82,21 @@ storefrontRoutes.get('/storefront-summaries/by-ids', async (request, response) =
 
   setCacheHeaders(response, { authenticated: Boolean(accountId), maxAge: 60, swr: 120 });
   response.json(payload);
+});
+
+storefrontRoutes.get('/storefront-summaries/resolve-slug/:slug', async (request, response) => {
+  const slug = String(request.params.slug ?? '').trim();
+  if (!slug) {
+    response.status(400).json({ error: 'Missing slug parameter.' });
+    return;
+  }
+  const resolvedId = await resolveStorefrontBySlug(slug);
+  if (!resolvedId) {
+    response.status(404).json({ error: 'No storefront matched this slug.' });
+    return;
+  }
+  setCacheHeaders(response, { authenticated: false, maxAge: 300, swr: 600 });
+  response.json({ storefrontId: resolvedId });
 });
 
 storefrontRoutes.get('/storefront-details/:storefrontId', async (request, response) => {

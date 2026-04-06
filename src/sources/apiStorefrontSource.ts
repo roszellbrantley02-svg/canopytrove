@@ -15,7 +15,9 @@ import type {
   StorefrontSummaryPage,
 } from './storefrontSource';
 
-const API_REQUEST_TIMEOUT_MS = 6_000;
+const API_REQUEST_TIMEOUT_MS = 10_000;
+const API_RETRY_DELAY_MS = 1_500;
+const API_MAX_RETRIES = 1;
 
 function normalizeAreaId(areaId?: string | null) {
   const normalized = areaId?.trim().toLowerCase();
@@ -46,13 +48,9 @@ function createUrl(pathname: string, searchParams?: Record<string, string | null
   return url.toString();
 }
 
-function requestJson<T>(url: string): Promise<T>;
-function requestJson<T>(url: string, options: { allowNotFound: true }): Promise<T | null>;
-async function requestJson<T>(
+async function singleRequestJson<T>(
   url: string,
-  options?: {
-    allowNotFound?: boolean;
-  },
+  options?: { allowNotFound?: boolean },
 ): Promise<T | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
@@ -88,6 +86,40 @@ async function requestJson<T>(
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+function requestJson<T>(url: string): Promise<T>;
+function requestJson<T>(url: string, options: { allowNotFound: true }): Promise<T | null>;
+async function requestJson<T>(
+  url: string,
+  options?: {
+    allowNotFound?: boolean;
+  },
+): Promise<T | null> {
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= API_MAX_RETRIES; attempt++) {
+    try {
+      return await singleRequestJson<T>(url, options);
+    } catch (error) {
+      lastError = error;
+
+      // Only retry on network/timeout errors, not on 4xx responses.
+      const isRetryable =
+        error instanceof TypeError ||
+        (error instanceof DOMException && error.name === 'AbortError');
+
+      if (!isRetryable || attempt >= API_MAX_RETRIES) {
+        break;
+      }
+
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, API_RETRY_DELAY_MS);
+      });
+    }
+  }
+
+  throw lastError;
 }
 
 function toSummaryResult(items: StorefrontSummaryApiDocument[]) {
@@ -164,3 +196,15 @@ export const apiStorefrontSource: StorefrontSource = {
     return response ? fromStorefrontDetailApiDocument(response) : null;
   },
 };
+
+/** Resolve a URL slug to a Firestore storefront ID via the backend. */
+export async function resolveStorefrontSlug(slug: string): Promise<string | null> {
+  const url = createUrl(`storefront-summaries/resolve-slug/${encodeURIComponent(slug)}`);
+  if (!url) return null;
+  try {
+    const response = await requestJson<{ storefrontId: string }>(url, { allowNotFound: true });
+    return response?.storefrontId ?? null;
+  } catch {
+    return null;
+  }
+}

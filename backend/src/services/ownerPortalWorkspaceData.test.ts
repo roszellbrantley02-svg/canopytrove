@@ -109,7 +109,7 @@ function createPromotion(
     startsAt: new Date(now - 30 * 60 * 1000).toISOString(),
     endsAt: new Date(now + 2 * 60 * 60 * 1000).toISOString(),
     status: 'active',
-    audience: 'all_followers',
+    audiences: ['all_followers'],
     alertFollowersOnStart: true,
     cardTone: 'hot_deal',
     placementSurfaces: ['browse', 'nearby'],

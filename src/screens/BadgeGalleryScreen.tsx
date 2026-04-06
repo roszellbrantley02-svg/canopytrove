@@ -127,6 +127,10 @@ function BadgeGalleryScreenInner() {
                 numColumns={numColumns}
                 columnWrapperStyle={columnWrapperStyle}
                 contentContainerStyle={styles.badgeGrid}
+                initialNumToRender={6}
+                maxToRenderPerBatch={4}
+                windowSize={3}
+                removeClippedSubviews
               />
             </View>
           )}
@@ -143,6 +147,10 @@ function BadgeGalleryScreenInner() {
                 keyExtractor={(item) => item.badge.id}
                 scrollEnabled={false}
                 contentContainerStyle={styles.progressList}
+                initialNumToRender={6}
+                maxToRenderPerBatch={4}
+                windowSize={3}
+                removeClippedSubviews
               />
             </View>
           )}

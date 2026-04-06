@@ -295,7 +295,7 @@ export type OwnerStorefrontPromotionDocument = {
   startsAt: string;
   endsAt: string;
   status: OwnerPromotionStatus;
-  audience: OwnerPromotionAudience;
+  audiences: OwnerPromotionAudience[];
   alertFollowersOnStart: boolean;
   cardTone: OwnerPromotionCardTone;
   placementSurfaces: OwnerPromotionPlacementSurface[];
@@ -479,7 +479,7 @@ export type OwnerPortalPromotionInput = {
   badges: string[];
   startsAt: string;
   endsAt: string;
-  audience: OwnerPromotionAudience;
+  audiences: OwnerPromotionAudience[];
   alertFollowersOnStart: boolean;
   cardTone: OwnerPromotionCardTone;
   placementSurfaces: OwnerPromotionPlacementSurface[];
@@ -505,7 +505,7 @@ export type OwnerAiPromotionDraft = {
   title: string;
   description: string;
   badges: string[];
-  audience: OwnerPromotionAudience;
+  audiences: OwnerPromotionAudience[];
   cardTone: OwnerPromotionCardTone;
   placementSurfaces: OwnerPromotionPlacementSurface[];
   placementScope: OwnerPromotionPlacementScope;
@@ -539,7 +539,7 @@ export type OwnerAiDraftRequest = {
 
 export type OwnerPortalAiPromotionDraftInput = {
   brief: string | null;
-  audience: OwnerPromotionAudience;
+  audiences: OwnerPromotionAudience[];
   cardTone: OwnerPromotionCardTone;
   placementScope: OwnerPromotionPlacementScope;
 };

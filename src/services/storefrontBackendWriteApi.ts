@@ -182,6 +182,36 @@ export function deleteStorefrontBackendProfile(profileId: string) {
   });
 }
 
+export type UsernameChangeRequestResponse = {
+  id: string;
+  profileId: string;
+  accountId: string;
+  currentDisplayName: string | null;
+  requestedDisplayName: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  reviewedAt: string | null;
+};
+
+export function submitUsernameChangeRequest(profileId: string, requestedDisplayName: string) {
+  return requestStorefrontBackendJson<{ ok: boolean; request: UsernameChangeRequestResponse }>(
+    `/profiles/${encodeURIComponent(profileId)}/username-requests`,
+    {
+      method: 'POST',
+      body: { requestedDisplayName },
+    },
+  );
+}
+
+export function getPendingUsernameRequest(profileId: string) {
+  return requestStorefrontBackendJson<{
+    hasPending: boolean;
+    request: UsernameChangeRequestResponse | null;
+  }>(`/profiles/${encodeURIComponent(profileId)}/username-requests/pending`, {
+    method: 'GET',
+  });
+}
+
 export function syncStorefrontBackendFavoriteDealAlerts(input: {
   profileId: string;
   savedStorefrontIds: string[];

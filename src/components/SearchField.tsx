@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { SearchGlyphIcon } from '../icons/ProvidedGlyphIcons';
 import { colors, spacing, typography } from '../theme/tokens';
@@ -21,13 +21,22 @@ function SearchFieldComponent({
   isActive,
   testID,
 }: SearchFieldProps) {
+  const inputRef = React.useRef<TextInput>(null);
+
+  const handleSubmitEditing = React.useCallback(() => {
+    Keyboard.dismiss();
+    inputRef.current?.blur();
+    onSubmitEditing?.();
+  }, [onSubmitEditing]);
+
   return (
     <View testID={testID} style={[styles.shell, isActive && styles.shellActive]}>
       <SearchGlyphIcon size={18} />
       <TextInput
+        ref={inputRef}
         value={value}
         onChangeText={onChangeText}
-        onSubmitEditing={onSubmitEditing}
+        onSubmitEditing={handleSubmitEditing}
         placeholder={placeholder}
         placeholderTextColor={colors.textSoft}
         style={styles.input}

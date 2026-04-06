@@ -16,6 +16,7 @@ import {
 } from '../../../src/types/storefront';
 import { getGamificationState, saveGamificationState } from './gamificationPersistenceService';
 import { getProfile } from './profileService';
+import { checkGamificationEventAllowed } from '../http/gamificationGuard';
 
 function buildNoRewardResult(
   activityType: GamificationActivityType,
@@ -34,6 +35,7 @@ function buildNoRewardResult(
 export async function applyGamificationEvent(
   profileId: string,
   event: GamificationEventRequest,
+  options?: { clientIp?: string },
 ): Promise<GamificationRewardResult> {
   const profile = await getProfile(profileId);
   const currentState = normalizeGamificationState(
@@ -41,6 +43,17 @@ export async function applyGamificationEvent(
     await getGamificationState(profileId, profile.createdAt),
     profile.createdAt,
   );
+
+  // Enforce per-activity daily caps and cooldowns
+  const guardResult = checkGamificationEventAllowed(
+    profileId,
+    event.activityType,
+    options?.clientIp ?? 'unknown',
+  );
+
+  if (!guardResult.allowed) {
+    return buildNoRewardResult(event.activityType, currentState);
+  }
 
   let rewardResult: GamificationRewardResult;
 

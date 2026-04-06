@@ -22,20 +22,42 @@ function buildAddressDestination(
   return parts.join(', ');
 }
 
-async function tryOpenUrl(url: string) {
-  if (Platform.OS === 'web') {
+/**
+ * Open a URL on web. Uses `window.open` first, then falls back to
+ * `window.location.href`. Mobile browsers (Safari, Chrome) block
+ * `window.open` when called outside the synchronous user-gesture
+ * context — which happens as soon as the call stack crosses an
+ * `await` boundary. The `location.href` fallback always works
+ * because it navigates the current tab instead of opening a popup.
+ */
+function openWebUrl(url: string): boolean {
+  try {
+    const popup = window.open(url, '_blank', 'noopener,noreferrer');
+    if (popup) {
+      return true;
+    }
+    // popup was blocked — navigate in the same tab instead.
+    window.location.href = url;
+    return true;
+  } catch {
     try {
-      window.open(url, '_blank', 'noopener,noreferrer');
+      window.location.href = url;
       return true;
     } catch {
       return false;
     }
   }
+}
 
-  if (!(await Linking.canOpenURL(url))) {
-    return false;
+async function tryOpenUrl(url: string) {
+  if (Platform.OS === 'web') {
+    return openWebUrl(url);
   }
 
+  // Skip `canOpenURL` — it adds latency (requires an async bridge call) and
+  // can return false negatives on iOS when `LSApplicationQueriesSchemes`
+  // doesn't list the scheme. Instead, attempt the open directly and catch
+  // failures. This makes the "Directions" tap feel instant.
   try {
     await Linking.openURL(url);
     return true;
@@ -58,19 +80,19 @@ export async function openStorefrontRoute(
     storefront: StorefrontSummary;
   },
 ) {
+  // Fire post-visit tracking in the background — never block navigation.
+  // The user expects maps to open instantly when they tap "Directions".
   if (trackingOptions?.profileId) {
-    try {
-      await startPostVisitJourney({
-        profileId: trackingOptions.profileId,
-        accountId: trackingOptions.accountId,
-        isAuthenticated: trackingOptions.isAuthenticated,
-        routeMode,
-        sourceScreen: trackingOptions.sourceScreen ?? null,
-        storefront: trackingOptions.storefront,
-      });
-    } catch {
-      // Route launch should continue even if visit tracking is unavailable.
-    }
+    void startPostVisitJourney({
+      profileId: trackingOptions.profileId,
+      accountId: trackingOptions.accountId,
+      isAuthenticated: trackingOptions.isAuthenticated,
+      routeMode,
+      sourceScreen: trackingOptions.sourceScreen ?? null,
+      storefront: trackingOptions.storefront,
+    }).catch(() => {
+      // Visit tracking should never block or crash navigation.
+    });
   }
 
   const addressDestination = buildAddressDestination(storefront);

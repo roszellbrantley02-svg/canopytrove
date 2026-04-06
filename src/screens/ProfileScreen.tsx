@@ -13,7 +13,11 @@ import { brand } from '../config/brand';
 import { ownerPortalAccessAvailable } from '../config/ownerPortalConfig';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, radii, motion, spacing, textStyles } from '../theme/tokens';
-import { ProfileHeroCard, StorefrontCollectionSection } from './profile/ProfileSections';
+import {
+  ProfileHeroCard,
+  StorefrontCollectionSection,
+  UsernameRequestSection,
+} from './profile/ProfileSections';
 import { useProfileScreenModel } from './profile/useProfileScreenModel';
 
 function ProfileScreenInner() {
@@ -137,6 +141,21 @@ function ProfileScreenInner() {
                 </Pressable>
               </View>
             </View>
+          </MotionInView>
+        ) : null}
+
+        {/* 1c. Username Request (authenticated only) */}
+        {model.authSession.status === 'authenticated' ? (
+          <MotionInView dense delay={revealDelay(0) + 60}>
+            <UsernameRequestSection
+              displayNameInput={model.displayNameInput}
+              onChangeDisplayNameInput={model.setDisplayNameInput}
+              pendingRequest={model.pendingUsernameRequest}
+              isSubmitting={model.isSavingDisplayName}
+              isLoadingPending={model.isLoadingPendingRequest}
+              statusMessage={model.profileActionStatus}
+              onSubmit={model.submitUsernameRequest}
+            />
           </MotionInView>
         ) : null}
 

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-// TODO: Replace with `import { Image } from 'expo-image'` after running `npx expo install expo-image`
-import { Image } from 'react-native';
+import { Image } from 'expo-image';
 import { styles } from './mapGridPreview/mapGridPreviewStyles';
 import type { PreviewTone, PreviewStatusTone } from './mapGridPreview/mapGridPreviewTones';
 import { getStatusToneStyles, getToneStyles } from './mapGridPreview/mapGridPreviewTones';
@@ -71,7 +70,13 @@ function MapGridPreviewComponent({
     <View pointerEvents="none" style={[styles.shell, shellStyle]}>
       {hasImage ? (
         <>
-          <Image source={{ uri: imageUrl }} style={styles.imageBackground} />
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.imageBackground}
+            accessible={false}
+            contentFit="cover"
+            transition={200}
+          />
           <View style={styles.imageOverlay} />
         </>
       ) : null}

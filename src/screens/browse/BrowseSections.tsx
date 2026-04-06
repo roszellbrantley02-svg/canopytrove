@@ -219,6 +219,8 @@ export function BrowseStoreList({
   total: number;
   onLoadMore: () => void;
 }) {
+  const visitedSet = React.useMemo(() => new Set(visitedStorefrontIds), [visitedStorefrontIds]);
+
   const renderItem = useCallback(
     ({ item, index }: { item: StorefrontSummary; index: number }) => (
       <MotionInView key={item.id} delay={Math.min(index, 8) * 65}>
@@ -228,7 +230,7 @@ export function BrowseStoreList({
           primaryActionLabel="Directions"
           secondaryActionLabel="Details"
           isSaved={isSavedStorefront(item.id)}
-          isVisited={visitedStorefrontIds.includes(item.id)}
+          isVisited={visitedSet.has(item.id)}
           showPromotionText={Boolean(item.promotionText?.trim())}
           onPressIn={() => onPrepareStorefront(item.id)}
           onPrimaryActionPressIn={() => onPrepareStorefront(item.id)}
@@ -239,7 +241,7 @@ export function BrowseStoreList({
         />
       </MotionInView>
     ),
-    [isSavedStorefront, visitedStorefrontIds, onPrepareStorefront, onOpenStorefront, onGoNow],
+    [isSavedStorefront, visitedSet, onPrepareStorefront, onOpenStorefront, onGoNow],
   );
 
   const keyExtractor = useCallback((item: StorefrontSummary) => item.id, []);

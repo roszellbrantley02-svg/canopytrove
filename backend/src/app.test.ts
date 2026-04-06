@@ -162,7 +162,7 @@ function createPromotionRecord(
     startsAt,
     endsAt,
     status: 'active',
-    audience: 'new_customers',
+    audiences: ['new_customers'],
     alertFollowersOnStart: true,
     cardTone: 'hot_deal',
     placementSurfaces: ['browse', 'nearby', 'hot_deals'],

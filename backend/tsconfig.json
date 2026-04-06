@@ -20,8 +20,5 @@
     "../src/types/**/*.ts",
     "../src/utils/**/*.ts"
   ],
-  "exclude": [
-    "../src/**/*.test.ts",
-    "../src/**/*.test.tsx"
-  ]
+  "exclude": ["../src/**/*.test.ts", "../src/**/*.test.tsx", "../src/utils/crossPlatformAlert.ts"]
 }

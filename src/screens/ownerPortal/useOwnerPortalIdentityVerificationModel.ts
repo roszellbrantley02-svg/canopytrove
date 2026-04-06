@@ -1,5 +1,6 @@
 import React from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useStorefrontProfileController } from '../../context/StorefrontController';
@@ -15,9 +16,11 @@ export const ID_TYPE_OPTIONS: OwnerPortalIdentityIdType[] = [
 ];
 
 async function pickIdentityImage() {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    throw new Error('Media library permission is required to select identity images.');
+  if (Platform.OS !== 'web') {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      throw new Error('Media library permission is required to select identity images.');
+    }
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({

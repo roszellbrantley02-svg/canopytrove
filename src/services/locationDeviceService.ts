@@ -23,22 +23,6 @@ let deviceLocationCachedAt = 0;
 let deviceLocationInFlight: Promise<DeviceLocationResult> | null = null;
 
 export async function getBestAvailableDeviceLocation(): Promise<DeviceLocationResult> {
-  const cachedCoordinates = getCachedDeviceLocation();
-  if (cachedCoordinates) {
-    return {
-      coordinates: cachedCoordinates,
-      source: 'lastKnown',
-    };
-  }
-
-  const storedCoordinates = await primeStoredDeviceLocation();
-  if (storedCoordinates) {
-    return {
-      coordinates: storedCoordinates,
-      source: 'lastKnown',
-    };
-  }
-
   if (deviceLocationInFlight) {
     return deviceLocationInFlight;
   }
@@ -59,21 +43,8 @@ export async function getBestAvailableDeviceLocation(): Promise<DeviceLocationRe
         return { coordinates: null, source: 'unavailable' };
       }
 
-      const lastKnown = await Location!.getLastKnownPositionAsync();
-      if (lastKnown?.coords) {
-        const coordinates = {
-          latitude: lastKnown.coords.latitude,
-          longitude: lastKnown.coords.longitude,
-        };
-        void cacheDeviceLocation(coordinates);
-        return {
-          coordinates,
-          source: 'lastKnown',
-        };
-      }
-
       const current = await Location!.getCurrentPositionAsync({
-        accuracy: Location!.Accuracy.Balanced,
+        accuracy: Location!.Accuracy.High,
       });
       const coordinates = {
         latitude: current.coords.latitude,
@@ -177,9 +148,16 @@ function getWebDeviceLocation(): Promise<DeviceLocationResult> {
         resolve({ coordinates, source: 'current' });
       },
       () => {
-        resolve({ coordinates: null, source: 'unavailable' });
+        // Geolocation failed or was denied — return cached location if
+        // available so callers still have something to work with.
+        const cached = getCachedDeviceLocation();
+        resolve(
+          cached
+            ? { coordinates: cached, source: 'lastKnown' }
+            : { coordinates: null, source: 'unavailable' },
+        );
       },
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+      { enableHighAccuracy: true, timeout: 8_000, maximumAge: 60_000 },
     );
   });
 }

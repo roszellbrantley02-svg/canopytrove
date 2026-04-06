@@ -54,7 +54,8 @@ export function getFirebaseDb(): Firestore | null {
     return null;
   }
 
-  cachedDb = getFirestore(app);
+  const databaseId = publicClientConfig.firebase.databaseId;
+  cachedDb = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
   return cachedDb;
 }
 

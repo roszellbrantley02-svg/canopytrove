@@ -1,8 +1,11 @@
 import type { PropsWithChildren } from 'react';
 import React, { useEffect, useRef } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Animated, Easing, Platform } from 'react-native';
+import { Animated, Easing, Platform, View } from 'react-native';
 import { motion } from '../theme/tokens';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+
+const isWeb = Platform.OS === 'web';
 
 type MotionInViewProps = PropsWithChildren<{
   delay?: number;
@@ -12,7 +15,40 @@ type MotionInViewProps = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
 }>;
 
+/**
+ * On native, runs a JS-driven Animated.timing reveal (translateY + optional scale).
+ * On web, renders children immediately with no animation to avoid hundreds of
+ * concurrent requestAnimationFrame callbacks that cause jitter on mobile browsers.
+ * Also skips animation when the user has prefers-reduced-motion enabled.
+ */
 export function MotionInView({
+  children,
+  delay = 0,
+  distance = motion.revealDistance,
+  duration = motion.standard,
+  dense = false,
+  style,
+}: MotionInViewProps) {
+  const reducedMotion = useReducedMotion();
+
+  if (isWeb || reducedMotion) {
+    return <View style={style}>{children}</View>;
+  }
+
+  return (
+    <NativeMotionInView
+      delay={delay}
+      distance={distance}
+      duration={duration}
+      dense={dense}
+      style={style}
+    >
+      {children}
+    </NativeMotionInView>
+  );
+}
+
+function NativeMotionInView({
   children,
   delay = 0,
   distance = motion.revealDistance,
@@ -33,7 +69,7 @@ export function MotionInView({
         duration: resolvedDuration,
         delay,
         easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: Platform.OS !== 'web',
+        useNativeDriver: true,
       });
 
       animation.start();

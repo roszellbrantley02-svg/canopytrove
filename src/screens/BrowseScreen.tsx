@@ -51,6 +51,7 @@ function BrowseScreenInner() {
     browseHotDealsOnly,
     storefrontQuery,
     applyLocationQuery,
+    useDeviceLocation: requestDeviceLocation,
     setLocationQuery,
     setSearchQuery,
     setBrowseSortKey,
@@ -83,6 +84,15 @@ function BrowseScreenInner() {
       });
     });
   }, [applyLocationQuery, locationQuery]);
+
+  const handleUseDeviceLocation = React.useCallback(() => {
+    void requestDeviceLocation().then((didRefresh) => {
+      trackAnalyticsEvent(didRefresh ? 'location_changed' : 'location_denied', {
+        source: 'browse',
+        locationMode: 'device',
+      });
+    });
+  }, [requestDeviceLocation]);
 
   const handleToggleHotDeals = React.useCallback(() => {
     if (!isMemberAuthenticated) {
@@ -208,6 +218,7 @@ function BrowseScreenInner() {
           locationQuery={locationQuery}
           onLocationQueryChange={setLocationQuery}
           onApplyLocationQuery={handleApplyLocationQuery}
+          onUseDeviceLocation={handleUseDeviceLocation}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
           onClearSearch={handleClearSearch}

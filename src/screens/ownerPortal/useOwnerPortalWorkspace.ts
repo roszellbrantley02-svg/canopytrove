@@ -12,6 +12,7 @@ import type {
 } from '../../types/ownerPortal';
 import {
   createOwnerPortalPromotion,
+  deleteOwnerPortalPromotion,
   getOwnerPortalAiActionPlan,
   getOwnerPortalAiProfileSuggestion,
   getOwnerPortalAiPromotionDraft,
@@ -25,6 +26,7 @@ import {
 } from '../../services/ownerPortalWorkspaceService';
 import {
   createOwnerPortalPreviewPromotion,
+  deleteOwnerPortalPreviewPromotion,
   getOwnerPortalPreviewWorkspace,
   replyToOwnerPortalPreviewReview,
   saveOwnerPortalPreviewLicenseCompliance,
@@ -40,7 +42,14 @@ import {
 import { isBackendTierAccessError } from '../../services/storefrontBackendHttp';
 
 const PREVIEW_AI_MESSAGE = 'AI assistant tools only run in the live owner workspace.';
-const ignoreAsyncError = () => undefined;
+
+function logSilentError(label: string) {
+  return (error: unknown) => {
+    if (__DEV__) {
+      console.warn(`[useOwnerPortalWorkspace] ${label}:`, error);
+    }
+  };
+}
 
 function getWorkspaceErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -101,13 +110,13 @@ export function useOwnerPortalWorkspace(preview = false) {
       setActiveLocationId(locationId);
       setActionPlan(null);
       hasRequestedActionPlanRef.current = false;
-      await refresh(locationId).catch(ignoreAsyncError);
+      await refresh(locationId).catch(logSilentError('switchLocation refresh'));
     },
     [refresh],
   );
 
   React.useEffect(() => {
-    void refresh().catch(ignoreAsyncError);
+    void refresh().catch(logSilentError('initial refresh'));
   }, [refresh]);
 
   const runAiTask = React.useCallback(
@@ -156,7 +165,7 @@ export function useOwnerPortalWorkspace(preview = false) {
       return;
     }
 
-    void refreshActionPlan().catch(ignoreAsyncError);
+    void refreshActionPlan().catch(logSilentError('auto action plan'));
   }, [preview, refreshActionPlan, workspace?.storefrontSummary]);
 
   const runMutation = React.useCallback(
@@ -241,6 +250,12 @@ export function useOwnerPortalWorkspace(preview = false) {
         preview
           ? updateOwnerPortalPreviewPromotion(promotionId, input)
           : updateOwnerPortalPromotion(promotionId, input, activeLocationId),
+      ),
+    deletePromotion: (promotionId: string) =>
+      runMutation(() =>
+        preview
+          ? deleteOwnerPortalPreviewPromotion(promotionId)
+          : deleteOwnerPortalPromotion(promotionId, activeLocationId),
       ),
     replyToReview: (reviewId: string, text: string) =>
       runMutation(() =>

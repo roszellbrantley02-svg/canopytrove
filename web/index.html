@@ -13,6 +13,12 @@
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://app.canopytrove.com/" />
     <meta name="theme-color" content="#121614" />
+
+    <!-- Preconnect to critical origins for faster first requests -->
+    <link rel="preconnect" href="https://api.canopytrove.com" crossorigin />
+    <link rel="preconnect" href="https://firebaseinstallations.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin />
+    <link rel="dns-prefetch" href="https://api.canopytrove.com" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Canopy Trove" />
@@ -32,33 +38,74 @@
     <meta property="twitter:description" content="Find licensed dispensaries open now near you. Live hours, directions, deals, and real reviews. Browse New York dispensaries instantly." />
     <meta property="twitter:image" content="https://app.canopytrove.com/og-image.png" />
 
-    <!-- Structured Data — WebApplication -->
+    <!-- Structured Data — WebApplication + Organization + FAQ -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Canopy Trove",
-      "url": "https://app.canopytrove.com",
-      "description": "Find licensed dispensaries open now near you. Live hours, directions, hot deals, real reviews, and verified storefronts in New York.",
-      "applicationCategory": "LifestyleApplication",
-      "operatingSystem": "Any",
-      "browserRequirements": "Requires JavaScript",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Canopy Trove",
+        "url": "https://app.canopytrove.com",
+        "description": "Find licensed dispensaries open now near you. Live hours, directions, hot deals, real reviews, and verified storefronts in New York.",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "author": {
+          "@type": "Organization",
+          "name": "Canopy Trove LLC",
+          "url": "https://canopytrove.com"
+        },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://app.canopytrove.com/browse?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
       },
-      "author": {
+      {
+        "@context": "https://schema.org",
         "@type": "Organization",
         "name": "Canopy Trove LLC",
-        "url": "https://canopytrove.com"
+        "url": "https://canopytrove.com",
+        "logo": "https://app.canopytrove.com/icon-512.png",
+        "description": "Licensed dispensary discovery platform helping consumers find verified, legal cannabis retailers in New York.",
+        "sameAs": []
       },
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://app.canopytrove.com/browse?q={search_term_string}",
-        "query-input": "required name=search_term_string"
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do I find licensed dispensaries near me?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Open Canopy Trove and allow location access. The app shows licensed dispensaries near you with live hours, directions, deals, and real reviews. All listings are verified against the New York Office of Cannabis Management registry."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are all dispensaries on Canopy Trove licensed?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Canopy Trove sources its listings from the New York Office of Cannabis Management (OCM) public registry. Each storefront is cross-referenced to ensure it holds a valid license."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Canopy Trove free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Canopy Trove is completely free for consumers. Browse dispensaries, read reviews, find deals, and get directions at no cost."
+            }
+          }
+        ]
       }
-    }
+    ]
     </script>
 
     <!-- PWA -->
@@ -66,11 +113,39 @@
     <link rel="icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
+    <!-- Referrer policy fallback for browsers that don't read the header -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
     <!-- Expo recommended reset -->
     <style id="expo-reset">
       html, body { height: 100%; margin: 0; padding: 0; }
       body { overflow: hidden; background-color: #121614; }
       #root { display: flex; height: 100%; flex: 1; }
+    </style>
+
+    <!-- Font-display swap fallbacks — prevent invisible text (FOIT) during bundle load.
+         Expo bundles fonts in JS; these @font-face rules ensure text renders immediately
+         with system fallbacks and swaps to the real fonts once the bundle runs. -->
+    <style id="ct-font-fallbacks">
+      @font-face { font-family: 'SpaceGrotesk_700Bold'; font-display: swap; src: local('Space Grotesk Bold'), local('SpaceGrotesk-Bold'); }
+      @font-face { font-family: 'SpaceGrotesk_500Medium'; font-display: swap; src: local('Space Grotesk Medium'), local('SpaceGrotesk-Medium'); }
+      @font-face { font-family: 'DMSans_400Regular'; font-display: swap; src: local('DM Sans'), local('DMSans-Regular'); }
+      @font-face { font-family: 'DMSans_500Medium'; font-display: swap; src: local('DM Sans Medium'), local('DMSans-Medium'); }
+      @font-face { font-family: 'DMSans_700Bold'; font-display: swap; src: local('DM Sans Bold'), local('DMSans-Bold'); }
+    </style>
+
+    <!-- CSS shimmer animation — replaces JS-driven Animated.timing on web (INP fix) -->
+    <style id="ct-shimmer-css">
+      @keyframes ct-shimmer-sweep {
+        0% { transform: translateX(-132px) rotate(16deg); }
+        100% { transform: translateX(240px) rotate(16deg); }
+      }
+      .ct-shimmer-sweep {
+        animation: ct-shimmer-sweep 1.4s ease-in-out infinite;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .ct-shimmer-sweep { animation: none; opacity: 0.5; }
+      }
     </style>
 
     <!-- Loading screen styles -->
@@ -160,51 +235,14 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
 
-    <script>
-      // iOS standalone (Add to Home Screen) navigation guard.
-      // Without this, tapping links or route changes can open Safari
-      // instead of staying inside the PWA shell.
-      (function () {
-        var standalone = window.navigator.standalone;
-        if (!standalone) return;
+    <script src="/scripts/standalone-nav.js"></script>
 
-        document.addEventListener('click', function (e) {
-          var node = e.target;
-          while (node && node !== document.body) {
-            if (node.tagName === 'A') {
-              var href = node.getAttribute('href');
-              if (!href) break;
+    <script src="/scripts/splash-observer.js"></script>
 
-              // External links: let them open in Safari
-              if (href.indexOf('http') === 0 && href.indexOf(window.location.origin) !== 0) break;
-              // tel: and mailto: links: let the OS handle them
-              if (/^(tel|mailto|sms):/.test(href)) break;
+    <!-- Service Worker registration -->
+    <script src="/scripts/sw-register.js"></script>
 
-              // Internal link — prevent Safari from opening and navigate in-app
-              e.preventDefault();
-              window.location.href = href;
-              return;
-            }
-            node = node.parentNode;
-          }
-        }, true);
-      })();
-    </script>
-
-    <script>
-      // Hide splash once React mounts
-      const observer = new MutationObserver(() => {
-        const root = document.getElementById('root');
-        if (root && root.children.length > 0) {
-          const splash = document.getElementById('ct-splash');
-          if (splash) {
-            splash.classList.add('hidden');
-            setTimeout(() => splash.remove(), 500);
-          }
-          observer.disconnect();
-        }
-      });
-      observer.observe(document.getElementById('root'), { childList: true });
-    </script>
+    <!-- Web Vitals — field measurement of LCP, INP, CLS (~2KB async) -->
+    <script src="/scripts/web-vitals-reporter.js"></script>
   </body>
 </html>

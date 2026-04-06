@@ -152,42 +152,22 @@ export const Stack = createNativeStackNavigator<RootStackParamList>();
 export const tabNavigatorScreenOptions = {
   headerShown: false,
   animation: 'fade' as const,
-  lazy: false,
+  lazy: true,
   freezeOnBlur: true,
   tabBarHideOnKeyboard: true,
   transitionSpec: {
     animation: 'timing' as const,
     config: {
-      duration: 300,
-      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      duration: 200,
+      easing: Easing.out(Easing.ease),
     },
   },
   sceneStyleInterpolator: ({ current }: { current: { progress: Animated.Value } }) => ({
     sceneStyle: {
       opacity: current.progress.interpolate({
         inputRange: [-1, 0, 1],
-        outputRange: [0.9, 1, 0.9],
+        outputRange: [0, 1, 0],
       }),
-      transform: [
-        {
-          translateX: current.progress.interpolate({
-            inputRange: [-1, 0, 1],
-            outputRange: [14, 0, -14],
-          }),
-        },
-        {
-          translateY: current.progress.interpolate({
-            inputRange: [-1, 0, 1],
-            outputRange: [4, 0, 4],
-          }),
-        },
-        {
-          scale: current.progress.interpolate({
-            inputRange: [-1, 0, 1],
-            outputRange: [0.985, 1, 0.985],
-          }),
-        },
-      ],
     },
   }),
   sceneStyle: {
