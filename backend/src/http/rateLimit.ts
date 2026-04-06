@@ -55,6 +55,12 @@ function shouldUsePersistentBuckets(options: RateLimitOptions) {
     return options.persistent;
   }
 
+  // In test/mock environments, always use memory buckets so
+  // clearRateLimitState() can reliably reset state between tests.
+  if (process.env.NODE_ENV === 'test' || process.env.STOREFRONT_BACKEND_SOURCE === 'mock') {
+    return false;
+  }
+
   if (!options.methods?.length) {
     return true;
   }

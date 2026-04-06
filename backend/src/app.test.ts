@@ -13,7 +13,7 @@ const testWebhookSecret = 'whsec_dGVzdF9zZWNyZXRfdmFsdWU=';
 beforeEach(() => {
   delete process.env.ADMIN_API_KEY;
   delete process.env.CORS_ORIGIN;
-  delete process.env.NODE_ENV;
+  process.env.NODE_ENV = 'test';
   delete process.env.EMAIL_DELIVERY_PROVIDER;
   delete process.env.RESEND_API_KEY;
   delete process.env.RESEND_WEBHOOK_SECRET;
@@ -507,7 +507,9 @@ test('applies stricter rate limits to admin routes', async () => {
   assert.ok(lastResponse);
   assert.equal(lastResponse.status, 429);
   assert.equal(lastResponse.json?.error, 'Too many requests. Please retry shortly.');
-  assert.equal(lastResponse.headers.get('retry-after'), '600');
+  // Retry-After includes intentional jitter (0-4s), so use a range check
+  const retryAfter = Number(lastResponse.headers.get('retry-after'));
+  assert.ok(retryAfter >= 598 && retryAfter <= 605, `Expected retry-after ~600, got ${retryAfter}`);
 });
 
 test('keeps public storefront reads on the shared read limiter instead of the admin limiter', async () => {
