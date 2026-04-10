@@ -59,6 +59,7 @@ function NearbyScreenInner() {
   const { authSession, profileId } = useStorefrontProfileController();
   const { isSavedStorefront } = useStorefrontRouteController();
   const {
+    trackRouteStartedReward,
     gamificationState: { visitedStorefrontIds },
   } = useStorefrontRewardsController();
   const hasNearbyOrigin = Boolean(deviceLocation || searchLocation);
@@ -186,9 +187,10 @@ function NearbyScreenInner() {
         isAuthenticated: authSession.status === 'authenticated',
         sourceScreen: 'Nearby',
         storefront: store,
+        onRouteStarted: trackRouteStartedReward,
       });
     },
-    [authSession.status, authSession.uid, profileId],
+    [authSession.status, authSession.uid, profileId, trackRouteStartedReward],
   );
 
   return (

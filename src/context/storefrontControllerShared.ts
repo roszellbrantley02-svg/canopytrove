@@ -64,6 +64,10 @@ export type StorefrontRewardsControllerValue = {
   lastRewardResult: GamificationRewardResult | null;
   clearLastRewardResult: () => void;
   applyRewardResult: (rewardResult: GamificationRewardResult) => GamificationRewardResult;
+  trackRouteStartedReward: (payload: {
+    storefrontId: string;
+    routeMode: 'preview' | 'verified';
+  }) => GamificationRewardResult;
   trackReviewSubmittedReward: (payload: {
     rating: number;
     textLength: number;

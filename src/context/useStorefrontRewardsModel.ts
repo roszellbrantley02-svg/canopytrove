@@ -8,6 +8,7 @@ import {
   applyPhotoUploadedReward,
   applyReportSubmittedReward,
   applyReviewSubmittedReward,
+  applyRouteStartedReward,
   getBadgeDefinitions,
   getLevelTitle,
   normalizeGamificationState,
@@ -109,6 +110,33 @@ export function useStorefrontRewardsModel({
     [applyRewardResult, syncGamificationEvent],
   );
 
+  const trackRouteStartedReward = useCallback(
+    (payload: { storefrontId: string; routeMode: 'preview' | 'verified' }) => {
+      if (payload.routeMode !== 'verified') {
+        return {
+          activityType: 'route_started' as const,
+          pointsEarned: 0,
+          badgesEarned: [],
+          levelBefore: gamificationStateRef.current.level,
+          levelAfter: gamificationStateRef.current.level,
+          updatedState: gamificationStateRef.current,
+        };
+      }
+
+      const rewardResult = applyRewardResult(
+        applyRouteStartedReward(gamificationStateRef.current, payload),
+      );
+
+      syncGamificationEvent({
+        activityType: 'route_started',
+        payload,
+      });
+
+      return rewardResult;
+    },
+    [applyRewardResult, syncGamificationEvent],
+  );
+
   const trackPhotoUploadedReward = useCallback(() => {
     const rewardResult = applyRewardResult(applyPhotoUploadedReward(gamificationStateRef.current));
 
@@ -189,6 +217,7 @@ export function useStorefrontRewardsModel({
       lastRewardResult,
       clearLastRewardResult,
       applyRewardResult,
+      trackRouteStartedReward,
       trackReviewSubmittedReward,
       trackPhotoUploadedReward,
       trackHelpfulVoteReceivedReward,
@@ -202,6 +231,7 @@ export function useStorefrontRewardsModel({
       clearLastRewardResult,
       gamificationState,
       lastRewardResult,
+      trackRouteStartedReward,
       trackFollowersUpdatedReward,
       trackFriendInvitedReward,
       trackHelpfulVoteReceivedReward,

@@ -48,6 +48,7 @@ function HotDealsScreenInner() {
   const { authSession, profileId } = useStorefrontProfileController();
   const { isSavedStorefront } = useStorefrontRouteController();
   const {
+    trackRouteStartedReward,
     gamificationState: { visitedStorefrontIds },
   } = useStorefrontRewardsController();
   const isMemberAuthenticated = authSession.status === 'authenticated';
@@ -159,6 +160,7 @@ function HotDealsScreenInner() {
               isAuthenticated: authSession.status === 'authenticated',
               sourceScreen: 'HotDeals',
               storefront: item,
+              onRouteStarted: trackRouteStartedReward,
             });
           }}
           dataHasMore={data.hasMore}

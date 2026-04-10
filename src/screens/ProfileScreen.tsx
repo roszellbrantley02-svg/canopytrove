@@ -21,7 +21,7 @@ import { brand } from '../config/brand';
 import { ownerPortalAccessAvailable } from '../config/ownerPortalConfig';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { useOwnerPortalAccessState } from '../hooks/useOwnerPortalAccessState';
-import { AppUiIcon } from '../icons/AppUiIcon';
+import { AppUiIcon, type AppUiIconName } from '../icons/AppUiIcon';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, radii, motion, spacing, textStyles } from '../theme/tokens';
 import {
@@ -621,7 +621,11 @@ function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function BadgeShowcase({ badges }: { badges: Array<{ icon?: string; name?: string }> }) {
+export function BadgeShowcase({
+  badges,
+}: {
+  badges: Array<{ icon?: string; name?: string; color?: string }>;
+}) {
   if (badges.length === 0) {
     return (
       <View style={internalStyles.emptyBadges}>
@@ -637,11 +641,11 @@ function BadgeShowcase({ badges }: { badges: Array<{ icon?: string; name?: strin
       {badges.map((badge, idx) => (
         <View key={idx} style={internalStyles.badgeItem}>
           <View style={internalStyles.badgePlaceholder}>
-            {badge?.icon ? (
-              <Text style={internalStyles.badgeEmoji}>{badge.icon}</Text>
-            ) : (
-              <Text style={internalStyles.badgeEmoji}>⭐</Text>
-            )}
+            <AppUiIcon
+              name={(badge?.icon as AppUiIconName | undefined) ?? 'star-outline'}
+              size={28}
+              color={badge?.color ?? colors.goldSoft}
+            />
           </View>
           <Text style={internalStyles.badgeItemLabel} numberOfLines={2} maxFontSizeMultiplier={1}>
             {badge?.name ?? 'Badge'}
@@ -853,9 +857,6 @@ const internalStyles = StyleSheet.create({
     borderColor: colors.borderSoft,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  badgeEmoji: {
-    fontSize: 32,
   },
   badgeItemLabel: {
     ...textStyles.caption,

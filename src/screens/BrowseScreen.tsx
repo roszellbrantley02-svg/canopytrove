@@ -59,6 +59,7 @@ function BrowseScreenInner() {
   } = useStorefrontQueryController();
   const { isSavedStorefront } = useStorefrontRouteController();
   const {
+    trackRouteStartedReward,
     gamificationState: { visitedStorefrontIds },
   } = useStorefrontRewardsController();
   const isMemberAuthenticated = authSession.status === 'authenticated';
@@ -342,6 +343,7 @@ function BrowseScreenInner() {
               isAuthenticated: authSession.status === 'authenticated',
               sourceScreen: 'Browse',
               storefront: item,
+              onRouteStarted: trackRouteStartedReward,
             });
           }}
           hasMore={data.hasMore}

@@ -78,8 +78,20 @@ export async function openStorefrontRoute(
     isAuthenticated: boolean;
     sourceScreen?: string | null;
     storefront: StorefrontSummary;
+    onRouteStarted?: (payload: { storefrontId: string; routeMode: RouteMode }) => void;
   },
 ) {
+  if (trackingOptions?.profileId && trackingOptions.onRouteStarted) {
+    try {
+      trackingOptions.onRouteStarted({
+        storefrontId: trackingOptions.storefront.id,
+        routeMode,
+      });
+    } catch {
+      // Reward tracking should never block or crash navigation.
+    }
+  }
+
   // Fire post-visit tracking in the background — never block navigation.
   // The user expects maps to open instantly when they tap "Directions".
   if (trackingOptions?.profileId) {

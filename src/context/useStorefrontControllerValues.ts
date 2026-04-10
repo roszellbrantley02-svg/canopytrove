@@ -89,6 +89,7 @@ export function useStorefrontControllerValues({
       lastRewardResult: rewardsModel.lastRewardResult,
       clearLastRewardResult: rewardsModel.clearLastRewardResult,
       applyRewardResult: rewardsModel.applyRewardResult,
+      trackRouteStartedReward: rewardsModel.trackRouteStartedReward,
       trackReviewSubmittedReward: rewardsModel.trackReviewSubmittedReward,
       trackPhotoUploadedReward: rewardsModel.trackPhotoUploadedReward,
       trackHelpfulVoteReceivedReward: rewardsModel.trackHelpfulVoteReceivedReward,

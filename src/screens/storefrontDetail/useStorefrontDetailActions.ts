@@ -1,6 +1,7 @@
 import React from 'react';
 import { Linking, Platform } from 'react-native';
 import { crossPlatformAlert } from '../../utils/crossPlatformAlert';
+import { useStorefrontRewardsController } from '../../context/StorefrontController';
 import { getPlatformSafeStorefrontOutboundLinks } from './storefrontDetailHelpers';
 
 /** Open a URL in a web-safe way. On web, use window.open with a
@@ -87,6 +88,7 @@ export function useStorefrontDetailActions({
   myReview,
   onReviewModerationStatusChange,
 }: UseStorefrontDetailActionsArgs) {
+  const { trackRouteStartedReward } = useStorefrontRewardsController();
   const [pendingHelpfulReviewId, setPendingHelpfulReviewId] = React.useState<string | null>(null);
   const [pendingReviewReportId, setPendingReviewReportId] = React.useState<string | null>(null);
   const safeOutboundLinks = React.useMemo(
@@ -229,8 +231,9 @@ export function useStorefrontDetailActions({
       isAuthenticated: authSession.status === 'authenticated',
       sourceScreen: 'StorefrontDetail',
       storefront,
+      onRouteStarted: trackRouteStartedReward,
     });
-  }, [authSession.status, authSession.uid, profileId, storefront]);
+  }, [authSession.status, authSession.uid, profileId, storefront, trackRouteStartedReward]);
 
   const promptCommunitySignIn = React.useCallback(
     (actionLabel: string) => {
