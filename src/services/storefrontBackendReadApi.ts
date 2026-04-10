@@ -11,6 +11,7 @@ import type {
 } from './storefrontBackendHttp';
 import {
   backendCacheTtls,
+  createCanonicalProfileCacheKey,
   createLeaderboardRankCacheKey,
   createProfileCacheKey,
   createProfileStateCacheKey,
@@ -52,6 +53,13 @@ export function getStorefrontBackendMarketAreas() {
 export function getStorefrontBackendProfile(profileId: string) {
   return requestJson<AppProfile>(`/profiles/${encodeURIComponent(profileId)}`, undefined, {
     cacheKey: createProfileCacheKey(profileId),
+    ttlMs: backendCacheTtls.profile,
+  });
+}
+
+export function getStorefrontBackendCanonicalProfile() {
+  return requestJson<AppProfile>('/profiles/me/canonical', undefined, {
+    cacheKey: createCanonicalProfileCacheKey(),
     ttlMs: backendCacheTtls.profile,
   });
 }

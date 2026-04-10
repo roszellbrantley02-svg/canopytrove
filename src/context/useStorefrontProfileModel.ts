@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AppProfile } from '../types/storefront';
 import type { CanopyTroveAuthSession } from '../types/identity';
 import {
@@ -7,6 +7,7 @@ import {
   getCachedAppProfile,
   saveAppProfile,
 } from '../services/appProfileService';
+import { getStorefrontBackendCanonicalProfile } from '../services/storefrontBackendService';
 import {
   getInitialCanopyTroveAuthSession,
   signOutCanopyTroveSession,
@@ -27,6 +28,48 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
   const [isStartingGuestSession, setIsStartingGuestSession] = useState(false);
   const [profileId, setProfileId] = useState<string>(
     cachedAppProfile?.id ?? cachedProfileId ?? createAppProfileId(),
+  );
+  const lastCanonicalResolutionKeyRef = useRef<string | null>(null);
+
+  const areProfilesEquivalent = useCallback(
+    (left: AppProfile | null | undefined, right: AppProfile | null | undefined) =>
+      (left?.id ?? null) === (right?.id ?? null) &&
+      (left?.kind ?? null) === (right?.kind ?? null) &&
+      (left?.accountId ?? null) === (right?.accountId ?? null) &&
+      (left?.displayName ?? null) === (right?.displayName ?? null) &&
+      (left?.createdAt ?? null) === (right?.createdAt ?? null) &&
+      (left?.updatedAt ?? null) === (right?.updatedAt ?? null),
+    [],
+  );
+
+  const getPreferredDisplayName = useCallback(
+    (
+      session: CanopyTroveAuthSession,
+      existingDisplayName: string | null | undefined,
+    ): string | null => {
+      const normalizedExistingDisplayName = existingDisplayName?.trim() || null;
+      const isExistingDisplayNameAnEmail =
+        normalizedExistingDisplayName &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedExistingDisplayName);
+      const authDisplayName =
+        session.status === 'authenticated' ? session.displayName?.trim() || null : null;
+      const authEmail = session.status === 'authenticated' ? (session.email ?? null) : null;
+
+      if (normalizedExistingDisplayName && !isExistingDisplayNameAnEmail) {
+        return normalizedExistingDisplayName;
+      }
+
+      if (authDisplayName) {
+        return authDisplayName;
+      }
+
+      if (authEmail) {
+        return authEmail;
+      }
+
+      return normalizedExistingDisplayName;
+    },
+    [],
   );
 
   const startGuestSession = useCallback(async () => {
@@ -107,27 +150,6 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
     //   3. Fall back to the authenticated email so the
     //      leaderboard always shows a real name — never "anonymous".
     //   4. If the user later picks a username it replaces all fallbacks.
-    const existingDisplayName = appProfile.displayName?.trim() || null;
-    const isExistingDisplayNameAnEmail =
-      existingDisplayName && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(existingDisplayName);
-    const authDisplayName =
-      authSession.status === 'authenticated' ? authSession.displayName?.trim() || null : null;
-    const authEmail = authSession.status === 'authenticated' ? (authSession.email ?? null) : null;
-
-    let nextDisplayName: string | null;
-    if (existingDisplayName && !isExistingDisplayNameAnEmail) {
-      // User chose a custom username — always keep it.
-      nextDisplayName = existingDisplayName;
-    } else if (authDisplayName) {
-      // Auth provider has a display name (e.g. from sign-up) — use it.
-      nextDisplayName = authDisplayName;
-    } else if (authEmail) {
-      // No custom username or auth display name — use email as fallback.
-      nextDisplayName = authEmail;
-    } else {
-      nextDisplayName = existingDisplayName;
-    }
-
     const nextProfile: AppProfile = {
       ...appProfile,
       kind: authSession.status === 'authenticated' ? 'authenticated' : 'anonymous',
@@ -135,7 +157,7 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
         authSession.status === 'authenticated' || authSession.status === 'anonymous'
           ? authSession.uid
           : null,
-      displayName: nextDisplayName,
+      displayName: getPreferredDisplayName(authSession, appProfile.displayName),
       updatedAt: new Date().toISOString(),
     };
 
@@ -149,7 +171,61 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
 
     setAppProfile(nextProfile);
     void saveAppProfile(nextProfile);
-  }, [appProfile, authSession]);
+  }, [appProfile, authSession, getPreferredDisplayName]);
+
+  useEffect(() => {
+    const currentProfileId = appProfile?.id ?? null;
+    const currentAccountId = authSession.status === 'authenticated' ? authSession.uid : null;
+
+    if (!currentProfileId || !currentAccountId) {
+      lastCanonicalResolutionKeyRef.current = null;
+      return;
+    }
+
+    const resolutionKey = `${currentAccountId}:${currentProfileId}`;
+    if (lastCanonicalResolutionKeyRef.current === resolutionKey) {
+      return;
+    }
+
+    lastCanonicalResolutionKeyRef.current = resolutionKey;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const canonicalProfile = await getStorefrontBackendCanonicalProfile();
+        if (
+          cancelled ||
+          !canonicalProfile ||
+          canonicalProfile.accountId !== currentAccountId ||
+          canonicalProfile.id === currentProfileId
+        ) {
+          return;
+        }
+
+        const nextProfile: AppProfile = {
+          ...canonicalProfile,
+          kind: 'authenticated',
+          accountId: currentAccountId,
+          displayName: getPreferredDisplayName(authSession, canonicalProfile.displayName),
+        };
+
+        setAppProfile((current) => (areProfilesEquivalent(current, nextProfile) ? current : nextProfile));
+        setProfileId((current) => (current === nextProfile.id ? current : nextProfile.id));
+        await saveAppProfile(nextProfile);
+      } catch {
+        // Canonical profile lookup is best-effort. Keep the current profile when unavailable.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    appProfile?.id,
+    authSession,
+    areProfilesEquivalent,
+    getPreferredDisplayName,
+  ]);
 
   useEffect(() => {
     let alive = true;

@@ -1,5 +1,6 @@
 import { getOptionalFirestoreCollection } from '../firestoreCollections';
 import { AppProfileApiDocument } from '../types';
+import { getGamificationState } from './gamificationPersistenceService';
 
 const PROFILE_COLLECTION = 'profiles';
 
@@ -95,4 +96,81 @@ export async function listProfiles(limit = 100, startAfter?: string) {
   }
 
   return filtered.slice(0, limit).map(normalizeProfile);
+}
+
+export async function listProfilesByAccountId(accountId: string) {
+  const normalizedAccountId = accountId.trim();
+  if (!normalizedAccountId) {
+    return [];
+  }
+
+  const collectionRef = getProfileCollection();
+  if (collectionRef) {
+    const snapshot = await collectionRef.where('accountId', '==', normalizedAccountId).get();
+    return snapshot.docs.map((documentSnapshot) =>
+      normalizeProfile(documentSnapshot.data() as AppProfileApiDocument),
+    );
+  }
+
+  return Array.from(profileStore.values())
+    .map(normalizeProfile)
+    .filter((profile) => profile.accountId === normalizedAccountId);
+}
+
+type CanonicalProfileCandidate = {
+  profile: AppProfileApiDocument;
+  totalPoints: number;
+  totalReviews: number;
+  dispensariesVisited: number;
+  badgeCount: number;
+};
+
+function compareCanonicalProfileCandidates(
+  left: CanonicalProfileCandidate,
+  right: CanonicalProfileCandidate,
+) {
+  if (right.totalPoints !== left.totalPoints) {
+    return right.totalPoints - left.totalPoints;
+  }
+
+  if (right.totalReviews !== left.totalReviews) {
+    return right.totalReviews - left.totalReviews;
+  }
+
+  if (right.dispensariesVisited !== left.dispensariesVisited) {
+    return right.dispensariesVisited - left.dispensariesVisited;
+  }
+
+  if (right.badgeCount !== left.badgeCount) {
+    return right.badgeCount - left.badgeCount;
+  }
+
+  if (left.profile.createdAt !== right.profile.createdAt) {
+    return left.profile.createdAt.localeCompare(right.profile.createdAt);
+  }
+
+  return left.profile.id.localeCompare(right.profile.id);
+}
+
+export async function getCanonicalProfileForAccount(accountId: string) {
+  const profiles = await listProfilesByAccountId(accountId);
+  if (!profiles.length) {
+    return null;
+  }
+
+  const candidates = await Promise.all(
+    profiles.map(async (profile) => {
+      const gamificationState = await getGamificationState(profile.id, profile.createdAt);
+      return {
+        profile,
+        totalPoints: gamificationState.totalPoints,
+        totalReviews: gamificationState.totalReviews,
+        dispensariesVisited: gamificationState.dispensariesVisited,
+        badgeCount: gamificationState.badges.length,
+      } satisfies CanonicalProfileCandidate;
+    }),
+  );
+
+  candidates.sort(compareCanonicalProfileCandidates);
+  return candidates[0]?.profile ?? null;
 }

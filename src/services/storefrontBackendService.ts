@@ -5,6 +5,7 @@ export type {
   StorefrontBackendSeedStatus,
 } from './storefrontBackendHttp';
 export {
+  getStorefrontBackendCanonicalProfile,
   getStorefrontBackendHealth,
   getStorefrontBackendLeaderboard,
   getStorefrontBackendLeaderboardRank,

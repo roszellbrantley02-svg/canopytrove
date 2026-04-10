@@ -7,7 +7,7 @@ import { parseProfileIdParam, parseProfileUpdateBody } from '../http/validation'
 import { deleteProfileAccountData } from '../services/accountCleanupService';
 import { sendSecurityNotification } from '../services/securityNotificationService';
 import { revokeAllUserSessions } from '../services/sessionRevocationService';
-import { saveProfile } from '../services/profileService';
+import { getCanonicalProfileForAccount, saveProfile } from '../services/profileService';
 import {
   ensureProfileReadAccess,
   ensureProfileWriteAccess,
@@ -33,6 +33,26 @@ const profileWriteUserRateLimiter = createUserRateLimitMiddleware({
 const profileDeleteRecentAuth = createRecentAuthGuard({
   operationLabel: 'account deletion',
   maxAuthAgeSeconds: 300,
+});
+
+profileRoutes.get('/profiles/me/canonical', async (request, response) => {
+  const accountId = await resolveVerifiedRequestAccountId(request);
+  if (!accountId) {
+    response.status(401).json({
+      error: 'Member authentication is required.',
+    });
+    return;
+  }
+
+  const profile = await getCanonicalProfileForAccount(accountId);
+  if (!profile) {
+    response.status(404).json({
+      error: 'No profile exists for this account yet.',
+    });
+    return;
+  }
+
+  response.json(profile);
 });
 
 profileRoutes.get('/profiles/:profileId', async (request, response) => {

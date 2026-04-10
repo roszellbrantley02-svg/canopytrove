@@ -152,6 +152,10 @@ export function createProfileCacheKey(profileId: string) {
   return `profile:${profileId}:${getCanopyTroveAuthCacheKey()}`;
 }
 
+export function createCanonicalProfileCacheKey() {
+  return `profile:canonical:${getCanopyTroveAuthCacheKey()}`;
+}
+
 export function createProfileStateCacheKey(profileId: string) {
   return `profile-state:${profileId}:${getCanopyTroveAuthCacheKey()}`;
 }

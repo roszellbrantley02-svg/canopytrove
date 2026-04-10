@@ -202,6 +202,51 @@ test('rejects malformed community review payloads', async () => {
   assert.equal(response.json?.error, 'body.rating must be at most 5.');
 });
 
+test('returns the canonical authenticated profile for the current account', async () => {
+  const { baseUrl } = await startTestServer();
+  const { saveProfileState } = await import('./services/profileStateService');
+  await saveProfileState('profile-empty', {
+    profile: {
+      accountId: 'member-1',
+      kind: 'authenticated',
+      displayName: 'Daniellett',
+      createdAt: '2026-04-07T15:17:54.720Z',
+      updatedAt: '2026-04-10T10:26:26.796Z',
+    },
+    gamificationState: {
+      totalPoints: 0,
+      totalReviews: 0,
+      dispensariesVisited: 0,
+      badges: ['early_adopter'],
+    },
+  });
+  await saveProfileState('profile-rich', {
+    profile: {
+      accountId: 'member-1',
+      kind: 'authenticated',
+      displayName: 'Daniellett',
+      createdAt: '2026-04-06T14:28:51.387Z',
+      updatedAt: '2026-04-09T01:18:18.995Z',
+    },
+    gamificationState: {
+      totalPoints: 1195,
+      totalReviews: 3,
+      dispensariesVisited: 0,
+      badges: ['reviewer_1', 'early_adopter'],
+    },
+  });
+
+  const response = await request(baseUrl, '/profiles/me/canonical', {
+    headers: {
+      Authorization: 'Bearer test-authenticated:member-1',
+    },
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.json?.id, 'profile-rich');
+  assert.equal(response.json?.accountId, 'member-1');
+});
+
 test('exports subscribed member emails through the admin route', async () => {
   process.env.ADMIN_API_KEY = 'admin-test-key';
   const { syncMemberEmailSubscription } = await import('./services/memberEmailSubscriptionService');
