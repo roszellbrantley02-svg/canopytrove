@@ -50,7 +50,7 @@ export function getOwnerPortalAccessState(input?: {
   claimRole?: 'owner' | 'admin' | null;
 }): OwnerPortalAccessState {
   const enabled = ownerPortalPrelaunchEnabled;
-  const allowlisted = !enabled || input?.claimRole === 'owner' || input?.claimRole === 'admin';
+  const allowlisted = input?.claimRole === 'owner' || input?.claimRole === 'admin';
 
   return {
     enabled,
