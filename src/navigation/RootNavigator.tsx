@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import type { NavigationContainerRef } from '@react-navigation/native';
-import { NavigationContainer } from '@react-navigation/native';
-import { Platform } from 'react-native';
+import { getPathFromState, NavigationContainer } from '@react-navigation/native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { CanopyTroveTabBar } from '../components/CanopyTroveTabBar';
 import { PostVisitPromptHost } from '../components/PostVisitPromptHost';
+import { colors } from '../theme/tokens';
 
 /* Notification bridges use expo-notifications which has no web implementation.
    Lazy-require on native only to prevent bundler errors on web. */
@@ -33,8 +34,37 @@ import {
 } from './rootNavigatorConfig';
 import { linkingConfig } from './linkingConfig';
 import { getActiveRouteName } from './rootNavigatorTracking';
+import { syncWebRouteMetadata } from './webRouteMetadata';
 
 export type { RootStackParamList, RootTabParamList } from './rootNavigatorConfig';
+
+function getCurrentWebPath(
+  state: Parameters<
+    NonNullable<React.ComponentProps<typeof NavigationContainer>['onStateChange']>
+  >[0],
+): string {
+  if (Platform.OS !== 'web') {
+    return '/';
+  }
+
+  const pathFromState = state ? getPathFromState(state, linkingConfig.config) : null;
+  const fallbackPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+  const rawPath = pathFromState || fallbackPath;
+
+  if (!rawPath) {
+    return '/';
+  }
+
+  const withoutQuery = rawPath.split(/[?#]/, 1)[0] || '/';
+  const withLeadingSlash = withoutQuery.startsWith('/') ? withoutQuery : `/${withoutQuery}`;
+  const collapsed = withLeadingSlash.replace(/\/{2,}/g, '/');
+
+  if (collapsed.length > 1 && collapsed.endsWith('/')) {
+    return collapsed.slice(0, -1);
+  }
+
+  return collapsed;
+}
 
 function TabsNavigator() {
   return (
@@ -50,6 +80,36 @@ function TabsNavigator() {
   );
 }
 
+const fallbackStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    paddingBottom: 48,
+  },
+  indicator: {
+    marginBottom: 12,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textSoft,
+    letterSpacing: 0.4,
+  },
+});
+
+/* Suspense fallback shown while lazy-loaded screens are being fetched.
+   Branded shell with subtle text so transitions feel intentional. */
+function ScreenLoadingFallback() {
+  return (
+    <View style={fallbackStyles.container}>
+      <ActivityIndicator size="small" color={colors.accent} style={fallbackStyles.indicator} />
+      <Text style={fallbackStyles.label}>Loading</Text>
+    </View>
+  );
+}
+
 export function RootNavigator() {
   const navigationRef = React.useRef<NavigationContainerRef<RootStackParamList>>(null);
   const routeNameRef = React.useRef<string | null>(null);
@@ -62,6 +122,11 @@ export function RootNavigator() {
       theme={navigationTheme}
       onReady={() => {
         const activeRouteName = navigationRef.current?.getCurrentRoute()?.name ?? null;
+        const currentRoute = navigationRef.current?.getCurrentRoute();
+        syncWebRouteMetadata(getCurrentWebPath(navigationRef.current?.getRootState()), {
+          name: currentRoute?.name,
+          params: currentRoute?.params,
+        });
         routeNameRef.current = activeRouteName;
         setNavigationReady(true);
         if (activeRouteName) {
@@ -70,6 +135,11 @@ export function RootNavigator() {
       }}
       onStateChange={(state) => {
         const activeRouteName = getActiveRouteName(state);
+        const currentRoute = navigationRef.current?.getCurrentRoute();
+        syncWebRouteMetadata(getCurrentWebPath(state), {
+          name: currentRoute?.name,
+          params: currentRoute?.params,
+        });
         if (!activeRouteName || routeNameRef.current === activeRouteName) {
           return;
         }
@@ -78,26 +148,28 @@ export function RootNavigator() {
         trackScreenView(activeRouteName);
       }}
     >
-      <Stack.Navigator screenOptions={stackNavigatorScreenOptions}>
-        <Stack.Screen
-          name="Tabs"
-          component={TabsNavigator}
-          options={{
-            animation: 'fade',
-            animationDuration: motion.quick,
-          }}
-        />
-        {stackScreens
-          .filter((screen) => screen.name !== 'Tabs')
-          .map((screen) => (
-            <Stack.Screen
-              key={screen.name}
-              name={screen.name}
-              component={screen.component}
-              options={screen.options}
-            />
-          ))}
-      </Stack.Navigator>
+      <Suspense fallback={<ScreenLoadingFallback />}>
+        <Stack.Navigator screenOptions={stackNavigatorScreenOptions}>
+          <Stack.Screen
+            name="Tabs"
+            component={TabsNavigator}
+            options={{
+              animation: 'fade',
+              animationDuration: motion.quick,
+            }}
+          />
+          {stackScreens
+            .filter((screen) => screen.name !== 'Tabs')
+            .map((screen) => (
+              <Stack.Screen
+                key={screen.name}
+                name={screen.name}
+                component={screen.component}
+                options={screen.options}
+              />
+            ))}
+        </Stack.Navigator>
+      </Suspense>
       <NotificationResponseBridge navigationReady={navigationReady} navigationRef={navigationRef} />
       <FavoriteDealNotificationBridge />
       <PostVisitPromptHost navigationRef={navigationRef} />

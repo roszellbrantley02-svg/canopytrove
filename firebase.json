@@ -87,7 +87,7 @@
       "rewrites": [
         {
           "source": "**",
-          "destination": "/index.html"
+          "destination": "/app-shell.html"
         }
       ],
       "headers": [
@@ -96,11 +96,11 @@
           "headers": [
             {
               "key": "Content-Security-Policy",
-              "value": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; connect-src 'self' https://api.canopytrove.com https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://*.cloudfunctions.net https://*.run.app https://unpkg.com; img-src 'self' data: https:; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; worker-src 'self'"
+              "value": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; connect-src 'self' blob: https://api.canopytrove.com https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://*.cloudfunctions.net https://*.run.app; img-src 'self' blob: data: https:; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; worker-src 'self'"
             },
             {
               "key": "Content-Security-Policy-Report-Only",
-              "value": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; connect-src 'self' https://api.canopytrove.com https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://*.cloudfunctions.net https://*.run.app https://unpkg.com; img-src 'self' data: https:; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; worker-src 'self'; report-uri https://api.canopytrove.com/v1/csp-report"
+              "value": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; connect-src 'self' blob: https://api.canopytrove.com https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://*.cloudfunctions.net https://*.run.app; img-src 'self' blob: data: https:; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; worker-src 'self'; report-uri https://api.canopytrove.com/v1/csp-report"
             },
             {
               "key": "Strict-Transport-Security",
@@ -121,7 +121,7 @@
           ]
         },
         {
-          "source": "index.html",
+          "source": "**/*.html",
           "headers": [
             {
               "key": "Cache-Control",
@@ -130,7 +130,43 @@
           ]
         },
         {
-          "source": "**/*.@(js|css|map|woff2|png|jpg|svg|ico)",
+          "source": "_expo/**",
+          "headers": [
+            {
+              "key": "X-Robots-Tag",
+              "value": "noindex"
+            }
+          ]
+        },
+        {
+          "source": "scripts/**",
+          "headers": [
+            {
+              "key": "X-Robots-Tag",
+              "value": "noindex"
+            }
+          ]
+        },
+        {
+          "source": "service-worker.js",
+          "headers": [
+            {
+              "key": "X-Robots-Tag",
+              "value": "noindex"
+            }
+          ]
+        },
+        {
+          "source": "manifest.json",
+          "headers": [
+            {
+              "key": "X-Robots-Tag",
+              "value": "noindex"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(js|css|map|woff2|ttf|woff|png|jpg|webp|svg|ico)",
           "headers": [
             {
               "key": "Cache-Control",

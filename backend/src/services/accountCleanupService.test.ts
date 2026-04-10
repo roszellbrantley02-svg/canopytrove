@@ -89,6 +89,10 @@ test('deleteProfileAccountData leaves the profile record intact when dependent c
           completedSteps.push('favorite_deal_alerts');
           return true;
         },
+        async deleteCommunitySafetyState() {
+          completedSteps.push('community_safety_state');
+          return true;
+        },
         async deleteCommunityContentForProfile() {
           throw new Error('community cleanup failed');
         },
@@ -119,6 +123,7 @@ test('deleteProfileAccountData leaves the profile record intact when dependent c
     'route_state',
     'gamification_state',
     'favorite_deal_alerts',
+    'community_safety_state',
     'owner_license_compliance',
     'owner_business_verification',
   ]);

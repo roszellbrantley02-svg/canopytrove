@@ -152,7 +152,7 @@ function OwnerPortalReviewInboxScreenInner() {
                   </Text>
                   <Text style={styles.summaryTileLabel}>Fast Alerts</Text>
                   <Text style={styles.summaryTileBody}>
-                    Notification readiness for reviews, reports, and runtime incidents.
+                    Notification status for reviews, reports, and urgent business issues.
                   </Text>
                 </View>
               </View>
@@ -213,7 +213,7 @@ function OwnerPortalReviewInboxScreenInner() {
                     value={formatCount(metrics.openReportCount)}
                   />
                   <OwnerPortalAnalyticsCard
-                    body="Push notifications that keep the owner aware of new reputation issues and runtime incidents quickly."
+                    body="Push notifications that keep you aware of new review and report issues quickly."
                     eyebrow="Notification readiness"
                     icon="notifications-outline"
                     progress={workspace?.ownerAlertStatus.pushEnabled ? 1 : 0.18}
@@ -245,7 +245,7 @@ function OwnerPortalReviewInboxScreenInner() {
       <MotionInView delay={180}>
         <SectionCard
           title="Inbox alerts"
-          body="Turn on owner push alerts so reviews, reports, and runtime incidents reach the phone quickly."
+          body="Turn on push alerts so reviews, reports, and other urgent issues reach your phone quickly."
         >
           <View
             style={[
@@ -257,13 +257,13 @@ function OwnerPortalReviewInboxScreenInner() {
           >
             <Text style={styles.helperText}>
               {workspace?.ownerAlertStatus.pushEnabled
-                ? `Owner and incident alerts are live${workspace.ownerAlertStatus.updatedAt ? ` as of ${new Date(workspace.ownerAlertStatus.updatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}.` : '.'}`
-                : 'Owner alerts are currently off for this device.'}
+                ? `Push alerts are live${workspace.ownerAlertStatus.updatedAt ? ` as of ${new Date(workspace.ownerAlertStatus.updatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}.` : '.'}`
+                : 'Push alerts are currently off for this device.'}
             </Text>
             {Platform.OS === 'web' ? (
               <Text style={styles.helperText}>
                 Push alerts require the native iOS or Android app. Download the app to receive
-                instant review, report, and incident alerts on your device.
+                instant review, report, and urgent business alerts on your device.
               </Text>
             ) : (
               <Pressable

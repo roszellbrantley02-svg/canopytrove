@@ -1,7 +1,9 @@
 import {
   ActiveRouteSessionApiDocument,
   AppProfileApiDocument,
+  BlockedCommunityAuthorApiDocument,
   StorefrontGamificationStateApiDocument,
+  StorefrontCommunitySafetyStateApiDocument,
   StorefrontRouteStateApiDocument,
 } from '../types';
 import {
@@ -141,6 +143,21 @@ function parsePartialGamificationState(
   return nextState;
 }
 
+function parseBlockedCommunityAuthor(
+  value: unknown,
+  field: string,
+): BlockedCommunityAuthorApiDocument {
+  const body = asObject(value, field);
+  return {
+    storefrontId: parseId(body.storefrontId, `${field}.storefrontId`),
+    storefrontName:
+      parseNullableTrimmedString(body.storefrontName, `${field}.storefrontName`, {
+        maxLength: 120,
+      }) ?? null,
+    authorId: parseId(body.authorId, `${field}.authorId`),
+  };
+}
+
 export function parseProfileUpdateBody(value: unknown, profileId: string) {
   return parsePartialProfileDocument(value, 'body', profileId);
 }
@@ -197,5 +214,38 @@ export function parseProfileStateBody(value: unknown, profileId: string) {
     gamificationState: body.gamificationState
       ? parsePartialGamificationState(body.gamificationState, 'body.gamificationState', profileId)
       : undefined,
+  };
+}
+
+export function parseCommunitySafetyStateBody(
+  value: unknown,
+  profileId: string,
+): StorefrontCommunitySafetyStateApiDocument {
+  const body = asObject(value, 'body');
+  const blockedReviewAuthorsValue = body.blockedReviewAuthors;
+  let blockedReviewAuthors: BlockedCommunityAuthorApiDocument[] = [];
+
+  if (blockedReviewAuthorsValue !== undefined) {
+    if (!Array.isArray(blockedReviewAuthorsValue)) {
+      throw new RequestValidationError('body.blockedReviewAuthors must be an array.');
+    }
+
+    blockedReviewAuthors = blockedReviewAuthorsValue.map((entry, index) =>
+      parseBlockedCommunityAuthor(entry, `body.blockedReviewAuthors[${index}]`),
+    );
+
+    if (blockedReviewAuthors.length > 64) {
+      throw new RequestValidationError('body.blockedReviewAuthors must contain at most 64 items.');
+    }
+  }
+
+  return {
+    profileId,
+    acceptedGuidelinesVersion:
+      parseNullableTrimmedString(body.acceptedGuidelinesVersion, 'body.acceptedGuidelinesVersion', {
+        maxLength: 32,
+      }) ?? null,
+    blockedReviewAuthors,
+    updatedAt: new Date().toISOString(),
   };
 }

@@ -6,7 +6,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AgeGateScreen } from './src/screens/AgeGateScreen';
 import { AnalyticsBridge } from './src/components/AnalyticsBridge';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
-import { FavoriteDealNotificationBridge } from './src/components/FavoriteDealNotificationBridge';
 import { GamificationRewardToastHost } from './src/components/GamificationRewardToastHost';
 import { AppBootScreen } from './src/components/AppBootScreen';
 import { StorefrontControllerProvider } from './src/context/StorefrontController';
@@ -17,18 +16,19 @@ import { initializeAnalytics } from './src/services/analyticsService';
 import { initializePostVisitPrompts } from './src/services/postVisitPromptService';
 import { initializeRuntimeReporting } from './src/services/runtimeReportingService';
 import { getRuntimeOpsStatus } from './src/services/runtimeOpsService';
-import { initializeSentryMonitoring, wrapAppWithSentry } from './src/services/sentryMonitoringService';
+import { initializeSentryMonitoring } from './src/services/sentryMonitoringService';
 import { migrateLegacyStorageNamespace } from './src/services/storageMigrationService';
 import { useCanopyTroveFonts } from './src/theme/fontSystem';
 
-initializeSentryMonitoring();
-
-export const MINIMUM_BOOT_DISPLAY_MS = 2000;
+export const MINIMUM_BOOT_DISPLAY_MS = 800;
 const CROSSFADE_DURATION_MS = 420;
 
 type AppPhase = 'boot' | 'age-gate' | 'main';
 
-function useAppPhase(fontsReady: boolean, ageGateStatus: 'checking' | 'required' | 'accepted'): AppPhase {
+function useAppPhase(
+  fontsReady: boolean,
+  ageGateStatus: 'checking' | 'required' | 'accepted',
+): AppPhase {
   const [minimumBootElapsed, setMinimumBootElapsed] = React.useState(false);
 
   React.useEffect(() => {
@@ -60,10 +60,11 @@ function useCrossfade(visible: boolean) {
 function App() {
   const fontsReady = useCanopyTroveFonts();
   const [ageGateStatus, setAgeGateStatus] = React.useState<'checking' | 'required' | 'accepted'>(
-    'checking'
+    'checking',
   );
 
   const phase = useAppPhase(fontsReady, ageGateStatus);
+  const shouldRenderMain = fontsReady && ageGateStatus === 'accepted';
 
   const bootOpacity = useCrossfade(phase === 'boot');
   const ageGateOpacity = useCrossfade(phase === 'age-gate');
@@ -90,20 +91,34 @@ function App() {
       return;
     }
 
-    initializeRuntimeReporting();
+    // Prime storefront data immediately — it feeds the first visible screen.
+    void primeAppBootstrap();
 
-    void Promise.all([
-      initializeAnalytics(),
-      initializePostVisitPrompts().catch(() => undefined),
-      primeAppBootstrap(),
-      getRuntimeOpsStatus({ force: true }).catch(() => undefined),
-    ]);
+    // Defer non-critical services so they don't compete with first render.
+    // Tier 1 (1.5s): error monitoring + analytics — needed for all traffic.
+    const tier1Handle = setTimeout(() => {
+      void initializeSentryMonitoring();
+      initializeRuntimeReporting();
+      void initializeAnalytics();
+    }, 1500);
+
+    // Tier 2 (4s): features only useful for authenticated users — post-visit
+    // prompts (location services), runtime ops status (owner portal).
+    // These are heavier and anonymous browse traffic never needs them.
+    const tier2Handle = setTimeout(() => {
+      void initializePostVisitPrompts().catch(() => undefined);
+      void getRuntimeOpsStatus({ force: true }).catch(() => undefined);
+    }, 4000);
+
+    return () => {
+      clearTimeout(tier1Handle);
+      clearTimeout(tier2Handle);
+    };
   }, [ageGateStatus]);
 
   const handleAcceptAgeGate = React.useCallback(() => {
-    void acceptAgeGate().then(() => {
-      setAgeGateStatus('accepted');
-    });
+    setAgeGateStatus('accepted');
+    void acceptAgeGate();
   }, []);
 
   return (
@@ -117,7 +132,7 @@ function App() {
           </Animated.View>
         ) : null}
 
-        {phase === 'age-gate' || phase === 'boot' ? (
+        {phase === 'age-gate' ? (
           <Animated.View
             style={[styles.layer, { opacity: ageGateOpacity }]}
             pointerEvents={phase === 'age-gate' ? 'auto' : 'none'}
@@ -126,21 +141,18 @@ function App() {
           </Animated.View>
         ) : null}
 
-        {phase === 'main' || phase === 'age-gate' ? (
+        {shouldRenderMain ? (
           <Animated.View
             style={[styles.layer, { opacity: mainOpacity }]}
             pointerEvents={phase === 'main' ? 'auto' : 'none'}
           >
-            {ageGateStatus === 'accepted' ? (
-              <StorefrontControllerProvider>
-                <AppErrorBoundary area="main-navigation">
-                  <AnalyticsBridge />
-                  <FavoriteDealNotificationBridge />
-                  <RootNavigator />
-                  <GamificationRewardToastHost />
-                </AppErrorBoundary>
-              </StorefrontControllerProvider>
-            ) : null}
+            <StorefrontControllerProvider>
+              <AppErrorBoundary area="main-navigation">
+                <AnalyticsBridge />
+                <RootNavigator />
+                <GamificationRewardToastHost />
+              </AppErrorBoundary>
+            </StorefrontControllerProvider>
           </Animated.View>
         ) : null}
       </SafeAreaProvider>
@@ -157,4 +169,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default wrapAppWithSentry(App);
+export default App;

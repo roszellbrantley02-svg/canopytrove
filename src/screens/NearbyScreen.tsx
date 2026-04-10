@@ -194,11 +194,11 @@ function NearbyScreenInner() {
   return (
     <ScreenShell
       eyebrow="Nearby"
-      title="Closest verified storefronts."
+      title="Storefronts nearby"
       subtitle={
         hasNearbyOrigin
-          ? `Showing the closest verified storefronts near ${activeLocationLabel}.`
-          : 'Use your location or enter a ZIP code or address to view the closest verified storefronts.'
+          ? `Showing storefronts near ${activeLocationLabel}.`
+          : 'Use your location or enter a ZIP code, city, or address to see storefronts nearby.'
       }
       headerPill={currentLocationLabel}
       onBrandIconPress={handleUseDeviceLocation}
@@ -252,8 +252,8 @@ function NearbyScreenInner() {
       ) : !hasNearbyOrigin ? (
         <MotionInView delay={80}>
           <NearbyEmptyState
-            title="Set a nearby search area."
-            body="Nearby is built around the closest storefronts to your current location or to a ZIP code or address you enter."
+            title="Set your location"
+            body="Use your current location or enter a ZIP code, city, or address to see storefronts nearby."
             errorText={locationError}
             primaryLabel="Use Device Location"
             secondaryLabel="Enter Location"
@@ -264,8 +264,8 @@ function NearbyScreenInner() {
       ) : data.length === 0 ? (
         <MotionInView delay={80}>
           <NearbyEmptyState
-            title="No nearby storefronts found."
-            body="Canopy Trove could not find any verified storefronts close to this location yet."
+            title="No storefronts found nearby"
+            body="We could not find any storefronts close to this location yet."
             errorText={error}
             primaryLabel={error ? 'Try Again' : 'Refresh Location'}
             secondaryLabel="Change Location"

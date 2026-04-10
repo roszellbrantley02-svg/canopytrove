@@ -6,6 +6,7 @@ import {
   getStorefrontDiscoveryRuns,
   getStorefrontDiscoveryStatus,
   publishStorefrontDiscoveryCandidate,
+  refreshPublishedStorefrontWebsiteHours,
   runStorefrontDiscoverySweep,
   startStorefrontDiscoverySweepAsync,
 } from '../services/storefrontDiscoveryOrchestrationService';
@@ -30,6 +31,18 @@ function parseOptionalMarketId(value: unknown) {
 
   const trimmed = value.trim();
   return trimmed.length ? trimmed : null;
+}
+
+function parseOptionalIds(value: unknown) {
+  if (typeof value !== 'string') {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .slice(0, 200);
 }
 
 export const adminDiscoveryRoutes = Router();
@@ -152,6 +165,23 @@ adminDiscoveryRoutes.post('/candidates/:candidateId/publish', async (request, re
     response.status(message.includes('not found') ? 404 : 409).json({
       ok: false,
       error: message,
+    });
+  }
+});
+
+adminDiscoveryRoutes.post('/published/refresh-hours', async (request, response) => {
+  try {
+    response.json(
+      await refreshPublishedStorefrontWebsiteHours({
+        limit: parseOptionalLimit(request.query.limit, 50),
+        marketId: parseOptionalMarketId(request.query.marketId),
+        storefrontIds: parseOptionalIds(request.query.ids),
+      }),
+    );
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown storefront hours refresh failure',
     });
   }
 });

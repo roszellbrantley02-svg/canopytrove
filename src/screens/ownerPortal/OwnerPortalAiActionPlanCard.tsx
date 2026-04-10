@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import type { OwnerAiActionPlan } from '../../types/ownerPortal';
 import { ownerPortalStyles as styles } from './ownerPortalStyles';
@@ -13,18 +13,22 @@ export function OwnerPortalAiActionPlanCard({
   isLoading: boolean;
   onRefresh: () => void;
 }) {
+  const isAndroid = Platform.OS === 'android';
+
   return (
     <View style={styles.sectionStack}>
       <View style={styles.actionTile}>
         <View style={styles.splitHeaderRow}>
           <View style={styles.splitHeaderCopy}>
-            <Text style={styles.actionTileMeta}>AI operator</Text>
+            <Text style={styles.actionTileMeta}>Suggestions</Text>
             <Text style={styles.actionTileTitle}>
-              {actionPlan?.headline ?? 'Generate the next owner action plan'}
+              {actionPlan?.headline ?? 'Get a few smart next steps'}
             </Text>
             <Text style={styles.actionTileBody}>
               {actionPlan?.summary ??
-                'This generates a short operating plan from storefront metrics, reviews, promotions, and live owner signals.'}
+                (isAndroid
+                  ? 'We will pull together a short set of ideas based on your storefront activity, reviews, and updates.'
+                  : 'We will pull together a short set of ideas based on your storefront activity, reviews, and offers.')}
             </Text>
           </View>
           <AppUiIcon name="sparkles-outline" size={20} color="#F5C86A" />
@@ -51,8 +55,8 @@ export function OwnerPortalAiActionPlanCard({
         ) : null}
         <Text style={styles.resultMeta}>
           {actionPlan
-            ? `${actionPlan.usedFallback ? 'Fallback' : 'Model'} draft generated ${new Date(actionPlan.generatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}.`
-            : 'No AI action plan generated yet.'}
+            ? `Updated ${new Date(actionPlan.generatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}.`
+            : 'No suggestions yet.'}
         </Text>
         <Pressable
           onPress={onRefresh}
@@ -60,12 +64,16 @@ export function OwnerPortalAiActionPlanCard({
           style={[styles.secondaryButton, isLoading && styles.buttonDisabled]}
           accessibilityRole="button"
           accessibilityLabel={
-            isLoading ? 'Generating AI plan' : actionPlan ? 'Refresh AI plan' : 'Generate AI plan'
+            isLoading
+              ? 'Loading suggestions'
+              : actionPlan
+                ? 'Refresh suggestions'
+                : 'Get suggestions'
           }
-          accessibilityHint="Generates or refreshes the AI-powered action plan for your storefront."
+          accessibilityHint="Loads a fresh set of suggestions for your storefront."
         >
           <Text style={styles.secondaryButtonText}>
-            {isLoading ? 'Generating...' : actionPlan ? 'Refresh AI Plan' : 'Generate AI Plan'}
+            {isLoading ? 'Loading...' : actionPlan ? 'Refresh Suggestions' : 'Get Suggestions'}
           </Text>
         </Pressable>
       </View>

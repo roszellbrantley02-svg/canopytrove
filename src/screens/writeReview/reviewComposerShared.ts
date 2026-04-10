@@ -1,4 +1,5 @@
 export const MIN_REVIEW_TEXT_LENGTH = 20;
+export const MIN_EDIT_REVIEW_TEXT_LENGTH = 10;
 
 export const REVIEW_TAGS = [
   'Fast checkout',
@@ -40,9 +41,14 @@ export function parseGifUrl(value: string) {
   }
 }
 
-export function getReviewValidationError(textLength: number, gifUrlInput: string, photoCount = 0) {
-  if (textLength < MIN_REVIEW_TEXT_LENGTH) {
-    const remainingCharacters = MIN_REVIEW_TEXT_LENGTH - textLength;
+export function getReviewValidationError(
+  textLength: number,
+  gifUrlInput: string,
+  photoCount = 0,
+  minReviewTextLength = MIN_REVIEW_TEXT_LENGTH,
+) {
+  if (textLength < minReviewTextLength) {
+    const remainingCharacters = minReviewTextLength - textLength;
     return `Add at least ${remainingCharacters} more characters to submit.`;
   }
 
@@ -57,14 +63,18 @@ export function getReviewValidationError(textLength: number, gifUrlInput: string
   return null;
 }
 
-export function getReviewValidationHint(textLength: number, photoCount = 0) {
-  if (textLength < MIN_REVIEW_TEXT_LENGTH) {
-    const remainingCharacters = MIN_REVIEW_TEXT_LENGTH - textLength;
-    return `Add at least ${remainingCharacters} more characters to enable review submission.`;
+export function getReviewValidationHint(
+  textLength: number,
+  photoCount = 0,
+  minReviewTextLength = MIN_REVIEW_TEXT_LENGTH,
+) {
+  if (textLength < minReviewTextLength) {
+    const remainingCharacters = minReviewTextLength - textLength;
+    return `Add at least ${remainingCharacters} more characters before you post.`;
   }
 
   if (photoCount > 0) {
-    return `Photos are uploaded privately first and stay hidden until moderation approves them.`;
+    return `Photos stay private until they are approved.`;
   }
 
   return 'Review looks good. Submit when ready.';

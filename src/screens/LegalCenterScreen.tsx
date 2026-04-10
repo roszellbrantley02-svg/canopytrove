@@ -23,29 +23,38 @@ import {
   clearBlockedCommunityAuthors,
   getCommunitySafetyState,
   initializeCommunitySafetyState,
+  subscribeToCommunitySafetyState,
   unblockCommunityAuthor,
 } from '../services/communitySafetyService';
 import { customerSupportStyles as styles } from './customerSupport/customerSupportStyles';
 
 function LegalCenterScreenInner() {
-  const [blockedAuthorProfileIds, setBlockedAuthorProfileIds] = React.useState<string[]>([]);
+  const [communitySafetyState, setCommunitySafetyState] = React.useState(() =>
+    getCommunitySafetyState(),
+  );
 
   React.useEffect(() => {
     let alive = true;
 
     void initializeCommunitySafetyState().then((state) => {
       if (alive) {
-        setBlockedAuthorProfileIds(state.blockedAuthorProfileIds);
+        setCommunitySafetyState(state);
+      }
+    });
+    const unsubscribe = subscribeToCommunitySafetyState((state) => {
+      if (alive) {
+        setCommunitySafetyState(state);
       }
     });
 
     return () => {
       alive = false;
+      unsubscribe();
     };
   }, []);
 
   const refreshBlockedAuthors = React.useCallback(() => {
-    setBlockedAuthorProfileIds(getCommunitySafetyState().blockedAuthorProfileIds);
+    setCommunitySafetyState(getCommunitySafetyState());
   }, []);
 
   const openExternalLink = React.useCallback((url: string | null) => {
@@ -169,39 +178,50 @@ function LegalCenterScreenInner() {
         <SectionCard
           title="Blocked review authors"
           body={
-            blockedAuthorProfileIds.length
-              ? 'Blocked authors are hidden from review sections on this device.'
+            communitySafetyState.blockedReviewAuthors.length
+              ? 'Blocked authors are hidden from their matching storefront review sections on this account.'
               : 'No review authors are blocked right now.'
           }
         >
           <View style={styles.list}>
-            {blockedAuthorProfileIds.length === 0 ? (
+            {communitySafetyState.blockedReviewAuthors.length === 0 ? (
               <CustomerStateCard
                 title="No blocked review authors"
-                body="Your review feed is currently showing every author normally. If you block someone later, their reviews will be hidden on this device."
+                body="Your review feed is currently showing every author normally. If you block someone later, their reviews will be hidden on that storefront for this account."
                 tone="success"
                 iconName="shield-checkmark-outline"
                 eyebrow="Safety state"
               />
             ) : null}
-            {blockedAuthorProfileIds.map((profileId) => (
-              <View key={profileId} style={styles.resultCard}>
+            {communitySafetyState.blockedReviewAuthors.map((blockedAuthor) => (
+              <View
+                key={`${blockedAuthor.storefrontId}:${blockedAuthor.authorId}`}
+                style={styles.resultCard}
+              >
                 <Text style={styles.resultMeta}>Blocked author</Text>
-                <Text style={styles.resultTitle}>{profileId}</Text>
+                <Text style={styles.resultTitle}>{blockedAuthor.authorId}</Text>
+                <Text style={styles.helperText}>
+                  {blockedAuthor.storefrontName?.trim()
+                    ? `Storefront: ${blockedAuthor.storefrontName}`
+                    : `Storefront ID: ${blockedAuthor.storefrontId}`}
+                </Text>
                 <HapticPressable
                   onPress={() => {
-                    void unblockCommunityAuthor(profileId).then(refreshBlockedAuthors);
+                    void unblockCommunityAuthor({
+                      storefrontId: blockedAuthor.storefrontId,
+                      authorId: blockedAuthor.authorId,
+                    }).then(refreshBlockedAuthors);
                   }}
                   style={styles.secondaryButton}
                   accessibilityRole="button"
-                  accessibilityLabel={`Unblock ${profileId}`}
-                  accessibilityHint="Unblocks this author to see their reviews again."
+                  accessibilityLabel={`Unblock ${blockedAuthor.authorId}`}
+                  accessibilityHint="Unblocks this author so their reviews are visible again on that storefront."
                 >
                   <Text style={styles.secondaryButtonText}>Unblock</Text>
                 </HapticPressable>
               </View>
             ))}
-            {blockedAuthorProfileIds.length ? (
+            {communitySafetyState.blockedReviewAuthors.length ? (
               <HapticPressable
                 onPress={() => {
                   void clearBlockedCommunityAuthors().then(refreshBlockedAuthors);

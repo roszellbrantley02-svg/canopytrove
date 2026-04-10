@@ -29,9 +29,9 @@ export function OwnerPortalHomeRoiSection({
       <InlineFeedbackPanel
         tone="info"
         iconName="stats-chart-outline"
-        label="Workspace state"
-        title="Loading owner metrics"
-        body="Canopy Trove is assembling the storefront analytics and operator signal stack."
+        label="Storefront activity"
+        title="Loading your storefront activity"
+        body="Pulling together recent views, taps, and review activity."
       />
     );
   }
@@ -41,8 +41,8 @@ export function OwnerPortalHomeRoiSection({
       <InlineFeedbackPanel
         tone="danger"
         iconName="alert-circle-outline"
-        label="Workspace issue"
-        title="Owner metrics could not load"
+        label="Storefront activity"
+        title="Could not load storefront activity"
         body={errorText}
       />
     );
@@ -59,23 +59,23 @@ export function OwnerPortalHomeRoiSection({
           <Text style={styles.summaryTileValue}>
             {formatCount(workspace.metrics.storefrontImpressions7d)}
           </Text>
-          <Text style={styles.summaryTileLabel}>Visibility 7D</Text>
+          <Text style={styles.summaryTileLabel}>Views This Week</Text>
           <Text style={styles.summaryTileBody}>
-            App impressions generated for this storefront in the last week.
+            How often people saw this storefront in the app this week.
           </Text>
         </View>
         <View style={styles.summaryTile}>
           <Text style={styles.summaryTileValue}>{formatRate(metrics.openRate)}</Text>
           <Text style={styles.summaryTileLabel}>Open Rate</Text>
           <Text style={styles.summaryTileBody}>
-            Share of storefront views that turned into listing opens.
+            How often a storefront view turned into a full open.
           </Text>
         </View>
         <View style={styles.summaryTile}>
           <Text style={styles.summaryTileValue}>{formatCount(metrics.totalActions7d)}</Text>
-          <Text style={styles.summaryTileLabel}>Action Intent 7D</Text>
+          <Text style={styles.summaryTileLabel}>Customer Actions</Text>
           <Text style={styles.summaryTileBody}>
-            Route, website, {Platform.OS === 'android' ? 'website,' : 'menu,'} and phone intent
+            Directions, website, {Platform.OS === 'android' ? 'website,' : 'menu,'} and phone taps
             combined.
           </Text>
         </View>
@@ -83,34 +83,31 @@ export function OwnerPortalHomeRoiSection({
           <Text style={styles.summaryTileValue}>
             {workspace.metrics.averageRating?.toFixed(1) ?? 'New'}
           </Text>
-          <Text style={styles.summaryTileLabel}>Trust Signal</Text>
-          <Text style={styles.summaryTileBody}>
-            Average rating with owner response quality layered in.
-          </Text>
+          <Text style={styles.summaryTileLabel}>Average Rating</Text>
+          <Text style={styles.summaryTileBody}>The rating customers currently see.</Text>
         </View>
       </View>
 
       <View style={styles.analyticsSectionCard}>
         <View style={styles.analyticsSectionHeader}>
-          <Text style={styles.analyticsSectionEyebrow}>Visibility and discovery</Text>
+          <Text style={styles.analyticsSectionEyebrow}>Reach</Text>
           <Text style={styles.analyticsSectionTitle}>
-            The premium listing story starts with reach, attention, and retention.
+            Start with how many people are seeing and opening your storefront.
           </Text>
           <Text style={styles.analyticsSectionBody}>
-            These KPIs tell you how often the storefront is surfaced and whether customers are
-            staying close enough to act later.
+            These numbers show how often people discover your storefront and how often they tap in.
           </Text>
         </View>
         <View style={styles.metricGrid}>
           <OwnerPortalAnalyticsCard
-            body="How often Canopy Trove surfaced this storefront across customer discovery surfaces."
+            body="How often your storefront appeared across the app."
             eyebrow="Reach"
             icon="sparkles-outline"
             progress={getRelativeProgress(
               workspace.metrics.storefrontImpressions7d,
               metrics.visibilityMax,
             )}
-            progressLabel="Relative visibility inside this owner KPI set"
+            progressLabel="Compared with your other storefront numbers"
             stats={[
               { label: 'Store opens', value: formatCount(workspace.metrics.storefrontOpenCount7d) },
               { label: 'Open rate', value: formatRate(metrics.openRate) },
@@ -120,11 +117,11 @@ export function OwnerPortalHomeRoiSection({
             value={formatCount(workspace.metrics.storefrontImpressions7d)}
           />
           <OwnerPortalAnalyticsCard
-            body="Customers who opened the storefront after seeing it in the app."
+            body="How many people opened the storefront after seeing it in the app."
             eyebrow="Attention"
             icon="open-outline"
             progress={clampProgress(metrics.openRate / 100)}
-            progressLabel="View-to-open conversion"
+            progressLabel="Share of views that become storefront opens"
             stats={[
               {
                 label: 'From views',
@@ -137,13 +134,20 @@ export function OwnerPortalHomeRoiSection({
             value={formatCount(workspace.metrics.storefrontOpenCount7d)}
           />
           <OwnerPortalAnalyticsCard
-            body="People ready to hear when a new deal or premium placement goes live."
-            eyebrow="Retention"
+            body={
+              Platform.OS === 'android'
+                ? 'People who saved the storefront and may come back for future updates.'
+                : 'People who saved the storefront and may come back for future offers.'
+            }
+            eyebrow="Saved"
             icon="bookmark-outline"
             progress={getRelativeProgress(workspace.metrics.followerCount, metrics.visibilityMax)}
-            progressLabel="Saved audience depth"
+            progressLabel="Size of your saved audience"
             stats={[
-              { label: 'Active offers', value: formatCount(metrics.activePromotionCount) },
+              {
+                label: Platform.OS === 'android' ? 'Active updates' : 'Active offers',
+                value: formatCount(metrics.activePromotionCount),
+              },
               { label: 'Reviews 30D', value: formatCount(workspace.metrics.reviewCount30d) },
             ]}
             title="Saved Followers"
@@ -151,8 +155,8 @@ export function OwnerPortalHomeRoiSection({
             value={formatCount(workspace.metrics.followerCount)}
           />
           <OwnerPortalAnalyticsCard
-            body="Fresh social proof generated from active customer visits in the last month."
-            eyebrow="Proof"
+            body="Recent customer reviews that help build trust."
+            eyebrow="Reviews"
             icon="chatbubble-ellipses-outline"
             progress={getRelativeProgress(workspace.metrics.reviewCount30d, metrics.visibilityMax)}
             progressLabel="Recent review activity"
@@ -172,24 +176,22 @@ export function OwnerPortalHomeRoiSection({
 
       <View style={styles.analyticsSectionCard}>
         <View style={styles.analyticsSectionHeader}>
-          <Text style={styles.analyticsSectionEyebrow}>Action mix</Text>
+          <Text style={styles.analyticsSectionEyebrow}>What customers do next</Text>
           <Text style={styles.analyticsSectionTitle}>
-            Customer intent is easier to scan when each action has a role.
+            See which actions people take after opening your storefront.
           </Text>
           <Text style={styles.analyticsSectionBody}>
-            Use the mix below to see whether traffic is leaning toward navigation, website
-            exploration,{' '}
-            {Platform.OS === 'android' ? 'additional website visits,' : 'menu browsing,'} or direct
-            phone contact.
+            This makes it easier to tell whether people want directions, want to browse more, or
+            want to contact you directly.
           </Text>
         </View>
         <View style={styles.metricGrid}>
           <OwnerPortalAnalyticsCard
-            body="Customers starting directions to visit the storefront."
-            eyebrow="Visit intent"
+            body="People starting directions to visit the storefront."
+            eyebrow="Directions"
             icon="navigate-outline"
             progress={getRelativeProgress(workspace.metrics.routeStarts7d, metrics.actionMixMax)}
-            progressLabel="Share of total action mix"
+            progressLabel="Share of total customer actions"
             stats={[
               { label: 'Open to route', value: formatRate(workspace.metrics.openToRouteRate) },
               { label: '7D total', value: formatCount(metrics.totalActions7d) },
@@ -199,14 +201,14 @@ export function OwnerPortalHomeRoiSection({
             value={formatCount(workspace.metrics.routeStarts7d)}
           />
           <OwnerPortalAnalyticsCard
-            body="Outbound taps from the storefront into the business website."
-            eyebrow="Web intent"
+            body="People leaving the storefront to visit your website."
+            eyebrow="Website"
             icon="globe-outline"
             progress={getRelativeProgress(
               workspace.metrics.websiteTapCount7d,
               metrics.actionMixMax,
             )}
-            progressLabel="Share of total action mix"
+            progressLabel="Share of total customer actions"
             stats={[
               { label: 'Open to site', value: formatRate(workspace.metrics.openToWebsiteRate) },
               { label: 'Store opens', value: formatCount(workspace.metrics.storefrontOpenCount7d) },
@@ -218,13 +220,13 @@ export function OwnerPortalHomeRoiSection({
           <OwnerPortalAnalyticsCard
             body={
               Platform.OS === 'android'
-                ? 'Customers choosing to visit the business website from the listing.'
-                : 'Shoppers choosing to inspect live menu inventory from the listing.'
+                ? 'People opening the business website from the storefront.'
+                : 'People checking the live menu from the storefront.'
             }
-            eyebrow={Platform.OS === 'android' ? 'Website intent' : 'Menu intent'}
+            eyebrow={Platform.OS === 'android' ? 'Website' : 'Menu'}
             icon="restaurant-outline"
             progress={getRelativeProgress(workspace.metrics.menuTapCount7d, metrics.actionMixMax)}
-            progressLabel="Share of total action mix"
+            progressLabel="Share of total customer actions"
             stats={[
               {
                 label: Platform.OS === 'android' ? 'Open to site' : 'Open to menu',
@@ -237,14 +239,17 @@ export function OwnerPortalHomeRoiSection({
             value={formatCount(workspace.metrics.menuTapCount7d)}
           />
           <OwnerPortalAnalyticsCard
-            body="Customers escalating to direct phone contact from the storefront."
-            eyebrow="Direct contact"
+            body="People calling the business from the storefront."
+            eyebrow="Calls"
             icon="call-outline"
             progress={getRelativeProgress(workspace.metrics.phoneTapCount7d, metrics.actionMixMax)}
-            progressLabel="Share of total action mix"
+            progressLabel="Share of total customer actions"
             stats={[
               { label: 'Open to phone', value: formatRate(workspace.metrics.openToPhoneRate) },
-              { label: 'Active offers', value: formatCount(metrics.activePromotionCount) },
+              {
+                label: Platform.OS === 'android' ? 'Active updates' : 'Active offers',
+                value: formatCount(metrics.activePromotionCount),
+              },
             ]}
             title="Phone Taps 7D"
             tone="rose"
@@ -255,23 +260,23 @@ export function OwnerPortalHomeRoiSection({
 
       <View style={styles.analyticsSectionCard}>
         <View style={styles.analyticsSectionHeader}>
-          <Text style={styles.analyticsSectionEyebrow}>Operator signals</Text>
+          <Text style={styles.analyticsSectionEyebrow}>Store health</Text>
           <Text style={styles.analyticsSectionTitle}>
-            The paid side feels strongest when trust, responsiveness, and campaign energy stay
-            readable at a glance.
+            {Platform.OS === 'android'
+              ? 'Keep an eye on reputation, replies, reports, and live updates.'
+              : 'Keep an eye on reputation, replies, reports, and live offers.'}
           </Text>
           <Text style={styles.analyticsSectionBody}>
-            These signals balance reputation quality, moderation load, and live offer momentum
-            without changing any underlying owner logic.
+            These signals help you spot what needs attention without digging through every section.
           </Text>
         </View>
         <View style={styles.metricGrid}>
           <OwnerPortalAnalyticsCard
-            body="Average customer sentiment across recent Canopy Trove reviews."
-            eyebrow="Reputation"
+            body="Your average customer rating from recent reviews."
+            eyebrow="Rating"
             icon="star-outline"
             progress={clampProgress((workspace.metrics.averageRating ?? 0) / 5)}
-            progressLabel="Five-star scale"
+            progressLabel="Based on a five-star scale"
             stats={[
               { label: 'Reply rate', value: formatRate(workspace.metrics.replyRate * 100) },
               { label: 'Reviews 30D', value: formatCount(workspace.metrics.reviewCount30d) },
@@ -281,11 +286,11 @@ export function OwnerPortalHomeRoiSection({
             value={workspace.metrics.averageRating?.toFixed(1) ?? 'New'}
           />
           <OwnerPortalAnalyticsCard
-            body="Recent reviews that already received an owner response."
-            eyebrow="Response quality"
+            body="How often recent reviews already have a reply."
+            eyebrow="Replies"
             icon="send-outline"
             progress={clampProgress(workspace.metrics.replyRate)}
-            progressLabel="Replied share of recent reviews"
+            progressLabel="Share of recent reviews with replies"
             stats={[
               {
                 label: 'Low-rating focus',
@@ -300,14 +305,14 @@ export function OwnerPortalHomeRoiSection({
             value={formatRate(workspace.metrics.replyRate * 100)}
           />
           <OwnerPortalAnalyticsCard
-            body="Moderation issues still waiting on owner follow-up."
-            eyebrow="Risk load"
+            body="Reports that still need attention."
+            eyebrow="Reports"
             icon="warning-outline"
             progress={getRelativeProgress(
               workspace.metrics.openReportCount,
               metrics.responseMixMax,
             )}
-            progressLabel="Relative moderation pressure"
+            progressLabel="How many reports still need attention"
             stats={[
               { label: 'Recent reports', value: formatCount(workspace.recentReports.length) },
               { label: 'Recent reviews', value: formatCount(workspace.recentReviews.length) },
@@ -317,14 +322,22 @@ export function OwnerPortalHomeRoiSection({
             value={formatCount(workspace.metrics.openReportCount)}
           />
           <OwnerPortalAnalyticsCard
-            body="Promotions currently carrying live paid visibility or action opportunity."
-            eyebrow="Campaign pace"
+            body={
+              Platform.OS === 'android'
+                ? 'Updates that are currently live for customers.'
+                : 'Offers that are currently live for customers.'
+            }
+            eyebrow={Platform.OS === 'android' ? 'Updates' : 'Offers'}
             icon="pricetags-outline"
             progress={getRelativeProgress(metrics.activePromotionCount, metrics.responseMixMax)}
-            progressLabel="Live promotion presence"
+            progressLabel={
+              Platform.OS === 'android'
+                ? 'How many updates are live right now'
+                : 'How many offers are live right now'
+            }
             stats={[
               {
-                label: 'Tracked offers',
+                label: Platform.OS === 'android' ? 'Tracked updates' : 'Tracked offers',
                 value: formatCount(workspace.promotionPerformance.length),
               },
               {
@@ -334,7 +347,7 @@ export function OwnerPortalHomeRoiSection({
                   : '0%',
               },
             ]}
-            title="Active Offers"
+            title={Platform.OS === 'android' ? 'Active Updates' : 'Active Offers'}
             tone="cyan"
             value={formatCount(metrics.activePromotionCount)}
           />
@@ -345,11 +358,14 @@ export function OwnerPortalHomeRoiSection({
         <View style={styles.analyticsSpotlightCard}>
           <View style={styles.analyticsSpotlightHeader}>
             <View style={styles.splitHeaderCopy}>
-              <Text style={styles.sectionEyebrow}>Top offer right now</Text>
+              <Text style={styles.sectionEyebrow}>
+                {Platform.OS === 'android' ? 'Top update right now' : 'Top offer right now'}
+              </Text>
               <Text style={styles.splitHeaderTitle}>{metrics.topPromotion.title}</Text>
               <Text style={styles.analyticsSpotlightBody}>
-                The current leader combines the strongest action rate with the best mix of
-                visibility and downstream storefront intent.
+                {Platform.OS === 'android'
+                  ? 'This is the update getting the strongest response right now.'
+                  : 'This is the offer getting the strongest response right now.'}
               </Text>
             </View>
             <AppUiIcon name="trophy-outline" size={22} color="#F5C86A" />
@@ -372,7 +388,9 @@ export function OwnerPortalHomeRoiSection({
             />
           </View>
           <Text style={styles.metricProgressLabel}>
-            Action rate across the current promotion set
+            {Platform.OS === 'android'
+              ? 'Action rate across the current update set'
+              : 'Action rate across the current promotion set'}
           </Text>
           <View style={styles.analyticsInlineStats}>
             <View style={styles.analyticsInlineStat}>
@@ -410,10 +428,13 @@ export function OwnerPortalHomeRoiSection({
         </View>
       ) : (
         <View style={styles.emptyStateCard}>
-          <Text style={styles.emptyStateTitle}>No promotion leader yet</Text>
+          <Text style={styles.emptyStateTitle}>
+            {Platform.OS === 'android' ? 'No standout update yet' : 'No standout offer yet'}
+          </Text>
           <Text style={styles.emptyStateBody}>
-            Once owner offers start receiving meaningful activity, the best-performing promotion
-            will be highlighted here for faster scanning.
+            {Platform.OS === 'android'
+              ? 'Once your updates start getting activity, the best-performing one will show up here.'
+              : 'Once your offers start getting activity, the best-performing one will show up here.'}
           </Text>
         </View>
       )}
@@ -421,17 +442,16 @@ export function OwnerPortalHomeRoiSection({
       {workspace.patternFlags.length ? (
         <View style={styles.analyticsSectionCard}>
           <View style={styles.analyticsSectionHeader}>
-            <Text style={styles.analyticsSectionEyebrow}>Signals to act on</Text>
+            <Text style={styles.analyticsSectionEyebrow}>Worth your attention</Text>
             <Text style={styles.analyticsSectionTitle}>
-              The next owner tasks worth attention surface here first.
+              The next things worth checking show up here first.
             </Text>
             <Text style={styles.analyticsSectionBody}>
-              These alerts keep moderation, promotion, and review priorities readable without
-              changing any existing decision logic.
+              Use these notes to decide what to fix or follow up on next.
             </Text>
           </View>
           <View style={styles.list}>
-            <Text style={styles.resultTitle}>Signals to act on</Text>
+            <Text style={styles.resultTitle}>What to look at next</Text>
             {workspace.patternFlags.map((flag) => (
               <View
                 key={flag.id}
@@ -452,10 +472,11 @@ export function OwnerPortalHomeRoiSection({
         </View>
       ) : (
         <View style={styles.emptyStateCard}>
-          <Text style={styles.emptyStateTitle}>No urgent owner signals</Text>
+          <Text style={styles.emptyStateTitle}>Nothing urgent right now</Text>
           <Text style={styles.emptyStateBody}>
-            Review, moderation, and promotion signals are currently calm. This section will surface
-            the next issues worth acting on first.
+            {Platform.OS === 'android'
+              ? 'Reviews, reports, and updates all look calm right now. If something needs attention, it will show up here first.'
+              : 'Reviews, reports, and offers all look calm right now. If something needs attention, it will show up here first.'}
           </Text>
         </View>
       )}

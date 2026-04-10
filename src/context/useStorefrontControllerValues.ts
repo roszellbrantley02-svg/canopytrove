@@ -15,6 +15,7 @@ type UseStorefrontControllerValuesArgs = {
   profileId: string;
   signOutSession: StorefrontProfileControllerValue['signOutSession'];
   startGuestSession: StorefrontProfileControllerValue['startGuestSession'];
+  repairProfileForCurrentSession: StorefrontProfileControllerValue['repairProfileForCurrentSession'];
   deleteAccount: StorefrontProfileControllerValue['deleteAccount'];
   updateDisplayName: StorefrontProfileControllerValue['updateDisplayName'];
   clearDisplayName: StorefrontProfileControllerValue['clearDisplayName'];
@@ -34,6 +35,7 @@ export function useStorefrontControllerValues({
   profileId,
   signOutSession,
   startGuestSession,
+  repairProfileForCurrentSession,
   deleteAccount,
   updateDisplayName,
   clearDisplayName,
@@ -61,6 +63,7 @@ export function useStorefrontControllerValues({
       profileId,
       signOutSession,
       startGuestSession,
+      repairProfileForCurrentSession,
       deleteAccount,
       updateDisplayName,
     }),
@@ -71,6 +74,7 @@ export function useStorefrontControllerValues({
       deleteAccount,
       isStartingGuestSession,
       profileId,
+      repairProfileForCurrentSession,
       signOutSession,
       startGuestSession,
       updateDisplayName,

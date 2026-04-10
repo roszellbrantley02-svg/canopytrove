@@ -29,6 +29,7 @@ export function fromStorefrontSummaryApiDocument(
     rating: document.rating,
     reviewCount: document.reviewCount,
     openNow: typeof document.openNow === 'boolean' ? document.openNow : null,
+    hours: normalizeStorefrontHours(document.hours),
     isVerified: document.isVerified,
     mapPreviewLabel: document.mapPreviewLabel,
     promotionText: document.promotionText ?? null,
@@ -82,6 +83,7 @@ export function fromStorefrontDetailApiDocument(
     appReviews: document.appReviews.map((review) => ({
       ...review,
       authorProfileId: review.authorProfileId ?? null,
+      isOwnReview: review.isOwnReview ?? false,
       gifUrl: review.gifUrl ?? null,
       photoUrls: [...(review.photoUrls ?? [])],
       tags: [...review.tags],

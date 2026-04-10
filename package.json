@@ -1,6 +1,6 @@
 {
   "name": "canopytrove",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -24,8 +24,8 @@
     "generate:ocm-verified-seed": "node ./scripts/generate-ocm-verified-seed.mjs",
     "audit:deps": "node ./scripts/audit-deps.mjs",
     "audit:deps:strict": "node ./scripts/audit-deps.mjs --strict",
-    "check:all": "npx tsc --noEmit && npm run test:frontend-core && npm run test:frontend-integration && npm run test:rules && npm --prefix backend test && npm --prefix backend run check",
-    "release:check": "node ./scripts/check-release-readiness.mjs --production && npm --prefix backend run release:check && npm run audit:deps",
+    "check:all": "npm run precheck:strict && npm run test:frontend-core && npm run test:frontend-integration && npm run test:rules && npm --prefix backend test && npm --prefix backend run check",
+    "release:check": "node ./scripts/check-release-readiness.mjs --production && npm --prefix backend run release:check -- --production && npm run audit:deps",
     "hosting:firebase:serve": "npx firebase-tools emulators:start --only hosting",
     "hosting:firebase:deploy": "npx firebase-tools deploy --only hosting",
     "lint": "eslint .",
@@ -59,6 +59,7 @@
     "expo-secure-store": "~14.2.3",
     "expo-status-bar": "~55.0.5",
     "expo-task-manager": "~55.0.12",
+    "expo-updates": "~55.0.19",
     "firebase": "^12.11.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
@@ -80,7 +81,7 @@
     "eslint-plugin-react": "^7.37.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-native": "^5.0.0",
-    "firebase-tools": "^15.12.0",
+    "firebase-tools": "^15.13.0",
     "husky": "^9.1.0",
     "lint-staged": "^16.1.0",
     "prettier": "^3.5.0",
@@ -88,6 +89,11 @@
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.58.0",
     "vitest": "^4.1.1"
+  },
+  "overrides": {
+    "@hono/node-server": "^1.19.13",
+    "basic-ftp": "^5.2.1",
+    "hono": "^4.12.12"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

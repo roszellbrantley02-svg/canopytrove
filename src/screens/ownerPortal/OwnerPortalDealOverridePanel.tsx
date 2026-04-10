@@ -14,7 +14,7 @@ import {
 import { OwnerPortalDealBadgeEditor } from './OwnerPortalDealBadgeEditor';
 import { ownerPortalStyles as styles } from './ownerPortalStyles';
 
-const QUICK_BADGES = ['10% Off', '20% Off', 'Today Only', 'Fresh Drop', 'Bundle Deal'];
+const QUICK_BADGES = ['Open Late', 'Today Only', 'Fresh Drop', 'Community Event', 'Weekend Update'];
 const DURATION_OPTIONS = [
   { label: '2h', hours: 2 },
   { label: '6h', hours: 6 },
@@ -154,7 +154,7 @@ export function OwnerPortalDealOverridePanel({
 
   const handleApplyToAll = React.useCallback(async () => {
     if (!normalizedBatchBadges.length) {
-      setStatusText('Add at least one badge before applying a test deal to every preview card.');
+      setStatusText('Add at least one badge before applying a test update to every preview card.');
       return;
     }
 
@@ -175,11 +175,11 @@ export function OwnerPortalDealOverridePanel({
         })),
       );
       setStatusText(
-        `Applied ${saved.length} temporary hot-deal override${saved.length === 1 ? '' : 's'} across ${storefrontCatalog.length} preview card${storefrontCatalog.length === 1 ? '' : 's'}.`,
+        `Applied ${saved.length} temporary update override${saved.length === 1 ? '' : 's'} across ${storefrontCatalog.length} preview card${storefrontCatalog.length === 1 ? '' : 's'}.`,
       );
     } catch (error) {
       setStatusText(
-        error instanceof Error ? error.message : 'Unable to apply the preview deal override.',
+        error instanceof Error ? error.message : 'Unable to apply the preview update override.',
       );
     } finally {
       setIsSavingAll(false);
@@ -194,10 +194,10 @@ export function OwnerPortalDealOverridePanel({
       await clearAllStorefrontPromotionOverrides();
       setBatchBadges([]);
       setBatchBadgeDraft('');
-      setStatusText('Cleared every temporary hot-deal preview override.');
+      setStatusText('Cleared the sample update from every preview storefront.');
     } catch (error) {
       setStatusText(
-        error instanceof Error ? error.message : 'Unable to clear the preview deal overrides.',
+        error instanceof Error ? error.message : 'Unable to clear the sample update right now.',
       );
     } finally {
       setIsSavingAll(false);
@@ -207,13 +207,12 @@ export function OwnerPortalDealOverridePanel({
   return (
     <View style={styles.form}>
       <Text style={styles.helperText}>
-        This is the preview override lab for your test owner storefront set. It does not replace the
-        claimed-store editor above, and it keeps quick hot-deal testing separate from the full
-        promotion planner.
+        Use this preview area to try a sample update across demo storefront cards. It stays separate
+        from your live storefront settings.
       </Text>
 
       <View style={styles.form}>
-        <Text style={styles.statusLabel}>Open any preview storefront card</Text>
+        <Text style={styles.statusLabel}>Choose a preview storefront</Text>
         <TextInput
           value={searchText}
           onChangeText={setSearchText}
@@ -223,10 +222,10 @@ export function OwnerPortalDealOverridePanel({
         />
         {catalogError ? <Text style={styles.errorText}>{catalogError}</Text> : null}
         {isLoadingCatalog ? (
-          <Text style={styles.helperText}>Loading preview storefront cards...</Text>
+          <Text style={styles.helperText}>Loading preview storefronts...</Text>
         ) : null}
         {!isLoadingCatalog && !visibleStorefronts.length ? (
-          <Text style={styles.helperText}>No preview storefront cards match this search.</Text>
+          <Text style={styles.helperText}>No preview storefronts match this search.</Text>
         ) : null}
         <View style={styles.list}>
           {visibleStorefronts.map((storefront) => {
@@ -244,7 +243,7 @@ export function OwnerPortalDealOverridePanel({
                   </Text>
                 </View>
                 <Text style={styles.helperText}>
-                  {selected ? 'Open in override panel below' : 'Tap to open this card below'}
+                  {selected ? 'Selected below' : 'Choose this storefront'}
                 </Text>
               </Pressable>
             );
@@ -253,7 +252,7 @@ export function OwnerPortalDealOverridePanel({
         {filteredStorefronts.length > visibleStorefronts.length ? (
           <Text style={styles.helperText}>
             Showing {visibleStorefronts.length} of {filteredStorefronts.length} matching preview
-            cards.
+            storefronts.
           </Text>
         ) : null}
       </View>
@@ -271,9 +270,9 @@ export function OwnerPortalDealOverridePanel({
       <View style={styles.sectionDivider} />
 
       <View style={styles.form}>
-        <Text style={styles.statusLabel}>Apply one test hot deal to every preview card</Text>
+        <Text style={styles.statusLabel}>Apply one test update to every preview card</Text>
         <Text style={styles.helperText}>
-          Use this when you want to see the whole app light up at once with the main deal lane.
+          Use this when you want to see the whole app light up at once with the main updates lane.
           These overrides stay local to this preview build until you clear them.
         </Text>
 
@@ -281,7 +280,7 @@ export function OwnerPortalDealOverridePanel({
           <TextInput
             value={batchBadgeDraft}
             onChangeText={setBatchBadgeDraft}
-            placeholder="Add a badge like 20% Off"
+            placeholder="Add a badge like Open Late"
             placeholderTextColor={colors.textSoft}
             style={[styles.input, styles.inlineInput]}
             maxLength={24}

@@ -50,8 +50,8 @@ export class AppErrorBoundary extends React.Component<
     return (
       <View style={styles.container}>
         <ErrorRecoveryCard
-          title="This part of the app hit a runtime error."
-          message="The app caught the failure so the whole experience did not crash. Try loading this area again."
+          title="This part of the app ran into a problem."
+          message="The rest of the app is still okay. Try opening this section again."
           onRetry={this.handleRetry}
           retryLabel="Try Again"
         />

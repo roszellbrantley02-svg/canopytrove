@@ -10,6 +10,7 @@
     "check": "tsc -p tsconfig.json --noEmit",
     "release:check": "tsx ./scripts/check-release-readiness.ts",
     "migrate:legacy-storefront-media": "tsx ./scripts/migrate-legacy-storefront-media.ts",
+    "refresh:published-hours": "tsx ./scripts/refresh-published-hours.ts",
     "test": "tsx --test src/**/*.test.ts",
     "favorite-deals:dispatch": "tsx src/scripts/dispatchFavoriteDealAlerts.ts",
     "smoke": "node ./scripts/smoke-api.mjs",
@@ -21,6 +22,7 @@
     "dotenv": "^17.3.1",
     "express": "^5.1.0",
     "firebase-admin": "^13.7.0",
+    "sharp": "^0.33.5",
     "svix": "^1.89.0"
   },
   "devDependencies": {

@@ -15,6 +15,7 @@ export type StorefrontSummaryApiDocument = {
   rating: number;
   reviewCount: number;
   openNow: boolean | null;
+  hours?: string[];
   isVerified: boolean;
   mapPreviewLabel: string;
   promotionText?: string | null;
@@ -60,6 +61,7 @@ export type StorefrontDetailApiDocument = {
     id: string;
     authorName: string;
     authorProfileId: string | null;
+    isOwnReview?: boolean;
     rating: number;
     relativeTime: string;
     text: string;

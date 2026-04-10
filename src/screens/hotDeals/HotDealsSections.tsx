@@ -1,5 +1,12 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { InlineFeedbackPanel } from '../../components/InlineFeedbackPanel';
 import { MotionInView } from '../../components/MotionInView';
@@ -36,6 +43,7 @@ export function HotDealsFilters({
   sortKey: BrowseSortKey;
   setSortKey: (value: BrowseSortKey) => void;
 }) {
+  const isAndroid = Platform.OS === 'android';
   const { width } = useWindowDimensions();
   const compactHeader = width < 390;
   const activeDealSearchQuery = dealSearchQuery.trim();
@@ -45,12 +53,16 @@ export function HotDealsFilters({
       <View style={styles.filters}>
         <View style={[styles.filtersHeader, compactHeader && styles.filtersHeaderCompact]}>
           <View style={styles.filtersHeaderCopy}>
-            <Text style={styles.filtersEyebrow}>Offers view</Text>
-            <Text style={styles.filtersTitle}>Refine active promotions</Text>
+            <Text style={styles.filtersEyebrow}>{isAndroid ? 'Updates view' : 'Offers view'}</Text>
+            <Text style={styles.filtersTitle}>
+              {isAndroid ? 'Refine recent storefront updates' : 'Refine active promotions'}
+            </Text>
           </View>
           <View style={[styles.filtersPill, compactHeader && styles.filtersPillCompact]}>
             <AppUiIcon name="pricetag-outline" size={14} color={colors.textSoft} />
-            <Text style={styles.filtersPillText}>Live offers</Text>
+            <Text style={styles.filtersPillText}>
+              {isAndroid ? 'Recent updates' : 'Live offers'}
+            </Text>
           </View>
         </View>
         <SearchField
@@ -67,7 +79,11 @@ export function HotDealsFilters({
             style={styles.locationButton}
             accessibilityRole="button"
             accessibilityLabel="Apply location"
-            accessibilityHint="Applies the location to filter deals."
+            accessibilityHint={
+              isAndroid
+                ? 'Applies the location to filter updates.'
+                : 'Applies the location to filter deals.'
+            }
           >
             {isResolvingLocation ? <ActivityIndicator size="small" color="#06130c" /> : null}
             <Text style={styles.locationButtonText}>
@@ -89,7 +105,7 @@ export function HotDealsFilters({
         <SearchField
           value={dealSearchQuery}
           onChangeText={setDealSearchQuery}
-          placeholder="Search deal or storefront"
+          placeholder={isAndroid ? 'Search update or storefront' : 'Search deal or storefront'}
           isActive={Boolean(activeDealSearchQuery)}
         />
 
@@ -132,21 +148,45 @@ export function HotDealsFilters({
 }
 
 export function HotDealsEmptyState({ errorText }: { errorText?: string | null }) {
+  const isAndroid = Platform.OS === 'android';
+
   return (
     <MotionInView delay={180}>
       <CustomerStateCard
-        title={errorText ? 'Offers could not refresh right now.' : 'No live offers found.'}
+        title={
+          errorText
+            ? isAndroid
+              ? 'Updates could not refresh right now.'
+              : 'Offers could not refresh right now.'
+            : isAndroid
+              ? 'No recent updates found.'
+              : 'No live offers found.'
+        }
         body={
           errorText ??
-          'Active promotions show up here when a storefront in the current area is running something live.'
+          (isAndroid
+            ? 'Recent owner updates show up here when a storefront in the current area posts something new.'
+            : 'Active promotions show up here when a storefront in the current area is running something live.')
         }
         tone={errorText ? 'danger' : 'warm'}
         iconName={errorText ? 'alert-circle-outline' : 'pricetag-outline'}
-        eyebrow={errorText ? 'Offers issue' : 'Offers state'}
+        eyebrow={
+          errorText
+            ? isAndroid
+              ? 'Updates issue'
+              : 'Offers issue'
+            : isAndroid
+              ? 'Updates state'
+              : 'Offers state'
+        }
         note={
           errorText
-            ? 'The last stable offer state stayed in place. Try again in a moment or widen the area.'
-            : 'Widen the area, broaden the search, or check back when the next promotion cycle goes live.'
+            ? isAndroid
+              ? 'The last stable updates state stayed in place. Try again in a moment or widen the area.'
+              : 'The last stable offer state stayed in place. Try again in a moment or widen the area.'
+            : isAndroid
+              ? 'Widen the area, broaden the search, or check back when storefronts publish something new.'
+              : 'Widen the area, broaden the search, or check back when the next promotion cycle goes live.'
         }
       />
     </MotionInView>
@@ -160,19 +200,37 @@ export function HotDealsMemberGate({
   onOpenMemberSignIn: () => void;
   onOpenMemberSignUp: () => void;
 }) {
+  const isAndroid = Platform.OS === 'android';
+
   return (
     <MotionInView delay={180}>
       <CustomerStateCard
-        title="Member access required for live deals."
-        body="Live deals are now member-only. Sign in to view current promotions, follow storefronts, and get notified when your favorite licensed dispensaries post something new."
+        title={
+          isAndroid
+            ? 'Member access required for updates.'
+            : 'Member access required for live deals.'
+        }
+        body={
+          isAndroid
+            ? 'Recent storefront updates are member-only. Sign in to view current owner-posted activity, follow storefronts, and get notified when your favorite licensed dispensaries share something new.'
+            : 'Live deals are now member-only. Sign in to view current promotions, follow storefronts, and get notified when your favorite licensed dispensaries post something new.'
+        }
         tone="warm"
         iconName="lock-closed-outline"
         eyebrow="Members only"
-        note="Storefront discovery stays public. Live deals browsing stays reserved for signed-in members."
+        note={
+          isAndroid
+            ? 'Storefront discovery stays public. Updates browsing stays reserved for signed-in members.'
+            : 'Live deals browsing stays reserved for signed-in members.'
+        }
       >
         <View style={styles.memberGateActions}>
           <Pressable
-            accessibilityLabel="Sign in to view members-only live deals"
+            accessibilityLabel={
+              isAndroid
+                ? 'Sign in to view members-only updates'
+                : 'Sign in to view members-only live deals'
+            }
             accessibilityRole="button"
             accessibilityHint="Opens the sign in screen."
             onPress={onOpenMemberSignIn}
@@ -181,7 +239,11 @@ export function HotDealsMemberGate({
             <Text style={styles.memberGatePrimaryButtonText}>Sign In</Text>
           </Pressable>
           <Pressable
-            accessibilityLabel="Create a Canopy Trove account to unlock members-only live deals"
+            accessibilityLabel={
+              isAndroid
+                ? 'Create a Canopy Trove account to unlock members-only updates'
+                : 'Create a Canopy Trove account to unlock members-only live deals'
+            }
             accessibilityRole="button"
             accessibilityHint="Opens the account creation screen."
             onPress={onOpenMemberSignUp}
@@ -228,6 +290,8 @@ export function HotDealsList({
   isLoading: boolean;
   onLoadMore: () => void;
 }) {
+  const isAndroid = Platform.OS === 'android';
+
   return (
     <View style={styles.list}>
       {items.map((item, index) => (
@@ -243,6 +307,7 @@ export function HotDealsList({
             onPress={() => onOpenDetail(item)}
             onPrimaryActionPress={() => onGoNow(item)}
             onSecondaryActionPress={() => onOpenDetail(item)}
+            imagePriority={index < 3 ? 'high' : 'low'}
           />
         </MotionInView>
       ))}
@@ -256,8 +321,8 @@ export function HotDealsList({
           >
             <Text style={styles.loadMoreButtonText}>
               {isLoading
-                ? `Loading More Offers (${items.length} of ${dataTotal})`
-                : `Load More Offers (${items.length} of ${dataTotal})`}
+                ? `Loading More ${isAndroid ? 'Updates' : 'Offers'} (${items.length} of ${dataTotal})`
+                : `Load More ${isAndroid ? 'Updates' : 'Offers'} (${items.length} of ${dataTotal})`}
             </Text>
           </Pressable>
         </MotionInView>

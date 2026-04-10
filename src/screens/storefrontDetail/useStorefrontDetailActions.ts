@@ -1,6 +1,7 @@
 import React from 'react';
 import { Linking, Platform } from 'react-native';
 import { crossPlatformAlert } from '../../utils/crossPlatformAlert';
+import { getPlatformSafeStorefrontOutboundLinks } from './storefrontDetailHelpers';
 
 /** Open a URL in a web-safe way. On web, use window.open with a
  *  location.href fallback (mobile browsers block popups outside the
@@ -51,7 +52,7 @@ function buildReviewModerationDescription(review: AppReview) {
 
   return [
     `Review ${review.id} was flagged from the storefront detail screen.`,
-    `Author: ${review.authorName}${review.authorProfileId ? ` (${review.authorProfileId})` : ''}.`,
+    `Author: ${review.authorName}.`,
     `Rating: ${review.rating.toFixed(1)}.`,
     excerpt ? `Excerpt: "${excerpt}".` : null,
     'Reason: Possible harassment, spam, illegal claim, or other abusive content.',
@@ -88,6 +89,15 @@ export function useStorefrontDetailActions({
 }: UseStorefrontDetailActionsArgs) {
   const [pendingHelpfulReviewId, setPendingHelpfulReviewId] = React.useState<string | null>(null);
   const [pendingReviewReportId, setPendingReviewReportId] = React.useState<string | null>(null);
+  const safeOutboundLinks = React.useMemo(
+    () =>
+      getPlatformSafeStorefrontOutboundLinks({
+        platform: Platform.OS,
+        website: detailData.website,
+        menuUrl: detailData.menuUrl,
+      }),
+    [detailData.menuUrl, detailData.website],
+  );
 
   React.useEffect(() => {
     void markStorefrontAsRecent(storefront.id);
@@ -130,7 +140,7 @@ export function useStorefrontDetailActions({
   }, [storefront.activePromotionId, storefront.id]);
 
   const openWebsite = React.useCallback(async () => {
-    if (!detailData.website) {
+    if (!safeOutboundLinks.websiteUrl) {
       return;
     }
 
@@ -145,8 +155,8 @@ export function useStorefrontDetailActions({
         dealId: storefront.activePromotionId ?? undefined,
       },
     );
-    await openUrl(detailData.website);
-  }, [detailData.website, storefront.activePromotionId, storefront.id]);
+    await openUrl(safeOutboundLinks.websiteUrl);
+  }, [safeOutboundLinks.websiteUrl, storefront.activePromotionId, storefront.id]);
 
   const callStore = React.useCallback(async () => {
     if (!detailData.phone) {
@@ -168,7 +178,7 @@ export function useStorefrontDetailActions({
   }, [detailData.phone, storefront.activePromotionId, storefront.id]);
 
   const openMenu = React.useCallback(async () => {
-    if (!detailData.menuUrl) {
+    if (!safeOutboundLinks.menuUrl) {
       return;
     }
 
@@ -183,8 +193,8 @@ export function useStorefrontDetailActions({
         dealId: storefront.activePromotionId ?? undefined,
       },
     );
-    await openUrl(detailData.menuUrl);
-  }, [detailData.menuUrl, storefront.activePromotionId, storefront.id]);
+    await openUrl(safeOutboundLinks.menuUrl);
+  }, [safeOutboundLinks.menuUrl, storefront.activePromotionId, storefront.id]);
 
   const goNow = React.useCallback(async () => {
     trackAnalyticsEvent(
@@ -222,9 +232,42 @@ export function useStorefrontDetailActions({
     });
   }, [authSession.status, authSession.uid, profileId, storefront]);
 
+  const promptCommunitySignIn = React.useCallback(
+    (actionLabel: string) => {
+      if (authSession.status === 'disabled') {
+        crossPlatformAlert(
+          'Sign in unavailable',
+          `${actionLabel} requires a signed-in account, but sign-in is not available in this build right now.`,
+          [{ text: 'OK', style: 'cancel' }],
+        );
+        return;
+      }
+
+      crossPlatformAlert(
+        'Sign in required',
+        `You need to sign in before you can ${actionLabel.toLowerCase()}.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign In',
+            onPress: () => navigation.navigate('Tabs', { screen: 'Profile' }),
+          },
+        ],
+      );
+    },
+    [authSession.status, navigation],
+  );
+
   const markReviewHelpful = React.useCallback(
-    async (reviewId: string, reviewAuthorProfileId: string | null) => {
+    async (reviewId: string, isOwnReview?: boolean) => {
       if (pendingHelpfulReviewId === reviewId) {
+        return;
+      }
+      if (isOwnReview) {
+        return;
+      }
+      if (authSession.status !== 'authenticated') {
+        promptCommunitySignIn('Mark this review as helpful');
         return;
       }
 
@@ -234,18 +277,22 @@ export function useStorefrontDetailActions({
           storefrontId: storefront.id,
           reviewId,
           profileId,
-          reviewAuthorProfileId,
+          isOwnReview,
         });
       } finally {
         setPendingHelpfulReviewId((current) => (current === reviewId ? null : current));
       }
     },
-    [pendingHelpfulReviewId, profileId, storefront.id],
+    [authSession.status, pendingHelpfulReviewId, profileId, promptCommunitySignIn, storefront.id],
   );
 
   const submitReviewReport = React.useCallback(
     async (review: AppReview) => {
-      if (pendingReviewReportId === review.id || review.authorProfileId === profileId) {
+      if (pendingReviewReportId === review.id || review.isOwnReview) {
+        return;
+      }
+      if (authSession.status !== 'authenticated') {
+        promptCommunitySignIn('Report a review');
         return;
       }
 
@@ -259,6 +306,10 @@ export function useStorefrontDetailActions({
           authorName: getReportAuthorName(appProfile),
           reason: 'Review content issue',
           description: buildReviewModerationDescription(review),
+          reportTarget: 'review',
+          reportedReviewId: review.id,
+          reportedReviewAuthorName: review.authorName,
+          reportedReviewExcerpt: review.text.trim().replace(/\s+/g, ' ').slice(0, 180),
         });
 
         trackAnalyticsEvent(
@@ -275,7 +326,7 @@ export function useStorefrontDetailActions({
         );
 
         onReviewModerationStatusChange?.(
-          'Review reported. The moderation queue has the flagged review and supporting context now.',
+          'Review reported. Our team now has the flagged review and your notes.',
         );
       } catch (error) {
         onReviewModerationStatusChange?.(
@@ -287,18 +338,30 @@ export function useStorefrontDetailActions({
         setPendingReviewReportId((current) => (current === review.id ? null : current));
       }
     },
-    [appProfile, onReviewModerationStatusChange, pendingReviewReportId, profileId, storefront.id],
+    [
+      appProfile,
+      authSession.status,
+      onReviewModerationStatusChange,
+      pendingReviewReportId,
+      profileId,
+      promptCommunitySignIn,
+      storefront.id,
+    ],
   );
 
   const reportReview = React.useCallback(
     (review: AppReview) => {
-      if (review.authorProfileId === profileId) {
+      if (review.isOwnReview) {
+        return;
+      }
+      if (authSession.status !== 'authenticated') {
+        promptCommunitySignIn('Report a review');
         return;
       }
 
       crossPlatformAlert(
         'Report this review?',
-        'Use reports for harassment, spam, illegal claims, or other abusive content. Block only hides the author on this device.',
+        'Use reports for harassment, spam, illegal claims, or other abusive content. Block only hides the author on this storefront for your account.',
         [
           {
             text: 'Cancel',
@@ -314,7 +377,7 @@ export function useStorefrontDetailActions({
         ],
       );
     },
-    [profileId, submitReviewReport],
+    [authSession.status, promptCommunitySignIn, submitReviewReport],
   );
 
   return {
@@ -333,8 +396,8 @@ export function useStorefrontDetailActions({
     goNow: () => {
       void goNow();
     },
-    markReviewHelpful: (reviewId: string, reviewAuthorProfileId: string | null) => {
-      void markReviewHelpful(reviewId, reviewAuthorProfileId);
+    markReviewHelpful: (reviewId: string, isOwnReview?: boolean) => {
+      void markReviewHelpful(reviewId, isOwnReview);
     },
     reportReview,
     openWebsite: () => {

@@ -1,6 +1,6 @@
 import { colors } from '../../theme/tokens';
 import React from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { StorefrontRouteCard } from '../../components/StorefrontRouteCard';
 import {
   clearStorefrontPromotionOverride,
@@ -18,6 +18,13 @@ import {
 import { ownerPortalStyles as styles } from './ownerPortalStyles';
 
 const QUICK_BADGES = ['10% Off', '20% Off', 'Today Only', 'Fresh Drop', 'Bundle Deal'];
+const ANDROID_QUICK_BADGES = [
+  'Open Late',
+  'New Hours',
+  'Community Event',
+  'Fresh Today',
+  'Weekend Update',
+];
 const DURATION_OPTIONS = [
   { label: '2h', hours: 2 },
   { label: '6h', hours: 6 },
@@ -31,6 +38,7 @@ type OwnerPortalDealBadgeEditorProps = {
 };
 
 export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeEditorProps) {
+  const isAndroid = Platform.OS === 'android';
   const initialBadges = React.useMemo(
     () =>
       getStorefrontPromotionBadges({
@@ -89,6 +97,7 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
 
   const canAddBadge =
     Boolean(badgeDraft.trim()) && normalizedBadges.length < MAX_STOREFRONT_PROMOTION_BADGES;
+  const quickBadges = isAndroid ? ANDROID_QUICK_BADGES : QUICK_BADGES;
   const customDurationHours = Number.parseInt(customDurationInput.trim(), 10);
   const hasCustomDuration =
     Number.isFinite(customDurationHours) && customDurationHours >= 1 && customDurationHours <= 720;
@@ -117,15 +126,25 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
       setExpiresAt(override?.expiresAt ?? null);
       setStatusText(
         override
-          ? 'Live deal badges saved. Nearby, Browse, and the Hot Deals lane will refresh with this storefront update.'
-          : 'All live deal badges were cleared from this storefront.',
+          ? isAndroid
+            ? 'Update badges saved. Nearby, Browse, and the Updates lane will refresh with this storefront update.'
+            : 'Live deal badges saved. Nearby, Browse, and the Hot Deals lane will refresh with this storefront update.'
+          : isAndroid
+            ? 'All update badges were cleared from this storefront.'
+            : 'All live deal badges were cleared from this storefront.',
       );
     } catch (error) {
-      setStatusText(error instanceof Error ? error.message : 'Unable to save live deal badges.');
+      setStatusText(
+        error instanceof Error
+          ? error.message
+          : isAndroid
+            ? 'Unable to save update badges.'
+            : 'Unable to save live deal badges.',
+      );
     } finally {
       setIsSaving(false);
     }
-  }, [durationHours, normalizedBadges, storefront.id]);
+  }, [durationHours, isAndroid, normalizedBadges, storefront.id]);
 
   const handleClear = React.useCallback(async () => {
     setIsSaving(true);
@@ -135,13 +154,23 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
       await clearStorefrontPromotionOverride(storefront.id);
       setBadges([]);
       setExpiresAt(null);
-      setStatusText('Live deal badges cleared from this storefront.');
+      setStatusText(
+        isAndroid
+          ? 'Update badges cleared from this storefront.'
+          : 'Live deal badges cleared from this storefront.',
+      );
     } catch (error) {
-      setStatusText(error instanceof Error ? error.message : 'Unable to clear live deal badges.');
+      setStatusText(
+        error instanceof Error
+          ? error.message
+          : isAndroid
+            ? 'Unable to clear update badges.'
+            : 'Unable to clear live deal badges.',
+      );
     } finally {
       setIsSaving(false);
     }
-  }, [storefront.id]);
+  }, [isAndroid, storefront.id]);
 
   return (
     <View style={styles.form}>
@@ -149,22 +178,24 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
         storefront={previewStorefront}
         variant="feature"
         primaryActionLabel="Go Now"
-        secondaryActionLabel="View Shop"
+        secondaryActionLabel={isAndroid ? 'Website' : 'View Shop'}
         onPrimaryActionPress={() => undefined}
         onSecondaryActionPress={() => undefined}
       />
 
       <Text style={styles.helperText}>
-        Add up to {MAX_STOREFRONT_PROMOTION_BADGES} short badges. Any active badge stack turns the
-        card into the hot-deal lane automatically. Use the planner above when you want the separate
-        owner-highlight treatment instead.
+        Add up to {MAX_STOREFRONT_PROMOTION_BADGES} short badges. When badges are live, this card
+        can appear in the {isAndroid ? 'Updates' : 'Hot Deals'} area.{' '}
+        {isAndroid
+          ? 'Keep badge text informational on Android and avoid prices, discounts, or order language.'
+          : 'Use the offer editor above if you want a fuller featured promotion instead.'}
       </Text>
 
       <View style={styles.inlineActionRow}>
         <TextInput
           value={badgeDraft}
           onChangeText={setBadgeDraft}
-          placeholder="Add a badge like 20% Off"
+          placeholder={isAndroid ? 'Add a badge like Open Late' : 'Add a badge like 20% Off'}
           placeholderTextColor={colors.textSoft}
           style={[styles.input, styles.inlineInput]}
           maxLength={24}
@@ -183,7 +214,7 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
       </View>
 
       <View style={styles.row}>
-        {QUICK_BADGES.map((badge) => (
+        {quickBadges.map((badge) => (
           <Pressable
             key={badge}
             disabled={normalizedBadges.length >= MAX_STOREFRONT_PROMOTION_BADGES}
@@ -224,13 +255,19 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
           ))
         ) : (
           <Text style={styles.helperText}>
-            No live badges yet. Add one to turn the card into a hot deal.
+            {isAndroid
+              ? 'No update badges yet. Add one to turn the card into a highlighted update.'
+              : 'No live badges yet. Add one to turn the card into a hot deal.'}
           </Text>
         )}
       </View>
 
       <View style={styles.form}>
-        <Text style={styles.statusLabel}>How long should this deal stay live?</Text>
+        <Text style={styles.statusLabel}>
+          {isAndroid
+            ? 'How long should this update stay highlighted?'
+            : 'How long should this deal stay live?'}
+        </Text>
         <View style={styles.row}>
           {DURATION_OPTIONS.map((option) => {
             const selected = option.hours === durationHours;
@@ -292,7 +329,9 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
             isSaving && styles.buttonDisabled,
           ]}
         >
-          <Text style={styles.primaryButtonText}>{isSaving ? 'Saving...' : 'Save Deal'}</Text>
+          <Text style={styles.primaryButtonText}>
+            {isSaving ? 'Saving...' : isAndroid ? 'Save Update' : 'Save Deal'}
+          </Text>
         </Pressable>
         <Pressable
           disabled={isSaving || normalizedBadges.length === 0}
@@ -305,7 +344,9 @@ export function OwnerPortalDealBadgeEditor({ storefront }: OwnerPortalDealBadgeE
             (isSaving || normalizedBadges.length === 0) && styles.buttonDisabled,
           ]}
         >
-          <Text style={styles.secondaryButtonText}>Clear Hot Deal</Text>
+          <Text style={styles.secondaryButtonText}>
+            {isAndroid ? 'Clear Update' : 'Clear Hot Deal'}
+          </Text>
         </Pressable>
       </View>
     </View>

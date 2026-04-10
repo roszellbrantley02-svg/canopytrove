@@ -14,11 +14,12 @@ Ready now:
 - Android adaptive icon, monochrome icon, and intent filters configured in app.json
 - EAS production build profile configured for Android
 - Age gate (21+) integrated at app entry
-- Deep linking with Android App Links verified via `.well-known/assetlinks.json`
+- Android App Links file published at `.well-known/assetlinks.json`
 
 Still needed:
 
 - Google Play developer account ($25 one-time enrollment)
+- Replace the placeholder SHA-256 fingerprint in `.well-known/assetlinks.json` with the real Android release signing fingerprint, then verify App Links
 - Android screenshot set rendered at Play Store required dimensions
 - IARC content rating questionnaire completed in Play Console
 - Real Play Console store listing entered
@@ -48,10 +49,10 @@ Key features:
 
 - Browse licensed dispensaries by location, distance, or category
 - View hours, contact info, photos, and verified licensing details
-- Save favorites and get notified about new deals at saved storefronts
+- Save favorites and get notified about new updates at saved storefronts
 - Read and write thoughtful community reviews with photo support
 - Private tools for verified dispensary operators (claim listing, manage
-  promotions, respond to reviews)
+  updates, respond to reviews)
 
 Canopy Trove is not an ordering, checkout, or delivery platform. The product is
 positioned around licensed storefront discovery, trusted details, favorites,
@@ -59,7 +60,7 @@ alerts, and community reviews. No in-app purchasing of cannabis products occurs.
 
 Canopy Trove includes private tools for verified dispensary operators managing a
 claimed storefront. Those owner tools cover listing management, review follow-up,
-promotions, verification, and billing for the business workspace.
+owner updates, verification, and business-workspace billing status.
 
 ### Category
 
@@ -79,7 +80,7 @@ Answer these questions in the Google Play Console IARC questionnaire:
 | Does the app facilitate the sale of drugs or controlled substances? | No                                          | The app is discovery-only. No cart, no ordering, no delivery. Users navigate to dispensary websites externally.                    |
 | Does the app contain user-generated content?                        | Yes                                         | Community reviews with photos (moderated before publishing).                                                                       |
 | Does the app share the user's location?                             | Yes — approximate and precise, with consent | Used to find nearby dispensaries. Standard location permission flow.                                                               |
-| Does the app contain in-app purchases?                              | Yes                                         | Owner portal subscription ($49/month or $490/year) for dispensary operators. Consumer use is free.                                 |
+| Does the app contain in-app purchases?                              | No                                          | The Android build does not initiate owner-plan checkout or billing management inside the app. Consumer use stays free.             |
 
 Expected IARC rating: **Mature 17+** or equivalent (varies by region).
 
@@ -190,6 +191,7 @@ Google Play requires a 1024 x 500 feature graphic. Create one with:
 4. Create the 1024x500 feature graphic.
 5. Complete the IARC content rating questionnaire using the answers above.
 6. Fill in the Data Safety section using the table above.
-7. Run `eas build --platform android --profile production` to generate the AAB.
-8. Upload the AAB to the production track.
-9. Submit for review.
+7. Insert the real Android release signing SHA-256 fingerprint into `.well-known/assetlinks.json`.
+8. Run `eas build --platform android --profile production` to generate the AAB.
+9. Upload the AAB to the production track.
+10. Submit for review.

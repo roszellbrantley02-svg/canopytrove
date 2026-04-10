@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { InlineFeedbackPanel } from '../../components/InlineFeedbackPanel';
 import type { OwnerProfileDocument } from '../../types/ownerPortal';
 import type { OwnerPortalHomeSummaryTile } from './ownerPortalHomeData';
@@ -33,14 +33,16 @@ export function OwnerPortalHomeProfileSection({
   ownerProfile: OwnerProfileDocument | null;
   profileSummaryTiles: OwnerPortalHomeSummaryTile[];
 }) {
+  const isAndroid = Platform.OS === 'android';
+
   if (isLoading) {
     return (
       <InlineFeedbackPanel
         tone="info"
         iconName="time-outline"
-        label="Workspace state"
-        title="Loading owner profile"
-        body="Loading the current owner profile."
+        label="Business profile"
+        title="Loading your business details"
+        body="Pulling in the current business profile."
       />
     );
   }
@@ -50,8 +52,8 @@ export function OwnerPortalHomeProfileSection({
       <InlineFeedbackPanel
         tone="danger"
         iconName="alert-circle-outline"
-        label="Workspace issue"
-        title="Owner profile could not load"
+        label="Business profile"
+        title="Could not load your business details"
         body={errorText}
       />
     );
@@ -62,9 +64,13 @@ export function OwnerPortalHomeProfileSection({
       <InlineFeedbackPanel
         tone="warning"
         iconName="briefcase-outline"
-        label="Workspace state"
-        title="No owner profile found"
-        body="Finish owner setup to unlock deals, media, and storefront tools."
+        label="Business profile"
+        title="Your business profile is not ready yet"
+        body={
+          isAndroid
+            ? 'Finish setup to unlock storefront photos, updates, and business tools.'
+            : 'Finish setup to unlock storefront photos, offers, and business tools.'
+        }
       />
     );
   }
@@ -75,11 +81,13 @@ export function OwnerPortalHomeProfileSection({
       ? ownerProfile.legalName
       : ownerProfile.phone
         ? ownerProfile.phone
-        : 'Primary owner profile';
-  const storefrontState = ownerProfile.dispensaryId ? 'Connected' : 'Unclaimed';
+        : 'Business account';
+  const storefrontState = ownerProfile.dispensaryId ? 'Connected' : 'Not connected';
   const storefrontBody = ownerProfile.dispensaryId
     ? ownerProfile.dispensaryId
-    : 'Claim the live listing to unlock storefront controls.';
+    : isAndroid
+      ? 'Connect your storefront to start editing photos, details, and updates.'
+      : 'Connect your storefront to start editing photos, details, and offers.';
   const workspaceChipLabel = ownerProfile.dispensaryId
     ? 'Storefront connected'
     : 'Setup in progress';
@@ -95,7 +103,7 @@ export function OwnerPortalHomeProfileSection({
             </View>
             <View style={styles.ownerProfileIdentityCopy}>
               <View style={styles.ownerProfileKickerRow}>
-                <Text style={styles.sectionEyebrow}>Owner profile</Text>
+                <Text style={styles.sectionEyebrow}>Business profile</Text>
                 <View style={styles.ownerProfileLiveChip}>
                   <Text style={styles.ownerProfileLiveChipText}>{workspaceChipLabel}</Text>
                 </View>
@@ -109,26 +117,26 @@ export function OwnerPortalHomeProfileSection({
             </View>
           </View>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>Owner level {ownerProfile.badgeLevel}</Text>
+            <Text style={styles.badgeText}>Level {ownerProfile.badgeLevel}</Text>
           </View>
         </View>
         <Text style={styles.portalHeroBody}>
-          Track verification, storefront connection, and plan status from one owner profile.
+          Keep your business details, storefront connection, and plan status in one place.
         </Text>
         <View style={styles.ownerProfileStatusGrid}>
           <View style={styles.ownerProfileStatusCard}>
             <Text style={styles.ownerProfileStatusValue}>
               {formatOwnerValue(ownerProfile.businessVerificationStatus)}
             </Text>
-            <Text style={styles.ownerProfileStatusLabel}>Business status</Text>
-            <Text style={styles.ownerProfileStatusBody}>Company verification on file.</Text>
+            <Text style={styles.ownerProfileStatusLabel}>Business approval</Text>
+            <Text style={styles.ownerProfileStatusBody}>Where your business review stands.</Text>
           </View>
           <View style={styles.ownerProfileStatusCard}>
             <Text style={styles.ownerProfileStatusValue}>
               {formatOwnerValue(ownerProfile.identityVerificationStatus)}
             </Text>
-            <Text style={styles.ownerProfileStatusLabel}>Identity status</Text>
-            <Text style={styles.ownerProfileStatusBody}>Authorized operator verification.</Text>
+            <Text style={styles.ownerProfileStatusLabel}>Identity</Text>
+            <Text style={styles.ownerProfileStatusBody}>Your owner verification status.</Text>
           </View>
           <View style={styles.ownerProfileStatusCard}>
             <Text style={styles.ownerProfileStatusValue}>{storefrontState}</Text>
@@ -171,30 +179,30 @@ export function OwnerPortalHomeProfileSection({
           <Text style={styles.detailTileValue} numberOfLines={2} ellipsizeMode="tail">
             {ownerProfile.legalName || 'Not added'}
           </Text>
-          <Text style={styles.detailTileBody}>Business identity on file.</Text>
+          <Text style={styles.detailTileBody}>The business name tied to this account.</Text>
         </View>
         <View style={styles.detailTile}>
-          <Text style={styles.detailTileLabel}>Contact line</Text>
+          <Text style={styles.detailTileLabel}>Contact number</Text>
           <Text style={styles.detailTileValue} numberOfLines={1} ellipsizeMode="tail">
             {ownerProfile.phone || 'Not added'}
           </Text>
-          <Text style={styles.detailTileBody}>Primary owner contact.</Text>
+          <Text style={styles.detailTileBody}>The best number to reach the business.</Text>
         </View>
         <View style={styles.detailTile}>
-          <Text style={styles.detailTileLabel}>Storefront link</Text>
+          <Text style={styles.detailTileLabel}>Storefront connection</Text>
           <Text style={styles.detailTileValue} numberOfLines={1} ellipsizeMode="tail">
             {ownerProfile.dispensaryId ? 'Connected' : 'Not claimed yet'}
           </Text>
           <Text style={styles.detailTileBody} numberOfLines={2} ellipsizeMode="middle">
-            {ownerProfile.dispensaryId ?? 'Claim the listing to unlock live storefront control.'}
+            {ownerProfile.dispensaryId ?? 'Connect your storefront to unlock live edits.'}
           </Text>
         </View>
         <View style={styles.detailTile}>
-          <Text style={styles.detailTileLabel}>Setup step</Text>
+          <Text style={styles.detailTileLabel}>Next step</Text>
           <Text style={styles.detailTileValue} numberOfLines={2} ellipsizeMode="tail">
             {formatOwnerValue(ownerProfile.onboardingStep)}
           </Text>
-          <Text style={styles.detailTileBody}>Current owner setup step.</Text>
+          <Text style={styles.detailTileBody}>Where you left off in setup.</Text>
         </View>
       </View>
     </View>

@@ -136,7 +136,7 @@ function createFallbackChecklist(): OwnerPortalLicenseComplianceCheckItem[] {
       id: 'submission-plan',
       label: 'Submission plan ready',
       completed: false,
-      detail: 'Use this workspace to stage notes, reminders, and renewal follow-up.',
+      detail: 'Use this area to keep notes, reminders, and renewal follow-up in one place.',
     },
   ];
 }

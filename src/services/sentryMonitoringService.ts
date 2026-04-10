@@ -1,5 +1,4 @@
 import type { ComponentType } from 'react';
-import * as Sentry from '@sentry/react-native';
 import { analyticsRuntimeState } from './analyticsRuntimeState';
 
 type MonitoringContext = {
@@ -9,6 +8,24 @@ type MonitoringContext = {
   tags?: Record<string, string>;
   extras?: Record<string, unknown>;
 };
+
+// Lazy-loaded Sentry SDK — keeps ~1MB out of the critical render path on web.
+// The SDK is dynamically imported on first use so it doesn't block FCP/LCP.
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+type SentryModule = typeof import('@sentry/react-native');
+let _sentry: SentryModule | null = null;
+let _sentryLoadPromise: Promise<SentryModule> | null = null;
+
+function loadSentry(): Promise<SentryModule> {
+  if (_sentry) return Promise.resolve(_sentry);
+  if (!_sentryLoadPromise) {
+    _sentryLoadPromise = import('@sentry/react-native').then((mod) => {
+      _sentry = mod;
+      return mod;
+    });
+  }
+  return _sentryLoadPromise;
+}
 
 function readConfiguredValue(value: string | null | undefined) {
   const normalizedValue = value?.trim();
@@ -45,10 +62,12 @@ function normalizeError(error: unknown) {
   return new Error(typeof error === 'string' ? error : 'Unknown runtime error');
 }
 
-export function initializeSentryMonitoring() {
+export async function initializeSentryMonitoring() {
   if (sentryInitialized || !sentryDsn) {
     return;
   }
+
+  const Sentry = await loadSentry();
 
   Sentry.init({
     dsn: sentryDsn,
@@ -69,10 +88,11 @@ export function isSentryMonitoringEnabled() {
 }
 
 export function captureMonitoringException(error: unknown, context?: MonitoringContext) {
-  if (!sentryInitialized || !sentryDsn) {
+  if (!sentryInitialized || !_sentry || !sentryDsn) {
     return;
   }
 
+  const Sentry = _sentry;
   const normalizedError = normalizeError(error);
 
   try {
@@ -112,5 +132,8 @@ export function captureMonitoringException(error: unknown, context?: MonitoringC
 }
 
 export function wrapAppWithSentry<T extends ComponentType<unknown>>(component: T) {
-  return Sentry.wrap(component) as T;
+  // On web, skip wrapping — Sentry loads lazily after first render.
+  // On native, Sentry.wrap() is applied once the SDK is ready.
+  if (!_sentry) return component;
+  return _sentry.wrap(component) as T;
 }

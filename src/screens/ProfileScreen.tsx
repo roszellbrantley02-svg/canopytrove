@@ -1,16 +1,27 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Constants from 'expo-constants';
 import { MotionInView } from '../components/MotionInView';
-import { ScreenShell } from '../components/ScreenShell';
 import { QuickActionsRow, type QuickAction } from '../components/QuickActionsRow';
+import { ScreenShell } from '../components/ScreenShell';
+import { SectionCard } from '../components/SectionCard';
 import { SectionHeader } from '../components/SectionHeader';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
-import { AppUiIcon } from '../icons/AppUiIcon';
-import Constants from 'expo-constants';
 import { brand } from '../config/brand';
 import { ownerPortalAccessAvailable } from '../config/ownerPortalConfig';
+import { useStorefrontProfileController } from '../context/StorefrontController';
+import { useOwnerPortalAccessState } from '../hooks/useOwnerPortalAccessState';
+import { AppUiIcon } from '../icons/AppUiIcon';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, radii, motion, spacing, textStyles } from '../theme/tokens';
 import {
@@ -21,6 +32,359 @@ import {
 import { useProfileScreenModel } from './profile/useProfileScreenModel';
 
 function ProfileScreenInner() {
+  const { authSession } = useStorefrontProfileController();
+  const { accessState, isCheckingAccess } = useOwnerPortalAccessState(authSession);
+  const ownerPortalUiAvailable = ownerPortalAccessAvailable || Platform.OS === 'web';
+  const ownerWorkspaceReady =
+    ownerPortalUiAvailable &&
+    authSession.status === 'authenticated' &&
+    accessState.allowlisted &&
+    !isCheckingAccess;
+
+  if (authSession.status === 'checking') {
+    return (
+      <ProfileLoadingScreen
+        title="Checking your account"
+        body="Opening the right profile view for this session."
+      />
+    );
+  }
+
+  if (authSession.status === 'authenticated' && ownerPortalAccessAvailable && isCheckingAccess) {
+    return (
+      <ProfileLoadingScreen
+        title="Checking your account role"
+        body="Making sure this session opens the right side of the profile."
+      />
+    );
+  }
+
+  if (ownerWorkspaceReady) {
+    return <OwnerProfileWorkspace />;
+  }
+
+  if (authSession.status !== 'authenticated') {
+    return <ProfileEntryWorkspace />;
+  }
+
+  return <MemberProfileWorkspace />;
+}
+
+function ProfileLoadingScreen({ title, body }: { title: string; body: string }) {
+  return (
+    <ScreenShell
+      eyebrow="Profile"
+      title={title}
+      subtitle={body}
+      headerPill="Profile"
+      showHero={false}
+    >
+      <SectionCard title="Loading profile" body={body}>
+        <View style={internalStyles.loadingCard}>
+          <ActivityIndicator size="small" color={colors.accent} />
+          <Text style={internalStyles.loadingText}>One moment.</Text>
+        </View>
+      </SectionCard>
+    </ScreenShell>
+  );
+}
+
+function ProfileEntryWorkspace() {
+  const isAndroid = Platform.OS === 'android';
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const ownerPortalUiAvailable = ownerPortalAccessAvailable || Platform.OS === 'web';
+
+  return (
+    <ScreenShell
+      eyebrow="Profile"
+      title="Choose your account"
+      subtitle="Sign in as a member or as an owner. Once you sign in, this tab stays on the right side of the profile until you sign out."
+      headerPill="Profile"
+    >
+      <MotionInView delay={70}>
+        <SectionCard
+          title="Member access"
+          body="Use the member side for saved storefronts, reviews, badges, and personal settings."
+        >
+          <View style={internalStyles.entryCardHeader}>
+            <View style={internalStyles.entryIconMember}>
+              <AppUiIcon name="person-circle-outline" size={20} color={colors.accent} />
+            </View>
+            <View style={internalStyles.entryCopy}>
+              <Text style={internalStyles.entryTitle}>Customer account</Text>
+              <Text style={internalStyles.entryBody}>
+                Sign in as a member if this profile is for browsing, saving storefronts, and writing
+                reviews.
+              </Text>
+            </View>
+          </View>
+          <View style={internalStyles.entryActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Member sign in"
+              onPress={() => navigation.navigate('CanopyTroveSignIn')}
+              style={({ pressed }) => [
+                internalStyles.primaryButton,
+                pressed && internalStyles.buttonPressed,
+              ]}
+            >
+              <Text style={internalStyles.primaryButtonText}>Member Sign In</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Create member account"
+              onPress={() => navigation.navigate('CanopyTroveSignUp')}
+              style={({ pressed }) => [
+                internalStyles.secondaryButton,
+                pressed && internalStyles.buttonPressed,
+              ]}
+            >
+              <Text style={internalStyles.secondaryButtonText}>Create Member Account</Text>
+            </Pressable>
+          </View>
+        </SectionCard>
+      </MotionInView>
+
+      {ownerPortalUiAvailable ? (
+        <MotionInView delay={120}>
+          <SectionCard
+            title="Owner access"
+            body={
+              isAndroid
+                ? 'Use the owner side for storefront photos, profile updates, reviews, updates, and billing.'
+                : 'Use the owner side for storefront photos, profile updates, reviews, offers, and billing.'
+            }
+          >
+            <View style={internalStyles.entryCardHeader}>
+              <View style={internalStyles.entryIconOwner}>
+                <AppUiIcon name="storefront-outline" size={20} color={colors.goldSoft} />
+              </View>
+              <View style={internalStyles.entryCopy}>
+                <Text style={internalStyles.entryTitle}>Business account</Text>
+                <Text style={internalStyles.entryBody}>
+                  Sign in as an owner if this profile belongs to a storefront operator or business
+                  manager.
+                </Text>
+              </View>
+            </View>
+            <View style={internalStyles.entryActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Owner sign in"
+                onPress={() => navigation.navigate('OwnerPortalSignIn')}
+                style={({ pressed }) => [
+                  internalStyles.primaryButtonGold,
+                  pressed && internalStyles.buttonPressed,
+                ]}
+              >
+                <Text style={internalStyles.primaryButtonGoldText}>Owner Sign In</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Create owner account"
+                onPress={() => navigation.navigate('OwnerPortalSignUp')}
+                style={({ pressed }) => [
+                  internalStyles.secondaryButton,
+                  pressed && internalStyles.buttonPressed,
+                ]}
+              >
+                <Text style={internalStyles.secondaryButtonText}>Create Owner Account</Text>
+              </Pressable>
+            </View>
+          </SectionCard>
+        </MotionInView>
+      ) : null}
+    </ScreenShell>
+  );
+}
+
+function OwnerProfileWorkspace() {
+  const isAndroid = Platform.OS === 'android';
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { authSession, signOutSession } = useStorefrontProfileController();
+  const promotionsLabel = isAndroid ? 'Updates' : 'Offers';
+
+  const ownerWorkspaceCards: Array<{
+    key: string;
+    title: string;
+    body: string;
+    buttonLabel: string;
+    accessibilityLabel: string;
+    iconName: React.ComponentProps<typeof SectionCard>['iconName'];
+    badgeLabel: string;
+    tone: NonNullable<React.ComponentProps<typeof SectionCard>['tone']>;
+    onPress: () => void;
+  }> = React.useMemo(
+    () => [
+      {
+        key: 'storefront',
+        title: 'Storefront studio',
+        body: 'Update gallery photos, the hero image, menu link, and short copy from one polished editor.',
+        buttonLabel: 'Open Storefront Studio',
+        accessibilityLabel: 'Open storefront studio',
+        iconName: 'storefront-outline',
+        badgeLabel: 'Studio',
+        tone: 'gold' as const,
+        onPress: () => navigation.navigate('OwnerPortalProfileTools'),
+      },
+      {
+        key: 'reviews',
+        title: 'Review inbox',
+        body: 'Read new feedback, spot issues quickly, and keep customer replies moving from one private workspace.',
+        buttonLabel: 'Open Review Inbox',
+        accessibilityLabel: 'Open review inbox',
+        iconName: 'chatbubble-ellipses-outline',
+        badgeLabel: 'Reviews',
+        tone: 'cyan' as const,
+        onPress: () => navigation.navigate('OwnerPortalReviewInbox'),
+      },
+      {
+        key: 'dashboard',
+        title: 'Business dashboard',
+        body: 'Check the business overview, verification state, and account readiness from the main owner dashboard.',
+        buttonLabel: 'Open Business Dashboard',
+        accessibilityLabel: 'Open business dashboard',
+        iconName: 'stats-chart-outline',
+        badgeLabel: 'Dashboard',
+        tone: 'primary' as const,
+        onPress: () => navigation.navigate('OwnerPortalHome'),
+      },
+      {
+        key: 'promotions',
+        title: `${promotionsLabel} workspace`,
+        body: isAndroid
+          ? 'Manage storefront updates, visibility, and publishing from one focused owner workflow.'
+          : 'Manage storefront offers, visibility, and publishing from one focused owner workflow.',
+        buttonLabel: isAndroid ? 'Open Updates Workspace' : 'Open Offers Workspace',
+        accessibilityLabel: isAndroid ? 'Open updates workspace' : 'Open offers workspace',
+        iconName: 'megaphone-outline',
+        badgeLabel: promotionsLabel,
+        tone: 'gold' as const,
+        onPress: () => navigation.navigate('OwnerPortalPromotions'),
+      },
+      {
+        key: 'billing',
+        title: 'Billing center',
+        body: 'Review your plan, subscription status, and business billing settings without leaving the owner side.',
+        buttonLabel: 'Open Billing Center',
+        accessibilityLabel: 'Open billing center',
+        iconName: 'pricetag-outline',
+        badgeLabel: 'Billing',
+        tone: 'neutral' as const,
+        onPress: () => navigation.navigate('OwnerPortalSubscription'),
+      },
+    ],
+    [isAndroid, navigation, promotionsLabel],
+  );
+
+  return (
+    <ScreenShell
+      eyebrow="Profile"
+      title="Business profile"
+      subtitle="This tab is signed in as an owner. Member history stays hidden until you sign out."
+      headerPill="Business"
+    >
+      <MotionInView delay={70}>
+        <SectionCard
+          title="Owner account active"
+          body={
+            isAndroid
+              ? 'Use this private profile for the storefront customers see, from gallery photos and reviews to updates and billing.'
+              : 'Use this private profile for the storefront customers see, from gallery photos and reviews to offers and billing.'
+          }
+        >
+          <View style={internalStyles.sessionLockCard}>
+            <View style={internalStyles.sessionCopy}>
+              <Text style={internalStyles.sessionTitle}>Signed in as owner</Text>
+              <Text style={internalStyles.sessionBody}>
+                {authSession.email ?? authSession.displayName ?? 'Business account active'}
+              </Text>
+            </View>
+            <View style={internalStyles.ownerChip}>
+              <Text style={internalStyles.ownerChipText}>Owner</Text>
+            </View>
+          </View>
+        </SectionCard>
+      </MotionInView>
+
+      {ownerWorkspaceCards.map((card, index) => (
+        <MotionInView key={card.key} delay={120 + index * 50}>
+          <OwnerWorkspaceActionCard
+            title={card.title}
+            body={card.body}
+            buttonLabel={card.buttonLabel}
+            accessibilityLabel={card.accessibilityLabel}
+            iconName={card.iconName}
+            badgeLabel={card.badgeLabel}
+            tone={card.tone}
+            onPress={card.onPress}
+          />
+        </MotionInView>
+      ))}
+
+      <MotionInView delay={120 + ownerWorkspaceCards.length * 50}>
+        <SectionCard
+          title="Switch account"
+          body="Sign out to return to the profile chooser and switch back to a member account."
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Sign out"
+            onPress={() => {
+              void signOutSession();
+            }}
+            style={({ pressed }) => [
+              internalStyles.secondaryButton,
+              pressed && internalStyles.buttonPressed,
+            ]}
+          >
+            <Text style={internalStyles.secondaryButtonText}>Sign Out</Text>
+          </Pressable>
+        </SectionCard>
+      </MotionInView>
+    </ScreenShell>
+  );
+}
+
+function OwnerWorkspaceActionCard({
+  title,
+  body,
+  buttonLabel,
+  accessibilityLabel,
+  iconName,
+  badgeLabel,
+  tone,
+  onPress,
+}: {
+  title: string;
+  body: string;
+  buttonLabel: string;
+  accessibilityLabel: string;
+  iconName: React.ComponentProps<typeof SectionCard>['iconName'];
+  badgeLabel: string;
+  tone: React.ComponentProps<typeof SectionCard>['tone'];
+  onPress: () => void;
+}) {
+  return (
+    <SectionCard title={title} body={body} iconName={iconName} badgeLabel={badgeLabel} tone={tone}>
+      <View style={internalStyles.actionStack}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel}
+          onPress={onPress}
+          style={({ pressed }) => [
+            internalStyles.primaryButtonGold,
+            pressed && internalStyles.buttonPressed,
+          ]}
+        >
+          <Text style={internalStyles.primaryButtonGoldText}>{buttonLabel}</Text>
+        </Pressable>
+      </View>
+    </SectionCard>
+  );
+}
+
+function MemberProfileWorkspace() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const model = useProfileScreenModel(navigation);
   const scrollViewRef = React.useRef<ScrollView>(null);
@@ -41,7 +405,6 @@ function ProfileScreenInner() {
           if (target) {
             navigation.navigate('WriteReview', { storefront: target });
           } else {
-            // No storefronts visited yet — send them to Browse to find one
             navigation.navigate('Tabs', { screen: 'Browse' });
           }
         },
@@ -73,7 +436,7 @@ function ProfileScreenInner() {
       eyebrow={`${brand.productDisplayName} profile`}
       title={model.displayName}
       subtitle={`Level ${model.gamificationState.level} ${model.levelTitle} \u2022 ${model.gamificationState.totalPoints} points`}
-      headerPill={model.appProfile?.kind === 'authenticated' ? 'Member' : 'Guest'}
+      headerPill="Member"
       showHero={false}
     >
       <ScrollView
@@ -82,7 +445,6 @@ function ProfileScreenInner() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={internalStyles.scrollContent}
       >
-        {/* 1. ProfileHeroCard */}
         <MotionInView dense delay={revealDelay(0)}>
           <ProfileHeroCard
             appProfile={model.appProfile}
@@ -101,77 +463,49 @@ function ProfileScreenInner() {
           />
         </MotionInView>
 
-        {/* 1b. Sign-in / Create Account CTA (guests only) */}
-        {model.authSession.status !== 'authenticated' ? (
-          <MotionInView dense delay={revealDelay(0) + 30}>
-            <View style={internalStyles.authCard}>
-              <View style={internalStyles.authCardIcon}>
-                <AppUiIcon name="person-add-outline" size={22} color={colors.accent} />
-              </View>
-              <View style={internalStyles.authCardContent}>
-                <Text style={internalStyles.authCardTitle}>Create an account or sign in</Text>
-                <Text style={internalStyles.authCardBody}>
-                  Save favorites, write reviews, earn badges, and unlock your full profile.
+        <MotionInView dense delay={revealDelay(0) + 30}>
+          <SectionCard
+            title="Member account active"
+            body="This profile is locked to the member side. Sign out here if you need to switch to an owner account."
+          >
+            <View style={internalStyles.sessionLockCard}>
+              <View style={internalStyles.sessionCopy}>
+                <Text style={internalStyles.sessionTitle}>Signed in as member</Text>
+                <Text style={internalStyles.sessionBody}>
+                  {model.authSession.email ?? model.displayName}
                 </Text>
               </View>
-              <View style={internalStyles.authCardActions}>
-                <Pressable
-                  onPress={() => navigation.navigate('CanopyTroveSignUp')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Create account"
-                  style={({ pressed }) => [
-                    internalStyles.authCardButton,
-                    internalStyles.authCardButtonPrimary,
-                    pressed && internalStyles.authCardButtonPressed,
-                  ]}
-                >
-                  <Text style={internalStyles.authCardButtonPrimaryText}>Create Account</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => navigation.navigate('CanopyTroveSignIn')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Sign in"
-                  style={({ pressed }) => [
-                    internalStyles.authCardButton,
-                    internalStyles.authCardButtonSecondary,
-                    pressed && internalStyles.authCardButtonPressed,
-                  ]}
-                >
-                  <Text style={internalStyles.authCardButtonSecondaryText}>Sign In</Text>
-                </Pressable>
-              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Sign out"
+                onPress={model.signOut}
+                style={({ pressed }) => [
+                  internalStyles.inlineButton,
+                  pressed && internalStyles.buttonPressed,
+                ]}
+              >
+                <Text style={internalStyles.inlineButtonText}>Sign Out</Text>
+              </Pressable>
             </View>
-          </MotionInView>
-        ) : null}
+          </SectionCard>
+        </MotionInView>
 
-        {/* 1c. Username Request (authenticated only) */}
-        {model.authSession.status === 'authenticated' ? (
-          <MotionInView dense delay={revealDelay(0) + 60}>
-            <UsernameRequestSection
-              displayNameInput={model.displayNameInput}
-              onChangeDisplayNameInput={model.setDisplayNameInput}
-              pendingRequest={model.pendingUsernameRequest}
-              isSubmitting={model.isSavingDisplayName}
-              isLoadingPending={model.isLoadingPendingRequest}
-              statusMessage={model.profileActionStatus}
-              onSubmit={model.submitUsernameRequest}
-            />
-          </MotionInView>
-        ) : null}
+        <MotionInView dense delay={revealDelay(0) + 60}>
+          <UsernameRequestSection
+            displayNameInput={model.displayNameInput}
+            onChangeDisplayNameInput={model.setDisplayNameInput}
+            pendingRequest={model.pendingUsernameRequest}
+            isSubmitting={model.isSavingDisplayName}
+            isLoadingPending={model.isLoadingPendingRequest}
+            statusMessage={model.profileActionStatus}
+            onSubmit={model.submitUsernameRequest}
+          />
+        </MotionInView>
 
-        {/* 2. QuickActionsRow */}
         <MotionInView dense delay={revealDelay(1)}>
           <QuickActionsRow actions={quickActions} />
         </MotionInView>
 
-        {/* 2b. Owner Portal CTA */}
-        {ownerPortalAccessAvailable ? (
-          <MotionInView dense delay={revealDelay(1) + 30}>
-            <OwnerClaimCard onPress={() => navigation.navigate('OwnerPortalAccess')} />
-          </MotionInView>
-        ) : null}
-
-        {/* 3. Stats Snapshot */}
         <MotionInView dense delay={revealDelay(2)}>
           <StatsSnapshot
             totalPoints={model.gamificationState.totalPoints}
@@ -180,7 +514,6 @@ function ProfileScreenInner() {
           />
         </MotionInView>
 
-        {/* 4. Saved Storefronts */}
         <MotionInView dense delay={revealDelay(3)}>
           <View style={internalStyles.section}>
             <SectionHeader
@@ -204,7 +537,6 @@ function ProfileScreenInner() {
           </View>
         </MotionInView>
 
-        {/* 5. Recently Viewed */}
         <MotionInView dense delay={revealDelay(4)}>
           <View style={internalStyles.section}>
             <SectionHeader
@@ -229,7 +561,6 @@ function ProfileScreenInner() {
           </View>
         </MotionInView>
 
-        {/* 6. Badge Showcase */}
         <MotionInView dense delay={revealDelay(5)}>
           <View style={internalStyles.section}>
             <SectionHeader
@@ -245,7 +576,6 @@ function ProfileScreenInner() {
           </View>
         </MotionInView>
 
-        {/* 7. Footer */}
         <MotionInView dense delay={revealDelay(6)}>
           <View style={internalStyles.footer}>
             <Text style={internalStyles.footerText}>
@@ -260,7 +590,6 @@ function ProfileScreenInner() {
 
 export const ProfileScreen = withScreenErrorBoundary(ProfileScreenInner, 'profile-screen');
 
-/** Stats Snapshot: compact 3-column view of key metrics */
 function StatsSnapshot({
   totalPoints,
   totalReviews,
@@ -292,7 +621,6 @@ function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Badge Showcase: top 3 featured badges in a row */
 function BadgeShowcase({ badges }: { badges: Array<{ icon?: string; name?: string }> }) {
   if (badges.length === 0) {
     return (
@@ -324,37 +652,6 @@ function BadgeShowcase({ badges }: { badges: Array<{ icon?: string; name?: strin
   );
 }
 
-/** Owner Claim CTA: visible banner linking to the Owner Portal */
-function OwnerClaimCard({ onPress }: { onPress: () => void }) {
-  return (
-    <View style={internalStyles.ownerCard}>
-      <View style={internalStyles.ownerCardIcon}>
-        <AppUiIcon name="storefront-outline" size={22} color={colors.gold} />
-      </View>
-      <View style={internalStyles.ownerCardContent}>
-        <Text style={internalStyles.ownerCardTitle}>Own a dispensary?</Text>
-        <Text style={internalStyles.ownerCardBody}>
-          Claim your listing, manage reviews, and publish deals on Canopy Trove.
-        </Text>
-      </View>
-      <View style={internalStyles.ownerCardActions}>
-        <Pressable
-          onPress={onPress}
-          accessibilityRole="button"
-          accessibilityLabel="Claim your dispensary"
-          accessibilityHint="Opens the owner portal to claim and manage your dispensary listing."
-          style={({ pressed }) => [
-            internalStyles.ownerCardButton,
-            pressed && internalStyles.ownerCardButtonPressed,
-          ]}
-        >
-          <Text style={internalStyles.ownerCardButtonText}>Claim Your Dispensary</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
 const internalStyles = StyleSheet.create({
   scrollContent: {
     paddingVertical: spacing.lg,
@@ -362,6 +659,152 @@ const internalStyles = StyleSheet.create({
   },
   section: {
     gap: spacing.md,
+  },
+  loadingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  loadingText: {
+    ...textStyles.body,
+    color: colors.textMuted,
+  },
+  entryCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  entryIconMember: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(46, 204, 113, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  entryIconOwner: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(245, 200, 106, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  entryCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  entryTitle: {
+    ...textStyles.bodyStrong,
+    color: colors.text,
+  },
+  entryBody: {
+    ...textStyles.caption,
+    color: colors.textMuted,
+    lineHeight: 20,
+  },
+  entryActions: {
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  actionStack: {
+    gap: spacing.md,
+  },
+  primaryButton: {
+    minHeight: 48,
+    borderRadius: radii.md,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 10,
+  },
+  primaryButtonText: {
+    ...textStyles.bodyStrong,
+    color: colors.background,
+  },
+  primaryButtonGold: {
+    minHeight: 48,
+    borderRadius: radii.md,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 10,
+  },
+  primaryButtonGoldText: {
+    ...textStyles.bodyStrong,
+    color: colors.backgroundDeep,
+  },
+  secondaryButton: {
+    minHeight: 46,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 10,
+    backgroundColor: colors.surfaceElevated,
+  },
+  secondaryButtonText: {
+    ...textStyles.bodyStrong,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  inlineButton: {
+    minHeight: 40,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    backgroundColor: colors.surfaceElevated,
+  },
+  inlineButtonText: {
+    ...textStyles.bodyStrong,
+    color: colors.text,
+    fontSize: 13,
+  },
+  buttonPressed: {
+    opacity: 0.82,
+  },
+  sessionLockCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  sessionCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  sessionTitle: {
+    ...textStyles.bodyStrong,
+    color: colors.text,
+  },
+  sessionBody: {
+    ...textStyles.caption,
+    color: colors.textMuted,
+    lineHeight: 20,
+  },
+  ownerChip: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(245, 200, 106, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 200, 106, 0.18)',
+  },
+  ownerChipText: {
+    ...textStyles.caption,
+    color: colors.goldSoft,
   },
   statsSnapshot: {
     flexDirection: 'row',
@@ -443,121 +886,5 @@ const internalStyles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 11,
     letterSpacing: 0.3,
-  },
-  authCard: {
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: colors.accent,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-    gap: spacing.md,
-  },
-  authCardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.md,
-    backgroundColor: 'rgba(46, 204, 113, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
-  },
-  authCardContent: {
-    gap: 4,
-  },
-  authCardTitle: {
-    ...textStyles.bodyStrong,
-    color: colors.text,
-  },
-  authCardBody: {
-    ...textStyles.caption,
-    color: colors.textMuted,
-    lineHeight: 20,
-  },
-  authCardActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  authCardButton: {
-    minHeight: 48,
-    paddingVertical: 10,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  authCardButtonPrimary: {
-    backgroundColor: colors.accent,
-  },
-  authCardButtonSecondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-  },
-  authCardButtonPressed: {
-    opacity: 0.7,
-  },
-  authCardButtonPrimaryText: {
-    ...textStyles.bodyStrong,
-    color: colors.background,
-    fontSize: 14,
-  },
-  authCardButtonSecondaryText: {
-    ...textStyles.bodyStrong,
-    color: colors.text,
-    fontSize: 14,
-  },
-  ownerCard: {
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: colors.gold,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-    gap: spacing.md,
-  },
-  ownerCardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.md,
-    backgroundColor: 'rgba(232, 160, 0, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
-  },
-  ownerCardContent: {
-    gap: 4,
-  },
-  ownerCardTitle: {
-    ...textStyles.bodyStrong,
-    color: colors.text,
-  },
-  ownerCardBody: {
-    ...textStyles.caption,
-    color: colors.textMuted,
-    lineHeight: 20,
-  },
-  ownerCardActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  ownerCardButton: {
-    minHeight: 48,
-    paddingVertical: 10,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.gold,
-  },
-  ownerCardButtonPressed: {
-    opacity: 0.7,
-  },
-  ownerCardButtonText: {
-    ...textStyles.bodyStrong,
-    color: colors.background,
-    fontSize: 14,
   },
 });

@@ -78,6 +78,94 @@ import type { OwnerSubscriptionTier, TierFeatureLimits } from './ownerTierGating
 import { resolveOwnerActiveLocation } from './ownerMultiLocationService';
 
 const TARGETED_AUDIENCES = new Set(['all_followers', 'frequent_visitors', 'new_customers']);
+const DISPENSARIES_COLLECTION = 'dispensaries';
+
+type OwnerPrivateStorefrontRegistryRecord = {
+  displayName?: string | null;
+  storefrontName?: string | null;
+  legalName?: string | null;
+  legalBusinessName?: string | null;
+  addressLine1?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  ownerUid?: string | null;
+  claimedByOwnerUid?: string | null;
+};
+
+type OwnerWorkspaceStorefrontSnapshot = NonNullable<
+  OwnerPortalWorkspaceDocument['storefrontSummary']
+>;
+
+function normalizeOptionalString(value: unknown) {
+  return typeof value === 'string' && value.trim().length ? value.trim() : null;
+}
+
+export function buildOwnerPrivateStorefrontSnapshot(
+  storefrontId: string,
+  record: OwnerPrivateStorefrontRegistryRecord,
+  promotionText?: string | null,
+  promotionBadges?: string[] | null,
+): OwnerWorkspaceStorefrontSnapshot | null {
+  const displayName =
+    normalizeOptionalString(record.displayName) ??
+    normalizeOptionalString(record.storefrontName) ??
+    normalizeOptionalString(record.legalName) ??
+    normalizeOptionalString(record.legalBusinessName);
+  if (!displayName) {
+    return null;
+  }
+
+  return {
+    id: storefrontId,
+    displayName,
+    addressLine1:
+      normalizeOptionalString(record.addressLine1) ?? normalizeOptionalString(record.address) ?? '',
+    city: normalizeOptionalString(record.city) ?? '',
+    state: normalizeOptionalString(record.state) ?? 'NY',
+    zip: normalizeOptionalString(record.zip) ?? '',
+    promotionText: promotionText ?? null,
+    promotionBadges: promotionBadges ?? [],
+  };
+}
+
+async function getOwnerPrivateStorefrontSnapshot(
+  ownerUid: string,
+  storefrontId: string,
+  options?: {
+    promotionText?: string | null;
+    promotionBadges?: string[] | null;
+  },
+): Promise<OwnerWorkspaceStorefrontSnapshot | null> {
+  const db = getBackendFirebaseDb();
+  if (!db) {
+    return null;
+  }
+
+  const snapshot = await db.collection(DISPENSARIES_COLLECTION).doc(storefrontId).get();
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  const record = snapshot.data() as OwnerPrivateStorefrontRegistryRecord | undefined;
+  if (!record) {
+    return null;
+  }
+
+  const linkedOwnerUid =
+    normalizeOptionalString(record.ownerUid) ?? normalizeOptionalString(record.claimedByOwnerUid);
+  if (linkedOwnerUid && linkedOwnerUid !== ownerUid) {
+    return null;
+  }
+
+  return buildOwnerPrivateStorefrontSnapshot(
+    storefrontId,
+    record,
+    options?.promotionText ?? null,
+    options?.promotionBadges ?? [],
+  );
+}
 
 function assertAudienceTargetingAccess(
   audiences: string[] | undefined | null,
@@ -202,8 +290,9 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
   const subscriptionActive = await isOwnerSubscriptionActive(rawProfileTools);
 
   // Owner hours persist even after subscription lapse — always apply when present.
-  const ownerHoursOpenNow = rawProfileTools?.ownerHours?.length
-    ? computeOpenNowFromOwnerHours(rawProfileTools.ownerHours)
+  const ownerHoursEntries = rawProfileTools?.ownerHours?.length ? rawProfileTools.ownerHours : null;
+  const ownerHoursOpenNow = ownerHoursEntries
+    ? computeOpenNowFromOwnerHours(ownerHoursEntries)
     : null;
 
   // When subscription has lapsed, strip all owner-added content except hours.
@@ -234,6 +323,9 @@ export async function applyOwnerWorkspaceSummaryEnhancements(
   };
 
   // Owner hours override openNow regardless of subscription status.
+  if (ownerHoursEntries) {
+    enhancement.hours = ownerHoursToDisplayStrings(ownerHoursEntries);
+  }
   if (ownerHoursOpenNow !== null) {
     enhancement.openNow = ownerHoursOpenNow;
   }
@@ -486,9 +578,23 @@ export async function getOwnerPortalWorkspace(
   );
 
   const activePromotion = storefrontId ? await getActivePromotion(storefrontId) : null;
-  const storefrontSummary = baseSummary
+  const enhancedPublicSummary = baseSummary
     ? await applyOwnerWorkspaceSummaryEnhancements(baseSummary)
     : null;
+  const privateStorefrontSummary =
+    !enhancedPublicSummary && storefrontId
+      ? await getOwnerPrivateStorefrontSnapshot(ownerUid, storefrontId, {
+          promotionText: activePromotion?.description || activePromotion?.title || null,
+          promotionBadges: activePromotion?.badges.length
+            ? normalizeBadges(activePromotion.badges)
+            : activePromotion
+              ? normalizeBadges([activePromotion.title])
+              : [],
+        })
+      : null;
+  const workspaceStorefrontSummary = enhancedPublicSummary
+    ? buildOwnerWorkspaceSummarySnapshot(enhancedPublicSummary)
+    : privateStorefrontSummary;
   const patternFlags = buildPatternFlags({
     followerCount,
     reviews: ownerWorkspaceReviews,
@@ -539,9 +645,7 @@ export async function getOwnerPortalWorkspace(
   return {
     ownerProfile: ownerProfile as OwnerPortalWorkspaceDocument['ownerProfile'],
     ownerClaim: ownerClaim as OwnerPortalWorkspaceDocument['ownerClaim'],
-    storefrontSummary: storefrontSummary
-      ? buildOwnerWorkspaceSummarySnapshot(storefrontSummary)
-      : null,
+    storefrontSummary: workspaceStorefrontSummary,
     metrics: gatedMetrics,
     patternFlags: gatedPatternFlags,
     recentReviews: ownerWorkspaceReviews,
@@ -556,12 +660,13 @@ export async function getOwnerPortalWorkspace(
     activeLocationId: storefrontId,
     locations:
       allOwnerLocationIds.length > 1
-        ? await buildLocationSummaries(allOwnerLocationIds, primaryStorefrontId)
+        ? await buildLocationSummaries(ownerUid, allOwnerLocationIds, primaryStorefrontId)
         : undefined,
   };
 }
 
 async function buildLocationSummaries(
+  ownerUid: string,
   locationIds: string[],
   primaryId: string | null,
 ): Promise<
@@ -576,17 +681,22 @@ async function buildLocationSummaries(
 > {
   if (locationIds.length === 0) return [];
   const summaries = await backendStorefrontSource.getSummariesByIds(locationIds);
-  return locationIds.map((id) => {
-    const summary = summaries.find((s) => s.id === id);
-    return {
-      storefrontId: id,
-      displayName: summary?.displayName ?? id,
-      addressLine1: summary?.addressLine1 ?? '',
-      city: summary?.city ?? '',
-      state: summary?.state ?? '',
-      isPrimary: id === primaryId,
-    };
-  });
+  return Promise.all(
+    locationIds.map(async (id) => {
+      const summary = summaries.find((s) => s.id === id);
+      const privateSnapshot = summary
+        ? null
+        : await getOwnerPrivateStorefrontSnapshot(ownerUid, id);
+      return {
+        storefrontId: id,
+        displayName: summary?.displayName ?? privateSnapshot?.displayName ?? id,
+        addressLine1: summary?.addressLine1 ?? privateSnapshot?.addressLine1 ?? '',
+        city: summary?.city ?? privateSnapshot?.city ?? '',
+        state: summary?.state ?? privateSnapshot?.state ?? '',
+        isPrimary: id === primaryId,
+      };
+    }),
+  );
 }
 
 export async function saveOwnerPortalLicenseCompliance(

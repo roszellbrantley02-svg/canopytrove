@@ -6,6 +6,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { ownerPortalAccessAvailable } from '../config/ownerPortalConfig';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors } from '../theme/tokens';
 import { trackAnalyticsEvent } from '../services/analyticsService';
@@ -37,7 +38,7 @@ function CanopyTroveSignInScreenInner() {
         role: 'customer',
         source: 'profile',
       });
-      navigation.replace('Tabs');
+      navigation.replace('Tabs', { screen: 'Profile' });
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Unable to sign in.');
     } finally {
@@ -200,6 +201,17 @@ function CanopyTroveSignInScreenInner() {
                       <Text style={styles.secondaryButtonText}>Create Account</Text>
                     </Pressable>
                   </View>
+                  {ownerPortalAccessAvailable ? (
+                    <Pressable
+                      onPress={() => navigation.replace('OwnerPortalSignIn')}
+                      style={styles.secondaryButton}
+                      accessibilityRole="button"
+                      accessibilityLabel="Use owner portal"
+                      accessibilityHint="Opens the owner sign in screen instead of the member account flow."
+                    >
+                      <Text style={styles.secondaryButtonText}>Use Owner Portal Instead</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               </View>
             </SectionCard>

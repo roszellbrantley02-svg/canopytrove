@@ -70,19 +70,19 @@ function OwnerPortalBusinessDetailsScreenInner() {
   return (
     <ScreenShell
       eyebrow="Owner Portal"
-      title="Business details."
-      subtitle="Set the legal and public business details tied to your owner workspace."
+      title="Business details"
+      subtitle="Add the main business details tied to this owner account."
       headerPill="Onboarding"
     >
       <MotionInView delay={70}>
         <OwnerPortalHeroPanel
-          kicker="Owner onboarding"
-          title="Capture the business profile clearly."
-          body="Details anchor storefront claim and the account record."
+          kicker="Business details"
+          title="Tell us about the business."
+          body="These details help connect the account to the right storefront."
           metrics={[
             {
               value: 'Live',
-              label: 'Mode',
+              label: 'Status',
               body: '',
             },
             {
@@ -137,7 +137,7 @@ function OwnerPortalBusinessDetailsScreenInner() {
             <View style={styles.ctaPanel}>
               <View style={styles.splitHeaderRow}>
                 <View style={styles.splitHeaderCopy}>
-                  <Text style={styles.sectionEyebrow}>Continue onboarding</Text>
+                  <Text style={styles.sectionEyebrow}>Save details</Text>
                 </View>
                 <AppUiIcon name="briefcase-outline" size={20} color="#F5C86A" />
               </View>
@@ -150,7 +150,7 @@ function OwnerPortalBusinessDetailsScreenInner() {
               >
                 <Text style={styles.primaryButtonText}>
                   {preview
-                    ? 'Continue To Claim Listing'
+                    ? 'Continue to Claim Listing'
                     : isSaving
                       ? 'Saving...'
                       : 'Save Business Details'}

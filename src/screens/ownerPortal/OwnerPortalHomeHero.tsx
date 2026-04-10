@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { ownerPortalStyles as styles } from './ownerPortalStyles';
 
 export function OwnerPortalHomeHero({
@@ -15,24 +15,30 @@ export function OwnerPortalHomeHero({
   trackedActions7d: number;
   chips: string[];
 }) {
+  const isAndroid = Platform.OS === 'android';
+
   return (
     <View style={styles.portalHeroCard}>
       <View style={styles.portalHeroGlow} />
-      <Text style={styles.portalHeroKicker}>Owner workspace</Text>
+      <Text style={styles.portalHeroKicker}>Business profile</Text>
       <Text style={styles.portalHeroTitle}>
         {preview
-          ? 'Review the owner workspace with preview data.'
-          : 'Run storefront readiness, visibility, and growth from one dashboard.'}
+          ? 'Preview how your owner space reads before you publish anything live.'
+          : 'Keep your storefront sharp, trusted, and easy for customers to open.'}
       </Text>
       <Text style={styles.portalHeroBody}>
         {preview
-          ? 'Use this workspace to review deals, media, and profile tools without touching live records.'
-          : 'Manage listing health, promotions, compliance, and plan access from one private workspace.'}
+          ? isAndroid
+            ? 'Review gallery photos, updates, and profile details without touching live records.'
+            : 'Review gallery photos, offers, and profile details without touching live records.'
+          : isAndroid
+            ? 'Manage gallery photos, reviews, updates, hours, and billing from one private space.'
+            : 'Manage gallery photos, reviews, offers, hours, and billing from one private space.'}
       </Text>
       <View style={styles.portalHeroMetricRow}>
         <View style={styles.portalHeroMetricCard}>
           <Text style={styles.portalHeroMetricValue}>{managedStorefrontCount}</Text>
-          <Text style={styles.portalHeroMetricLabel}>Managed Storefronts</Text>
+          <Text style={styles.portalHeroMetricLabel}>Locations</Text>
         </View>
         <View style={styles.portalHeroMetricCard}>
           <Text style={styles.portalHeroMetricValue}>{savedFollowers}</Text>
@@ -40,7 +46,7 @@ export function OwnerPortalHomeHero({
         </View>
         <View style={styles.portalHeroMetricCard}>
           <Text style={styles.portalHeroMetricValue}>{trackedActions7d}</Text>
-          <Text style={styles.portalHeroMetricLabel}>Tracked Actions 7D</Text>
+          <Text style={styles.portalHeroMetricLabel}>Actions This Week</Text>
         </View>
       </View>
       <View style={styles.portalHeroMetaRow}>

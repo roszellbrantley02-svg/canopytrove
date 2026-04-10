@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import React from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { CommonActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import {
   Animated,
   Easing,
@@ -32,6 +32,114 @@ type ScreenShellProps = PropsWithChildren<{
   resetScrollOnFocus?: boolean;
 }>;
 
+const TAB_ROUTE_NAMES = new Set(['Nearby', 'Browse', 'HotDeals', 'Profile']);
+const MANUAL_BACK_ROUTES = new Set(['Leaderboard']);
+const OWNER_PORTAL_WORKSPACE_ROUTES = new Set([
+  'OwnerPortalReviewInbox',
+  'OwnerPortalPromotions',
+  'OwnerPortalProfileTools',
+  'OwnerPortalBusinessDetails',
+  'OwnerPortalClaimListing',
+  'OwnerPortalBusinessVerification',
+  'OwnerPortalIdentityVerification',
+  'OwnerPortalSubscription',
+  'OwnerPortalBadges',
+  'OwnerPortalHours',
+]);
+
+function buildWebBackResetState(routeName: string) {
+  const profileTabsRoute = { name: 'Tabs', params: { screen: 'Profile' } };
+  const browseTabsRoute = { name: 'Tabs', params: { screen: 'Browse' } };
+
+  if (routeName === 'OwnerPortalAccess') {
+    return {
+      index: 0,
+      routes: [profileTabsRoute],
+    };
+  }
+
+  if (
+    routeName === 'OwnerPortalSignIn' ||
+    routeName === 'OwnerPortalSignUp' ||
+    routeName === 'OwnerPortalForgotPassword' ||
+    routeName === 'OwnerPortalHome'
+  ) {
+    return {
+      index: 1,
+      routes: [profileTabsRoute, { name: 'OwnerPortalAccess' }],
+    };
+  }
+
+  if (OWNER_PORTAL_WORKSPACE_ROUTES.has(routeName)) {
+    return {
+      index: 1,
+      routes: [profileTabsRoute, { name: 'OwnerPortalHome' }],
+    };
+  }
+
+  if (
+    routeName === 'CanopyTroveSignIn' ||
+    routeName === 'CanopyTroveSignUp' ||
+    routeName === 'CanopyTroveForgotPassword' ||
+    routeName === 'Settings' ||
+    routeName === 'DeleteAccount' ||
+    routeName === 'LegalCenter' ||
+    routeName === 'SavedStorefronts' ||
+    routeName === 'BadgeGallery' ||
+    routeName === 'AdminRuntimePanel'
+  ) {
+    return {
+      index: 0,
+      routes: [profileTabsRoute],
+    };
+  }
+
+  if (routeName === 'WriteReview' || routeName === 'ReportStorefront') {
+    return {
+      index: 0,
+      routes: [browseTabsRoute],
+    };
+  }
+
+  return {
+    index: 0,
+    routes: [{ name: 'Tabs' }],
+  };
+}
+
+function getWebBackLabel(routeName: string) {
+  if (
+    routeName === 'OwnerPortalAccess' ||
+    routeName === 'OwnerPortalSignIn' ||
+    routeName === 'OwnerPortalSignUp' ||
+    routeName === 'OwnerPortalForgotPassword' ||
+    routeName === 'OwnerPortalHome' ||
+    OWNER_PORTAL_WORKSPACE_ROUTES.has(routeName)
+  ) {
+    return 'Back to Profile';
+  }
+
+  if (routeName === 'WriteReview' || routeName === 'ReportStorefront') {
+    return 'Back to Browse';
+  }
+
+  if (
+    routeName === 'CanopyTroveSignIn' ||
+    routeName === 'CanopyTroveSignUp' ||
+    routeName === 'CanopyTroveForgotPassword' ||
+    routeName === 'Settings' ||
+    routeName === 'DeleteAccount' ||
+    routeName === 'LegalCenter' ||
+    routeName === 'SavedStorefronts' ||
+    routeName === 'BadgeGallery' ||
+    routeName === 'AdminRuntimePanel'
+  ) {
+    return 'Back to Profile';
+  }
+
+  return 'Back';
+}
+
 export function ScreenShell({
   eyebrow,
   title,
@@ -44,6 +152,8 @@ export function ScreenShell({
   resetScrollOnFocus = false,
   children,
 }: ScreenShellProps) {
+  const navigation = useNavigation();
+  const route = useRoute();
   const scrollRef = React.useRef<ScrollView | null>(null);
   const shellProgress = React.useRef(new Animated.Value(0)).current;
   const { width, height } = useWindowDimensions();
@@ -79,6 +189,23 @@ export function ScreenShell({
   );
 
   const isWeb = Platform.OS === 'web';
+  const routeName = typeof route.name === 'string' ? route.name : '';
+  const shouldShowAutoBackButton =
+    isWeb &&
+    showTopBar &&
+    Boolean(routeName) &&
+    !TAB_ROUTE_NAMES.has(routeName) &&
+    !MANUAL_BACK_ROUTES.has(routeName);
+  const webBackLabel = React.useMemo(() => getWebBackLabel(routeName), [routeName]);
+
+  const handleAutoBackPress = React.useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.dispatch(CommonActions.reset(buildWebBackResetState(routeName)));
+  }, [navigation, routeName]);
 
   React.useEffect(() => {
     if (isWeb) {
@@ -150,62 +277,83 @@ export function ScreenShell({
         >
           {showTopBar ? (
             <MotionInView delay={20} distance={10} duration={motion.quick}>
-              <View style={[styles.topBar, compactHeader && styles.topBarCompact]}>
-                <View pointerEvents="none" style={styles.topBarTone} />
-                <View style={[styles.brandRow, compactHeader && styles.brandRowCompact]}>
-                  {onBrandIconPress ? (
-                    <HapticPressable
-                      hapticType="selection"
-                      onPress={onBrandIconPress}
-                      style={({ pressed }) => [
-                        styles.brandIcon,
-                        compactHeader && styles.brandIconCompact,
-                        pressed && styles.brandIconPressed,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel="Canopy Trove home"
-                      accessibilityHint="Returns to the home screen."
-                    >
-                      <BrandMarkIcon size={compactHeader ? 22 : 26} />
-                    </HapticPressable>
-                  ) : (
-                    <View style={[styles.brandIcon, compactHeader && styles.brandIconCompact]}>
-                      <BrandMarkIcon size={compactHeader ? 22 : 26} />
-                    </View>
-                  )}
-                  <View style={styles.brandTextWrap}>
-                    <Text style={[styles.brandTitle, compactHeader && styles.brandTitleCompact]}>
-                      {brand.productDisplayName}
-                    </Text>
-                    <Text numberOfLines={1} ellipsizeMode="tail" style={styles.brandSubtitle}>
-                      {brand.productTagline}
-                    </Text>
-                  </View>
-                </View>
-
-                {onHeaderPillPress ? (
+              <View>
+                {shouldShowAutoBackButton ? (
                   <HapticPressable
                     hapticType="selection"
-                    onPress={onHeaderPillPress}
+                    onPress={handleAutoBackPress}
                     style={({ pressed }) => [
-                      styles.headerPill,
-                      compactHeader && styles.headerPillCompact,
-                      pressed && styles.headerPillPressed,
+                      styles.backButton,
+                      pressed && styles.backButtonPressed,
                     ]}
                     accessibilityRole="button"
-                    accessibilityLabel="Change location"
-                    accessibilityHint={`Current location is ${headerPill}. Press to change.`}
+                    accessibilityLabel="Go back"
+                    accessibilityHint="Returns to the previous screen or the closest safe destination."
                   >
-                    <AppUiIcon name="location-outline" size={16} color={colors.goldSoft} />
-                    <Text style={styles.headerPillText}>{headerPill}</Text>
-                    <AppUiIcon name="chevron-down" size={12} color={colors.textSoft} />
+                    <View style={styles.backButtonIconWrap}>
+                      <AppUiIcon name="arrow-back" size={14} color={colors.text} />
+                    </View>
+                    <Text style={styles.backButtonText}>{webBackLabel}</Text>
                   </HapticPressable>
-                ) : (
-                  <View style={[styles.headerPill, compactHeader && styles.headerPillCompact]}>
-                    <AppUiIcon name="location-outline" size={16} color={colors.goldSoft} />
-                    <Text style={styles.headerPillText}>{headerPill}</Text>
+                ) : null}
+
+                <View style={[styles.topBar, compactHeader && styles.topBarCompact]}>
+                  <View pointerEvents="none" style={styles.topBarTone} />
+                  <View style={[styles.brandRow, compactHeader && styles.brandRowCompact]}>
+                    {onBrandIconPress ? (
+                      <HapticPressable
+                        hapticType="selection"
+                        onPress={onBrandIconPress}
+                        style={({ pressed }) => [
+                          styles.brandIcon,
+                          compactHeader && styles.brandIconCompact,
+                          pressed && styles.brandIconPressed,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Canopy Trove home"
+                        accessibilityHint="Returns to the home screen."
+                      >
+                        <BrandMarkIcon size={compactHeader ? 22 : 26} />
+                      </HapticPressable>
+                    ) : (
+                      <View style={[styles.brandIcon, compactHeader && styles.brandIconCompact]}>
+                        <BrandMarkIcon size={compactHeader ? 22 : 26} />
+                      </View>
+                    )}
+                    <View style={styles.brandTextWrap}>
+                      <Text style={[styles.brandTitle, compactHeader && styles.brandTitleCompact]}>
+                        {brand.productDisplayName}
+                      </Text>
+                      <Text numberOfLines={1} ellipsizeMode="tail" style={styles.brandSubtitle}>
+                        {brand.productTagline}
+                      </Text>
+                    </View>
                   </View>
-                )}
+
+                  {onHeaderPillPress ? (
+                    <HapticPressable
+                      hapticType="selection"
+                      onPress={onHeaderPillPress}
+                      style={({ pressed }) => [
+                        styles.headerPill,
+                        compactHeader && styles.headerPillCompact,
+                        pressed && styles.headerPillPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Change location"
+                      accessibilityHint={`Current location is ${headerPill}. Press to change.`}
+                    >
+                      <AppUiIcon name="location-outline" size={16} color={colors.goldSoft} />
+                      <Text style={styles.headerPillText}>{headerPill}</Text>
+                      <AppUiIcon name="chevron-down" size={12} color={colors.textSoft} />
+                    </HapticPressable>
+                  ) : (
+                    <View style={[styles.headerPill, compactHeader && styles.headerPillCompact]}>
+                      <AppUiIcon name="location-outline" size={16} color={colors.goldSoft} />
+                      <Text style={styles.headerPillText}>{headerPill}</Text>
+                    </View>
+                  )}
+                </View>
               </View>
             </MotionInView>
           ) : null}
@@ -352,6 +500,45 @@ const styles = StyleSheet.create({
     elevation: 7,
     overflow: 'hidden',
   },
+  backButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    marginLeft: -4,
+    minHeight: 44,
+    paddingVertical: 6,
+    paddingLeft: 4,
+    paddingRight: 12,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(143, 255, 209, 0.12)',
+    backgroundColor: 'rgba(8, 15, 21, 0.62)',
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  backButtonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.985 }],
+  },
+  backButtonIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(143, 255, 209, 0.10)',
+  },
+  backButtonText: {
+    ...textStyles.bodyStrong,
+    color: colors.text,
+    fontSize: 13,
+    letterSpacing: 0.15,
+  },
   topBarCompact: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -453,6 +640,7 @@ const styles = StyleSheet.create({
   hero: {
     gap: spacing.sm,
     position: 'relative',
+    minHeight: 120,
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,

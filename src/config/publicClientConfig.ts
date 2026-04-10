@@ -17,12 +17,22 @@ function readFirebaseValue(value: string | null | undefined, fallback: string, n
   if (configured) return configured;
 
   // If the API key env var is set, we're in a configured environment —
-  // all Firebase values should be explicitly provided.
+  // all Firebase values MUST be explicitly provided. In production this
+  // is a hard error so misconfigured builds fail closed instead of
+  // silently falling back to development defaults.
   const isConfiguredBuild = Boolean(readConfiguredValue(process.env.EXPO_PUBLIC_FIREBASE_API_KEY));
-  if (isConfiguredBuild && __DEV__) {
-    console.warn(
-      `[publicClientConfig] Missing ${name} — expected in configured build. Using development fallback.`,
-    );
+  if (isConfiguredBuild) {
+    if (__DEV__) {
+      console.warn(
+        `[publicClientConfig] Missing ${name} — expected in configured build. Using development fallback.`,
+      );
+    } else {
+      throw new Error(
+        `[publicClientConfig] Missing required env var ${name}. ` +
+          `All Firebase values must be set in production builds. ` +
+          `Refusing to fall back to development defaults.`,
+      );
+    }
   }
 
   return fallback;

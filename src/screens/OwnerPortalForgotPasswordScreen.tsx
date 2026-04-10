@@ -38,7 +38,7 @@ export function OwnerPortalForgotPasswordScreen() {
     <ScreenShell
       eyebrow="Owner Portal"
       title="Reset owner password."
-      subtitle="We will send a secure reset link so you can get back into your owner workspace."
+      subtitle="We will send a secure reset link so you can get back into your business account."
       headerPill="Owner"
     >
       <MotionInView delay={70}>
@@ -54,7 +54,7 @@ export function OwnerPortalForgotPasswordScreen() {
             },
             {
               value: 'No data loss',
-              label: 'Workspace state',
+              label: 'Your account',
               body: '',
             },
           ]}

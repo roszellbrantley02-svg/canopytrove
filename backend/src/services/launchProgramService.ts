@@ -319,6 +319,7 @@ export async function resolveOwnerLaunchTrialOffer(input: {
   ownerUid: string;
   storefrontId: string;
   currentSubscription?: TrialEligibilitySubscription | null;
+  tier?: string;
   now?: string;
 }) {
   const now = input.now ?? new Date().toISOString();
@@ -336,6 +337,15 @@ export async function resolveOwnerLaunchTrialOffer(input: {
     return {
       trialDays: existingClaim.trialDays,
       claim: existingClaim,
+    };
+  }
+
+  // Launch trial is only available for the Growth tier
+  const requestedTier = input.tier?.trim().toLowerCase() ?? '';
+  if (requestedTier && requestedTier !== 'growth') {
+    return {
+      trialDays: 0,
+      claim: null,
     };
   }
 

@@ -37,26 +37,26 @@ export function getReportScreenTitle(mode: StorefrontReportEntryMode, storefront
 
 export function getReportScreenSubtitle(mode: StorefrontReportEntryMode) {
   if (mode === 'suggest_edit') {
-    return 'Use this flow to correct storefront details that look stale, incomplete, or misleading.';
+    return 'Suggest a fix if any storefront details look outdated, incomplete, or wrong.';
   }
 
   if (mode === 'report_closed') {
-    return 'Use this flow when a storefront appears closed or no longer operating at the listed location.';
+    return 'Use this when a storefront appears closed or no longer operates at this location.';
   }
 
-  return 'Use reports for listing or storefront problems. They support moderation and quality control only.';
+  return 'Use reports for listing problems or storefront issues. Our team reviews them separately from reviews and other customer activity.';
 }
 
 export function getReportSnapshotBody(mode: StorefrontReportEntryMode) {
   if (mode === 'suggest_edit') {
-    return 'Suggested edits go into the same moderation and admin review queue as other storefront reports so listing fixes can be reviewed cleanly.';
+    return 'Suggested edits are reviewed by our team before listing details are updated.';
   }
 
   if (mode === 'report_closed') {
-    return 'Closure reports go straight into the moderation and admin review queue so storefront status changes can be checked quickly.';
+    return 'Closure reports go straight to our team so storefront status changes can be checked quickly.';
   }
 
-  return 'Reports help clean up storefront quality and moderation issues. This flow is separate from customer engagement features.';
+  return 'Reports help keep storefront details accurate. This screen is only for reporting issues.';
 }
 
 export function getReportDetailsPlaceholder(mode: StorefrontReportEntryMode) {
@@ -73,14 +73,14 @@ export function getReportDetailsPlaceholder(mode: StorefrontReportEntryMode) {
 
 export function getReportSubmitBody(mode: StorefrontReportEntryMode) {
   if (mode === 'suggest_edit') {
-    return 'Send the storefront correction once the reason and notes are accurate. Admin review can use it to improve listing quality.';
+    return 'Send the suggested correction once your notes are accurate. Our team will review it and update the listing if needed.';
   }
 
   if (mode === 'report_closed') {
-    return 'Send the closure report once the notes are accurate. The moderation queue will review the storefront status from there.';
+    return 'Send the closure report once the notes are accurate. Our team will review the storefront status from there.';
   }
 
-  return 'Send the report once the reason and notes are accurate. Reports are reviewed for quality control only.';
+  return 'Send the report once the reason and notes are accurate. Our team will review it from there.';
 }
 
 export function getReportValidationState(textLength: number) {
@@ -88,7 +88,7 @@ export function getReportValidationState(textLength: number) {
     return null;
   }
 
-  return `Add ${MIN_REPORT_DESCRIPTION_LENGTH - textLength} more characters so the report can be reviewed.`;
+  return `Add ${MIN_REPORT_DESCRIPTION_LENGTH - textLength} more characters so we can understand the issue.`;
 }
 
 export function getReportSubmitErrorMessage(error: unknown) {
@@ -111,15 +111,15 @@ export function getReportSubmitErrorMessage(error: unknown) {
 }
 
 export function getReportStorageBody() {
-  return 'Every report stores the storefront id, your profile id, the reason you picked, your notes, and a timestamp so it can be reviewed later.';
+  return 'Your report includes the storefront, the reason you chose, your notes, and a timestamp so our team can review it later.';
 }
 
 export function getReportRoutingBody() {
   if (storefrontSourceMode === 'api') {
-    return 'This build sends reports to the Canopy Trove backend moderation path. When backend Firestore is configured, the report is written into the storefront_reports review queue.';
+    return 'This report is sent to the Canopy Trove team for review.';
   }
 
-  return 'This preview build stores reports locally on this device for testing. They stay in the Canopy Trove storefront community cache until the live backend moderation path is enabled.';
+  return 'This preview build keeps reports on this device for testing until live reporting is turned on.';
 }
 
 export function getReportRoutingIconName() {
@@ -175,11 +175,11 @@ export function ReportStorefrontValidationCard({
 
   return (
     <CustomerStateCard
-      title="Reports are for quality control"
-      body="Reports help correct storefront data and moderation issues. They are reviewed separately from customer engagement activity."
+      title="Report is ready"
+      body="You have added enough detail for our team to review this report."
       tone="neutral"
       iconName="shield-checkmark-outline"
-      eyebrow="Reassurance"
+      eyebrow="Ready"
     />
   );
 }

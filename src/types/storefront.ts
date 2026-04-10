@@ -38,6 +38,8 @@ export type {
   StorefrontReportSubmissionResponse,
   StorefrontReviewHelpfulInput,
   StorefrontReviewHelpfulResponse,
+  BlockedReviewAuthor,
+  CommunitySafetyState,
   StorefrontRouteState,
   StorefrontProfileState,
 } from './storefrontCommunityTypes';

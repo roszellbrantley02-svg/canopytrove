@@ -85,7 +85,7 @@ export function OwnerPortalClaimListingScreen() {
         displayName,
       });
       setStatusText(
-        'Claim submitted. Your owner workspace is now linked to this listing for verification review.',
+        'Claim sent. We will review it and connect this business account to the storefront.',
       );
       navigation.replace('OwnerPortalHome');
     } catch (error) {
@@ -99,14 +99,14 @@ export function OwnerPortalClaimListingScreen() {
     <ScreenShell
       eyebrow="Owner Portal"
       title="Claim dispensary listing."
-      subtitle="Search the Canopy Trove directory and claim the storefront your team manages."
+      subtitle="Search the Canopy Trove directory and pick the storefront your team manages."
       headerPill="Onboarding"
     >
       <MotionInView delay={70}>
         <OwnerPortalHeroPanel
           kicker="Owner onboarding"
           title="Match the owner account to the right storefront."
-          body="Search connects owner workspace to the real listing record."
+          body="Find the right storefront so we can connect it to your business account."
           metrics={[
             {
               value: submittedQuery.trim() ? results.length : 0,

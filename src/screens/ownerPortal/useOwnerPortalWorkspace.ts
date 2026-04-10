@@ -35,13 +35,14 @@ import {
   updateOwnerPortalPreviewPromotion,
 } from '../../services/ownerPortalPreviewService';
 import { getRegisteredOpsAlertPushToken } from '../../services/opsAlertNotificationService';
+import { saveOwnerSelectedBadgeIds } from '../../services/ownerPortalProfileService';
 import {
   clearStorefrontRepositoryCache,
   storefrontRepository,
 } from '../../repositories/storefrontRepository';
 import { isBackendTierAccessError } from '../../services/storefrontBackendHttp';
 
-const PREVIEW_AI_MESSAGE = 'AI assistant tools only run in the live owner workspace.';
+const PREVIEW_AI_MESSAGE = 'Suggestions are only available on the live business dashboard.';
 
 function logSilentError(label: string) {
   return (error: unknown) => {
@@ -95,7 +96,7 @@ export function useOwnerPortalWorkspace(preview = false) {
         }
         return nextWorkspace;
       } catch (error) {
-        const nextError = getWorkspaceErrorMessage(error, 'Unable to load owner workspace.');
+        const nextError = getWorkspaceErrorMessage(error, 'Could not load the business dashboard.');
         setErrorText(nextError);
         throw error;
       } finally {
@@ -141,7 +142,7 @@ export function useOwnerPortalWorkspace(preview = false) {
         } else {
           const nextError = getWorkspaceErrorMessage(
             error,
-            'Unable to run the owner AI assistant.',
+            'Could not load suggestions right now.',
           );
           setAiErrorText(nextError);
         }
@@ -188,9 +189,11 @@ export function useOwnerPortalWorkspace(preview = false) {
         } catch (refreshError) {
           const refreshMessage = getWorkspaceErrorMessage(
             refreshError,
-            'Unable to refresh the owner workspace.',
+            'Could not refresh the business dashboard yet.',
           );
-          setErrorText(`Changes saved, but the workspace could not refresh yet. ${refreshMessage}`);
+          setErrorText(
+            `Your changes were saved, but the dashboard could not refresh yet. ${refreshMessage}`,
+          );
         }
         return result;
       } catch (error) {
@@ -201,7 +204,7 @@ export function useOwnerPortalWorkspace(preview = false) {
             currentTier: error.currentTier,
           });
         } else {
-          setErrorText(getWorkspaceErrorMessage(error, 'Unable to save owner changes.'));
+          setErrorText(getWorkspaceErrorMessage(error, 'Could not save your business changes.'));
         }
         throw error;
       } finally {
@@ -239,6 +242,27 @@ export function useOwnerPortalWorkspace(preview = false) {
           ? saveOwnerPortalPreviewProfileTools(input)
           : saveOwnerPortalProfileTools(input, activeLocationId),
       ),
+    saveBadgeDisplaySettings: (input: { selectedBadgeIds: string[]; featuredBadges: string[] }) =>
+      runMutation(async () => {
+        if (preview) {
+          return saveOwnerPortalPreviewProfileTools({
+            featuredBadges: input.featuredBadges,
+          });
+        }
+
+        const ownerUid = workspace?.ownerProfile?.uid;
+        if (!ownerUid) {
+          throw new Error('Could not save badge display settings without an owner profile.');
+        }
+
+        await saveOwnerSelectedBadgeIds(ownerUid, input.selectedBadgeIds);
+        return saveOwnerPortalProfileTools(
+          {
+            featuredBadges: input.featuredBadges,
+          },
+          activeLocationId,
+        );
+      }),
     createPromotion: (input: OwnerPortalPromotionInput) =>
       runMutation(() =>
         preview

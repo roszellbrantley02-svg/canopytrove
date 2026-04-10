@@ -20,6 +20,8 @@ const JS_DAY_TO_NAME: Record<number, OwnerHoursEntry['day']> = {
   6: 'Saturday',
 };
 
+const DEFAULT_OWNER_HOURS_TIMEZONE = 'America/New_York';
+
 const TIME_PATTERN = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i;
 
 function parseTimeToMinutes(timeStr: string): number | null {
@@ -36,6 +38,45 @@ function parseTimeToMinutes(timeStr: string): number | null {
   if (ampm === 'PM' && hours !== 12) hours += 12;
 
   return hours * 60 + minutes;
+}
+
+function getLocalTimeComponents(
+  date: Date,
+  timezone: string,
+): { dayName: OwnerHoursEntry['day'] | null; minutes: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: 'numeric',
+    minute: 'numeric',
+    weekday: 'short',
+    hour12: false,
+  }).formatToParts(date);
+
+  let hour = 0;
+  let minute = 0;
+  let weekday = '';
+  for (const part of parts) {
+    if (part.type === 'hour') hour = Number.parseInt(part.value, 10);
+    if (part.type === 'minute') minute = Number.parseInt(part.value, 10);
+    if (part.type === 'weekday') weekday = part.value;
+  }
+
+  if (hour === 24) hour = 0;
+
+  const weekdayMap: Record<string, OwnerHoursEntry['day']> = {
+    Sun: 'Sunday',
+    Mon: 'Monday',
+    Tue: 'Tuesday',
+    Wed: 'Wednesday',
+    Thu: 'Thursday',
+    Fri: 'Friday',
+    Sat: 'Saturday',
+  };
+
+  return {
+    dayName: weekdayMap[weekday] ?? JS_DAY_TO_NAME[date.getDay()] ?? null,
+    minutes: hour * 60 + minute,
+  };
 }
 
 /**
@@ -99,29 +140,51 @@ export function ownerHoursToDisplayStrings(entries: OwnerHoursEntry[]): string[]
 export function computeOpenNowFromOwnerHours(
   entries: OwnerHoursEntry[],
   now: Date = new Date(),
+  timezone: string = DEFAULT_OWNER_HOURS_TIMEZONE,
 ): boolean | null {
-  const dayName = JS_DAY_TO_NAME[now.getDay()];
+  const { dayName, minutes: currentMinutes } = getLocalTimeComponents(now, timezone);
   if (!dayName) return null;
 
   const todayEntry = entries.find((e) => e.day === dayName);
-  if (!todayEntry) return null;
+  if (todayEntry && !todayEntry.closed && todayEntry.open && todayEntry.close) {
+    const openMinutes = parseTimeToMinutes(todayEntry.open);
+    const closeMinutes = parseTimeToMinutes(todayEntry.close);
+    if (openMinutes !== null && closeMinutes !== null) {
+      if (closeMinutes > openMinutes) {
+        if (currentMinutes >= openMinutes && currentMinutes < closeMinutes) {
+          return true;
+        }
+      } else if (currentMinutes >= openMinutes) {
+        return true;
+      }
+    }
+  }
 
-  if (todayEntry.closed || !todayEntry.open || !todayEntry.close) {
+  const currentDayIndex = VALID_DAYS.indexOf(dayName);
+  const yesterdayDay =
+    currentDayIndex >= 0
+      ? VALID_DAYS[(currentDayIndex + VALID_DAYS.length - 1) % VALID_DAYS.length]
+      : null;
+  const yesterdayEntry = yesterdayDay ? entries.find((entry) => entry.day === yesterdayDay) : null;
+
+  if (yesterdayEntry && !yesterdayEntry.closed && yesterdayEntry.open && yesterdayEntry.close) {
+    const yesterdayOpenMinutes = parseTimeToMinutes(yesterdayEntry.open);
+    const yesterdayCloseMinutes = parseTimeToMinutes(yesterdayEntry.close);
+    if (
+      yesterdayOpenMinutes !== null &&
+      yesterdayCloseMinutes !== null &&
+      yesterdayCloseMinutes <= yesterdayOpenMinutes &&
+      currentMinutes < yesterdayCloseMinutes
+    ) {
+      return true;
+    }
+  }
+
+  if (todayEntry) {
     return false;
   }
 
-  const openMinutes = parseTimeToMinutes(todayEntry.open);
-  const closeMinutes = parseTimeToMinutes(todayEntry.close);
-  if (openMinutes === null || closeMinutes === null) return null;
-
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-  if (closeMinutes > openMinutes) {
-    return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
-  }
-
-  // Overnight hours (e.g., open 8 PM, close 2 AM)
-  return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
+  return null;
 }
 
 export { VALID_DAYS };

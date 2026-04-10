@@ -127,11 +127,13 @@ export function toCommunityRelativeTime(createdAt: string) {
 export function mapStoredReviewToAppReview(
   review: StoredLocalAppReviewRecord,
   helpfulVotes: StoredHelpfulReviewOverlay | undefined,
+  currentProfileId?: string | null,
 ): AppReview {
   return {
     id: review.id,
     authorName: review.authorName,
     authorProfileId: review.profileId,
+    isOwnReview: Boolean(currentProfileId && review.profileId === currentProfileId),
     rating: review.rating,
     relativeTime: toCommunityRelativeTime(review.createdAt),
     text: review.text,

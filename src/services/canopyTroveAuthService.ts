@@ -162,6 +162,35 @@ export async function getCanopyTroveAuthIdTokenResult(options?: { forceRefresh?:
   }
 }
 
+function getCanopyTroveSessionRole(claims: Record<string, unknown> | undefined) {
+  if (claims?.admin === true || claims?.role === 'admin') {
+    return 'admin';
+  }
+
+  if (claims?.role === 'owner') {
+    return 'owner';
+  }
+
+  return 'member';
+}
+
+export async function getCanopyTroveStorefrontReadIdToken() {
+  const tokenResult = await getCanopyTroveAuthIdTokenResult();
+  if (!tokenResult) {
+    return null;
+  }
+
+  // Owner/admin sessions should browse public storefront content as guests.
+  // That keeps discovery reads on the same safe path instead of opting owners
+  // into member-view enhancements and member-only deal visibility.
+  const sessionRole = getCanopyTroveSessionRole(tokenResult.claims);
+  if (sessionRole === 'owner' || sessionRole === 'admin') {
+    return null;
+  }
+
+  return tokenResult.token;
+}
+
 export async function signInCanopyTroveEmailPassword(email: string, password: string) {
   const auth = getFirebaseAuth();
   if (!auth) {

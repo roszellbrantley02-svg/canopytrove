@@ -732,6 +732,7 @@ export async function createOwnerBillingCheckoutSession(
     ownerUid,
     storefrontId: storefrontId ?? '',
     currentSubscription,
+    tier,
     now,
   });
 

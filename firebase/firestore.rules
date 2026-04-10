@@ -85,6 +85,22 @@ service cloud.firestore {
         request.resource.data.selectedBadgeIds == resource.data.selectedBadgeIds;
     }
 
+    function isOwnerDealSubmission() {
+      return request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.moderationStatus == 'pending' &&
+        request.resource.data.reviewedAt == null &&
+        request.resource.data.reviewNotes == null;
+    }
+
+    function preservesDealControlledFields() {
+      return request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.dispensaryId == resource.data.dispensaryId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.moderationStatus == resource.data.moderationStatus &&
+        request.resource.data.reviewedAt == resource.data.reviewedAt &&
+        request.resource.data.reviewNotes == resource.data.reviewNotes;
+    }
+
     match /users/{uid} {
       allow create: if isSelf(uid) &&
         request.resource.data.uid == uid &&
@@ -105,7 +121,7 @@ service cloud.firestore {
       );
       allow read: if isSelf(uid) || isAdmin();
       allow update: if isAdmin() || (
-        isSelf(uid) &&
+        isOwner(uid) &&
         preservesOwnerProfileControlledFields()
       );
       allow delete: if isAdmin();
@@ -184,7 +200,7 @@ service cloud.firestore {
       allow read: if resource.data.status == 'active' &&
         resource.data.moderationStatus == 'approved';
       allow create: if isSignedIn() &&
-        request.resource.data.ownerUid == request.auth.uid &&
+        isOwnerDealSubmission() &&
         ownsDispensary(request.resource.data.dispensaryId) &&
         ownerVerified(request.auth.uid) &&
         ownerSubscribed(request.auth.uid, request.resource.data.dispensaryId);
@@ -192,6 +208,7 @@ service cloud.firestore {
         isSignedIn() &&
         resource.data.ownerUid == request.auth.uid &&
         ownsDispensary(resource.data.dispensaryId) &&
+        preservesDealControlledFields() &&
         ownerVerified(request.auth.uid) &&
         ownerSubscribed(request.auth.uid, resource.data.dispensaryId)
       );
@@ -231,7 +248,7 @@ service cloud.firestore {
     }
 
     match /ownerTasks/{taskId} {
-      allow read: if isOwner(request.auth.uid) || isAdmin();
+      allow read: if isAdmin() || isOwner(resource.data.ownerUid);
       allow write: if isAdmin();
     }
 

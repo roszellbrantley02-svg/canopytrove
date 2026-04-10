@@ -23,6 +23,7 @@ export const savedSummariesInFlight = new Map<string, Promise<StorefrontSummary[
 export const nearbySummariesInFlight = new Map<string, Promise<StorefrontSummary[]>>();
 export const browseSummariesInFlight = new Map<string, Promise<BrowseSummaryResult>>();
 export const storefrontDetailsInFlight = new Map<string, Promise<StorefrontDetails | null>>();
+const storefrontDetailsListeners = new Map<string, Set<() => void>>();
 
 export const NEARBY_RADIUS_MILES = 35;
 export const BROWSE_RADIUS_MILES = 120;
@@ -33,6 +34,20 @@ const MAX_DETAIL_CACHE_ENTRIES = 64;
 
 function createDetailKey(storefrontId: string) {
   return `${storefrontId}::${getStorefrontMemberAccessCacheKey()}`;
+}
+
+function notifyStorefrontDetailListeners(storefrontId: string) {
+  storefrontDetailsListeners.get(storefrontId)?.forEach((listener) => {
+    listener();
+  });
+}
+
+function notifyAllStorefrontDetailListeners() {
+  storefrontDetailsListeners.forEach((listeners) => {
+    listeners.forEach((listener) => {
+      listener();
+    });
+  });
 }
 
 function pruneMapToLimit<T>(cache: Map<string, T>, maxEntries: number) {
@@ -126,6 +141,24 @@ export function getFreshDetail(storefrontId: string) {
   return getFreshDetailEntry(storefrontId).value;
 }
 
+export function subscribeToFreshDetail(storefrontId: string, listener: () => void) {
+  const listeners = storefrontDetailsListeners.get(storefrontId) ?? new Set<() => void>();
+  listeners.add(listener);
+  storefrontDetailsListeners.set(storefrontId, listeners);
+
+  return () => {
+    const current = storefrontDetailsListeners.get(storefrontId);
+    if (!current) {
+      return;
+    }
+
+    current.delete(listener);
+    if (current.size === 0) {
+      storefrontDetailsListeners.delete(storefrontId);
+    }
+  };
+}
+
 export async function resolveDetailWithCache(
   storefrontId: string,
   loader: () => Promise<StorefrontDetails | null>,
@@ -151,6 +184,7 @@ export async function resolveDetailWithCache(
       });
       pruneMapToLimit(storefrontDetailsCache, MAX_DETAIL_CACHE_ENTRIES);
       storefrontDetailsInFlight.delete(detailKey);
+      notifyStorefrontDetailListeners(storefrontId);
       return value;
     })
     .catch((error) => {
@@ -188,6 +222,7 @@ export function clearStorefrontRepositoryCacheEntries() {
   nearbySummariesInFlight.clear();
   browseSummariesInFlight.clear();
   storefrontDetailsInFlight.clear();
+  notifyAllStorefrontDetailListeners();
 }
 
 export function primeStorefrontDetailsCache(
@@ -198,6 +233,7 @@ export function primeStorefrontDetailsCache(
   if (!detail) {
     storefrontDetailsCache.delete(detailKey);
     storefrontDetailsInFlight.delete(detailKey);
+    notifyStorefrontDetailListeners(storefrontId);
     return;
   }
 
@@ -206,10 +242,56 @@ export function primeStorefrontDetailsCache(
     expiresAt: Date.now() + DETAIL_TTL_MS,
   });
   storefrontDetailsInFlight.delete(detailKey);
+  notifyStorefrontDetailListeners(storefrontId);
 }
 
 export function invalidateStorefrontDetailsCache(storefrontId: string) {
   const detailKey = createDetailKey(storefrontId);
   storefrontDetailsCache.delete(detailKey);
   storefrontDetailsInFlight.delete(detailKey);
+  notifyStorefrontDetailListeners(storefrontId);
+}
+
+// ---------------------------------------------------------------------------
+// Cross-tab shared summary pool
+// ---------------------------------------------------------------------------
+// When any screen fetches summaries (Nearby, Browse, Hot Deals), it primes this
+// pool.  When Browse starts cold (no cached data for its specific query), it can
+// pull from this pool to show instant UI instead of skeletons.
+// ---------------------------------------------------------------------------
+
+const MAX_SHARED_SUMMARY_ITEMS = 100;
+const sharedSummaryPool = new Map<string, { item: StorefrontSummary; primedAt: number }>();
+
+/** Prime the shared pool with freshly fetched summaries from any screen. */
+export function primeSharedSummaryPool(items: StorefrontSummary[]) {
+  const now = Date.now();
+  for (const item of items) {
+    sharedSummaryPool.set(item.id, { item, primedAt: now });
+  }
+  // Evict oldest entries if the pool grows too large
+  if (sharedSummaryPool.size > MAX_SHARED_SUMMARY_ITEMS) {
+    const sorted = Array.from(sharedSummaryPool.entries()).sort(
+      (a, b) => a[1].primedAt - b[1].primedAt,
+    );
+    const toRemove = sorted.slice(0, sharedSummaryPool.size - MAX_SHARED_SUMMARY_ITEMS);
+    for (const [key] of toRemove) {
+      sharedSummaryPool.delete(key);
+    }
+  }
+}
+
+/**
+ * Get warm summaries from the shared pool, optionally sorted by distance
+ * from a reference point. Only returns items primed within the last 90 seconds.
+ */
+export function getWarmSharedSummaries(limit: number): StorefrontSummary[] {
+  const staleThreshold = Date.now() - 90_000;
+  const fresh: StorefrontSummary[] = [];
+  for (const entry of sharedSummaryPool.values()) {
+    if (entry.primedAt > staleThreshold) {
+      fresh.push(entry.item);
+    }
+  }
+  return fresh.slice(0, limit);
 }

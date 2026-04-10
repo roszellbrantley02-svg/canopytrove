@@ -65,12 +65,23 @@ export type StorefrontReviewHelpfulInput = {
   storefrontId: string;
   reviewId: string;
   profileId: string;
+  isOwnReview?: boolean;
 };
 
 export type StorefrontReviewHelpfulResponse = {
   detail: StorefrontDetails;
   didApply: boolean;
-  reviewAuthorProfileId: string | null;
+};
+
+export type BlockedReviewAuthor = {
+  storefrontId: string;
+  storefrontName?: string | null;
+  authorId: string;
+};
+
+export type CommunitySafetyState = {
+  acceptedGuidelinesVersion: string | null;
+  blockedReviewAuthors: BlockedReviewAuthor[];
 };
 
 export type StorefrontRouteState = {

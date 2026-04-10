@@ -4,8 +4,11 @@ import type { RootStackParamList } from '../../navigation/RootNavigator';
 import { useStorefrontDetails } from '../../hooks/useStorefrontDetailData';
 import {
   blockCommunityAuthor,
+  clearBlockedCommunityAuthorsForStorefront,
   getCommunitySafetyState,
   initializeCommunitySafetyState,
+  isCommunityAuthorBlocked,
+  subscribeToCommunitySafetyState,
 } from '../../services/communitySafetyService';
 import {
   useStorefrontProfileController,
@@ -31,7 +34,9 @@ export function useStorefrontDetailScreenModel(
     isOperationalDataPending,
     error,
   } = useStorefrontDetails(storefront.id, storefront);
-  const [blockedAuthorProfileIds, setBlockedAuthorProfileIds] = React.useState<string[]>([]);
+  const [communitySafetyState, setCommunitySafetyState] = React.useState(() =>
+    getCommunitySafetyState(),
+  );
   const [reviewModerationStatusText, setReviewModerationStatusText] = React.useState<string | null>(
     null,
   );
@@ -46,7 +51,10 @@ export function useStorefrontDetailScreenModel(
   });
   const appReviews = derivedState.detailData.appReviews;
   const myReview = React.useMemo(
-    () => appReviews.find((review: AppReview) => review.authorProfileId === profileId) ?? null,
+    () =>
+      appReviews.find(
+        (review: AppReview) => review.isOwnReview || review.authorProfileId === profileId,
+      ) ?? null,
     [appReviews, profileId],
   );
   const actions = useStorefrontDetailActions({
@@ -63,9 +71,10 @@ export function useStorefrontDetailScreenModel(
     () =>
       appReviews.filter(
         (review: AppReview) =>
-          !review.authorProfileId || !blockedAuthorProfileIds.includes(review.authorProfileId),
+          !review.authorProfileId ||
+          !isCommunityAuthorBlocked(storefront.id, review.authorProfileId, communitySafetyState),
       ),
-    [blockedAuthorProfileIds, appReviews],
+    [appReviews, communitySafetyState, storefront.id],
   );
   const hiddenReviewCount = derivedState.detailData.appReviews.length - visibleAppReviews.length;
 
@@ -74,12 +83,18 @@ export function useStorefrontDetailScreenModel(
 
     void initializeCommunitySafetyState().then(() => {
       if (alive) {
-        setBlockedAuthorProfileIds(getCommunitySafetyState().blockedAuthorProfileIds);
+        setCommunitySafetyState(getCommunitySafetyState());
+      }
+    });
+    const unsubscribe = subscribeToCommunitySafetyState((state) => {
+      if (alive) {
+        setCommunitySafetyState(state);
       }
     });
 
     return () => {
       alive = false;
+      unsubscribe();
     };
   }, []);
 
@@ -91,7 +106,7 @@ export function useStorefrontDetailScreenModel(
     error,
     authSession,
     hasAnySupplementalDetail: derivedState.hasAnySupplementalDetail,
-    hasAppReviews: visibleAppReviews.length > 0,
+    hasAppReviews: derivedState.detailData.appReviews.length > 0,
     hasHours: derivedState.hasHours,
     hasLockedPhotos: derivedState.hasLockedPhotos,
     hasMenu: derivedState.hasMenu,
@@ -138,10 +153,22 @@ export function useStorefrontDetailScreenModel(
         return;
       }
 
-      void blockCommunityAuthor(reviewAuthorProfileId).then((state) => {
-        setBlockedAuthorProfileIds(state.blockedAuthorProfileIds);
+      void blockCommunityAuthor({
+        storefrontId: storefront.id,
+        storefrontName: storefront.displayName,
+        authorId: reviewAuthorProfileId,
+      }).then((state) => {
+        setCommunitySafetyState(state);
         setReviewModerationStatusText(
-          'Review author blocked. Their reviews are now hidden on this device and can be managed in Privacy and safety.',
+          `Reviews from this author are now hidden on ${storefront.displayName}. You can manage blocked authors later in Privacy and safety.`,
+        );
+      });
+    },
+    showHiddenReviews: () => {
+      void clearBlockedCommunityAuthorsForStorefront(storefront.id).then((state) => {
+        setCommunitySafetyState(state);
+        setReviewModerationStatusText(
+          `Hidden reviews are visible again on ${storefront.displayName}.`,
         );
       });
     },

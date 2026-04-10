@@ -384,6 +384,72 @@ const iconRenderers = {
       />
     </>
   ),
+  people: ({ color, strokeWidth }) => (
+    <>
+      <Circle cx="9.15" cy="9.35" r="2.15" fill={color} opacity={0.2} />
+      <Circle cx="15.25" cy="10.1" r="1.7" fill={color} opacity={0.16} />
+      <Circle cx="9.15" cy="9.35" r="2.15" stroke={color} strokeWidth={strokeWidth} />
+      <Circle cx="15.25" cy="10.1" r="1.7" stroke={color} strokeWidth={strokeWidth} />
+      <Path
+        d="M5.95 17.35c.8-1.8 2.12-2.8 3.95-2.8 1.83 0 3.15 1 3.95 2.8"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M13.8 16.95c.48-1.08 1.35-1.7 2.65-1.7 1.02 0 1.88.4 2.55 1.2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </>
+  ),
+  'diamond-outline': ({ color, strokeWidth }) => (
+    <Path
+      d="M12 4.9 18.15 12 12 19.1 5.85 12 12 4.9Z"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
+  'brush-outline': ({ color, strokeWidth }) => (
+    <>
+      <Path
+        d="m14.45 6.15 3.4 3.4-6.9 6.9a2.3 2.3 0 0 1-1.63.68H7.4v-1.92c0-.61.24-1.2.68-1.63l6.37-6.42Z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M6.55 17.55c-.48.3-.85.78-.95 1.55"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </>
+  ),
+  'chatbubbles-outline': ({ color, strokeWidth }) => (
+    <>
+      <Path
+        d="M6.85 7.15h7.45a2.7 2.7 0 0 1 2.7 2.7v2.65a2.7 2.7 0 0 1-2.7 2.7H10.3l-2.35 2.05v-2.05H6.85a2.7 2.7 0 0 1-2.7-2.7V9.85a2.7 2.7 0 0 1 2.7-2.7Z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M11.7 5.35h4.05a2.1 2.1 0 0 1 2.1 2.1v2.1"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </>
+  ),
   'shield-checkmark-outline': ({ color, strokeWidth }) => (
     <>
       <Path
@@ -1845,6 +1911,8 @@ const iconRenderers = {
 
 export type AppUiIconName = keyof typeof iconRenderers;
 
+const missingIconWarnings = new Set<string>();
+
 type AppUiIconProps = {
   name: AppUiIconName;
   size?: number;
@@ -1860,7 +1928,17 @@ export function AppUiIcon({
   strokeWidth = DEFAULT_STROKE_WIDTH,
   opacity = 1,
 }: AppUiIconProps) {
-  const renderer = iconRenderers[name];
+  const unsafeName = name as string;
+  const renderer =
+    (iconRenderers as Record<string, (props: IconDrawProps) => React.ReactNode>)[unsafeName] ??
+    iconRenderers['sparkles-outline'];
+  const isDevRuntime = typeof __DEV__ !== 'undefined' && __DEV__;
+
+  if (isDevRuntime && !(unsafeName in iconRenderers) && !missingIconWarnings.has(unsafeName)) {
+    missingIconWarnings.add(unsafeName);
+    console.warn(`[AppUiIcon] Missing icon renderer for "${unsafeName}", using fallback.`);
+  }
+
   return (
     <Svg
       width={size}

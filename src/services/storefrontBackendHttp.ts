@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { storefrontApiBaseUrl } from '../config/storefrontSourceConfig';
 import type { Coordinates, MarketArea } from '../types/storefront';
 import { getCanopyTroveAuthCacheKey, getCanopyTroveAuthIdToken } from './canopyTroveAuthService';
+import { getCachedAppProfile } from './appProfileService';
 
 export type StorefrontBackendHealth = {
   ok: boolean;
@@ -74,6 +75,7 @@ export const backendCacheTtls = {
   location: 5 * 60_000,
   profile: 15_000,
   profileState: 3_000,
+  communitySafety: 3_000,
   leaderboard: 15_000,
 } as const;
 
@@ -140,8 +142,12 @@ function getClientPlatformHeader(): string {
 async function buildRequestHeaders(headers?: HeadersInit) {
   const nextHeaders = new Headers(headers);
   const idToken = await getCanopyTroveAuthIdToken();
+  const profileId = getCachedAppProfile()?.id?.trim();
   if (idToken) {
     nextHeaders.set('Authorization', `Bearer ${idToken}`);
+  }
+  if (profileId) {
+    nextHeaders.set('X-Canopy-Profile-Id', profileId);
   }
   nextHeaders.set('X-Client-Platform', getClientPlatformHeader());
 
@@ -152,8 +158,16 @@ export function createProfileCacheKey(profileId: string) {
   return `profile:${profileId}:${getCanopyTroveAuthCacheKey()}`;
 }
 
+export function createCanonicalProfileCacheKey() {
+  return `profile:canonical:${getCanopyTroveAuthCacheKey()}`;
+}
+
 export function createProfileStateCacheKey(profileId: string) {
   return `profile-state:${profileId}:${getCanopyTroveAuthCacheKey()}`;
+}
+
+export function createCommunitySafetyCacheKey(profileId: string) {
+  return `community-safety:${profileId}:${getCanopyTroveAuthCacheKey()}`;
 }
 
 export function createLeaderboardRankCacheKey(profileId: string) {
@@ -283,4 +297,51 @@ export async function requestJson<T>(
   }
 
   return request;
+}
+
+/**
+ * Send a raw binary body (e.g. image bytes) to the backend with auth
+ * headers. Unlike `requestJson`, does NOT set Content-Type to JSON —
+ * the caller controls the Content-Type. The response is parsed as JSON.
+ */
+export async function requestRawUpload<T>(
+  pathname: string,
+  body: Blob | ArrayBuffer,
+  options: {
+    method?: string;
+    contentType: string;
+    extraHeaders?: Record<string, string>;
+    timeoutMs?: number;
+  },
+): Promise<T> {
+  const controller = new AbortController();
+  const effectiveTimeout = options.timeoutMs ?? BACKEND_REQUEST_TIMEOUT_MS;
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, effectiveTimeout);
+
+  try {
+    const headers = await buildRequestHeaders();
+    headers.set('Content-Type', options.contentType);
+    if (options.extraHeaders) {
+      for (const [key, value] of Object.entries(options.extraHeaders)) {
+        headers.set(key, value);
+      }
+    }
+
+    const response = await fetch(createBackendUrl(pathname), {
+      method: options.method ?? 'POST',
+      headers,
+      body,
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      await throwBackendError(response);
+    }
+
+    return (await response.json()) as T;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

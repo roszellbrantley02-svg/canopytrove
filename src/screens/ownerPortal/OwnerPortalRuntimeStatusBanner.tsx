@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import type { RuntimeOpsStatus } from '../../types/runtimeOps';
 import { ownerPortalStyles as styles } from './ownerPortalStyles';
@@ -11,20 +11,26 @@ export function OwnerPortalRuntimeStatusBanner({
 }) {
   const { policy, incidentCounts } = runtimeStatus;
   const isPaused = !policy.ownerPortalWritesEnabled || policy.safeModeEnabled;
+  const recentIssues =
+    incidentCounts.criticalLast15Minutes > 0 ||
+    incidentCounts.clientLast24Hours > 0 ||
+    incidentCounts.serverLast24Hours > 0;
 
   return (
     <View style={[styles.actionTile, isPaused ? styles.resultWarning : styles.metricCardCyan]}>
       <View style={styles.splitHeaderRow}>
         <View style={styles.splitHeaderCopy}>
-          <Text style={styles.actionTileMeta}>Runtime protection</Text>
+          <Text style={styles.actionTileMeta}>Update status</Text>
           <Text style={styles.actionTileTitle}>
-            {isPaused ? 'Protective safe mode is active' : 'Owner workspace is writable'}
+            {isPaused ? 'Edits are temporarily paused' : 'Everything is ready to update'}
           </Text>
           <Text style={styles.actionTileBody}>
             {isPaused
               ? (policy.reason ??
-                'Write actions are temporarily paused while the backend stabilizes.')
-              : 'No protective write pause is active. Promotions, replies, and profile tools can save normally.'}
+                'We temporarily paused updates while we smooth things out behind the scenes.')
+              : Platform.OS === 'android'
+                ? 'You can keep updating your storefront, updates, and replies normally.'
+                : 'You can keep updating your storefront, offers, and replies normally.'}
           </Text>
         </View>
         <AppUiIcon
@@ -34,11 +40,11 @@ export function OwnerPortalRuntimeStatusBanner({
         />
       </View>
       <Text style={styles.resultMeta}>
-        Critical incidents in last 15 minutes: {runtimeStatus.incidentCounts.criticalLast15Minutes}
-      </Text>
-      <Text style={styles.resultMeta}>
-        Client incidents 24H: {incidentCounts.clientLast24Hours} | Server incidents 24H:{' '}
-        {incidentCounts.serverLast24Hours}
+        {isPaused
+          ? 'You can still review everything here while saving is paused.'
+          : recentIssues
+            ? 'We are keeping a closer eye on things right now, but storefront updates are still available.'
+            : 'No action needed right now.'}
       </Text>
     </View>
   );

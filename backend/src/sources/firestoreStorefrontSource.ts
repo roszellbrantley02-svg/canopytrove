@@ -5,6 +5,7 @@ import {
 } from '../../../src/types/firestoreDocuments';
 import { getBackendFirebaseDb } from '../firebase';
 import { StorefrontDetailApiDocument, StorefrontSummaryApiDocument } from '../types';
+import { getStorefrontAppReviewAggregates } from '../services/storefrontCommunityService';
 import {
   applyOriginMetrics,
   createNearbySummaryCacheKey,
@@ -15,6 +16,7 @@ import {
   selectNearestSummaryPage,
   sortSummaries,
 } from './shared';
+import { computeOpenNowFromHours } from '../utils/storefrontOperationalStatus';
 import { StorefrontBackendSource, StorefrontSummaryQuery } from './types';
 
 const SUMMARY_COLLECTION = 'storefront_summaries';
@@ -39,6 +41,10 @@ let materializedSummaryCache: { expiresAt: number; items: StorefrontSummaryApiDo
   null;
 let materializedSummaryInFlight: Promise<StorefrontSummaryApiDocument[]> | null = null;
 
+type StorefrontVisibilityScopedDocument = {
+  visibilityScope?: string | null;
+};
+
 export function clearFirestoreStorefrontSourceCache() {
   scopedSummaryCache.clear();
   scopedSummaryInFlight.clear();
@@ -46,6 +52,12 @@ export function clearFirestoreStorefrontSourceCache() {
   nearbySummaryInFlight.clear();
   materializedSummaryCache = null;
   materializedSummaryInFlight = null;
+}
+
+export function isOwnerPrivateStorefrontDocument(
+  document?: StorefrontVisibilityScopedDocument | null,
+) {
+  return document?.visibilityScope === 'owner_private';
 }
 
 function applySearch(items: StorefrontSummaryApiDocument[], searchQuery?: string) {
@@ -90,7 +102,9 @@ function toSummaryDocument(
     travelMinutes: document.travelMinutes,
     rating: document.rating,
     reviewCount: document.reviewCount,
-    openNow: document.openNow,
+    openNow:
+      computeOpenNowFromHours(document.hours?.length ? document.hours : null) ?? document.openNow,
+    hours: document.hours?.length ? [...document.hours] : [],
     isVerified: document.isVerified,
     mapPreviewLabel: document.mapPreviewLabel,
     promotionText: document.promotionText ?? null,
@@ -107,6 +121,25 @@ function toSummaryDocument(
     promotionPlacementScope: document.promotionPlacementScope ?? null,
     placeId: document.placeId,
     thumbnailUrl: document.thumbnailUrl ?? null,
+  };
+}
+
+export function applyAppReviewAggregateFallback(
+  summary: StorefrontSummaryApiDocument,
+  aggregate?: { reviewCount: number; averageRating: number } | null,
+) {
+  if (!aggregate || aggregate.reviewCount <= 0) {
+    return summary;
+  }
+
+  if (summary.reviewCount > 0 && summary.rating > 0) {
+    return summary;
+  }
+
+  return {
+    ...summary,
+    reviewCount: aggregate.reviewCount,
+    rating: aggregate.averageRating,
   };
 }
 
@@ -253,6 +286,7 @@ function toDetailDocument(
     appReviews: document.appReviews.map((review) => ({
       ...review,
       authorProfileId: review.authorProfileId ?? null,
+      isOwnReview: review.isOwnReview ?? false,
       tags: [...review.tags],
       helpfulCount: review.helpfulCount ?? 0,
       ownerReply: review.ownerReply ?? null,
@@ -284,7 +318,10 @@ async function getSummarySnapshots(
       id: snapshot.id,
       data: snapshot.data(),
     }))
-    .filter(({ data }) => isCompleteStorefrontSummaryDocument(data))
+    .filter(
+      ({ data }) =>
+        isCompleteStorefrontSummaryDocument(data) && !isOwnerPrivateStorefrontDocument(data),
+    )
     .map(({ id, data }) => toSummaryDocument(id, data as StorefrontSummaryDocument));
 }
 
@@ -329,7 +366,13 @@ async function buildScopedSummaries(
   const origin = sourceQuery.origin;
   const radiusMiles = sourceQuery.radiusMiles;
   const sortKey = sourceQuery.sortKey;
-  const allSummaries = await getMaterializedSummaries();
+  const [baseSummaries, appReviewAggregates] = await Promise.all([
+    getMaterializedSummaries(),
+    getStorefrontAppReviewAggregates(),
+  ]);
+  const allSummaries = baseSummaries.map((summary) =>
+    applyAppReviewAggregateFallback(summary, appReviewAggregates.get(summary.id)),
+  );
   const scopedSummaries = areaId
     ? allSummaries.filter((summary) => summary.marketId === areaId)
     : allSummaries;
@@ -387,7 +430,13 @@ async function getNearbySummaryPage(sourceQuery: StorefrontSummaryQuery) {
   }
 
   const task = (async () => {
-    const allSummaries = await getMaterializedSummaries();
+    const [baseSummaries, appReviewAggregates] = await Promise.all([
+      getMaterializedSummaries(),
+      getStorefrontAppReviewAggregates(),
+    ]);
+    const allSummaries = baseSummaries.map((summary) =>
+      applyAppReviewAggregateFallback(summary, appReviewAggregates.get(summary.id)),
+    );
     const scopedSummaries = sourceQuery.areaId
       ? allSummaries.filter((summary) => summary.marketId === sourceQuery.areaId)
       : allSummaries;
@@ -417,7 +466,13 @@ async function getNearbySummaryPage(sourceQuery: StorefrontSummaryQuery) {
 
 export const firestoreStorefrontSource: StorefrontBackendSource = {
   async getAllSummaries() {
-    return getMaterializedSummaries();
+    const [baseSummaries, appReviewAggregates] = await Promise.all([
+      getMaterializedSummaries(),
+      getStorefrontAppReviewAggregates(),
+    ]);
+    return baseSummaries.map((summary) =>
+      applyAppReviewAggregateFallback(summary, appReviewAggregates.get(summary.id)),
+    );
   },
 
   async getSummariesByIds(ids) {
@@ -425,7 +480,7 @@ export const firestoreStorefrontSource: StorefrontBackendSource = {
       return [];
     }
     const idSet = new Set(ids);
-    return (await getMaterializedSummaries()).filter((summary) => idSet.has(summary.id));
+    return (await this.getAllSummaries()).filter((summary) => idSet.has(summary.id));
   },
 
   async getSummaryPage(sourceQuery) {
@@ -458,7 +513,12 @@ export const firestoreStorefrontSource: StorefrontBackendSource = {
       return null;
     }
 
-    return toDetailDocument(snapshot.id, snapshot.data() as StorefrontDetailDocument);
+    const data = snapshot.data() as StorefrontDetailDocument;
+    if (isOwnerPrivateStorefrontDocument(data)) {
+      return null;
+    }
+
+    return toDetailDocument(snapshot.id, data);
   },
 };
 

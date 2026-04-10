@@ -24,6 +24,11 @@ export function FavoriteDealNotificationBridge() {
   const appStateRef = React.useRef<AppStateStatus>(AppState.currentState);
   const syncInFlightRef = React.useRef<Promise<void> | null>(null);
 
+  // Gate: skip all notification work for signed-out users and users with no saves.
+  // This avoids network calls, push token registration, and polling for anonymous
+  // browse-only traffic that will never receive deal notifications.
+  const isActive = authSession.status === 'authenticated' && savedStorefrontIds.length > 0;
+
   const syncAlerts = React.useCallback(
     async (allowNotifications: boolean) => {
       try {
@@ -92,11 +97,36 @@ export function FavoriteDealNotificationBridge() {
     [authSession.status, profileId, savedStorefrontIds],
   );
 
+  // Defer the initial sync so it doesn't compete with the primary
+  // screen data fetch for network connections (this call takes ~1s).
   React.useEffect(() => {
-    void syncAlerts(false);
-  }, [syncAlerts]);
+    if (!isActive) return;
+
+    let cancelled = false;
+    const run = () => {
+      if (!cancelled) {
+        void syncAlerts(false);
+      }
+    };
+
+    if (typeof requestIdleCallback === 'function') {
+      const handle = requestIdleCallback(run, { timeout: 5_000 });
+      return () => {
+        cancelled = true;
+        cancelIdleCallback(handle);
+      };
+    }
+
+    const timer = setTimeout(run, 3_000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isActive, syncAlerts]);
 
   React.useEffect(() => {
+    if (!isActive) return;
+
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       const previousAppState = appStateRef.current;
       appStateRef.current = nextAppState;
@@ -112,9 +142,11 @@ export function FavoriteDealNotificationBridge() {
     return () => {
       subscription.remove();
     };
-  }, [syncAlerts]);
+  }, [isActive, syncAlerts]);
 
   React.useEffect(() => {
+    if (!isActive) return;
+
     const interval = setInterval(() => {
       if (appStateRef.current === 'active') {
         void syncAlerts(true);
@@ -124,7 +156,7 @@ export function FavoriteDealNotificationBridge() {
     return () => {
       clearInterval(interval);
     };
-  }, [syncAlerts]);
+  }, [isActive, syncAlerts]);
 
   return null;
 }

@@ -29,7 +29,7 @@ type OwnerPortalBadgesRoute = RouteProp<RootStackParamList, 'OwnerPortalBadges'>
 function OwnerPortalBadgesScreenInner() {
   const _route = useRoute<OwnerPortalBadgesRoute>();
   const preview = false;
-  const { workspace, isLoading, isSaving, errorText, saveProfileTools } =
+  const { workspace, isLoading, isSaving, errorText, saveBadgeDisplaySettings } =
     useOwnerPortalWorkspace(preview);
   const tierDef = getOwnerTierDefinition(workspace?.tier);
   const canCustomizeBadges = tierDef.badgeCustomizationEnabled;
@@ -72,14 +72,12 @@ function OwnerPortalBadgesScreenInner() {
   );
 
   const handleSave = React.useCallback(() => {
-    if (!workspace?.profileTools) return;
-
     const labels = selectedBadgeIdsToLabels(selectedIds);
-    void saveProfileTools({
-      ...workspace.profileTools,
+    void saveBadgeDisplaySettings({
+      selectedBadgeIds: selectedIds,
       featuredBadges: labels,
     });
-  }, [workspace?.profileTools, selectedIds, saveProfileTools]);
+  }, [selectedIds, saveBadgeDisplaySettings]);
 
   const earnedBadges = allOwnerBadges.filter((b) => earnedSet.has(b.id));
   const lockedBadges = allOwnerBadges.filter((b) => !earnedSet.has(b.id));

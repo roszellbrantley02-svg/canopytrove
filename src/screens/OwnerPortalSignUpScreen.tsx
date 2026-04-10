@@ -69,15 +69,15 @@ export function OwnerPortalSignUpScreen() {
   return (
     <ScreenShell
       eyebrow="Owner Portal"
-      title="Create owner account."
-      subtitle="Start your owner workspace and move through business details, listing claim, and verification from one place."
-      headerPill="Owner"
+      title="Create owner account"
+      subtitle="Set up your business account, connect your storefront, and get ready to manage it in one place."
+      headerPill="Business"
     >
       <MotionInView delay={70}>
         <OwnerPortalHeroPanel
-          kicker="Owner onboarding"
-          title="Start the owner workspace."
-          body="Create a new account to begin your owner journey."
+          kicker="Business account"
+          title="Create your owner account."
+          body="Start here, then add your business details and connect your storefront."
           metrics={[
             {
               value: 'New',
@@ -194,8 +194,8 @@ export function OwnerPortalSignUpScreen() {
             <View style={styles.ctaPanel}>
               <View style={styles.splitHeaderRow}>
                 <View style={styles.splitHeaderCopy}>
-                  <Text style={styles.sectionEyebrow}>Create owner account</Text>
-                  <Text style={styles.splitHeaderTitle}>Open the onboarding sequence</Text>
+                  <Text style={styles.sectionEyebrow}>Create account</Text>
+                  <Text style={styles.splitHeaderTitle}>Start your business setup</Text>
                 </View>
                 <AppUiIcon name="person-add-outline" size={20} color="#F5C86A" />
               </View>

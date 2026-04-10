@@ -1,9 +1,14 @@
 import {
+  AppProfileApiDocument,
   GamificationLeaderboardApiResponse,
   GamificationLeaderboardEntryApiDocument,
+  StorefrontGamificationStateApiDocument,
 } from '../types';
+import { getOptionalFirestoreCollection } from '../firestoreCollections';
 import { listGamificationStates } from './gamificationPersistenceService';
 import { listProfiles } from './profileService';
+
+const USERS_COLLECTION = 'users';
 
 function normalizeLimit(limit: number | undefined) {
   if (!Number.isFinite(limit)) {
@@ -21,17 +26,132 @@ function normalizeOffset(offset: number | undefined) {
   return Math.max(0, Math.floor(offset!));
 }
 
+/**
+ * Load the set of Firebase UIDs that belong to owner or admin accounts.
+ * These users are excluded from the community leaderboard.
+ */
+async function loadOwnerAccountIds(): Promise<Set<string>> {
+  const collectionRef = getOptionalFirestoreCollection<{
+    uid: string;
+    role: string;
+  }>(USERS_COLLECTION);
+
+  if (!collectionRef) {
+    return new Set();
+  }
+
+  const snapshot = await collectionRef.where('role', 'in', ['owner', 'admin']).select('uid').get();
+
+  return new Set(snapshot.docs.map((doc) => doc.id));
+}
+
+/**
+ * When the same authenticated user has multiple profiles (e.g. different
+ * devices, cache clears), the leaderboard can show them twice — once per
+ * profileId. This function merges gamification states that share the same
+ * `accountId`, keeping the profile with the highest total points and summing
+ * any metrics the secondary profile accumulated.
+ */
+function deduplicateByAccount(
+  gamificationStates: StorefrontGamificationStateApiDocument[],
+  profileById: Map<string, AppProfileApiDocument>,
+) {
+  const accountToPrimary = new Map<
+    string,
+    {
+      primary: StorefrontGamificationStateApiDocument;
+      merged: StorefrontGamificationStateApiDocument[];
+    }
+  >();
+
+  const deduplicatedStates: StorefrontGamificationStateApiDocument[] = [];
+
+  for (const state of gamificationStates) {
+    const profile = profileById.get(state.profileId);
+    const accountId = profile?.accountId ?? null;
+
+    if (!accountId) {
+      deduplicatedStates.push(state);
+      continue;
+    }
+
+    const existing = accountToPrimary.get(accountId);
+    if (!existing) {
+      accountToPrimary.set(accountId, { primary: state, merged: [state] });
+      continue;
+    }
+
+    existing.merged.push(state);
+    if (state.totalPoints > existing.primary.totalPoints) {
+      existing.primary = state;
+    }
+  }
+
+  for (const { primary, merged } of accountToPrimary.values()) {
+    if (merged.length === 1) {
+      deduplicatedStates.push(primary);
+      continue;
+    }
+
+    let totalPoints = 0;
+    let totalReviews = 0;
+    let totalPhotos = 0;
+    let dispensariesVisited = 0;
+    let totalRoutesStarted = 0;
+    let badgeCount = 0;
+    let highestLevel = 0;
+    let earliestJoined = primary.joinedDate;
+
+    for (const state of merged) {
+      totalPoints += state.totalPoints;
+      totalReviews += state.totalReviews;
+      totalPhotos += state.totalPhotos;
+      dispensariesVisited += state.dispensariesVisited;
+      totalRoutesStarted += state.totalRoutesStarted;
+      badgeCount = Math.max(badgeCount, state.badges.length);
+      highestLevel = Math.max(highestLevel, state.level);
+      if (state.joinedDate < earliestJoined) {
+        earliestJoined = state.joinedDate;
+      }
+    }
+
+    deduplicatedStates.push({
+      ...primary,
+      totalPoints,
+      totalReviews,
+      totalPhotos,
+      dispensariesVisited,
+      totalRoutesStarted,
+      level: highestLevel,
+      joinedDate: earliestJoined,
+    });
+  }
+
+  return deduplicatedStates;
+}
+
 export async function getLeaderboard(
   limit?: number,
   offset?: number,
 ): Promise<GamificationLeaderboardApiResponse> {
-  const [profiles, gamificationStates] = await Promise.all([
+  const [profiles, gamificationStates, ownerAccountIds] = await Promise.all([
     listProfiles(5000),
     listGamificationStates(5000),
+    loadOwnerAccountIds(),
   ]);
 
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
-  const sortedEntries = gamificationStates
+
+  // Exclude owners and admins — the leaderboard is for regular users only.
+  const nonOwnerStates = gamificationStates.filter((state) => {
+    const profile = profileById.get(state.profileId);
+    const accountId = profile?.accountId ?? null;
+    return !accountId || !ownerAccountIds.has(accountId);
+  });
+
+  const deduplicatedStates = deduplicateByAccount(nonOwnerStates, profileById);
+
+  const sortedEntries = deduplicatedStates
     .slice()
     .sort((left, right) => {
       if (right.totalPoints !== left.totalPoints) {

@@ -4,7 +4,7 @@ import type { BrowseSortKey, StorefrontDetails, StorefrontListQuery } from '../t
 import { getStorefrontMemberAccessCacheKey } from './storefrontMemberDealAccessService';
 
 export const NEARBY_SNAPSHOT_PREFIX = `${brand.storageNamespace}:nearby-snapshot:v8`;
-export const BROWSE_SNAPSHOT_PREFIX = `${brand.storageNamespace}:browse-snapshot:v7`;
+export const BROWSE_SNAPSHOT_PREFIX = `${brand.storageNamespace}:browse-snapshot:v8`;
 export const DETAIL_SNAPSHOT_PREFIX = `${brand.storageNamespace}:detail-snapshot:v7`;
 const BROWSE_SNAPSHOT_REGISTRY_KEY = `${brand.storageNamespace}:browse-snapshot-registry:v1`;
 const NEARBY_SNAPSHOT_REGISTRY_KEY = `${brand.storageNamespace}:nearby-snapshot-registry:v1`;

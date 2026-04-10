@@ -1,41 +1,160 @@
+import React from 'react';
 import type { Animated } from 'react-native';
 import { Easing } from 'react-native';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { BrowseScreen } from '../screens/BrowseScreen';
-import { AdminRuntimePanelScreen } from '../screens/AdminRuntimePanelScreen';
-import { CanopyTroveForgotPasswordScreen } from '../screens/CanopyTroveForgotPasswordScreen';
-import { CanopyTroveSignInScreen } from '../screens/CanopyTroveSignInScreen';
-import { CanopyTroveSignUpScreen } from '../screens/CanopyTroveSignUpScreen';
-import { HotDealsScreen } from '../screens/HotDealsScreen';
-import { LegalCenterScreen } from '../screens/LegalCenterScreen';
-import { LeaderboardScreen } from '../screens/LeaderboardScreen';
-import { NearbyScreen } from '../screens/NearbyScreen';
-import { OwnerPortalAccessScreen } from '../screens/OwnerPortalAccessScreen';
-import { OwnerPortalBusinessDetailsScreen } from '../screens/OwnerPortalBusinessDetailsScreen';
-import { OwnerPortalBusinessVerificationScreen } from '../screens/OwnerPortalBusinessVerificationScreen';
-import { OwnerPortalClaimListingScreen } from '../screens/OwnerPortalClaimListingScreen';
-import { OwnerPortalForgotPasswordScreen } from '../screens/OwnerPortalForgotPasswordScreen';
-import { OwnerPortalHomeScreen } from '../screens/OwnerPortalHomeScreen';
-import { OwnerPortalIdentityVerificationScreen } from '../screens/OwnerPortalIdentityVerificationScreen';
-import { OwnerPortalProfileToolsScreen } from '../screens/OwnerPortalProfileToolsScreen';
-import { OwnerPortalPromotionsScreen } from '../screens/OwnerPortalPromotionsScreen';
-import { OwnerPortalReviewInboxScreen } from '../screens/OwnerPortalReviewInboxScreen';
-import { OwnerPortalSignInScreen } from '../screens/OwnerPortalSignInScreen';
-import { OwnerPortalSignUpScreen } from '../screens/OwnerPortalSignUpScreen';
-import { OwnerPortalSubscriptionScreen } from '../screens/OwnerPortalSubscriptionScreen';
-import { OwnerPortalBadgesScreen } from '../screens/OwnerPortalBadgesScreen';
-import { OwnerPortalHoursScreen } from '../screens/OwnerPortalHoursScreen';
-import { ProfileScreen } from '../screens/ProfileScreen';
-import { ReportStorefrontScreen } from '../screens/ReportStorefrontScreen';
-import { StorefrontDetailScreen } from '../screens/StorefrontDetailScreen';
-import { DeleteAccountScreen } from '../screens/DeleteAccountScreen';
-import { WriteReviewScreen } from '../screens/WriteReviewScreen';
-import { SettingsScreen } from '../screens/SettingsScreen';
-import { SavedStorefrontsScreen } from '../screens/SavedStorefrontsScreen';
-import { BadgeGalleryScreen } from '../screens/BadgeGalleryScreen';
 import { colors } from '../theme/tokens';
+
+/* ── Core tab screens — always in the main bundle ── */
+import { NearbyScreen } from '../screens/NearbyScreen';
+import { BrowseScreen } from '../screens/BrowseScreen';
+import { HotDealsScreen } from '../screens/HotDealsScreen';
+import { ProfileScreen } from '../screens/ProfileScreen';
+
+/* ── Lazy-loaded helper ──
+ * On web, React.lazy splits these into separate chunks loaded on navigation.
+ * On native, React.lazy also works (Metro supports it), keeping the same API. */
+// React.lazy needs a loose component prop boundary here because the screen
+// modules mix prop-less components with navigator-injected props.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function lazyScreen<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T } | Record<string, T>>,
+  exportName?: string,
+): React.LazyExoticComponent<T> {
+  return React.lazy(() =>
+    factory().then((mod) => {
+      if ('default' in mod) return mod as { default: T };
+      const namedExports = mod as Record<string, T>;
+      const component = exportName ? namedExports[exportName] : Object.values(namedExports)[0];
+      if (!component) {
+        throw new Error(
+          exportName
+            ? `Lazy screen export "${exportName}" was not found.`
+            : 'Lazy screen module did not expose a component.',
+        );
+      }
+      return { default: component } as { default: T };
+    }),
+  );
+}
+
+/* ── Secondary routes — lazy-loaded for smaller initial bundle ── */
+const StorefrontDetailScreen = lazyScreen(
+  () => import('../screens/StorefrontDetailScreen'),
+  'StorefrontDetailScreen',
+);
+const WriteReviewScreen = lazyScreen(
+  () => import('../screens/WriteReviewScreen'),
+  'WriteReviewScreen',
+);
+const ReportStorefrontScreen = lazyScreen(
+  () => import('../screens/ReportStorefrontScreen'),
+  'ReportStorefrontScreen',
+);
+const LegalCenterScreen = lazyScreen(
+  () => import('../screens/LegalCenterScreen'),
+  'LegalCenterScreen',
+);
+const DeleteAccountScreen = lazyScreen(
+  () => import('../screens/DeleteAccountScreen'),
+  'DeleteAccountScreen',
+);
+const LeaderboardScreen = lazyScreen(
+  () => import('../screens/LeaderboardScreen'),
+  'LeaderboardScreen',
+);
+const SettingsScreen = lazyScreen(() => import('../screens/SettingsScreen'), 'SettingsScreen');
+const SavedStorefrontsScreen = lazyScreen(
+  () => import('../screens/SavedStorefrontsScreen'),
+  'SavedStorefrontsScreen',
+);
+const BadgeGalleryScreen = lazyScreen(
+  () => import('../screens/BadgeGalleryScreen'),
+  'BadgeGalleryScreen',
+);
+
+/* ── Auth screens — lazy ── */
+const CanopyTroveSignInScreen = lazyScreen(
+  () => import('../screens/CanopyTroveSignInScreen'),
+  'CanopyTroveSignInScreen',
+);
+const CanopyTroveSignUpScreen = lazyScreen(
+  () => import('../screens/CanopyTroveSignUpScreen'),
+  'CanopyTroveSignUpScreen',
+);
+const CanopyTroveForgotPasswordScreen = lazyScreen(
+  () => import('../screens/CanopyTroveForgotPasswordScreen'),
+  'CanopyTroveForgotPasswordScreen',
+);
+
+/* ── Owner portal screens — lazy (heaviest chunk, never needed for public browse) ── */
+const OwnerPortalAccessScreen = lazyScreen(
+  () => import('../screens/OwnerPortalAccessScreen'),
+  'OwnerPortalAccessScreen',
+);
+const OwnerPortalBusinessDetailsScreen = lazyScreen(
+  () => import('../screens/OwnerPortalBusinessDetailsScreen'),
+  'OwnerPortalBusinessDetailsScreen',
+);
+const OwnerPortalBusinessVerificationScreen = lazyScreen(
+  () => import('../screens/OwnerPortalBusinessVerificationScreen'),
+  'OwnerPortalBusinessVerificationScreen',
+);
+const OwnerPortalClaimListingScreen = lazyScreen(
+  () => import('../screens/OwnerPortalClaimListingScreen'),
+  'OwnerPortalClaimListingScreen',
+);
+const OwnerPortalForgotPasswordScreen = lazyScreen(
+  () => import('../screens/OwnerPortalForgotPasswordScreen'),
+  'OwnerPortalForgotPasswordScreen',
+);
+const OwnerPortalHomeScreen = lazyScreen(
+  () => import('../screens/OwnerPortalHomeScreen'),
+  'OwnerPortalHomeScreen',
+);
+const OwnerPortalIdentityVerificationScreen = lazyScreen(
+  () => import('../screens/OwnerPortalIdentityVerificationScreen'),
+  'OwnerPortalIdentityVerificationScreen',
+);
+const OwnerPortalProfileToolsScreen = lazyScreen(
+  () => import('../screens/OwnerPortalProfileToolsScreen'),
+  'OwnerPortalProfileToolsScreen',
+);
+const OwnerPortalPromotionsScreen = lazyScreen(
+  () => import('../screens/OwnerPortalPromotionsScreen'),
+  'OwnerPortalPromotionsScreen',
+);
+const OwnerPortalReviewInboxScreen = lazyScreen(
+  () => import('../screens/OwnerPortalReviewInboxScreen'),
+  'OwnerPortalReviewInboxScreen',
+);
+const OwnerPortalSignInScreen = lazyScreen(
+  () => import('../screens/OwnerPortalSignInScreen'),
+  'OwnerPortalSignInScreen',
+);
+const OwnerPortalSignUpScreen = lazyScreen(
+  () => import('../screens/OwnerPortalSignUpScreen'),
+  'OwnerPortalSignUpScreen',
+);
+const OwnerPortalSubscriptionScreen = lazyScreen(
+  () => import('../screens/OwnerPortalSubscriptionScreen'),
+  'OwnerPortalSubscriptionScreen',
+);
+const OwnerPortalBadgesScreen = lazyScreen(
+  () => import('../screens/OwnerPortalBadgesScreen'),
+  'OwnerPortalBadgesScreen',
+);
+const OwnerPortalHoursScreen = lazyScreen(
+  () => import('../screens/OwnerPortalHoursScreen'),
+  'OwnerPortalHoursScreen',
+);
+
+/* ── Admin screens — lazy ── */
+const AdminRuntimePanelScreen = lazyScreen(
+  () => import('../screens/AdminRuntimePanelScreen'),
+  'AdminRuntimePanelScreen',
+);
 import type {
   AppReview,
   StorefrontReviewReportContext,

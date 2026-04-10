@@ -122,7 +122,7 @@ export const serverConfig = {
   launchProgramStartAt: readConfiguredValue(process.env.LAUNCH_PROGRAM_START_AT),
   launchProgramDurationDays: parsePositiveInteger(process.env.LAUNCH_PROGRAM_DURATION_DAYS, 183),
   launchEarlyAdopterLimit: parsePositiveInteger(process.env.LAUNCH_EARLY_ADOPTER_LIMIT, 500),
-  ownerLaunchTrialDays: parsePositiveInteger(process.env.OWNER_LAUNCH_TRIAL_DAYS, 30),
+  ownerLaunchTrialDays: parsePositiveInteger(process.env.OWNER_LAUNCH_TRIAL_DAYS, 0),
   ownerPortalPrelaunchEnabled: parseBoolean(
     process.env.OWNER_PORTAL_PRELAUNCH_ENABLED ??
       process.env.EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED,
@@ -169,6 +169,13 @@ export const serverConfig = {
     process.env.OWNER_PROMOTION_SWEEP_INTERVAL_MINUTES,
     5,
   ),
+  ownerAiUserRateLimitPerMinute: parsePositiveInteger(
+    process.env.OWNER_AI_USER_RATE_LIMIT_PER_MINUTE,
+    12,
+  ),
+  ownerAiDailyRequestLimit: parsePositiveInteger(process.env.OWNER_AI_DAILY_REQUEST_LIMIT, 120),
+  ownerAiMaxCompletionTokens: parsePositiveInteger(process.env.OWNER_AI_MAX_COMPLETION_TOKENS, 350),
+  ownerAiInputModerationEnabled: parseBoolean(process.env.OWNER_AI_INPUT_MODERATION_ENABLED, true),
   opsAlertWebhookUrl: readConfiguredValue(process.env.OPS_ALERT_WEBHOOK_URL),
   opsAlertCooldownMinutes: parsePositiveInteger(process.env.OPS_ALERT_COOLDOWN_MINUTES, 30),
   readRateLimitPerMinute: parsePositiveInteger(process.env.READ_RATE_LIMIT_PER_MINUTE, 600),

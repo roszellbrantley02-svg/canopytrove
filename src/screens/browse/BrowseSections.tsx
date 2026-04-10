@@ -11,14 +11,14 @@ import { styles } from './browseStyles';
 
 function getSortLabel(sortKey: BrowseSortKey) {
   if (sortKey === 'rating') {
-    return 'rating';
+    return 'highest rating';
   }
 
   if (sortKey === 'reviews') {
-    return 'review volume';
+    return 'most reviews';
   }
 
-  return 'distance';
+  return 'closest first';
 }
 
 function getSortIcon(sortKey: BrowseSortKey) {
@@ -65,16 +65,16 @@ export function BrowseContextBar({
     <View style={styles.contextBar}>
       <View style={[styles.contextHeaderRow, compactLayout && styles.contextHeaderRowCompact]}>
         <View style={styles.contextHeaderCopy}>
-          <Text style={styles.contextBarEyebrow}>Current view</Text>
-          <Text style={styles.contextBarTitle}>Browse context stays steady while you compare.</Text>
+          <Text style={styles.contextBarEyebrow}>Current filters</Text>
+          <Text style={styles.contextBarTitle}>Compare storefronts without losing your place.</Text>
         </View>
         <View style={[styles.contextBadge, compactLayout && styles.contextBadgeCompact]}>
-          <Text style={styles.contextBadgeText}>Live browse</Text>
+          <Text style={styles.contextBadgeText}>Filters on</Text>
         </View>
       </View>
       <Text style={styles.contextBarText}>
-        Results stay scoped to the current location and search until you change them. Saved
-        storefronts stay marked on cards, so comparison still feels anchored.
+        Your location, search, and sort stay in place until you change them. Saved storefronts stay
+        marked so it is easier to compare your options.
       </Text>
       <View style={styles.contextPillRow}>
         <BrowseContextPill icon="navigate-outline" label={`Near ${locationLabel}`} />
@@ -121,20 +121,29 @@ export function BrowseEmptyState({
   onClearSearch: () => void;
   onClearHotDeals: () => void;
 }) {
+  const isAndroid = Platform.OS === 'android';
   const activeSearchQuery = searchQuery.trim();
   const title = activeSearchQuery
     ? hotDealsOnly
-      ? `No deals match "${activeSearchQuery}".`
+      ? isAndroid
+        ? `No updates match "${activeSearchQuery}".`
+        : `No deals match "${activeSearchQuery}".`
       : `No results for "${activeSearchQuery}".`
     : hotDealsOnly
-      ? 'No deals right now.'
+      ? isAndroid
+        ? 'No updates right now.'
+        : 'No deals right now.'
       : 'No storefronts found.';
   const body = activeSearchQuery
     ? hotDealsOnly
-      ? 'Try a broader search or turn off Hot Deals to widen the result set.'
-      : 'Try a broader term, a different location, or clear the search to widen the result set.'
+      ? isAndroid
+        ? 'Try a broader search or turn off Updates to see more results.'
+        : 'Try a broader search or turn off Hot Deals to see more results.'
+      : 'Try a broader search, a different location, or clear the search to see more storefronts.'
     : hotDealsOnly
-      ? 'No dispensaries in this result set are showing a live deal right now.'
+      ? isAndroid
+        ? 'None of these storefronts are showing a recent owner update right now.'
+        : 'None of these storefronts are showing a live deal right now.'
       : `Try another location near ${locationLabel}.`;
 
   return (
@@ -153,19 +162,21 @@ export function BrowseEmptyState({
       }
       eyebrow={
         errorText
-          ? 'Browse issue'
+          ? 'Browse'
           : showClearHotDeals
-            ? 'Hot Deals'
+            ? isAndroid
+              ? 'Updates'
+              : 'Hot Deals'
             : activeSearchQuery
               ? 'Search results'
-              : 'Browse state'
+              : 'Browse'
       }
       note={
         errorText
-          ? 'The last stable browse view stayed in place. Try again in a moment or shift the area.'
+          ? 'Try again in a moment, or switch locations if the list still does not refresh.'
           : activeSearchQuery
-            ? 'Clear the search or widen the area. The rest of the browse context stays intact.'
-            : 'Change the area or sort without losing the rest of the browse setup.'
+            ? 'Clear the search or widen the area without losing the rest of your filters.'
+            : 'Change the area or sort order without starting over.'
       }
     >
       <View style={styles.emptyActionRow}>
@@ -266,6 +277,7 @@ export function BrowseStoreList({
           onPress={() => onOpenStorefront(item)}
           onPrimaryActionPress={() => onGoNow(item)}
           onSecondaryActionPress={() => onOpenStorefront(item)}
+          imagePriority={index < 3 ? 'high' : 'low'}
         />
       </MotionInView>
     ),

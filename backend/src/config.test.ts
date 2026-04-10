@@ -61,7 +61,7 @@ test('parses launch program config with defaults', () => {
   assert.equal(config.serverConfig.launchProgramStartAt, '2026-04-20T00:00:00.000Z');
   assert.equal(config.serverConfig.launchProgramDurationDays, 183);
   assert.equal(config.serverConfig.launchEarlyAdopterLimit, 500);
-  assert.equal(config.serverConfig.ownerLaunchTrialDays, 30);
+  assert.equal(config.serverConfig.ownerLaunchTrialDays, 0);
 });
 
 test('allows launch program config overrides', () => {

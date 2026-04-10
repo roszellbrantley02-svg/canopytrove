@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { MotionInView } from '../../components/MotionInView';
 import { SectionCard } from '../../components/SectionCard';
 import { ScreenShell } from '../../components/ScreenShell';
@@ -28,14 +28,20 @@ import { OwnerPortalStageList } from './OwnerPortalStageList';
 
 const PREMIUM_FEATURES = [
   'Review replies and report inbox',
-  'Promotion scheduling with performance results',
-  'Favorite-follower alerts when deals go live',
+  Platform.OS === 'android'
+    ? 'Owner update scheduling with performance results'
+    : 'Promotion scheduling with performance results',
+  Platform.OS === 'android'
+    ? 'Favorite-follower alerts when updates go live'
+    : 'Favorite-follower alerts when deals go live',
   'Premium photos, menu links, and verified-owner card upgrades',
 ];
 
 const BUSINESS_SERVICE_NOTES = [
   'This plan is for licensed dispensary operators or approved staff managing a claimed storefront.',
-  'Checkout covers storefront management tools, verification follow-up, review replies, and promotional controls.',
+  Platform.OS === 'android'
+    ? 'Android shows billing status and eligibility only. Live checkout stays outside the Android app.'
+    : 'Checkout covers storefront management tools, verification follow-up, review replies, and promotional controls.',
   'Customer discovery stays separate. Canopy Trove does not sell cannabis products inside this billing flow.',
 ];
 
@@ -79,8 +85,8 @@ export function OwnerPortalSubscriptionPreview({
   return (
     <ScreenShell
       eyebrow="Owner Portal"
-      title="Business plan preview workspace."
-      subtitle="Review the private dispensary-workspace billing surface with preview data before turning on live billing."
+      title="Business plan preview."
+      subtitle="Review the business billing experience with preview data before turning on live billing."
       headerPill="Preview"
     >
       <MotionInView delay={70}>
@@ -90,7 +96,7 @@ export function OwnerPortalSubscriptionPreview({
       <MotionInView delay={120}>
         <SectionCard
           title="Preview plan status"
-          body="Use this preview workspace to review the paid owner experience without touching a live subscription record."
+          body="Use this preview screen to review the paid business experience without touching a live subscription."
         >
           <View style={[styles.statusPanel, styles.statusPanelWarm]}>
             <View style={styles.statusRow}>
@@ -102,8 +108,8 @@ export function OwnerPortalSubscriptionPreview({
               <Text style={styles.statusValue}>{demoStatus}</Text>
             </View>
             <View style={styles.statusRow}>
-              <Text style={styles.statusLabel}>Workspace</Text>
-              <Text style={styles.statusValue}>Preview review</Text>
+              <Text style={styles.statusLabel}>Mode</Text>
+              <Text style={styles.statusValue}>Preview</Text>
             </View>
           </View>
         </SectionCard>
@@ -112,7 +118,7 @@ export function OwnerPortalSubscriptionPreview({
       <MotionInView delay={180}>
         <SectionCard
           title="Premium owner tools"
-          body="These are the current paid owner features exposed in preview mode."
+          body="These are the current paid business features shown in preview mode."
         >
           <View style={styles.planTile}>
             <Text style={styles.sectionEyebrow}>What premium unlocks</Text>
@@ -124,18 +130,18 @@ export function OwnerPortalSubscriptionPreview({
       <MotionInView delay={210}>
         <SectionCard
           title="What preview mode means"
-          body="This route is for reviewing business-plan messaging only. It does not create a live customer, checkout session, or subscription."
+          body="This screen is for reviewing pricing and billing copy only. It does not create a live checkout or subscription."
         >
           <OwnerPortalSubscriptionReadinessList
             items={[
               {
-                label: 'Review the plan surface',
-                body: 'Use this screen to judge pricing language, storefront-tool value, and business-plan framing.',
+                label: 'Review the plan details',
+                body: 'Use this screen to judge pricing language, business value, and overall clarity.',
                 tone: 'complete',
               },
               {
                 label: 'Keep live billing separate',
-                body: 'Real checkout and billing management should only happen in the live dispensary workspace.',
+                body: 'Real checkout and billing management only happen in the live business dashboard.',
                 tone: 'attention',
               },
             ]}
@@ -146,14 +152,14 @@ export function OwnerPortalSubscriptionPreview({
       <MotionInView delay={240}>
         <SectionCard
           title="Keep reviewing"
-          body="Return to the owner preview workspace whenever you want to continue reviewing the paid owner flow."
+          body="Return to the preview dashboard any time you want to keep reviewing the paid business flow."
         >
           <View style={styles.form}>
             <Pressable
               onPress={() => navigation.replace('OwnerPortalHome', { preview: true })}
               style={styles.primaryButton}
             >
-              <Text style={styles.primaryButtonText}>Return To Preview Workspace</Text>
+              <Text style={styles.primaryButtonText}>Return To Preview Dashboard</Text>
             </Pressable>
           </View>
         </SectionCard>
@@ -166,13 +172,13 @@ export function OwnerPortalSubscriptionDemoHero({ demoStatus }: { demoStatus: st
   return (
     <View style={styles.portalHeroCard}>
       <View style={styles.portalHeroGlow} />
-      <Text style={styles.portalHeroKicker}>Business plan preview workspace</Text>
+      <Text style={styles.portalHeroKicker}>Business plan preview</Text>
       <Text style={styles.portalHeroTitle}>
-        Review the paid dispensary-workspace experience without touching a live subscription.
+        Review the paid business experience without touching a live subscription.
       </Text>
       <Text style={styles.portalHeroBody}>
-        This preview workspace keeps the access path safe while showing how the private business
-        plan, storefront tools, billing state, and owner messaging will feel in the live product.
+        This preview keeps things safe while showing how your business plan, storefront tools, and
+        billing details will feel in the live product.
       </Text>
       <View style={styles.portalHeroMetricRow}>
         <View style={styles.portalHeroMetricCard}>
@@ -246,7 +252,11 @@ export function OwnerPortalSubscriptionPlanDetails({
         </View>
         <View style={styles.metaChip}>
           <Text style={styles.metaChipText}>
-            {billingTemporarilyPaused ? 'Runtime paused' : 'Runtime ready'}
+            {Platform.OS === 'android'
+              ? 'Billing outside Android'
+              : billingTemporarilyPaused
+                ? 'Billing paused'
+                : 'Billing ready'}
           </Text>
         </View>
       </View>

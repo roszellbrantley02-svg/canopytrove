@@ -11,14 +11,6 @@
     "outDir": "dist",
     "typeRoots": ["./node_modules/@types", "../node_modules/@types"]
   },
-  "include": [
-    "src/**/*",
-    "scripts/**/*",
-    "../src/adapters/**/*.ts",
-    "../src/data/**/*.ts",
-    "../src/domain/**/*.ts",
-    "../src/types/**/*.ts",
-    "../src/utils/**/*.ts"
-  ],
-  "exclude": ["../src/**/*.test.ts", "../src/**/*.test.tsx", "../src/utils/crossPlatformAlert.ts"]
+  "include": ["src/**/*", "scripts/**/*"],
+  "exclude": ["../src/**/*.test.ts", "../src/**/*.test.tsx"]
 }

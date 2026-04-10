@@ -89,7 +89,7 @@ export async function submitStorefrontReport(
 }
 
 export async function submitStorefrontReviewHelpful(
-  input: StorefrontReviewHelpfulInput & { reviewAuthorProfileId?: string | null },
+  input: StorefrontReviewHelpfulInput,
 ): Promise<StorefrontReviewHelpfulResponse> {
   if (storefrontSourceMode === 'api') {
     const response = await submitStorefrontBackendReviewHelpful(input);
@@ -110,6 +110,5 @@ export async function submitStorefrontReviewHelpful(
   return {
     detail,
     didApply: helpfulResult.didApply,
-    reviewAuthorProfileId: helpfulResult.reviewAuthorProfileId,
   };
 }

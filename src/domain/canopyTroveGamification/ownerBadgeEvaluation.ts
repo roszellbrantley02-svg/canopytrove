@@ -12,6 +12,32 @@ import {
 } from './ownerBadgeDefinitions';
 import { MAX_GAMIFICATION_LEVEL } from './levelDefinitions';
 
+const OWNER_SHARED_BADGE_COPY_OVERRIDES: Record<
+  string,
+  Pick<GamificationBadgeDefinition, 'name' | 'description'>
+> = {
+  member_30: {
+    name: 'Established Presence',
+    description: 'Keep your storefront active on CanopyTrove for 30 days.',
+  },
+  member_365: {
+    name: 'Year-Round Presence',
+    description: 'Keep your storefront active on CanopyTrove for one full year.',
+  },
+  helpful_25: {
+    name: 'Trusted by Shoppers',
+    description: 'Earn 25 helpful votes across your storefront reviews and replies.',
+  },
+  ambassador: {
+    name: 'Growth Partner',
+    description: 'Bring 5 new shoppers or supporters into your storefront community.',
+  },
+  verified_user: {
+    name: 'Verified Operator',
+    description: 'Complete CanopyTrove business and identity verification.',
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Snapshot of owner activity used for evaluation
 // ---------------------------------------------------------------------------
@@ -77,7 +103,10 @@ function ownerBadgeLookup(): Map<string, GamificationBadgeDefinition> {
   }
   for (const badge of CANOPYTROVE_BADGES) {
     if (OWNER_SHARED_CONSUMER_BADGE_IDS.includes(badge.id)) {
-      map.set(badge.id, badge);
+      map.set(badge.id, {
+        ...badge,
+        ...OWNER_SHARED_BADGE_COPY_OVERRIDES[badge.id],
+      });
     }
   }
   return map;

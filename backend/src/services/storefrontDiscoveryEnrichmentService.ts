@@ -82,10 +82,34 @@ export function buildDiscoverySummaryLikeDocument(
   };
 }
 
-export async function resolveDiscoveryGoogleData(source: StorefrontRecord): Promise<{
+/**
+ * Resolve Google Places data for a storefront source record.
+ *
+ * When `existingCandidate` is supplied and already contains a placeId +
+ * enrichment, the function re-uses that data instead of making fresh API
+ * calls.  Set `forceRefresh: true` to bypass the cache (e.g. for a manual
+ * re-discovery).
+ */
+export async function resolveDiscoveryGoogleData(
+  source: StorefrontRecord,
+  options?: {
+    existingCandidate?: StorefrontDiscoveryCandidateDocument | null;
+    forceRefresh?: boolean;
+  },
+): Promise<{
   googlePlaceId: string | null;
   googleEnrichment: GooglePlacesEnrichment | null;
 }> {
+  // Re-use existing Google data when available — avoids redundant API calls
+  // that were costing ~$445/week in Places API fees.
+  const existing = options?.existingCandidate;
+  if (!options?.forceRefresh && existing?.googlePlaceId && existing?.googleEnrichment) {
+    return {
+      googlePlaceId: existing.googlePlaceId,
+      googleEnrichment: existing.googleEnrichment,
+    };
+  }
+
   if (!hasGooglePlacesConfig()) {
     return {
       googlePlaceId: null,
@@ -95,7 +119,10 @@ export async function resolveDiscoveryGoogleData(source: StorefrontRecord): Prom
 
   const discoverySummary = buildDiscoverySummaryLikeDocument(source);
   try {
-    const googlePlaceId = await matchPlaceId(discoverySummary);
+    // If we already have a placeId from a previous run, skip the expensive
+    // text-search step entirely and just refresh the detail.
+    const knownPlaceId = existing?.googlePlaceId ?? null;
+    const googlePlaceId = knownPlaceId || (await matchPlaceId(discoverySummary));
     if (!googlePlaceId) {
       return {
         googlePlaceId: null,
@@ -114,8 +141,8 @@ export async function resolveDiscoveryGoogleData(source: StorefrontRecord): Prom
     };
   } catch {
     return {
-      googlePlaceId: null,
-      googleEnrichment: null,
+      googlePlaceId: existing?.googlePlaceId ?? null,
+      googleEnrichment: existing?.googleEnrichment ?? null,
     };
   }
 }
@@ -224,6 +251,7 @@ export function buildPublishedStorefrontSummaryDocument(
     rating: source.rating,
     reviewCount: source.reviewCount,
     openNow: googleEnrichment?.openNow ?? source.openNow,
+    hours: googleEnrichment?.hours?.length ? [...googleEnrichment.hours] : [...source.hours],
     isVerified: source.isVerified,
     mapPreviewLabel: source.mapPreviewLabel,
     promotionText: null,

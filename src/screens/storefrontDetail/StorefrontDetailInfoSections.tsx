@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { SectionCard } from '../../components/SectionCard';
 import type { StorefrontActivePromotion } from '../../types/storefront';
@@ -25,20 +25,20 @@ function splitHoursLine(line: string) {
 export function DetailOfficialRecordCard({ error }: { error: string | null }) {
   return (
     <SectionCard
-      title="Official storefront record"
+      title="Basic storefront details"
       body={
         error
-          ? 'Canopy Trove could not refresh the live detail state right now. The official storefront listing is still available.'
-          : 'Canopy Trove shows the official storefront record first, then layers richer public detail when it is available.'
+          ? 'We could not refresh the latest storefront details right now, but the basic listing is still here.'
+          : 'The basic storefront listing stays visible while extra details load.'
       }
     >
       <CustomerStateCard
-        title="Official record remains visible"
-        body="The official listing stays visible as the baseline."
+        title="Basic listing still available"
+        body="You can still view the storefront listing while the rest of the details catch up."
         tone="warm"
         iconName="shield-checkmark-outline"
-        eyebrow="Fallback state"
-        note="The verified record stays visible even without live data."
+        eyebrow="Still available"
+        note="The storefront page stays usable even when extra details are not ready yet."
       />
     </SectionCard>
   );
@@ -47,16 +47,16 @@ export function DetailOfficialRecordCard({ error }: { error: string | null }) {
 export function DetailLiveUpdateUnavailableCard() {
   return (
     <SectionCard
-      title="Live update unavailable"
-      body="Showing the storefront details currently available on-device while live refresh catches up."
+      title="Latest details unavailable"
+      body="Showing the storefront details already on your device while the latest refresh catches up."
     >
       <CustomerStateCard
-        title="Using the last available detail state"
-        body="Showing cached hours, website, and review data until refresh."
+        title="Showing the last available details"
+        body="Hours, website, and reviews will refresh when the connection catches up."
         tone="info"
         iconName="cloud-offline-outline"
         eyebrow="Unavailable right now"
-        note="Detail screen stays usable while refresh catches up."
+        note="You can keep using this page while the newest details load."
       />
     </SectionCard>
   );
@@ -71,8 +71,8 @@ export function DetailStoreSummarySection({
 }) {
   return (
     <SectionCard
-      title="Storefront summary"
-      body={editorialSummary || 'Official summary and amenities for this storefront.'}
+      title="About this storefront"
+      body={editorialSummary || 'Highlights and amenities for this storefront.'}
     >
       <View style={styles.amenityWrap}>
         {displayAmenities.map((amenity) => (
@@ -96,7 +96,7 @@ export function DetailHoursSection({ hours }: { hours: string[] }) {
       body={
         holiday
           ? `${holiday.name} today \u2014 hours may differ from the regular schedule.`
-          : 'Official business hours from the detail payload.'
+          : 'Store hours listed for this storefront.'
       }
     >
       <View style={styles.listBlock}>
@@ -124,13 +124,15 @@ export function DetailHoursSection({ hours }: { hours: string[] }) {
 }
 
 function getPromotionToneLabel(cardTone: StorefrontActivePromotion['cardTone']) {
+  const isAndroid = Platform.OS === 'android';
+
   switch (cardTone) {
     case 'hot_deal':
-      return 'Hot deal';
+      return isAndroid ? 'Featured update' : 'Hot deal';
     case 'owner_featured':
-      return 'Owner featured';
+      return 'Featured';
     default:
-      return 'Live deal';
+      return isAndroid ? 'Recent update' : 'Live deal';
   }
 }
 
@@ -170,13 +172,18 @@ export function DetailLiveDealsSection({
 }: {
   promotions: StorefrontActivePromotion[];
 }) {
+  const isAndroid = Platform.OS === 'android';
   const body =
     promotions.length === 1
-      ? 'This owner-posted promotion is live on the storefront right now.'
-      : `${promotions.length} owner-posted promotions are live on this storefront right now.`;
+      ? isAndroid
+        ? 'This storefront has one recent update right now.'
+        : 'This storefront has one live deal right now.'
+      : isAndroid
+        ? `This storefront has ${promotions.length} recent updates right now.`
+        : `This storefront has ${promotions.length} live deals right now.`;
 
   return (
-    <SectionCard title="Live deals" body={body}>
+    <SectionCard title={isAndroid ? 'Recent updates' : 'Live deals'} body={body}>
       <View style={styles.liveDealsList}>
         {promotions.map((promotion) => {
           const expiryLabel = formatStorefrontPromotionExpiry(promotion.endsAt);
@@ -237,24 +244,41 @@ export function DetailLockedLiveDealsSection({
   onOpenMemberSignIn: () => void;
   onOpenMemberSignUp: () => void;
 }) {
+  const isAndroid = Platform.OS === 'android';
   const body =
     liveDealCount === 1
-      ? 'This storefront has a live owner-posted promotion, but the offer details are reserved for members.'
-      : `This storefront has ${liveDealCount} live owner-posted promotions, but the offer details are reserved for members.`;
+      ? isAndroid
+        ? 'This storefront has a recent update, but the details are only available to members.'
+        : 'This storefront has a live deal, but the details are only available to members.'
+      : isAndroid
+        ? `This storefront has ${liveDealCount} recent updates, but the details are only available to members.`
+        : `This storefront has ${liveDealCount} live deals, but the details are only available to members.`;
 
   return (
-    <SectionCard title="Live deals" body={body}>
+    <SectionCard title={isAndroid ? 'Recent updates' : 'Live deals'} body={body}>
       <CustomerStateCard
         title={
           liveDealCount === 1
-            ? 'One live deal is waiting.'
-            : `${liveDealCount} live deals are waiting.`
+            ? isAndroid
+              ? 'One recent update is waiting.'
+              : 'One live deal is waiting.'
+            : isAndroid
+              ? `${liveDealCount} recent updates are waiting.`
+              : `${liveDealCount} live deals are waiting.`
         }
-        body="Sign in to see promotion details, timing, and stacked deals."
+        body={
+          isAndroid
+            ? 'Sign in to see update details, timing, and the full member-only context.'
+            : 'Sign in to see promotion details, timing, and stacked deals.'
+        }
         tone="warm"
         iconName="lock-closed-outline"
         eyebrow="Members only"
-        note="Guests can browse. Promotion details unlock with a member account."
+        note={
+          isAndroid
+            ? 'Guests can browse. Update details unlock with a member account.'
+            : 'Guests can browse. Promotion details unlock with a member account.'
+        }
       >
         <DetailLockedMemberActions
           onOpenMemberSignIn={onOpenMemberSignIn}

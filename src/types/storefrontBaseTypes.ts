@@ -24,7 +24,9 @@ export type OwnerReviewReply = {
 export type AppReview = {
   id: string;
   authorName: string;
+  /** Stable public author token for device-side blocking/reporting. */
   authorProfileId: string | null;
+  isOwnReview?: boolean;
   rating: number;
   relativeTime: string;
   text: string;
@@ -63,6 +65,7 @@ export type StorefrontSummary = {
   rating: number;
   reviewCount: number;
   openNow: boolean | null;
+  hours?: string[];
   isVerified: boolean;
   mapPreviewLabel: string;
   promotionText?: string | null;

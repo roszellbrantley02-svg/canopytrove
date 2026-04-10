@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
@@ -16,16 +16,21 @@ import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 
 const OWNER_WORKSPACE_FEATURES = [
   'Claim and manage your dispensary listing',
-  'Submit business and identity verification',
+  'Submit business and identity approval details',
   'Reply to reviews and monitor reports fast',
-  'Schedule live deals with follower alerts and performance results',
-  'Control premium card treatments, menu links, and photo upgrades',
-  'Manage owner-only plan access and listing tools',
+  Platform.OS === 'android'
+    ? 'Schedule owner updates with follower alerts and performance results'
+    : 'Schedule live deals with follower alerts and performance results',
+  Platform.OS === 'android'
+    ? 'Update website links, storefront photos, and listing details'
+    : 'Update menu links, storefront photos, and listing details',
+  'Manage business plans and owner-only features',
 ];
 
 const ONBOARDING_STEPS = ['Access', 'Account', 'Business Details', 'Claim Listing', 'Verification'];
 
 function OwnerPortalAccessScreenInner() {
+  const isAndroid = Platform.OS === 'android';
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { authSession } = useStorefrontProfileController();
   const { accessState, isCheckingAccess } = useOwnerPortalAccessState(authSession);
@@ -37,8 +42,8 @@ function OwnerPortalAccessScreenInner() {
         ? 'Approved'
         : 'Invite required';
   const accessBody = accessState.enabled
-    ? 'Access is controlled for quality and security.'
-    : 'Owner access is open for this workspace.';
+    ? 'Business access is reviewed before it is approved.'
+    : 'Owner access is currently open.';
   const accountLabel = authSession.status === 'authenticated' ? 'Signed in' : 'Not signed in';
   const summaryTiles = [
     {
@@ -56,15 +61,19 @@ function OwnerPortalAccessScreenInner() {
   return (
     <ScreenShell
       eyebrow="Owner Portal"
-      title="Owner access."
-      subtitle="Sign in to manage a claimed licensed dispensary storefront from one private business workspace."
-      headerPill="Owner"
+      title="Owner access"
+      subtitle="Sign in to manage a licensed storefront from one private business space."
+      headerPill="Business"
     >
       <MotionInView delay={70}>
         <OwnerPortalHeroPanel
           kicker="Owner access"
-          title="Open the private business workspace for your dispensary team."
-          body="Licensed operators manage storefront claims, verification, reviews, and business tools here."
+          title="Open the private business side of the app."
+          body={
+            isAndroid
+              ? 'This is where storefront owners handle photos, reviews, updates, and business setup.'
+              : 'This is where storefront owners handle photos, reviews, offers, and business setup.'
+          }
           metrics={summaryTiles}
           steps={ONBOARDING_STEPS}
           activeStepIndex={0}
@@ -93,7 +102,7 @@ function OwnerPortalAccessScreenInner() {
             </View>
             {isCheckingAccess ? (
               <Text style={styles.helperText}>
-                Confirming this signed-in account against the private owner access controls.
+                Checking whether this signed-in account already has owner access.
               </Text>
             ) : null}
             <View style={styles.portalHeroMetaRow}>
@@ -114,14 +123,14 @@ function OwnerPortalAccessScreenInner() {
 
       <MotionInView delay={180}>
         <SectionCard
-          title="Owner access options"
+          title="How to get in"
           body="Sign in with your business email to manage your storefront."
         >
           <View style={styles.actionGrid}>
             <View style={styles.ctaPanel}>
               <View style={styles.splitHeaderRow}>
                 <View style={styles.splitHeaderCopy}>
-                  <Text style={styles.sectionEyebrow}>Business portal</Text>
+                  <Text style={styles.sectionEyebrow}>Business sign in</Text>
                   <Text style={styles.splitHeaderTitle}>
                     {accessState.enabled
                       ? 'Use your approved business email'
@@ -143,7 +152,7 @@ function OwnerPortalAccessScreenInner() {
                 <Text style={styles.secondaryButtonText}>Create Owner Account</Text>
               </Pressable>
               <Text style={styles.helperText}>
-                Access and storefront claims are confirmed after sign-in.
+                Once you sign in, we can confirm access and help connect the right storefront.
               </Text>
             </View>
           </View>
@@ -153,28 +162,30 @@ function OwnerPortalAccessScreenInner() {
       <MotionInView delay={220}>
         <SectionCard
           title="Getting started"
-          body="Complete these steps before using live storefront tools."
+          body="These are the main steps before you start managing the storefront."
         >
           <OwnerPortalStageList
             items={[
               {
                 label: 'Sign in with the real business account',
-                body: 'Use your business email.',
+                body: 'Use the business email tied to the storefront.',
                 tone: authSession.status === 'authenticated' ? 'complete' : 'current',
               },
               {
                 label: 'Finish the business profile',
-                body: 'Add legal and company details.',
+                body: 'Add your business name and company details.',
                 tone: authSession.status === 'authenticated' ? 'current' : 'pending',
               },
               {
                 label: 'Claim and verify the storefront',
-                body: 'Claim the listing and complete verification.',
+                body: 'Connect the storefront and finish approval.',
                 tone: 'pending',
               },
               {
-                label: 'Open live owner tools',
-                body: 'Access storefront controls and billing.',
+                label: 'Start managing the storefront',
+                body: isAndroid
+                  ? 'Open photos, reviews, updates, and billing.'
+                  : 'Open photos, reviews, offers, and billing.',
                 tone: 'pending',
               },
             ]}
@@ -183,11 +194,11 @@ function OwnerPortalAccessScreenInner() {
       </MotionInView>
 
       <MotionInView delay={260}>
-        <SectionCard title="What owners can do">
+        <SectionCard title="What you can do here">
           <View style={styles.actionGrid}>
             {OWNER_WORKSPACE_FEATURES.map((feature) => (
               <View key={feature} style={styles.actionTile}>
-                <Text style={styles.actionTileMeta}>Owner capability</Text>
+                <Text style={styles.actionTileMeta}>Business feature</Text>
                 <Text style={styles.actionTileTitle}>{feature}</Text>
               </View>
             ))}
@@ -197,14 +208,14 @@ function OwnerPortalAccessScreenInner() {
 
       {authSession.status === 'authenticated' && accessState.allowlisted && !isCheckingAccess ? (
         <MotionInView delay={300}>
-          <SectionCard title="Owner dashboard" body="Your account is approved.">
+          <SectionCard title="Business dashboard" body="Your account is approved.">
             <View style={[styles.ctaPanel, styles.onboardingInfoCardSuccess]}>
-              <Text style={styles.splitHeaderTitle}>Owner workspace is ready</Text>
+              <Text style={styles.splitHeaderTitle}>Your business side is ready</Text>
               <Pressable
                 onPress={() => navigation.navigate('OwnerPortalHome')}
                 style={styles.primaryButton}
               >
-                <Text style={styles.primaryButtonText}>Open Owner Dashboard</Text>
+                <Text style={styles.primaryButtonText}>Open Business Dashboard</Text>
               </Pressable>
             </View>
           </SectionCard>

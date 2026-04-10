@@ -66,6 +66,7 @@ Paste this into the **"App content" > "Content rating" > "Additional information
 > - It does not process transactions of any kind.
 > - It does not display product menus, prices, or inventory.
 > - It does not contain cannabis product imagery in the Android experience.
+> - It does not initiate owner billing or subscription management inside the Android app.
 >
 > **Content moderation system:**
 >
@@ -87,16 +88,16 @@ Paste this into the **"App content" > "Content rating" > "Additional information
 
 When completing the IARC content rating questionnaire:
 
-| Question area            | Recommended answer                                                                |
-| ------------------------ | --------------------------------------------------------------------------------- |
-| Violence                 | None                                                                              |
-| Sexuality                | None                                                                              |
-| Language                 | Mild (user reviews may contain informal language)                                 |
-| Controlled substance     | Reference to controlled substances (the app lists licensed cannabis dispensaries) |
-| Gambling                 | None                                                                              |
-| User interaction         | Users can interact (reviews, following storefronts)                               |
-| Users can share location | Yes (for nearby dispensary discovery)                                             |
-| Digital purchases        | None (no in-app purchases, no transactions)                                       |
+| Question area            | Recommended answer                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| Violence                 | None                                                                                       |
+| Sexuality                | None                                                                                       |
+| Language                 | Mild (user reviews may contain informal language)                                          |
+| Controlled substance     | Reference to controlled substances (the app lists licensed cannabis dispensaries)          |
+| Gambling                 | None                                                                                       |
+| User interaction         | Users can interact (reviews, following storefronts)                                        |
+| Users can share location | Yes (for nearby dispensary discovery)                                                      |
+| Digital purchases        | None in the Android build (no in-app purchases, no transactions, no billing checkout flow) |
 
 This should result in a **17+ / Mature** rating, which is appropriate.
 
@@ -193,8 +194,9 @@ Avoid tags like "cannabis deals", "weed delivery", "marijuana shop".
 - [ ] No screenshot contains deal, discount, or product language
 - [ ] App bundle uses the Android moderation build (server-side filtering confirmed)
 - [ ] Test on a real Android device: open 5 storefronts, verify no blocked promo text appears
-- [ ] Filter bar shows "Updates" not "Specials"
+- [ ] Updates surfaces say "Updates" and do not surface "Hot Deals" copy
 - [ ] Notification channel shows "Favorite store updates" not "Favorite store deals" in Android settings
+- [ ] Owner billing screen is read-only on Android and does not open external checkout or billing management
 - [ ] External links labeled "Website" not "Menu" (if gating applied)
 - [ ] Privacy policy URL works and is accessible
 - [ ] Terms of service URL works and is accessible

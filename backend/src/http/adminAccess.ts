@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import type { Request, RequestHandler } from 'express';
 import { serverConfig } from '../config';
 import { getBackendFirebaseAuth, hasBackendFirebaseConfig } from '../firebase';
+import { logger } from '../observability/logger';
 import { recordFailedAuth } from './suspiciousActivityDetector';
 
 function getExpectedAdminApiKey() {
@@ -68,7 +69,11 @@ export const ensureAdminApiKeyMatch: RequestHandler = (request, response, next) 
   const providedApiKey = request.header('x-admin-api-key')?.trim();
   if (!matchesAdminApiKey(providedApiKey, expectedApiKey)) {
     const clientIp = request.ip || request.socket.remoteAddress || 'unknown';
-    recordFailedAuth(clientIp);
+    void recordFailedAuth(clientIp).catch((e) =>
+      logger.error('[adminAccess] recordFailedAuth failed', {
+        error: e instanceof Error ? e.message : String(e),
+      }),
+    );
     response.status(401).json({
       ok: false,
       error: 'Invalid admin API key.',
@@ -102,7 +107,11 @@ export const ensureAdminRuntimeAccess: RequestHandler = async (request, response
   const token = getBearerToken(request);
   if (!token) {
     const clientIp = request.ip || request.socket.remoteAddress || 'unknown';
-    recordFailedAuth(clientIp);
+    void recordFailedAuth(clientIp).catch((e) =>
+      logger.error('[adminAccess] recordFailedAuth failed', {
+        error: e instanceof Error ? e.message : String(e),
+      }),
+    );
     response.status(401).json({
       ok: false,
       error: 'Admin authentication is required.',
@@ -131,7 +140,11 @@ export const ensureAdminRuntimeAccess: RequestHandler = async (request, response
     const decodedToken = await auth.verifyIdToken(token);
     if (!hasAdminClaims(decodedToken as unknown as Record<string, unknown>)) {
       const clientIp = request.ip || request.socket.remoteAddress || 'unknown';
-      recordFailedAuth(clientIp);
+      void recordFailedAuth(clientIp).catch((e) =>
+        logger.error('[adminAccess] recordFailedAuth failed', {
+          error: e instanceof Error ? e.message : String(e),
+        }),
+      );
       response.status(403).json({
         ok: false,
         error: 'Admin account access is required.',
@@ -142,7 +155,11 @@ export const ensureAdminRuntimeAccess: RequestHandler = async (request, response
     next();
   } catch {
     const clientIp = request.ip || request.socket.remoteAddress || 'unknown';
-    recordFailedAuth(clientIp);
+    void recordFailedAuth(clientIp).catch((e) =>
+      logger.error('[adminAccess] recordFailedAuth failed', {
+        error: e instanceof Error ? e.message : String(e),
+      }),
+    );
     response.status(401).json({
       ok: false,
       error: 'Invalid admin authentication token.',

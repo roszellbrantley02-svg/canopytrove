@@ -10,6 +10,9 @@ const rnMockPath = resolve(__dirname, 'src/__mocks__/react-native.ts');
  * Vite plugin that redirects all react-native imports to our lightweight mock.
  * This runs at the resolver level (enforce: 'pre') — before Rolldown ever
  * tries to parse the Flow-typed source in node_modules/react-native/index.js.
+ *
+ * Other native modules (e.g. expo-secure-store) are mocked via vi.mock() in
+ * vitest.setup.ts which Vitest hoists before module resolution.
  */
 function reactNativeMock(): Plugin {
   return {

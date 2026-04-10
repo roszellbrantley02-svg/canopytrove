@@ -1,5 +1,6 @@
 import type {
   AppProfile,
+  CommunitySafetyState,
   GamificationEventRequest,
   GamificationRewardResult,
   StorefrontProfileState,
@@ -13,6 +14,7 @@ import type {
 } from '../types/storefront';
 import {
   clearCachedValue,
+  createCommunitySafetyCacheKey,
   createLeaderboardRankCacheKey,
   createProfileCacheKey,
   createProfileStateCacheKey,
@@ -42,6 +44,7 @@ function requestStorefrontBackendJson<T>(
 function clearProfileLinkedCache(profileId: string) {
   clearCachedValue(createProfileCacheKey(profileId));
   clearCachedValue(createProfileStateCacheKey(profileId));
+  clearCachedValue(createCommunitySafetyCacheKey(profileId));
   clearCachedValue('leaderboard:');
   clearCachedValue(createLeaderboardRankCacheKey(profileId));
 }
@@ -129,7 +132,6 @@ export function submitStorefrontBackendReport(input: StorefrontReportSubmissionI
         description: input.description,
         reportTarget: input.reportTarget ?? 'storefront',
         reportedReviewId: input.reportedReviewId ?? undefined,
-        reportedReviewAuthorProfileId: input.reportedReviewAuthorProfileId ?? undefined,
         reportedReviewAuthorName: input.reportedReviewAuthorName ?? undefined,
         reportedReviewExcerpt: input.reportedReviewExcerpt ?? undefined,
       },
@@ -160,6 +162,20 @@ export function saveStorefrontBackendProfileState(profileState: StorefrontProfil
     {
       method: 'PUT',
       body: profileState,
+    },
+  );
+}
+
+export function saveStorefrontBackendCommunitySafetyState(
+  profileId: string,
+  state: CommunitySafetyState,
+) {
+  clearProfileLinkedCache(profileId);
+  return requestStorefrontBackendJson<CommunitySafetyState>(
+    `/profiles/${encodeURIComponent(profileId)}/community-safety`,
+    {
+      method: 'PUT',
+      body: state,
     },
   );
 }

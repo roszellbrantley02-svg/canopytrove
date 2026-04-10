@@ -52,6 +52,7 @@ async function loadPlaceDetail(placeId: string) {
           typeof payload.currentOpeningHours?.openNow === 'boolean'
             ? payload.currentOpeningHours.openNow
             : null,
+        hoursSource: 'google' as const,
         businessStatus: typeof payload.businessStatus === 'string' ? payload.businessStatus : null,
         location:
           typeof payload.location?.latitude === 'number' &&
@@ -139,9 +140,14 @@ export function clearGooglePlacesServiceCache() {
   clearGooglePlacesCaches();
 }
 
+/**
+ * Background-fill missing Place IDs. Reduced from 8 to 3 to limit API
+ * spend on every page view — most storefronts already have IDs after
+ * the first discovery run.
+ */
 export function backfillGooglePlaceIdsForSummaries(
   summaries: StorefrontSummaryApiDocument[],
-  maxCount = 8,
+  maxCount = 3,
 ) {
   if (!hasGooglePlacesConfig()) {
     return;
@@ -159,9 +165,14 @@ export function backfillGooglePlaceIdsForSummaries(
   });
 }
 
+/**
+ * Pre-warm enrichment for the first N summaries on a page. Reduced from 3
+ * to 1 — detail enrichment is fetched on-demand anyway when a user taps
+ * a storefront, so prewarming multiple is wasteful.
+ */
 export function prewarmGooglePlacesEnrichmentForSummaries(
   summaries: StorefrontSummaryApiDocument[],
-  maxCount = 3,
+  maxCount = 1,
 ) {
   if (!hasGooglePlacesConfig()) {
     return;

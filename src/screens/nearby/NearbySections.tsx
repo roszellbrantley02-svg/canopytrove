@@ -46,13 +46,13 @@ export function NearbyLocationPanel({
         style={[styles.locationPanelHeader, compactHeader && styles.locationPanelHeaderCompact]}
       >
         <View style={styles.locationPanelTitleWrap}>
-          <Text style={styles.locationPanelTitle}>Nearby location</Text>
+          <Text style={styles.locationPanelTitle}>Choose a nearby location</Text>
           <Text style={styles.locationPanelSubtitle}>
             {activeLocationMode === 'device'
-              ? 'Currently using your device location for nearby results.'
+              ? 'Using your device location right now.'
               : activeLocationMode === 'search'
-                ? 'Currently using the address or ZIP code you entered.'
-                : 'Choose a location source for the nearby view.'}
+                ? 'Using the ZIP code, city, or address you entered.'
+                : 'Choose where Nearby should search.'}
           </Text>
         </View>
         <View
@@ -62,7 +62,7 @@ export function NearbyLocationPanel({
           ]}
         >
           <View style={styles.locationPanelBadge}>
-            <Text style={styles.locationPanelBadgeText}>Live radius</Text>
+            <Text style={styles.locationPanelBadgeText}>Nearby</Text>
           </View>
           <Pressable
             onPress={handleToggleLocationPanel}
@@ -88,8 +88,8 @@ export function NearbyLocationPanel({
         <InlineFeedbackPanel
           tone="danger"
           iconName="location-outline"
-          label="Location issue"
-          title="Nearby could not apply that search area."
+          label="Location"
+          title="We could not use that location."
           body={locationError}
         />
       ) : null}
@@ -113,7 +113,7 @@ export function NearbyLocationPanel({
         >
           {isResolvingLocation ? <ActivityIndicator size="small" color={colors.text} /> : null}
           <Text style={styles.secondaryButtonText}>
-            {isResolvingLocation ? 'Applying...' : 'Apply Search Area'}
+            {isResolvingLocation ? 'Applying...' : 'Use This Location'}
           </Text>
         </Pressable>
 
@@ -144,11 +144,11 @@ export function NearbyInfoBanner() {
   return (
     <CustomerStateCard
       tone="info"
-      eyebrow="Nearby refresh"
+      eyebrow="Refreshing"
       iconName="refresh-outline"
-      title="Holding the last nearby view."
-      body="Nearby is refreshing in the background while the last usable list stays on screen."
-      note="This hands back to live nearby results as soon as the refresh finishes."
+      title="Showing your last nearby list"
+      body="Nearby is updating in the background, so your last good list stays on screen."
+      note="The list will switch back to the latest nearby results as soon as they are ready."
     />
   );
 }
@@ -189,6 +189,7 @@ export function NearbyStoreList({
             onPress={() => onOpenStorefront(store)}
             onPrimaryActionPress={() => onGoNow(store)}
             onSecondaryActionPress={() => onOpenStorefront(store)}
+            imagePriority={index < 3 ? 'high' : 'low'}
           />
         </MotionInView>
       ))}
@@ -231,10 +232,10 @@ export function NearbyEmptyState({
       body={body}
       tone={errorText ? 'danger' : 'warm'}
       iconName={errorText ? 'location-outline' : 'map-outline'}
-      eyebrow="Nearby state"
+      eyebrow="Nearby"
       note={
         errorText ??
-        'Switch to device location or enter a ZIP, city, or address without leaving this view.'
+        'You can switch to device location or enter a ZIP code, city, or address without leaving this screen.'
       }
     >
       <View style={styles.actionRow}>

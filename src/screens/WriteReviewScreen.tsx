@@ -39,7 +39,7 @@ function WriteReviewContent({
       subtitle={
         model.isEditingReview
           ? 'Update your existing review without creating a duplicate post for this storefront.'
-          : 'Clear reviews help other customers judge the storefront and improve the quality signal on this record.'
+          : 'Your review helps other customers know what to expect from this storefront.'
       }
       headerPill={model.isEditingReview ? 'Edit Review' : 'Write Review'}
     >
@@ -79,12 +79,12 @@ function WriteReviewScreenInner() {
       <ScreenShell
         eyebrow="Review"
         title="Storefront unavailable"
-        subtitle="The review composer needs storefront context before it can post or edit a review."
+        subtitle="This review screen needs a storefront before you can post or edit a review."
         headerPill="Review"
       >
         <CustomerStateCard
           title="Review could not open"
-          body="This review flow was opened without a storefront record. Return to the storefront and try again."
+          body="This screen opened without a storefront. Head back to the storefront page and try again."
           tone="warm"
           iconName="chatbubble-outline"
           eyebrow="Navigation"

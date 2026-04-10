@@ -61,13 +61,13 @@ export function AppBootHeader({ pulse, sweep }: { pulse: Animated.Value; sweep: 
             <Text style={styles.eyebrow}>{brand.productDisplayName}</Text>
             <View style={styles.liveBadge}>
               <View style={styles.liveDot} />
-              <Text style={styles.liveBadgeText}>Secure startup</Text>
+              <Text style={styles.liveBadgeText}>Starting up</Text>
             </View>
           </View>
-          <Text style={styles.title}>Booting a warm storefront session.</Text>
+          <Text style={styles.title}>Getting your app ready.</Text>
         </View>
         <Text style={styles.subtitle}>
-          Restoring your last market, favorites, profile, and storefront context.
+          Bringing back your last location, saved places, and profile details.
         </Text>
         <View style={styles.statusChipRow}>
           <View style={styles.statusChip}>
@@ -99,10 +99,10 @@ export function AppBootHeader({ pulse, sweep }: { pulse: Animated.Value; sweep: 
           />
         </View>
         <View style={styles.bootNoteCard}>
-          <Text style={styles.bootNoteTitle}>Preparing your customer entry state</Text>
+          <Text style={styles.bootNoteTitle}>Almost there</Text>
           <Text style={styles.bootNoteBody}>
-            {brand.productDisplayName} is restoring storefront surfaces and member context before
-            the app opens.
+            {brand.productDisplayName} is loading your browsing and account details before the app
+            opens.
           </Text>
         </View>
       </View>
@@ -115,9 +115,9 @@ export function AppBootHero({ pulse }: { pulse: Animated.Value }) {
     <MotionInView delay={90}>
       <View style={styles.heroCard}>
         <View style={styles.heroHeader}>
-          <Text style={styles.heroEyebrow}>Restoring browsing context</Text>
+          <Text style={styles.heroEyebrow}>Loading your app</Text>
           <View style={styles.heroBadge}>
-            <Text style={styles.heroBadgeText}>Member-ready</Text>
+            <Text style={styles.heroBadgeText}>Almost ready</Text>
           </View>
         </View>
         <Animated.View
@@ -137,10 +137,9 @@ export function AppBootHero({ pulse }: { pulse: Animated.Value }) {
         >
           <ShimmerBlock style={styles.heroMap} borderRadius={radii.md} shimmerWidth={240} />
         </Animated.View>
-        <Text style={styles.heroTitle}>Loading the surfaces you left behind.</Text>
+        <Text style={styles.heroTitle}>Loading where you left off.</Text>
         <Text style={styles.heroBody}>
-          Favorites, recent storefronts, and profile progress are being staged for a smoother
-          return.
+          Saved storefronts, recent visits, and profile progress are loading for a smoother return.
         </Text>
         <ShimmerBlock style={styles.heroLineShort} borderRadius={radii.pill} shimmerWidth={110} />
         <ShimmerBlock style={styles.heroLineLong} borderRadius={radii.pill} shimmerWidth={160} />

@@ -194,6 +194,7 @@ export function fromStorefrontDetailDocument(
             id: asString(entry.id, `app-review-${index}`),
             authorName: asString(entry.authorName, 'Canopy Trove user'),
             authorProfileId: asOptionalString(entry.authorProfileId),
+            isOwnReview: asBoolean(entry.isOwnReview),
             rating: asNumber(entry.rating),
             relativeTime: asString(entry.relativeTime, 'Unknown'),
             text: asString(entry.text),

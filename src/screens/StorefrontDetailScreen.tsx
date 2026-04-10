@@ -192,8 +192,8 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
                 hiddenReviewCount={model.hiddenReviewCount}
                 pendingHelpfulReviewId={model.pendingHelpfulReviewId}
                 pendingReviewReportId={model.pendingReviewReportId}
-                profileId={model.profileId}
                 reviewModerationStatusText={model.reviewModerationStatusText}
+                onShowHiddenReviews={model.showHiddenReviews}
                 onMarkHelpful={model.markReviewHelpful}
                 onBlockAuthor={model.blockReviewAuthor}
                 onReportReview={model.reportReview}
@@ -310,8 +310,8 @@ function StorefrontDetailScreenInner() {
               body={
                 storefrontId
                   ? (storefrontLookupError ??
-                    'This storefront link could not be resolved. It may be unavailable, unpublished, or no longer part of the current Canopy Trove listing set.')
-                  : 'This storefront could not be opened because the navigation data was incomplete. Return to browse and try again.'
+                    'This storefront link is not working right now. It may be unavailable or no longer listed.')
+                  : 'This storefront could not be opened from the current page. Head back to Browse and try again.'
               }
               iconName="compass-outline"
               tone="warm"

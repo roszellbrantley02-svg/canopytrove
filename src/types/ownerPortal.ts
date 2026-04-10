@@ -102,6 +102,8 @@ export type OwnerPortalUploadedFile = {
   name: string;
   mimeType: string | null;
   size: number | null;
+  blob?: Blob | null;
+  previewUri?: string | null;
 };
 
 export type OwnerPortalBusinessVerificationDocument = {

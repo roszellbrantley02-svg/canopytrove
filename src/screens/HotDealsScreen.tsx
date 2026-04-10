@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -28,6 +28,7 @@ import {
 const PAGE_SIZE = 6;
 
 function HotDealsScreenInner() {
+  const isAndroid = Platform.OS === 'android';
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [offset, setOffset] = React.useState(0);
   const [items, setItems] = React.useState<StorefrontSummary[]>([]);
@@ -56,10 +57,13 @@ function HotDealsScreenInner() {
       ...storefrontQuery,
       searchQuery: debouncedDealSearchQuery,
       hotDealsOnly: true,
+      prioritySurface: 'hot_deals' as const,
     }),
     [debouncedDealSearchQuery, storefrontQuery],
   );
-  const { data, error, isLoading } = useBrowseSummaries(query, sortKey, PAGE_SIZE, offset);
+  const { data, error, isLoading } = useBrowseSummaries(query, sortKey, PAGE_SIZE, offset, {
+    enabled: isMemberAuthenticated,
+  });
 
   const handleApplyLocationQuery = React.useCallback(() => {
     void applyLocationQuery();
@@ -98,9 +102,13 @@ function HotDealsScreenInner() {
 
   return (
     <ScreenShell
-      eyebrow="Hot Deals"
-      title="Live deals near you."
-      subtitle="Filter by location, storefront, or offer details to browse active promotions."
+      eyebrow={isAndroid ? 'Updates' : 'Hot Deals'}
+      title={isAndroid ? 'Recent storefront updates.' : 'Live deals near you.'}
+      subtitle={
+        isAndroid
+          ? 'Filter by location, storefront, or update details to browse recent owner-posted activity.'
+          : 'Filter by location, storefront, or offer details to browse active promotions.'
+      }
       headerPill={activeLocationLabel}
       onBrandIconPress={handleRefreshDeviceLocation}
     >
@@ -126,7 +134,7 @@ function HotDealsScreenInner() {
       ) : error && items.length === 0 ? (
         <View style={{ padding: spacing.xl, paddingTop: spacing.xxl }}>
           <ErrorRecoveryCard
-            title="Unable to load deals"
+            title={isAndroid ? 'Unable to load updates' : 'Unable to load deals'}
             message={error}
             onRetry={handleRetryError}
             retryLabel="Refresh"

@@ -97,7 +97,7 @@ export const communityGuidelines = [
 
 export const moderationPolicyNotes = [
   'Canopy Trove members can report storefront listing issues and flag abusive reviews directly from the storefront detail screen.',
-  'Blocked review authors are hidden only on the current device and can be managed in Privacy and safety.',
+  'Blocked review authors are hidden per storefront for the signed-in account and can be managed in Privacy and safety.',
   'Owner verification, storefront reports, and reported reviews move through a manual review workflow.',
   'Photo, copyright, trademark, and privacy complaints can be sent to support for manual review.',
   `Support and moderation questions can be sent to ${supportEmail}.`,

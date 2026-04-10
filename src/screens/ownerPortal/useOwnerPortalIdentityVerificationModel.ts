@@ -1,12 +1,11 @@
 import React from 'react';
-import * as ImagePicker from 'expo-image-picker';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useStorefrontProfileController } from '../../context/StorefrontController';
 import type { RootStackParamList } from '../../navigation/RootNavigator';
-import { submitIdentityVerification } from '../../services/ownerPortalVerificationService';
-import type { OwnerPortalIdentityIdType, OwnerPortalUploadedFile } from '../../types/ownerPortal';
+import { requestJson } from '../../services/storefrontBackendHttp';
+import type { OwnerPortalIdentityIdType } from '../../types/ownerPortal';
 import { useOwnerPortalProfileLoader } from './useOwnerPortalProfileLoader';
 
 export const ID_TYPE_OPTIONS: OwnerPortalIdentityIdType[] = [
@@ -15,134 +14,96 @@ export const ID_TYPE_OPTIONS: OwnerPortalIdentityIdType[] = [
   'passport',
 ];
 
-async function pickIdentityImage() {
-  if (Platform.OS !== 'web') {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      throw new Error('Media library permission is required to select identity images.');
-    }
-  }
+type StripeIdentitySessionResponse = {
+  ok: boolean;
+  sessionId: string;
+  clientSecret: string;
+  verificationUrl: string | null;
+};
 
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    allowsEditing: false,
-    quality: 0.9,
-  });
-
-  if (result.canceled || !result.assets?.length) {
-    return null;
-  }
-
-  const asset = result.assets[0];
-  return {
-    uri: asset.uri,
-    name: asset.fileName ?? `image-${Date.now()}.jpg`,
-    mimeType: asset.mimeType ?? 'image/jpeg',
-    size: asset.fileSize ?? null,
-  } satisfies OwnerPortalUploadedFile;
-}
-
+/**
+ * Owner portal identity verification model — now powered by Stripe Identity.
+ *
+ * Instead of capturing photos manually, we create a Stripe Identity
+ * VerificationSession and open the hosted verification UI. Stripe handles
+ * document scanning, selfie capture, and biometric matching. The result
+ * comes back via webhook and auto-updates Firestore.
+ */
 export function useOwnerPortalIdentityVerificationModel() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { authSession } = useStorefrontProfileController();
   const ownerUid = authSession.uid;
-  const [fullName, setFullName] = React.useState('');
-  const [idType, setIdType] = React.useState<OwnerPortalIdentityIdType>('drivers_license');
-  const [frontFile, setFrontFile] = React.useState<OwnerPortalUploadedFile | null>(null);
-  const [backFile, setBackFile] = React.useState<OwnerPortalUploadedFile | null>(null);
-  const [selfieFile, setSelfieFile] = React.useState<OwnerPortalUploadedFile | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [verificationStarted, setVerificationStarted] = React.useState(false);
   const { isLoading, ownerProfile, setStatusText, statusText } =
     useOwnerPortalProfileLoader(ownerUid);
 
-  React.useEffect(() => {
-    if (!ownerProfile) {
-      return;
-    }
+  // Check if identity verification is already in progress or completed
+  const identityStatus = ownerProfile?.identityVerificationStatus ?? null;
+  const isAlreadyVerified = identityStatus === 'verified';
+  const isProcessing = identityStatus === 'pending';
 
-    setFullName((current) => current || ownerProfile.legalName || ownerProfile.companyName);
-  }, [ownerProfile]);
-
-  const chooseFrontFile = React.useCallback(() => {
-    void pickIdentityImage().then((file) => {
-      if (file) {
-        setFrontFile(file);
-      }
-    });
-  }, []);
-
-  const chooseBackFile = React.useCallback(() => {
-    void pickIdentityImage().then((file) => {
-      if (file) {
-        setBackFile(file);
-      }
-    });
-  }, []);
-
-  const chooseSelfieFile = React.useCallback(() => {
-    void pickIdentityImage().then((file) => {
-      if (file) {
-        setSelfieFile(file);
-      }
-    });
-  }, []);
-
-  const submit = React.useCallback(async () => {
-    if (!ownerUid || !frontFile || !selfieFile || isSubmitting) {
+  const startVerification = React.useCallback(async () => {
+    if (!ownerUid || isSubmitting) {
       return;
     }
 
     setIsSubmitting(true);
     setStatusText(null);
     try {
-      await submitIdentityVerification({
-        ownerUid,
-        fullName,
-        idType,
-        frontFile,
-        backFile,
-        selfieFile,
-      });
-      navigation.replace('OwnerPortalHome');
+      const response = await requestJson<StripeIdentitySessionResponse>(
+        '/owner-portal/identity-verification/session',
+        { method: 'POST' },
+      );
+
+      if (!response.ok) {
+        throw new Error('Unable to create identity verification session.');
+      }
+
+      // Open the Stripe-hosted verification URL
+      if (response.verificationUrl) {
+        if (Platform.OS === 'web') {
+          // On web, open in a new tab
+          window.open(response.verificationUrl, '_blank');
+        } else {
+          // On native, open in the in-app browser
+          // expo-web-browser would be ideal, but Linking works as a fallback
+          await Linking.openURL(response.verificationUrl);
+        }
+        setVerificationStarted(true);
+        setStatusText('Verification opened. Complete it in the browser, then return here.');
+      } else {
+        throw new Error('Verification URL not available. Please try again.');
+      }
     } catch (error) {
       setStatusText(
-        error instanceof Error ? error.message : 'Unable to submit identity verification.',
+        error instanceof Error ? error.message : 'Unable to start identity verification.',
       );
     } finally {
       setIsSubmitting(false);
     }
-  }, [
-    backFile,
-    frontFile,
-    fullName,
-    idType,
-    isSubmitting,
-    navigation,
-    ownerUid,
-    selfieFile,
-    setStatusText,
-  ]);
+  }, [ownerUid, isSubmitting, setStatusText]);
 
-  const isSubmitDisabled = isSubmitting || !fullName.trim() || !frontFile || !selfieFile;
+  const checkStatus = React.useCallback(() => {
+    // Navigate home — the profile loader will re-fetch and show current status
+    navigation.replace('OwnerPortalHome');
+  }, [navigation]);
+
+  const isSubmitDisabled = isSubmitting || isAlreadyVerified || isProcessing;
 
   return {
-    chooseBackFile,
-    chooseFrontFile,
-    chooseSelfieFile,
-    frontFile,
-    backFile,
-    fullName,
-    idType,
+    identityStatus,
+    isAlreadyVerified,
     isLoading,
+    isProcessing,
     isSubmitDisabled,
     isSubmitting,
     ownerProfile,
-    selfieFile,
-    setFullName,
-    setIdType,
     statusText,
-    submit: () => {
-      void submit();
+    verificationStarted,
+    startVerification: () => {
+      void startVerification();
     },
+    checkStatus,
   };
 }

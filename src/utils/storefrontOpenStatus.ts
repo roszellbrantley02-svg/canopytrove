@@ -20,6 +20,8 @@ const DAY_NAMES = [
   'Saturday',
 ] as const;
 
+const DEFAULT_STOREFRONT_TIMEZONE = 'America/New_York';
+
 /**
  * Parse a 12-hour time string like "9:00 AM" or "12:30 PM" into minutes since midnight.
  * Returns null if unparseable.
@@ -91,6 +93,45 @@ function parseHoursLine(line: string): {
   };
 }
 
+function getLocalTimeComponents(
+  date: Date,
+  timezone: string,
+): { dayIndex: number; minutes: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: 'numeric',
+    minute: 'numeric',
+    weekday: 'short',
+    hour12: false,
+  }).formatToParts(date);
+
+  let hour = 0;
+  let minute = 0;
+  let weekday = '';
+  for (const part of parts) {
+    if (part.type === 'hour') hour = parseInt(part.value, 10);
+    if (part.type === 'minute') minute = parseInt(part.value, 10);
+    if (part.type === 'weekday') weekday = part.value;
+  }
+
+  if (hour === 24) hour = 0;
+
+  const weekdayMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+
+  return {
+    dayIndex: weekdayMap[weekday] ?? date.getDay(),
+    minutes: hour * 60 + minute,
+  };
+}
+
 /**
  * Determine if a storefront is currently open based on its hours array.
  *
@@ -103,42 +144,35 @@ export function computeOpenNow(
   hours: string[] | null | undefined,
   staticOpenNow: boolean | null,
   now?: Date,
+  timezone: string = DEFAULT_STOREFRONT_TIMEZONE,
 ): boolean | null {
   if (!hours || hours.length === 0) {
     return staticOpenNow;
   }
 
   const currentDate = now ?? new Date();
-  const currentDayIndex = currentDate.getDay(); // 0 = Sunday
+  const { dayIndex: currentDayIndex, minutes: currentMinutes } = getLocalTimeComponents(
+    currentDate,
+    timezone,
+  );
   const currentDayName = DAY_NAMES[currentDayIndex];
-  const currentMinutes = currentDate.getHours() * 60 + currentDate.getMinutes();
 
   // Find today's hours line
   const todayLine = hours.find((line) =>
     line.trim().toLowerCase().startsWith(currentDayName.toLowerCase()),
   );
+  const todayParsed = todayLine ? parseHoursLine(todayLine) : null;
 
-  if (!todayLine) {
-    // No entry for today — fall back
-    return staticOpenNow;
-  }
-
-  const todayParsed = parseHoursLine(todayLine);
-
-  if (!todayParsed) {
-    // "Closed" or unparseable → store is closed today
-    return false;
-  }
-
-  // Normal hours (e.g. 9:00 AM – 9:00 PM)
-  if (!todayParsed.crossesMidnight) {
-    return currentMinutes >= todayParsed.openMinutes && currentMinutes < todayParsed.closeMinutes;
-  }
-
-  // Crosses midnight (e.g. 10:00 AM – 2:00 AM)
-  // If current time is after the open time today, we're in the first part
-  if (currentMinutes >= todayParsed.openMinutes) {
-    return true;
+  if (todayParsed) {
+    // Normal hours (e.g. 9:00 AM – 9:00 PM)
+    if (!todayParsed.crossesMidnight) {
+      if (currentMinutes >= todayParsed.openMinutes && currentMinutes < todayParsed.closeMinutes) {
+        return true;
+      }
+    } else if (currentMinutes >= todayParsed.openMinutes) {
+      // Crosses midnight (e.g. 10:00 AM – 2:00 AM)
+      return true;
+    }
   }
 
   // Otherwise check if we're in the overnight spillover from yesterday
@@ -149,16 +183,18 @@ export function computeOpenNow(
   );
 
   if (!yesterdayLine) {
-    return staticOpenNow;
+    return todayLine ? false : staticOpenNow;
   }
 
   const yesterdayParsed = parseHoursLine(yesterdayLine);
 
-  if (!yesterdayParsed || !yesterdayParsed.crossesMidnight) {
-    // Yesterday didn't cross midnight, so no spillover
+  if (yesterdayParsed?.crossesMidnight && currentMinutes < yesterdayParsed.closeMinutes) {
+    return true;
+  }
+
+  if (todayLine) {
     return false;
   }
 
-  // We're in the overnight window if current time is before yesterday's close
-  return currentMinutes < yesterdayParsed.closeMinutes;
+  return staticOpenNow;
 }

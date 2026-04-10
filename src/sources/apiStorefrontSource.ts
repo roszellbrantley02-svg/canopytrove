@@ -8,7 +8,7 @@ import type {
   StorefrontSummariesApiResponse,
   StorefrontSummaryApiDocument,
 } from '../types/storefrontApi';
-import { getCanopyTroveAuthIdToken } from '../services/canopyTroveAuthService';
+import { getCanopyTroveStorefrontReadIdToken } from '../services/canopyTroveAuthService';
 import type {
   StorefrontSource,
   StorefrontSourceSummaryQuery,
@@ -18,6 +18,16 @@ import type {
 const API_REQUEST_TIMEOUT_MS = 10_000;
 const API_RETRY_DELAY_MS = 1_500;
 const API_MAX_RETRIES = 1;
+
+class StorefrontApiHttpError extends Error {
+  readonly statusCode: number;
+
+  constructor(statusCode: number) {
+    super(`Storefront API request failed with ${statusCode}`);
+    this.name = 'StorefrontApiHttpError';
+    this.statusCode = statusCode;
+  }
+}
 
 function normalizeAreaId(areaId?: string | null) {
   const normalized = areaId?.trim().toLowerCase();
@@ -61,8 +71,7 @@ async function singleRequestJson<T>(
     const headers = new Headers();
     let idToken: string | null = null;
     try {
-      // Public storefront reads should degrade to guest access if auth refresh is stale.
-      idToken = await getCanopyTroveAuthIdToken();
+      idToken = await getCanopyTroveStorefrontReadIdToken();
     } catch {
       idToken = null;
     }
@@ -79,7 +88,7 @@ async function singleRequestJson<T>(
         return null;
       }
 
-      throw new Error(`Storefront API request failed with ${response.status}`);
+      throw new StorefrontApiHttpError(response.status);
     }
 
     return (await response.json()) as T;
@@ -107,7 +116,9 @@ async function requestJson<T>(
       // Only retry on network/timeout errors, not on 4xx responses.
       const isRetryable =
         error instanceof TypeError ||
-        (error instanceof DOMException && error.name === 'AbortError');
+        (error instanceof DOMException && error.name === 'AbortError') ||
+        (error instanceof StorefrontApiHttpError &&
+          [408, 429, 502, 503, 504].includes(error.statusCode));
 
       if (!isRetryable || attempt >= API_MAX_RETRIES) {
         break;

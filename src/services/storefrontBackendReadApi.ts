@@ -1,5 +1,6 @@
 import type {
   AppProfile,
+  CommunitySafetyState,
   GamificationLeaderboardResponse,
   StorefrontProfileState,
 } from '../types/storefront';
@@ -11,7 +12,9 @@ import type {
 } from './storefrontBackendHttp';
 import {
   backendCacheTtls,
+  createCanonicalProfileCacheKey,
   createLeaderboardRankCacheKey,
+  createCommunitySafetyCacheKey,
   createProfileCacheKey,
   createProfileStateCacheKey,
   requestJson,
@@ -56,6 +59,13 @@ export function getStorefrontBackendProfile(profileId: string) {
   });
 }
 
+export function getStorefrontBackendCanonicalProfile() {
+  return requestJson<AppProfile>('/profiles/me/canonical', undefined, {
+    cacheKey: createCanonicalProfileCacheKey(),
+    ttlMs: backendCacheTtls.profile,
+  });
+}
+
 export function getStorefrontBackendProfileState(profileId: string) {
   return requestJson<StorefrontProfileState>(
     `/profile-state/${encodeURIComponent(profileId)}`,
@@ -63,6 +73,17 @@ export function getStorefrontBackendProfileState(profileId: string) {
     {
       cacheKey: createProfileStateCacheKey(profileId),
       ttlMs: backendCacheTtls.profileState,
+    },
+  );
+}
+
+export function getStorefrontBackendCommunitySafetyState(profileId: string) {
+  return requestJson<CommunitySafetyState>(
+    `/profiles/${encodeURIComponent(profileId)}/community-safety`,
+    undefined,
+    {
+      cacheKey: createCommunitySafetyCacheKey(profileId),
+      ttlMs: backendCacheTtls.communitySafety,
     },
   );
 }

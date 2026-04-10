@@ -13,8 +13,8 @@ export function DetailReviewsSection({
   hiddenReviewCount,
   pendingHelpfulReviewId,
   pendingReviewReportId,
-  profileId,
   reviewModerationStatusText,
+  onShowHiddenReviews,
   onMarkHelpful,
   onBlockAuthor,
   onReportReview,
@@ -23,16 +23,16 @@ export function DetailReviewsSection({
   hiddenReviewCount: number;
   pendingHelpfulReviewId: string | null;
   pendingReviewReportId: string | null;
-  profileId: string;
   reviewModerationStatusText: string | null;
-  onMarkHelpful: (reviewId: string, reviewAuthorProfileId: string | null) => void;
+  onShowHiddenReviews: () => void;
+  onMarkHelpful: (reviewId: string, isOwnReview?: boolean) => void;
   onBlockAuthor: (reviewAuthorProfileId: string | null) => void;
   onReportReview: (review: StorefrontDetails['appReviews'][number]) => void;
 }) {
   return (
     <SectionCard
       title="Customer reviews"
-      body="Verified customer reviews from Canopy Trove users. Report abusive content or hide an author on this device from Privacy and safety."
+      body="Reviews from Canopy Trove customers. You can report abusive content or hide an author's reviews on this storefront from Privacy and safety."
     >
       <View style={styles.reviewList}>
         <View style={[styles.infoNoticeCard, styles.infoNoticeCardCyan]}>
@@ -41,10 +41,10 @@ export function DetailReviewsSection({
               <AppUiIcon name="shield-checkmark-outline" size={18} color={colors.cyan} />
             </View>
             <View style={styles.infoNoticeCopy}>
-              <Text style={styles.infoNoticeTitle}>Moderation controls</Text>
+              <Text style={styles.infoNoticeTitle}>Report or hide reviews</Text>
               <Text style={styles.infoNoticeBody}>
-                Report flags abusive review content for moderation. Hide only affects this device
-                and can be managed later in Privacy and safety.
+                Report sends a review to our team. Hide affects this storefront for your account and
+                can be managed later in Privacy and safety.
               </Text>
             </View>
           </View>
@@ -57,7 +57,7 @@ export function DetailReviewsSection({
                 <AppUiIcon name="information-circle-outline" size={18} color={colors.goldSoft} />
               </View>
               <View style={styles.infoNoticeCopy}>
-                <Text style={styles.infoNoticeTitle}>Review moderation status</Text>
+                <Text style={styles.infoNoticeTitle}>Review update</Text>
                 <Text style={styles.infoNoticeBody}>{reviewModerationStatusText}</Text>
               </View>
             </View>
@@ -77,7 +77,27 @@ export function DetailReviewsSection({
                 </Text>
               </View>
             </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Show hidden reviews for this storefront"
+              accessibilityHint="Unblocks hidden review authors for this storefront so their reviews are visible again."
+              onPress={onShowHiddenReviews}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>Show Hidden Reviews</Text>
+            </Pressable>
           </View>
+        ) : null}
+
+        {hiddenReviewCount > 0 && appReviews.length === 0 ? (
+          <CustomerStateCard
+            title="Reviews are hidden by your safety settings"
+            body="This storefront still has customer reviews, but they are hidden on this account because the reviewer is blocked."
+            tone="warm"
+            iconName="eye-off-outline"
+            eyebrow="Hidden reviews"
+            note="Use Show Hidden Reviews to restore them on this storefront."
+          />
         ) : null}
 
         {appReviews.map((review) => (
@@ -110,6 +130,8 @@ export function DetailReviewsSection({
                 source={{ uri: review.gifUrl }}
                 style={styles.reviewGif}
                 accessibilityLabel="Reaction GIF from review"
+                cachePolicy="disk"
+                transition={200}
               />
             ) : null}
 
@@ -125,6 +147,9 @@ export function DetailReviewsSection({
                     source={{ uri: photoUrl }}
                     style={styles.reviewPhotoCard}
                     accessibilityLabel={`Review photo ${index + 1}`}
+                    cachePolicy="disk"
+                    transition={200}
+                    recyclingKey={photoUrl}
                   />
                 ))}
               </ScrollView>
@@ -134,7 +159,7 @@ export function DetailReviewsSection({
               <View style={styles.reviewOwnerReplyCard}>
                 <Text style={styles.reviewOwnerReplyLabel}>Owner response</Text>
                 <Text style={styles.reviewOwnerReplyMeta}>
-                  {(review.ownerReply.ownerDisplayName ?? 'Canopy Trove owner') +
+                  {(review.ownerReply.ownerDisplayName ?? 'Store owner') +
                     ' | ' +
                     new Date(review.ownerReply.respondedAt).toLocaleDateString()}
                 </Text>
@@ -153,21 +178,18 @@ export function DetailReviewsSection({
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={
-                    review.authorProfileId === profileId
+                    review.isOwnReview
                       ? 'Your own review cannot be marked helpful'
                       : `Mark review by ${review.authorName} as helpful`
                   }
                   accessibilityHint="Adds your helpful vote to this review."
-                  disabled={
-                    pendingHelpfulReviewId === review.id || review.authorProfileId === profileId
-                  }
+                  disabled={pendingHelpfulReviewId === review.id || review.isOwnReview}
                   onPress={() => {
-                    onMarkHelpful(review.id, review.authorProfileId);
+                    onMarkHelpful(review.id, review.isOwnReview);
                   }}
                   style={[
                     styles.reviewHelpfulButton,
-                    (pendingHelpfulReviewId === review.id ||
-                      review.authorProfileId === profileId) &&
+                    (pendingHelpfulReviewId === review.id || review.isOwnReview) &&
                       styles.reviewHelpfulButtonDisabled,
                   ]}
                 >
@@ -177,16 +199,16 @@ export function DetailReviewsSection({
                     <>
                       <AppUiIcon name="thumbs-up-outline" size={14} color={colors.background} />
                       <Text style={styles.reviewHelpfulButtonText}>
-                        {review.authorProfileId === profileId ? 'Your review' : 'Mark helpful'}
+                        {review.isOwnReview ? 'Your review' : 'Mark helpful'}
                       </Text>
                     </>
                   )}
                 </Pressable>
-                {review.authorProfileId && review.authorProfileId !== profileId ? (
+                {review.authorProfileId && !review.isOwnReview ? (
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`Report review by ${review.authorName}`}
-                    accessibilityHint="Flags this review for moderation."
+                    accessibilityHint="Sends this review to our team for review."
                     disabled={pendingReviewReportId === review.id}
                     onPress={() => {
                       onReportReview(review);
@@ -201,11 +223,11 @@ export function DetailReviewsSection({
                     </Text>
                   </Pressable>
                 ) : null}
-                {review.authorProfileId && review.authorProfileId !== profileId ? (
+                {review.authorProfileId && !review.isOwnReview ? (
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`Block reviews from ${review.authorName}`}
-                    accessibilityHint="Hides future reviews from this author on this device."
+                    accessibilityHint="Hides future reviews from this author on this storefront for your account."
                     onPress={() => {
                       onBlockAuthor(review.authorProfileId);
                     }}
@@ -225,17 +247,14 @@ export function DetailReviewsSection({
 
 export function DetailReviewsEmptyCard() {
   return (
-    <SectionCard
-      title="Customer reviews"
-      body="No customer reviews are available yet. The first review becomes the initial trust signal for this storefront."
-    >
+    <SectionCard title="Customer reviews" body="No customer reviews are available yet.">
       <CustomerStateCard
         title="No reviews yet"
-        body="This storefront is still waiting for its first customer review. A clear first post helps the next visitor judge the storefront more confidently."
+        body="This storefront is still waiting for its first customer review."
         tone="warm"
         iconName="chatbubble-ellipses-outline"
-        eyebrow="Review state"
-        note="If your visit was recent, a clear first review helps set the baseline for later visitors."
+        eyebrow="Reviews"
+        note="If you have been here recently, your review can help the next customer know what to expect."
       />
     </SectionCard>
   );
@@ -251,7 +270,7 @@ export function DetailPhotosSection({
   return (
     <SectionCard
       title="Photos"
-      body="Photos stay on the detail screen so they do not crowd the listing view."
+      body="Photos are shown here so the main listing stays easy to scan."
     >
       <ScrollView
         horizontal
@@ -264,6 +283,10 @@ export function DetailPhotosSection({
             source={{ uri: photoUrl }}
             style={styles.photoCard}
             accessibilityLabel={`Storefront photo ${index + 1}`}
+            cachePolicy="disk"
+            transition={200}
+            recyclingKey={photoUrl}
+            priority={index === 0 ? 'high' : 'low'}
           />
         ))}
       </ScrollView>

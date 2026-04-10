@@ -2,7 +2,7 @@ import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
@@ -96,6 +96,7 @@ function getAttentionItems(workspace: OwnerPortalWorkspaceDocument | null): Atte
 }
 
 function OwnerPortalHomeScreenInner() {
+  const isAndroid = Platform.OS === 'android';
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const _route = useRoute<OwnerPortalHomeRoute>();
   const preview = false;
@@ -141,7 +142,7 @@ function OwnerPortalHomeScreenInner() {
     },
     {
       key: 'create-deal',
-      label: 'Create Deal',
+      label: isAndroid ? 'Create Update' : 'Create Offer',
       iconName: 'megaphone-outline',
       locked: !isGrowthOrAbove,
       onPress: () => {
@@ -154,7 +155,7 @@ function OwnerPortalHomeScreenInner() {
     },
     {
       key: 'edit-listing',
-      label: 'Edit Listing',
+      label: 'Storefront',
       iconName: 'storefront-outline',
       onPress: () => {
         navigation.navigate('OwnerPortalProfileTools', undefined);
@@ -183,7 +184,7 @@ function OwnerPortalHomeScreenInner() {
     },
     {
       key: 'metrics',
-      label: 'Metrics',
+      label: 'Activity',
       iconName: 'stats-chart-outline',
       onPress: () => {
         scrollViewRef.current?.scrollTo({ y: roiSectionY.current, animated: true });
@@ -218,7 +219,11 @@ function OwnerPortalHomeScreenInner() {
     <ScreenShell
       eyebrow="Owner Portal"
       title="Business dashboard"
-      subtitle="Manage your listing, verification, deals, media, and billing."
+      subtitle={
+        isAndroid
+          ? 'Gallery, reviews, updates, hours, and billing in one place.'
+          : 'Gallery, reviews, offers, hours, and billing in one place.'
+      }
       headerPill="Business"
     >
       <ScrollView
@@ -307,7 +312,10 @@ function OwnerPortalHomeScreenInner() {
         {/* 4. Metrics Snapshot */}
         {workspace?.metrics ? (
           <MotionInView delay={160}>
-            <SectionCard title="Metrics Snapshot" body="Key performance indicators.">
+            <SectionCard
+              title="Performance this week"
+              body="A quick look at how your storefront is doing."
+            >
               <View style={localStyles.metricsGrid}>
                 <View style={localStyles.metricTile}>
                   <Text style={localStyles.metricLabel}>Followers</Text>
@@ -316,7 +324,7 @@ function OwnerPortalHomeScreenInner() {
                   </Text>
                 </View>
                 <View style={localStyles.metricTile}>
-                  <Text style={localStyles.metricLabel}>Impressions 7d</Text>
+                  <Text style={localStyles.metricLabel}>Actions 7D</Text>
                   <Text style={localStyles.metricValue}>{homeMetrics.totalActions7d}</Text>
                 </View>
                 <View style={localStyles.metricTile}>
@@ -334,8 +342,16 @@ function OwnerPortalHomeScreenInner() {
         {ownerProfile?.dispensaryId ? (
           <MotionInView delay={190}>
             <SectionCard
-              title="Active Promotion"
-              body={activePromotion ? 'Your current deal.' : 'No active deals.'}
+              title={isAndroid ? 'Current update' : 'Current offer'}
+              body={
+                activePromotion
+                  ? isAndroid
+                    ? 'The update customers can see right now.'
+                    : 'The offer customers can see right now.'
+                  : isAndroid
+                    ? 'No live updates yet.'
+                    : 'No live offers yet.'
+              }
             >
               {activePromotion ? (
                 <View style={localStyles.promotionCard}>
@@ -352,7 +368,9 @@ function OwnerPortalHomeScreenInner() {
                 <View style={localStyles.emptyState}>
                   <AppUiIcon name="megaphone-outline" size={32} color="#9CC5B4" />
                   <Text style={localStyles.emptyStateText}>
-                    Create your first deal to attract customers
+                    {isAndroid
+                      ? 'Create your first update to keep customers informed'
+                      : 'Create your first deal to attract customers'}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -361,14 +379,18 @@ function OwnerPortalHomeScreenInner() {
                     }}
                     style={localStyles.primaryButton}
                   >
-                    <Text style={localStyles.primaryButtonText}>Create Deal</Text>
+                    <Text style={localStyles.primaryButtonText}>
+                      {isAndroid ? 'Create Update' : 'Create Deal'}
+                    </Text>
                   </Pressable>
                 </View>
               ) : (
                 <View style={localStyles.lockedFeature}>
                   <AppUiIcon name="lock-closed-outline" size={24} color="#C4B8B0" />
                   <Text style={localStyles.lockedFeatureText}>
-                    Deals require the Growth plan or higher.
+                    {isAndroid
+                      ? 'Updates require the Growth plan or higher.'
+                      : 'Deals require the Growth plan or higher.'}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -387,7 +409,7 @@ function OwnerPortalHomeScreenInner() {
         {!preview && ownerProfile?.dispensaryId ? (
           <MotionInView delay={220}>
             {isProTier && actionPlan ? (
-              <SectionCard title="AI Insights" body="Weekly priorities.">
+              <SectionCard title="Suggestions" body="A short list of next moves for this week.">
                 <View style={localStyles.aiCard}>
                   <View style={localStyles.aiCardHeader}>
                     <AppUiIcon name="sparkles-outline" size={20} color="#F5C86A" />
@@ -413,13 +435,13 @@ function OwnerPortalHomeScreenInner() {
                     disabled={isAiLoading}
                   >
                     <Text style={localStyles.secondaryButtonText}>
-                      {isAiLoading ? 'Loading...' : 'View Full Plan'}
+                      {isAiLoading ? 'Loading...' : 'See All Suggestions'}
                     </Text>
                   </Pressable>
                 </View>
               </SectionCard>
             ) : !isProTier ? (
-              <SectionCard title="AI Insights" body="Unlock with the Pro plan.">
+              <SectionCard title="Suggestions" body="Available on the Pro plan.">
                 <View style={localStyles.lockedFeature}>
                   <AppUiIcon name="lock-closed-outline" size={24} color="#C4B8B0" />
                   <Text style={localStyles.lockedFeatureText}>
@@ -441,7 +463,7 @@ function OwnerPortalHomeScreenInner() {
         {/* 7. License Compliance */}
         {ownerProfile?.dispensaryId ? (
           <MotionInView delay={250}>
-            <SectionCard title="Compliance" body="License number and renewal window.">
+            <SectionCard title="License" body="Your license details and renewal timing.">
               <OwnerPortalLicenseComplianceCard
                 workspace={workspace}
                 isSaving={isSaving}
@@ -460,8 +482,8 @@ function OwnerPortalHomeScreenInner() {
           >
             <MotionInView delay={280}>
               <SectionCard
-                title="Owner ROI"
-                body="Visibility, conversion, and customer action metrics."
+                title="Customer activity"
+                body="How people are finding your storefront and what they do next."
               >
                 <OwnerPortalHomeRoiSection
                   errorText=""
@@ -477,7 +499,7 @@ function OwnerPortalHomeScreenInner() {
         {/* 9. Onboarding Checklist - only if not complete */}
         {!isOnboardingComplete && ownerProfile?.dispensaryId ? (
           <MotionInView delay={310}>
-            <SectionCard title="Journey" body="Your onboarding progress.">
+            <SectionCard title="Getting set up" body="What is done and what is left.">
               <OwnerPortalStageList items={journeyItems} />
             </SectionCard>
           </MotionInView>
@@ -496,7 +518,10 @@ function OwnerPortalHomeScreenInner() {
                   style: 'destructive',
                   onPress: () => {
                     void signOutCanopyTroveSession().then(() => {
-                      navigation.reset({ index: 0, routes: [{ name: 'Tabs' }] });
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Tabs', params: { screen: 'Profile' } }],
+                      });
                     });
                   },
                 },

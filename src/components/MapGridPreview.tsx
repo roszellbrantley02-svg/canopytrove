@@ -14,6 +14,8 @@ type MapGridPreviewProps = {
   imageUrl?: string | null;
   tone?: PreviewTone;
   statusTone?: PreviewStatusTone;
+  /** Hint for image loading priority. 'high' for above-fold cards, 'low' for offscreen. */
+  imagePriority?: 'high' | 'normal' | 'low';
 };
 
 function MapGridPreviewComponent({
@@ -25,6 +27,7 @@ function MapGridPreviewComponent({
   imageUrl,
   tone = 'default',
   statusTone = 'neverVisited',
+  imagePriority = 'normal',
 }: MapGridPreviewProps) {
   const toneStyles = getToneStyles(tone);
   const statusToneStyles = getStatusToneStyles(statusTone);
@@ -76,6 +79,10 @@ function MapGridPreviewComponent({
             accessible={false}
             contentFit="cover"
             transition={200}
+            cachePolicy="disk"
+            recyclingKey={imageUrl}
+            priority={imagePriority}
+            placeholder={{ blurhash: 'L03[}Nt700WB~qj[M{fQ00ay%Mof' }}
           />
           <View style={styles.imageOverlay} />
         </>

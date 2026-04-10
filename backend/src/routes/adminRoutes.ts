@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { serverConfig } from '../config';
+import { hasBackendFirebaseConfig } from '../firebase';
+import { backendStorefrontSourceStatus } from '../sources';
 import { createRateLimitMiddleware } from '../http/rateLimit';
 import { ensureAdminApiKeyConfigured, ensureAdminApiKeyMatch } from '../http/adminAccess';
 import {
@@ -12,7 +14,10 @@ import {
   invalidateCachedStorefrontDetail,
 } from '../services/storefrontCacheService';
 import { clearBackendStorefrontSourceCaches, warmBackendStorefrontSource } from '../sources';
+import { adminBatchWelcomeEmailRoutes } from './adminBatchWelcomeEmailRoutes';
 import { adminDiscoveryRoutes } from './adminDiscoveryRoutes';
+import { adminPlaceIdBackfillRoutes } from './adminPlaceIdBackfillRoutes';
+import { adminPushNotificationRoutes } from './adminPushNotificationRoutes';
 import {
   getAdminReviewReadiness,
   getAdminReviewQueue,
@@ -53,6 +58,29 @@ adminRoutes.use('/admin/reviews', (_request, response, next) => {
   }
 
   next();
+});
+
+adminRoutes.get('/admin/health', (_request, response) => {
+  const storageMode =
+    backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory';
+
+  response.json({
+    ok: true,
+    source: {
+      requestedMode: backendStorefrontSourceStatus.requestedMode,
+      activeMode: backendStorefrontSourceStatus.activeMode,
+      fallbackReason: backendStorefrontSourceStatus.fallbackReason,
+    },
+    profileStorage: storageMode,
+    routeStateStorage: storageMode,
+    gamificationStorage: storageMode,
+    authVerification: hasBackendFirebaseConfig ? 'firebase-admin' : 'disabled',
+    allowDevSeed: serverConfig.allowDevSeed,
+    uptime: Math.round(process.uptime()),
+    nodeVersion: process.version,
+    memoryUsageMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+    environment: process.env.NODE_ENV || 'development',
+  });
 });
 
 adminRoutes.get('/admin/seed-status', (_request, response) => {
@@ -165,7 +193,10 @@ adminRoutes.get('/admin/email-delivery-events', async (request, response) => {
   }
 });
 
+adminRoutes.use('/admin', adminBatchWelcomeEmailRoutes);
 adminRoutes.use('/admin/discovery', adminDiscoveryRoutes);
+adminRoutes.use('/admin/place-ids', adminPlaceIdBackfillRoutes);
+adminRoutes.use('/admin/push', adminPushNotificationRoutes);
 
 adminRoutes.get('/admin/reviews/queue', async (request, response) => {
   try {

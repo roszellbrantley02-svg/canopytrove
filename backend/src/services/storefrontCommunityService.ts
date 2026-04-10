@@ -13,6 +13,7 @@ import {
   deleteReviewPhotoUploadsForProfile,
   getApprovedReviewPhotoUrls,
 } from './reviewPhotoModerationService';
+import { createPublicCommunityAuthorId } from './publicCommunityIdentityService';
 
 type StoredAppReviewRecord = {
   id: string;
@@ -72,9 +73,14 @@ export type StoredStorefrontReportRecord = {
 
 const APP_REVIEWS_COLLECTION = 'storefront_app_reviews';
 const STOREFRONT_REPORTS_COLLECTION = 'storefront_reports';
+const APP_REVIEW_AGGREGATE_TTL_MS = 60_000;
 
 const appReviewStore = new Map<string, StoredAppReviewRecord[]>();
 const storefrontReportStore = new Map<string, StoredStorefrontReportRecord[]>();
+let appReviewAggregateCache: {
+  expiresAt: number;
+  value: Map<string, { reviewCount: number; averageRating: number }>;
+} | null = null;
 
 export class StorefrontCommunityError extends Error {
   constructor(
@@ -152,17 +158,19 @@ function normalizeOwnerReply(
 
 async function mapStoredReviewToAppReview(
   review: StoredAppReviewRecord,
+  viewerProfileId?: string | null,
 ): Promise<StorefrontAppReviewRecord> {
   return {
     id: review.id,
     authorName: review.authorName,
-    authorProfileId: review.profileId,
+    authorProfileId: createPublicCommunityAuthorId(review.profileId, review.storefrontId),
     rating: review.rating,
     relativeTime: toRelativeTime(review.createdAt),
     text: review.text,
     gifUrl: review.gifUrl ?? null,
     tags: [...review.tags],
     helpfulCount: review.helpfulCount,
+    isOwnReview: Boolean(viewerProfileId && viewerProfileId === review.profileId),
     ownerReply: normalizeOwnerReply(review.ownerReply),
     photoUrls: await getApprovedReviewPhotoUrls(review.photoIds),
     photoCount: review.photoIds.length,
@@ -225,6 +233,63 @@ function normalizeStoredReviewRecord(review: StoredAppReviewRecord): StoredAppRe
   };
 }
 
+function createStorefrontReviewAggregateMap(reviews: StoredAppReviewRecord[]) {
+  const totals = new Map<string, { reviewCount: number; ratingTotal: number }>();
+  for (const review of reviews) {
+    const storefrontId = review.storefrontId.trim();
+    if (!storefrontId) {
+      continue;
+    }
+
+    const current = totals.get(storefrontId) ?? { reviewCount: 0, ratingTotal: 0 };
+    current.reviewCount += 1;
+    current.ratingTotal += normalizeRating(review.rating);
+    totals.set(storefrontId, current);
+  }
+
+  const aggregateMap = new Map<string, { reviewCount: number; averageRating: number }>();
+  totals.forEach((current, storefrontId) => {
+    aggregateMap.set(storefrontId, {
+      reviewCount: current.reviewCount,
+      averageRating:
+        current.reviewCount > 0
+          ? Number((current.ratingTotal / current.reviewCount).toFixed(1))
+          : 0,
+    });
+  });
+
+  return aggregateMap;
+}
+
+async function loadAllStoredAppReviews() {
+  const collectionRef = getAppReviewCollection();
+  if (collectionRef) {
+    const snapshot = await collectionRef.get();
+    return snapshot.docs.map((documentSnapshot) =>
+      normalizeStoredReviewRecord(documentSnapshot.data() as StoredAppReviewRecord),
+    );
+  }
+
+  return Array.from(appReviewStore.values()).flat().map(normalizeStoredReviewRecord);
+}
+
+export function clearStorefrontAppReviewAggregateCache() {
+  appReviewAggregateCache = null;
+}
+
+export async function getStorefrontAppReviewAggregates() {
+  if (appReviewAggregateCache && appReviewAggregateCache.expiresAt > Date.now()) {
+    return appReviewAggregateCache.value;
+  }
+
+  const aggregateMap = createStorefrontReviewAggregateMap(await loadAllStoredAppReviews());
+  appReviewAggregateCache = {
+    value: aggregateMap,
+    expiresAt: Date.now() + APP_REVIEW_AGGREGATE_TTL_MS,
+  };
+  return aggregateMap;
+}
+
 function normalizeStoredReportRecord(
   report: StoredStorefrontReportRecord,
 ): StoredStorefrontReportRecord {
@@ -261,7 +326,10 @@ function normalizeStoredReportRecord(
   };
 }
 
-export async function listStorefrontAppReviews(storefrontId: string) {
+export async function listStorefrontAppReviews(
+  storefrontId: string,
+  viewerProfileId?: string | null,
+) {
   const collectionRef = getAppReviewCollection();
   if (collectionRef) {
     const snapshot = await collectionRef.where('storefrontId', '==', storefrontId).get();
@@ -271,7 +339,7 @@ export async function listStorefrontAppReviews(storefrontId: string) {
           normalizeStoredReviewRecord(documentSnapshot.data() as StoredAppReviewRecord),
         )
         .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-        .map(mapStoredReviewToAppReview),
+        .map((review) => mapStoredReviewToAppReview(review, viewerProfileId)),
     );
     return settledReviews.flatMap((result) => {
       if (result.status === 'fulfilled') {
@@ -287,7 +355,7 @@ export async function listStorefrontAppReviews(storefrontId: string) {
       .slice()
       .map(normalizeStoredReviewRecord)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-      .map(mapStoredReviewToAppReview),
+      .map((review) => mapStoredReviewToAppReview(review, viewerProfileId)),
   );
   return settledMemoryReviews.flatMap((result) => {
     if (result.status === 'fulfilled') {
@@ -438,6 +506,7 @@ export async function submitStorefrontAppReview(
   const collectionRef = getAppReviewCollection();
   if (collectionRef) {
     await collectionRef.doc(reviewRecord.id).set(reviewRecord);
+    clearStorefrontAppReviewAggregateCache();
     return {
       review: await mapStoredReviewToAppReview(reviewRecord),
       photoModeration,
@@ -446,6 +515,7 @@ export async function submitStorefrontAppReview(
 
   const currentReviews = appReviewStore.get(input.storefrontId) ?? [];
   appReviewStore.set(input.storefrontId, [reviewRecord, ...currentReviews]);
+  clearStorefrontAppReviewAggregateCache();
   return {
     review: await mapStoredReviewToAppReview(reviewRecord),
     photoModeration,
@@ -502,6 +572,7 @@ export async function updateStorefrontAppReview(
   const collectionRef = getAppReviewCollection();
   if (collectionRef) {
     await collectionRef.doc(currentReview.id).set(nextReview);
+    clearStorefrontAppReviewAggregateCache();
     return {
       review: await mapStoredReviewToAppReview(nextReview),
       photoModeration,
@@ -517,6 +588,7 @@ export async function updateStorefrontAppReview(
   const nextReviews = storefrontReviews.slice();
   nextReviews[reviewIndex] = nextReview;
   appReviewStore.set(input.storefrontId, nextReviews);
+  clearStorefrontAppReviewAggregateCache();
 
   return {
     review: await mapStoredReviewToAppReview(nextReview),
@@ -706,6 +778,35 @@ export async function replyToStorefrontAppReview(options: {
 }
 
 export async function submitStorefrontReport(input: StorefrontReportSubmissionInput) {
+  const reportTarget = input.reportTarget === 'review' ? 'review' : 'storefront';
+  let reportedReviewId: string | null = null;
+  let reportedReviewAuthorProfileId: string | null = null;
+  let reportedReviewAuthorName: string | null = null;
+  let reportedReviewExcerpt: string | null = null;
+
+  if (reportTarget === 'review') {
+    const normalizedReviewId = input.reportedReviewId?.trim() || '';
+    if (!normalizedReviewId) {
+      throw new StorefrontCommunityError('Review not found.', 404);
+    }
+
+    const reviewRecord = await getStoredStorefrontAppReviewById(normalizedReviewId);
+    if (!reviewRecord) {
+      throw new StorefrontCommunityError('Review not found.', 404);
+    }
+    if (reviewRecord.storefrontId !== input.storefrontId) {
+      throw new StorefrontCommunityError('Review does not belong to this storefront.', 400);
+    }
+
+    reportedReviewId = reviewRecord.id;
+    reportedReviewAuthorProfileId = createPublicCommunityAuthorId(
+      reviewRecord.profileId,
+      reviewRecord.storefrontId,
+    );
+    reportedReviewAuthorName = reviewRecord.authorName;
+    reportedReviewExcerpt = reviewRecord.text.trim().slice(0, 240) || null;
+  }
+
   const reportRecord: StoredStorefrontReportRecord = {
     id: createId('report'),
     storefrontId: input.storefrontId,
@@ -713,11 +814,11 @@ export async function submitStorefrontReport(input: StorefrontReportSubmissionIn
     authorName: input.authorName.trim() || 'Canopy Trove user',
     reason: input.reason.trim(),
     description: input.description.trim(),
-    reportTarget: input.reportTarget === 'review' ? 'review' : 'storefront',
-    reportedReviewId: input.reportedReviewId?.trim() || null,
-    reportedReviewAuthorProfileId: input.reportedReviewAuthorProfileId?.trim() || null,
-    reportedReviewAuthorName: input.reportedReviewAuthorName?.trim() || null,
-    reportedReviewExcerpt: input.reportedReviewExcerpt?.trim() || null,
+    reportTarget,
+    reportedReviewId,
+    reportedReviewAuthorProfileId,
+    reportedReviewAuthorName,
+    reportedReviewExcerpt,
     createdAt: new Date().toISOString(),
     moderationStatus: 'open',
     reviewedAt: null,
@@ -795,4 +896,5 @@ export async function deleteCommunityContentForProfile(profileId: string) {
 export function clearStorefrontCommunityMemoryStateForTests() {
   appReviewStore.clear();
   storefrontReportStore.clear();
+  clearStorefrontAppReviewAggregateCache();
 }

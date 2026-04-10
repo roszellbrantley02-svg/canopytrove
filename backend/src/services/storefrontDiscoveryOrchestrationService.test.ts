@@ -213,3 +213,62 @@ test('persists published storefront summary/detail atomically with a single batc
   assert.equal(writes[0]?.value.ingestSource, 'registry');
   assert.equal(writes[1]?.value.ingestSource, 'registry');
 });
+
+test('patches only published hours fields and can skip detail writes safely', async () => {
+  const { patchPublishedStorefrontHoursForTests } = await loadService();
+  const writes: Array<{
+    path: string;
+    value: Record<string, unknown>;
+    merge: boolean | undefined;
+  }> = [];
+  let commitCount = 0;
+
+  const fakeDb = {
+    collection(name: string) {
+      return {
+        doc(id: string) {
+          return { path: `${name}/${id}` };
+        },
+      };
+    },
+    batch() {
+      return {
+        set(
+          reference: { path: string },
+          value: Record<string, unknown>,
+          options?: { merge?: boolean },
+        ) {
+          writes.push({
+            path: reference.path,
+            value,
+            merge: options?.merge,
+          });
+          return this;
+        },
+        async commit() {
+          commitCount += 1;
+        },
+      };
+    },
+  };
+
+  await patchPublishedStorefrontHoursForTests(
+    'ny-store-2',
+    ['Monday: 10:00 AM - 9:00 PM'],
+    true,
+    '2026-04-10T00:00:00.000Z',
+    {
+      detailExists: false,
+      dbOverride: fakeDb,
+    },
+  );
+
+  assert.equal(commitCount, 1);
+  assert.deepEqual(
+    writes.map((write) => write.path),
+    ['storefront_summaries/ny-store-2'],
+  );
+  assert.equal(writes[0]?.merge, true);
+  assert.deepEqual(writes[0]?.value.hours, ['Monday: 10:00 AM - 9:00 PM']);
+  assert.equal(writes[0]?.value.openNow, true);
+});

@@ -1,6 +1,6 @@
 import { colors } from '../theme/tokens';
 import React from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
@@ -31,7 +31,7 @@ export function OwnerPortalSignInScreen() {
     setErrorText(null);
     try {
       await signInOwnerPortalAccount(email, password);
-      navigation.replace('OwnerPortalHome');
+      navigation.replace('Tabs', { screen: 'Profile' });
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Unable to sign in.');
     } finally {
@@ -42,15 +42,19 @@ export function OwnerPortalSignInScreen() {
   return (
     <ScreenShell
       eyebrow="Owner Portal"
-      title="Owner sign in."
-      subtitle="Sign in to manage your storefront, verification documents, deals, and owner tools."
-      headerPill="Owner"
+      title="Owner sign in"
+      subtitle={
+        Platform.OS === 'android'
+          ? 'Sign in to manage your storefront, business details, reviews, and updates.'
+          : 'Sign in to manage your storefront, business details, reviews, and offers.'
+      }
+      headerPill="Business"
     >
       <MotionInView delay={70}>
         <OwnerPortalHeroPanel
-          kicker="Owner access"
-          title="Return to the owner workspace."
-          body="Sign in with your approved business email."
+          kicker="Business sign in"
+          title="Welcome back."
+          body="Use your business email to open the owner side of the app."
           metrics={[
             {
               value: 'Existing',
@@ -59,7 +63,7 @@ export function OwnerPortalSignInScreen() {
             },
             {
               value: 'Private',
-              label: 'Workspace',
+              label: 'Access',
               body: '',
             },
           ]}
@@ -113,8 +117,8 @@ export function OwnerPortalSignInScreen() {
             <View style={styles.ctaPanel}>
               <View style={styles.splitHeaderRow}>
                 <View style={styles.splitHeaderCopy}>
-                  <Text style={styles.sectionEyebrow}>Sign-in action</Text>
-                  <Text style={styles.splitHeaderTitle}>Open your owner workspace</Text>
+                  <Text style={styles.sectionEyebrow}>Sign in</Text>
+                  <Text style={styles.splitHeaderTitle}>Open your business profile</Text>
                 </View>
                 <AppUiIcon name="log-in-outline" size={20} color="#F5C86A" />
               </View>

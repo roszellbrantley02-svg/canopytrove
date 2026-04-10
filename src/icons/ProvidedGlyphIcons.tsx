@@ -160,6 +160,38 @@ const glyphRenderers = {
       />
     </>
   ),
+  storefront: ({ color, strokeWidth }: GlyphDrawProps) => (
+    <>
+      <Path d="M5.1 8.05h13.8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path
+        d="M6.1 8.05 7.1 5.4h9.8l1 2.65"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M6.25 9.15v8.85h11.5V9.15"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M10.05 18V13.5h3.9V18"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M8.15 10.95h1.4M14.45 10.95h1.4"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </>
+  ),
   reviews: ({ color, strokeWidth }: GlyphDrawProps) => (
     <>
       <Path

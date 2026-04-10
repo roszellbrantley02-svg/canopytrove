@@ -60,6 +60,14 @@ service firebase.storage {
         request.resource.contentType.matches('image/.*');
     }
 
+    function validOwnerPrivateUpload() {
+      return request.resource.size < 10 * 1024 * 1024 &&
+        (
+          request.resource.contentType.matches('image/.*') ||
+          request.resource.contentType == 'application/pdf'
+        );
+    }
+
     function validCommunityReviewImageUpload() {
       return request.resource.size < 6 * 1024 * 1024 &&
         request.resource.contentType.matches('image/.*');
@@ -83,7 +91,12 @@ service firebase.storage {
     }
 
     match /owner-private/{ownerUid}/{allPaths=**} {
-      allow read, write: if isAdmin() || isSelf(ownerUid);
+      allow read: if isAdmin() || isSelf(ownerUid);
+      allow write: if isAdmin() || (
+        isOwner() &&
+        isSelf(ownerUid) &&
+        validOwnerPrivateUpload()
+      );
     }
 
     match /community-review-media/pending/{profileId}/{storefrontId}/{draftId}/{allPaths=**} {

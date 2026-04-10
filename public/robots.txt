@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /_expo/
 
 Sitemap: https://app.canopytrove.com/sitemap.xml

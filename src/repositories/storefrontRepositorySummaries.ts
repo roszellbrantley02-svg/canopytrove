@@ -9,6 +9,7 @@ import {
   nearbySummariesCache,
   nearbySummariesInFlight,
   NEARBY_RADIUS_MILES,
+  primeSharedSummaryPool,
   resolveWithCache,
   savedSummariesCache,
   savedSummariesInFlight,
@@ -38,8 +39,11 @@ export async function getSavedSummaries(storefrontIds: string[]) {
 export async function getNearbySummaries(query: StorefrontListQuery) {
   const key = createNearbyKey(query);
 
-  return applyStorefrontPromotionOverrides(
-    await resolveWithCache(key, nearbySummariesCache, nearbySummariesInFlight, async () => {
+  const items = await resolveWithCache(
+    key,
+    nearbySummariesCache,
+    nearbySummariesInFlight,
+    async () => {
       const nearbyPage = await storefrontSource.getSummaryPage({
         searchQuery: '',
         origin: query.origin,
@@ -65,8 +69,13 @@ export async function getNearbySummaries(query: StorefrontListQuery) {
           prioritySurface: 'nearby',
         })
       ).items;
-    }),
+    },
   );
+
+  // Prime shared pool so Browse/Hot Deals can show data immediately
+  primeSharedSummaryPool(items);
+
+  return applyStorefrontPromotionOverrides(items);
 }
 
 export async function getBrowseSummaries(
@@ -94,8 +103,13 @@ export async function getBrowseSummaries(
     },
   );
 
+  const enhancedItems = await applyStorefrontPromotionOverrides(result.items);
+
+  // Prime shared pool so other tabs can show data immediately
+  primeSharedSummaryPool(enhancedItems);
+
   return {
     ...result,
-    items: await applyStorefrontPromotionOverrides(result.items),
+    items: enhancedItems,
   };
 }

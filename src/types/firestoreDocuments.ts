@@ -14,6 +14,7 @@ export type StorefrontSummaryDocument = {
   rating: number;
   reviewCount: number;
   openNow: boolean | null;
+  hours?: string[];
   isVerified: boolean;
   mapPreviewLabel: string;
   promotionText?: string | null;
@@ -33,6 +34,7 @@ export type StorefrontSummaryDocument = {
   thumbnailUrl?: string | null;
   ingestSource?: 'seed' | 'registry';
   publishedAt?: string | null;
+  visibilityScope?: 'public' | 'owner_private';
 };
 
 export type StorefrontDetailDocument = {
@@ -50,6 +52,7 @@ export type StorefrontDetailDocument = {
     id: string;
     authorName: string;
     authorProfileId: string | null;
+    isOwnReview?: boolean;
     rating: number;
     relativeTime: string;
     text: string;
@@ -69,4 +72,5 @@ export type StorefrontDetailDocument = {
   routeMode: 'preview' | 'verified';
   ingestSource?: 'seed' | 'registry';
   publishedAt?: string | null;
+  visibilityScope?: 'public' | 'owner_private';
 };

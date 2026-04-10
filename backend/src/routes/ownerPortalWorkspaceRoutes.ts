@@ -22,6 +22,8 @@ import {
   saveOwnerPortalProfileTools,
   updateOwnerPortalPromotion,
 } from '../services/ownerPortalWorkspaceService';
+import { autoVerifyBusinessWithOcm } from '../services/ocmAutoVerificationService';
+import { createStripeIdentitySession } from '../services/stripeIdentityService';
 import { assertRuntimePolicyAllowsOwnerAction } from '../services/runtimeOpsService';
 import { requireTierAccess } from '../services/ownerTierGatingService';
 
@@ -84,6 +86,20 @@ ownerPortalWorkspaceRoutes.post(
         ownerUid,
         ownerEmail,
       }),
+  ),
+);
+
+ownerPortalWorkspaceRoutes.post(
+  '/owner-portal/business-verification/auto-verify',
+  createOwnerPortalJsonRoute('Unknown OCM auto-verification failure', async ({ ownerUid }) =>
+    autoVerifyBusinessWithOcm(ownerUid),
+  ),
+);
+
+ownerPortalWorkspaceRoutes.post(
+  '/owner-portal/identity-verification/session',
+  createOwnerPortalJsonRoute('Unknown Stripe Identity session failure', async ({ ownerUid }) =>
+    createStripeIdentitySession(ownerUid),
   ),
 );
 

@@ -37,7 +37,7 @@ export const EARLY_PARTNER_WINDOW_DAYS = 60;
 export const EARLY_PARTNER_WINDOW_MS = EARLY_PARTNER_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
 /** Maximum badges an owner can display on their storefront card at once. */
-export const OWNER_MAX_FEATURED_BADGES = 4;
+export const OWNER_MAX_FEATURED_BADGES = 5;
 
 /** Minimum duration (days) an earned owner badge remains valid. */
 export const OWNER_BADGE_MIN_DURATION_DAYS = 365;

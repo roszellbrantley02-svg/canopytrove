@@ -51,6 +51,9 @@ afterEach(async () => {
   const { clearStorefrontCommunityMemoryStateForTests } =
     await import('./services/storefrontCommunityService');
   clearStorefrontCommunityMemoryStateForTests();
+  const { clearCommunitySafetyMemoryStateForTests } =
+    await import('./services/communitySafetyStateService');
+  clearCommunitySafetyMemoryStateForTests();
   const { clearMemberEmailSubscriptionMemoryStateForTests } =
     await import('./services/memberEmailSubscriptionService');
   clearMemberEmailSubscriptionMemoryStateForTests();
@@ -64,6 +67,8 @@ afterEach(async () => {
   const { clearReviewPhotoModerationMemoryStateForTests } =
     await import('./services/reviewPhotoModerationService');
   clearReviewPhotoModerationMemoryStateForTests();
+  const { clearRuntimeOpsMemoryStateForTests } = await import('./services/runtimeOpsService');
+  clearRuntimeOpsMemoryStateForTests();
   const { clearBackendFirebaseTestStateForTests } = await import('./firebase');
   clearBackendFirebaseTestStateForTests();
   const { clearLaunchProgramMemoryStateForTests } = await import('./services/launchProgramService');
@@ -147,6 +152,16 @@ function createReviewPayload(profileId: string, overrides?: Record<string, unkno
   };
 }
 
+function createReportPayload(profileId: string, overrides?: Record<string, unknown>) {
+  return {
+    profileId,
+    authorName: 'Canopy Trove user',
+    reason: 'Listing issue',
+    description: 'The storefront details appear to be inaccurate and need review.',
+    ...overrides,
+  };
+}
+
 function createPromotionRecord(
   overrides?: Partial<OwnerStorefrontPromotionDocument>,
 ): OwnerStorefrontPromotionDocument {
@@ -200,6 +215,63 @@ test('rejects malformed community review payloads', async () => {
 
   assert.equal(response.status, 400);
   assert.equal(response.json?.error, 'body.rating must be at most 5.');
+});
+
+test('returns the canonical authenticated profile for the current account', async () => {
+  const { baseUrl } = await startTestServer();
+  await fetch(`${baseUrl}/profile-state/profile-empty`, {
+    method: 'PUT',
+    headers: {
+      Authorization: 'Bearer test-authenticated:member-1',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      profile: {
+        accountId: 'member-1',
+        kind: 'authenticated',
+        displayName: 'Daniellett',
+        createdAt: '2026-04-07T15:17:54.720Z',
+        updatedAt: '2026-04-10T10:26:26.796Z',
+      },
+      gamificationState: {
+        totalPoints: 0,
+        totalReviews: 0,
+        dispensariesVisited: 0,
+        badges: ['early_adopter'],
+      },
+    }),
+  });
+  await fetch(`${baseUrl}/profile-state/profile-rich`, {
+    method: 'PUT',
+    headers: {
+      Authorization: 'Bearer test-authenticated:member-1',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      profile: {
+        accountId: 'member-1',
+        kind: 'authenticated',
+        displayName: 'Daniellett',
+        createdAt: '2026-04-06T14:28:51.387Z',
+        updatedAt: '2026-04-09T01:18:18.995Z',
+      },
+      gamificationState: {
+        totalPoints: 1195,
+        totalReviews: 3,
+        dispensariesVisited: 0,
+        badges: ['reviewer_1', 'early_adopter'],
+      },
+    }),
+  });
+  const response = await request(baseUrl, '/profiles/me/canonical', {
+    headers: {
+      Authorization: 'Bearer test-authenticated:member-1',
+    },
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.json?.id, 'profile-rich');
+  assert.equal(response.json?.accountId, 'member-1');
 });
 
 test('exports subscribed member emails through the admin route', async () => {
@@ -391,12 +463,10 @@ test('allows a review author to edit their existing review', async () => {
 
   const createdDetail = createResponse.json?.detail as
     | {
-        appReviews?: Array<{ id?: string; authorProfileId?: string | null }>;
+        appReviews?: Array<{ id?: string }>;
       }
     | undefined;
-  const reviewId = createdDetail?.appReviews?.find(
-    (review) => review.authorProfileId === 'profile-1',
-  )?.id;
+  const reviewId = createdDetail?.appReviews?.[0]?.id;
   assert.ok(reviewId);
 
   const updateResponse = await request(
@@ -441,12 +511,10 @@ test('rejects review edits from a different profile', async () => {
 
   const createdDetail = createResponse.json?.detail as
     | {
-        appReviews?: Array<{ id?: string; authorProfileId?: string | null }>;
+        appReviews?: Array<{ id?: string }>;
       }
     | undefined;
-  const reviewId = createdDetail?.appReviews?.find(
-    (review) => review.authorProfileId === 'profile-1',
-  )?.id;
+  const reviewId = createdDetail?.appReviews?.[0]?.id;
   assert.ok(reviewId);
 
   const updateResponse = await request(
@@ -491,6 +559,101 @@ test('requires signed-in access for review photo uploads', async () => {
 
   assert.equal(response.status, 403);
   assert.equal(response.json?.error, 'Signed-in access is required for this profile.');
+});
+
+test('requires signed-in access for storefront reports', async () => {
+  const { baseUrl } = await startTestServer();
+  const response = await request(baseUrl, `/storefront-details/${testStorefrontId}/reports`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(createReportPayload('profile-1')),
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal(response.json?.error, 'You must be signed in to report a storefront or review.');
+});
+
+test('requires signed-in access for helpful votes', async () => {
+  const { baseUrl } = await startTestServer();
+  const createResponse = await request(baseUrl, `/storefront-details/${testStorefrontId}/reviews`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer test-authenticated:account-1',
+    },
+    body: JSON.stringify(createReviewPayload('profile-1')),
+  });
+
+  const createdDetail = createResponse.json?.detail as
+    | {
+        appReviews?: Array<{ id?: string }>;
+      }
+    | undefined;
+  const reviewId = createdDetail?.appReviews?.[0]?.id;
+  assert.ok(reviewId);
+
+  const helpfulResponse = await request(
+    baseUrl,
+    `/storefront-details/${testStorefrontId}/reviews/${reviewId}/helpful`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        profileId: 'profile-2',
+      }),
+    },
+  );
+
+  assert.equal(helpfulResponse.status, 403);
+  assert.equal(helpfulResponse.json?.error, 'You must be signed in to mark a review as helpful.');
+});
+
+test('stores community safety state for an authenticated profile', async () => {
+  const { baseUrl } = await startTestServer();
+  const saveResponse = await request(baseUrl, '/profiles/profile-1/community-safety', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer test-authenticated:account-1',
+    },
+    body: JSON.stringify({
+      acceptedGuidelinesVersion: '2026-03-28',
+      blockedReviewAuthors: [
+        {
+          storefrontId: 'storefront-1',
+          storefrontName: 'Storefront One',
+          authorId: 'author-1',
+        },
+      ],
+    }),
+  });
+  const loadResponse = await request(baseUrl, '/profiles/profile-1/community-safety', {
+    headers: {
+      Authorization: 'Bearer test-authenticated:account-1',
+    },
+  });
+
+  assert.equal(saveResponse.status, 200);
+  assert.equal(saveResponse.json?.acceptedGuidelinesVersion, '2026-03-28');
+  assert.deepEqual(saveResponse.json?.blockedReviewAuthors, [
+    {
+      storefrontId: 'storefront-1',
+      storefrontName: 'Storefront One',
+      authorId: 'author-1',
+    },
+  ]);
+  assert.equal(loadResponse.status, 200);
+  assert.deepEqual(loadResponse.json?.blockedReviewAuthors, [
+    {
+      storefrontId: 'storefront-1',
+      storefrontName: 'Storefront One',
+      authorId: 'author-1',
+    },
+  ]);
 });
 
 test('applies stricter rate limits to admin routes', async () => {
@@ -712,6 +875,41 @@ test('treats invalid bearer auth on public storefront browse routes as guest acc
   assert.equal(item?.thumbnailUrl, null);
 });
 
+test('treats owner bearer auth on public storefront browse routes as guest access', async () => {
+  process.env.NODE_ENV = 'test';
+  const {
+    ownerStorefrontPromotionStore,
+    ownerStorefrontPromotionCache,
+    storefrontSummaryEnhancementCache,
+  } = await import('./services/ownerPortalWorkspaceData');
+  ownerStorefrontPromotionStore.set(testStorefrontId, [
+    createPromotionRecord({
+      id: 'promotion-owner-bearer',
+      description: 'Owner sessions should browse as guests',
+      badges: ['Owner isolated'],
+    }),
+  ]);
+  ownerStorefrontPromotionCache.clear();
+  storefrontSummaryEnhancementCache.clear();
+
+  const { baseUrl } = await startTestServer();
+  const response = await request(baseUrl, '/storefront-summaries?limit=4&offset=0', {
+    headers: {
+      Authorization: 'Bearer test-owner:owner-1',
+    },
+  });
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('cache-control') ?? '', /^public,/);
+  const payload = response.json as { items?: Array<Record<string, unknown>> } | null;
+  const item = payload?.items?.find((candidate) => candidate.id === testStorefrontId);
+  assert.ok(item);
+  assert.equal(item?.activePromotionId, 'promotion-owner-bearer');
+  assert.equal(item?.promotionText, 'Owner sessions should browse as guests');
+  assert.equal(item?.activePromotionCount, 1);
+  assert.equal(item?.thumbnailUrl, null);
+});
+
 test('hides the full active promotion stack from signed-out storefront detail payloads', async () => {
   // Start the server FIRST so that the module instances (and their in-memory
   // Maps) created during import are the same ones we populate below.
@@ -817,6 +1015,39 @@ test('publishes the full active promotion stack onto member storefront detail pa
         JSON.stringify(promotion.badges) === JSON.stringify(['20% off']),
     ),
   );
+});
+
+test('serves a published storefront detail fallback when the base detail read times out', async () => {
+  const { baseUrl } = await startTestServer();
+  const { backendStorefrontSource } = await import('./sources');
+  const originalGetDetailsById = backendStorefrontSource.getDetailsById;
+  backendStorefrontSource.getDetailsById = async (storefrontId: string) => {
+    if (storefrontId !== testStorefrontId) {
+      return originalGetDetailsById(storefrontId);
+    }
+
+    return new Promise(() => {
+      // Intentionally unresolved to force the detail timeout path.
+    });
+  };
+
+  try {
+    const response = await request(baseUrl, `/storefront-details/${testStorefrontId}`);
+
+    assert.equal(response.status, 200);
+    const detail = response.json as {
+      storefrontId?: string;
+      routeMode?: string;
+      appReviewCount?: number;
+      photoUrls?: string[];
+    } | null;
+    assert.equal(detail?.storefrontId, testStorefrontId);
+    assert.equal(detail?.routeMode, 'verified');
+    assert.equal(typeof detail?.appReviewCount, 'number');
+    assert.ok(Array.isArray(detail?.photoUrls));
+  } finally {
+    backendStorefrontSource.getDetailsById = originalGetDetailsById;
+  }
 });
 
 test('requires member auth for email subscription status reads', async () => {
@@ -930,23 +1161,9 @@ test('exempts /health from the shared public read limiter', async () => {
   assert.equal(secondHealth.status, 200);
   assert.equal(firstHealth.json?.ok, true);
   const firstSource = firstHealth.json?.source as { activeMode?: unknown } | undefined;
-  assert.deepEqual(Object.keys(firstHealth.json ?? {}).sort(), [
-    'allowDevSeed',
-    'authVerification',
-    'environment',
-    'gamificationStorage',
-    'memoryUsageMb',
-    'nodeVersion',
-    'ok',
-    'profileStorage',
-    'routeStateStorage',
-    'source',
-    'uptime',
-  ]);
-  assert.equal(typeof firstHealth.json?.source, 'object');
-  assert.equal(typeof firstSource?.activeMode, 'string');
-  assert.equal(typeof firstHealth.json?.profileStorage, 'string');
-  assert.equal(typeof firstHealth.json?.authVerification, 'string');
+  assert.deepEqual(Object.keys(firstHealth.json ?? {}).sort(), ['ok']);
+  assert.equal(typeof firstHealth.json?.source, 'undefined');
+  assert.equal(typeof firstSource?.activeMode, 'undefined');
   assert.equal('monitored' in (firstHealth.json ?? {}), false);
   assert.equal('checkedAt' in (firstHealth.json ?? {}), false);
   assert.equal('runtimeMonitoring' in (firstHealth.json ?? {}), false);
@@ -1075,6 +1292,42 @@ test('allows admin runtime routes to use the private admin api key fallback', as
   const runtimePolicy = response.json?.policy as { safeModeEnabled?: boolean } | undefined;
   assert.ok(runtimePolicy);
   assert.equal(runtimePolicy.safeModeEnabled, false);
+});
+
+test('clears stale automatic safe mode when recent critical incidents have already dropped away', async () => {
+  const { baseUrl } = await startTestServer();
+  const runtimeOpsService = await import('./services/runtimeOpsService');
+
+  await runtimeOpsService.saveRuntimePolicy({
+    safeModeEnabled: true,
+    ownerPortalWritesEnabled: false,
+    promotionWritesEnabled: false,
+    reviewRepliesEnabled: false,
+    profileToolsWritesEnabled: false,
+    trigger: 'automatic',
+    reason: 'Automatic safe mode engaged after 3 critical incidents in the last 15 minutes.',
+  });
+
+  await assert.doesNotReject(() =>
+    runtimeOpsService.assertRuntimePolicyAllowsOwnerAction('profile_tools'),
+  );
+
+  const response = await request(baseUrl, '/runtime/status');
+
+  assert.equal(response.status, 200);
+  const runtimePolicy = response.json?.policy as
+    | {
+        safeModeEnabled?: boolean;
+        trigger?: string;
+        ownerPortalWritesEnabled?: boolean;
+        reason?: string | null;
+      }
+    | undefined;
+  assert.ok(runtimePolicy);
+  assert.equal(runtimePolicy.safeModeEnabled, false);
+  assert.equal(runtimePolicy.trigger, 'normal');
+  assert.equal(runtimePolicy.ownerPortalWritesEnabled, true);
+  assert.match(runtimePolicy.reason ?? '', /cleared/i);
 });
 
 test('reports storefront readiness failures through the admin runtime readiness route', async () => {

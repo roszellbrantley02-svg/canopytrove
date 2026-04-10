@@ -75,7 +75,11 @@ function BrowseFiltersBarComponent({
             color={colors.textSoft}
           />
           <Text style={styles.livePillText}>
-            {hotDealsOnly ? 'Live offers only' : 'Verified storefronts'}
+            {hotDealsOnly
+              ? Platform.OS === 'android'
+                ? 'Recent updates only'
+                : 'Live offers only'
+              : 'Verified storefronts'}
           </Text>
         </View>
       </View>
@@ -189,7 +193,11 @@ function BrowseFiltersBarComponent({
       <View style={[styles.sortHeaderRow, compactLayout && styles.sortHeaderRowCompact]}>
         <Text style={styles.sortLabel}>Sort storefronts by</Text>
         <Text style={styles.sortCaption}>
-          {hotDealsOnly ? 'Live offers view' : 'Verified storefront view'}
+          {hotDealsOnly
+            ? Platform.OS === 'android'
+              ? 'Recent updates view'
+              : 'Live offers view'
+            : 'Verified storefront view'}
         </Text>
       </View>
 

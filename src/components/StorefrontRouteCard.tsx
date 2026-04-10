@@ -1,11 +1,12 @@
 import React from 'react';
-import { Pressable } from 'react-native';
+import { Platform, Pressable } from 'react-native';
 import type { StorefrontSummary } from '../types/storefront';
 import { useStorefrontOperationalStatus } from '../hooks/useStorefrontOperationalStatus';
 import {
+  getStorefrontRouteCardHoursState,
   getStorefrontRouteCardState,
-  StorefrontRouteCardBody,
-} from './storefrontRouteCard/StorefrontRouteCardSections';
+} from './storefrontRouteCard/storefrontRouteCardState';
+import { StorefrontRouteCardBody } from './storefrontRouteCard/StorefrontRouteCardSections';
 import {
   StorefrontHeatGlow,
   routeStartsToHeatLevel,
@@ -37,6 +38,8 @@ type StorefrontRouteCardProps = {
   isSaved?: boolean;
   isVisited?: boolean;
   showPromotionText?: boolean;
+  /** Controls image loading priority — 'high' for above-fold cards. */
+  imagePriority?: 'high' | 'normal' | 'low';
 };
 
 function areStringArraysEqual(previous: string[] | undefined, next: string[] | undefined) {
@@ -65,11 +68,13 @@ function StorefrontRouteCardComponent({
   isSaved = false,
   isVisited = false,
   showPromotionText = false,
+  imagePriority = 'normal',
 }: StorefrontRouteCardProps) {
   const compact = variant === 'list';
   const hasPromotion = hasStorefrontPromotion(storefront);
   const { openNow, isLoading: isOperationalStatusPending } =
     useStorefrontOperationalStatus(storefront);
+  const hasPublishedHours = getStorefrontRouteCardHoursState(storefront);
   const { cardVisualLane, previewStatusLabel, previewStatusTone } = getStorefrontRouteCardState({
     isSaved,
     isVisited,
@@ -77,9 +82,17 @@ function StorefrontRouteCardComponent({
     premiumCardVariant: storefront.premiumCardVariant,
     openNow,
     isOperationalStatusPending,
+    hasPublishedHours,
   });
   const heatLevel = routeStartsToHeatLevel(storefront.routeStartsPerHour ?? 0);
-  const accessibilityLabel = `${storefront.displayName}, ${storefront.city}, ${storefront.state}. ${previewStatusLabel}. ${hasPromotion ? 'Live deal available.' : 'No live deal highlighted.'}`;
+  const promotionAvailabilityLabel = hasPromotion
+    ? Platform.OS === 'android'
+      ? 'Recent update available.'
+      : 'Live deal available.'
+    : Platform.OS === 'android'
+      ? 'No update highlighted.'
+      : 'No live deal highlighted.';
+  const accessibilityLabel = `${storefront.displayName}, ${storefront.city}, ${storefront.state}. ${previewStatusLabel}. ${promotionAvailabilityLabel}`;
 
   return (
     <Pressable
@@ -111,6 +124,7 @@ function StorefrontRouteCardComponent({
         cardVisualLane={cardVisualLane}
         previewStatusLabel={previewStatusLabel}
         previewStatusTone={previewStatusTone}
+        imagePriority={imagePriority}
       />
     </Pressable>
   );
@@ -137,6 +151,7 @@ function areStorefrontCardsEqual(
     previous.storefront.reviewCount === next.storefront.reviewCount &&
     previous.storefront.distanceMiles === next.storefront.distanceMiles &&
     previous.storefront.openNow === next.storefront.openNow &&
+    areStringArraysEqual(previous.storefront.hours, next.storefront.hours) &&
     previous.storefront.isVerified === next.storefront.isVerified &&
     previous.storefront.promotionText === next.storefront.promotionText &&
     areStringArraysEqual(previous.storefront.promotionBadges, next.storefront.promotionBadges) &&
@@ -152,6 +167,7 @@ function areStorefrontCardsEqual(
     previous.storefront.premiumCardVariant === next.storefront.premiumCardVariant &&
     previous.storefront.thumbnailUrl === next.storefront.thumbnailUrl &&
     previous.storefront.routeStartsPerHour === next.storefront.routeStartsPerHour &&
+    previous.imagePriority === next.imagePriority &&
     previous.onPress === next.onPress &&
     previous.onPressIn === next.onPressIn &&
     previous.onPrimaryActionPress === next.onPrimaryActionPress &&

@@ -6,6 +6,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { ownerPortalAccessAvailable } from '../config/ownerPortalConfig';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { trackAnalyticsEvent } from '../services/analyticsService';
@@ -77,7 +78,7 @@ function CanopyTroveSignUpScreenInner() {
         }
       }
 
-      navigation.replace('Tabs');
+      navigation.replace('Tabs', { screen: 'Profile' });
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Unable to create account.');
     } finally {
@@ -281,6 +282,17 @@ function CanopyTroveSignUpScreenInner() {
                   >
                     <Text style={styles.secondaryButtonText}>Already Have an Account</Text>
                   </Pressable>
+                  {ownerPortalAccessAvailable ? (
+                    <Pressable
+                      onPress={() => navigation.replace('OwnerPortalSignUp')}
+                      style={styles.secondaryButton}
+                      accessibilityRole="button"
+                      accessibilityLabel="Create owner account instead"
+                      accessibilityHint="Opens the owner account creation flow instead of the member account flow."
+                    >
+                      <Text style={styles.secondaryButtonText}>Create Owner Account Instead</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               </View>
             </SectionCard>

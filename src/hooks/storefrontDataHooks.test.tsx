@@ -345,6 +345,38 @@ describe('useBrowseSummaries', () => {
 
     expect(latestValue.data.items).toEqual(guestItems);
   });
+
+  it('skips browse fetches when disabled', async () => {
+    function DisabledHarness() {
+      latestValue = useBrowseSummaries(
+        {
+          areaId: 'all',
+          searchQuery: '',
+          origin: { latitude: 40.7128, longitude: -74.006 },
+          locationLabel: 'New York City',
+          hotDealsOnly: false,
+        },
+        'distance',
+        4,
+        0,
+        { enabled: false },
+      );
+      return null;
+    }
+
+    act(() => {
+      renderer = create(<DisabledHarness />);
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    expect(repositoryMocks.getBrowseSummaries).not.toHaveBeenCalled();
+    expect(latestValue.isLoading).toBe(false);
+    expect(latestValue.error).toBeNull();
+    expect(latestValue.data.items).toEqual([]);
+  });
 });
 
 describe('useNearbyWarmSnapshot', () => {

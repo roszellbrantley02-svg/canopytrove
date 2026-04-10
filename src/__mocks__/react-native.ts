@@ -44,9 +44,9 @@ export const StyleSheet = {
 };
 
 export const Platform = {
-  OS: 'android' as const,
-  select: (obj: any) => obj.android ?? obj.default,
-  Version: 33,
+  OS: 'web' as const,
+  select: (obj: any) => obj.web ?? obj.default,
+  Version: undefined,
 };
 
 export const Dimensions = {

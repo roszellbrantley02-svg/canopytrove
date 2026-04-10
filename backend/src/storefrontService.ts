@@ -7,7 +7,10 @@ import {
 } from './types';
 import type { OwnerPromotionPlacementSurface } from './utils/ownerPromotionPlacement';
 import { sortSummariesByPriorityPlacement } from './utils/ownerPromotionPlacement';
-import { resolveStorefrontOpenNow } from './utils/storefrontOperationalStatus';
+import {
+  resolveStorefrontOpenNow,
+  computeOpenNowFromHours,
+} from './utils/storefrontOperationalStatus';
 import {
   getCachedStorefrontDetail,
   getCachedStorefrontSummariesByIds,
@@ -31,6 +34,7 @@ import type { ViewerContext } from './services/ownerPortalWorkspaceData';
 import { listStorefrontAppReviews } from './services/storefrontCommunityService';
 
 const SUMMARY_GOOGLE_ENRICHMENT_TIMEOUT_MS = 1_500;
+const SUMMARY_DETAIL_FALLBACK_TIMEOUT_MS = 400;
 const DETAIL_BASE_TIMEOUT_MS = 2_500;
 const DETAIL_QUERY_TIMEOUT_MS = 1_500;
 const DETAIL_ENHANCEMENT_TIMEOUT_MS = 1_500;
@@ -43,6 +47,11 @@ class StorefrontDataUnavailableError extends Error {
     this.name = 'StorefrontDataUnavailableError';
   }
 }
+
+type TimedResolution<T> =
+  | { status: 'fulfilled'; value: T }
+  | { status: 'timeout' }
+  | { status: 'rejected'; error: unknown };
 
 function hasMeaningfulHours(hours: string[]) {
   return hours.some((entry) => !/hours not published yet/i.test(entry));
@@ -70,6 +79,32 @@ async function withTimeoutFallback<T>(promise: Promise<T>, fallbackValue: T, tim
     return await Promise.race([promise, timeoutPromise]);
   } catch {
     return fallbackValue;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
+async function resolveWithTimeoutStatus<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<TimedResolution<T>> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const timeoutPromise = new Promise<TimedResolution<T>>((resolve) => {
+    timeoutId = setTimeout(() => {
+      resolve({ status: 'timeout' });
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([
+      promise
+        .then((value) => ({ status: 'fulfilled', value }) as const)
+        .catch((error) => ({ status: 'rejected', error }) as const),
+      timeoutPromise,
+    ]);
   } finally {
     if (timeoutId) {
       clearTimeout(timeoutId);
@@ -119,6 +154,48 @@ function stripMemberOnlyDetailPromotionFields(detail: StorefrontDetailApiDocumen
   } satisfies StorefrontDetailApiDocument;
 }
 
+function createPublishedStorefrontDetailFallback(input: {
+  storefrontId: string;
+  summary: StorefrontSummaryApiDocument;
+  appReviews: StorefrontDetailApiDocument['appReviews'];
+  googleEnrichment?: {
+    phone?: string | null;
+    website?: string | null;
+    hours?: string[];
+    openNow?: boolean | null;
+  } | null;
+  hasOwnerClaim: boolean;
+}): StorefrontDetailApiDocument {
+  const hours = input.googleEnrichment?.hours?.length ? input.googleEnrichment.hours : [];
+  const photoUrls = input.summary.thumbnailUrl ? [input.summary.thumbnailUrl] : [];
+
+  return {
+    storefrontId: input.storefrontId,
+    phone: normalizeDetailString(input.googleEnrichment?.phone) ?? null,
+    website: normalizeDetailString(input.googleEnrichment?.website) ?? null,
+    hours,
+    openNow: resolveStorefrontOpenNow({
+      hours,
+      liveOpenNow: input.googleEnrichment?.openNow,
+      summaryOpenNow: input.summary.openNow,
+      detailOpenNow: null,
+    }),
+    hasOwnerClaim: input.hasOwnerClaim,
+    menuUrl: input.summary.menuUrl ?? null,
+    verifiedOwnerBadgeLabel: input.summary.verifiedOwnerBadgeLabel ?? null,
+    favoriteFollowerCount: input.summary.favoriteFollowerCount ?? null,
+    ownerFeaturedBadges: input.summary.ownerFeaturedBadges ?? [],
+    activePromotions: [],
+    photoCount: photoUrls.length,
+    appReviewCount: input.appReviews.length,
+    appReviews: input.appReviews,
+    photoUrls,
+    amenities: [],
+    editorialSummary: input.summary.ownerCardSummary ?? null,
+    routeMode: 'verified',
+  };
+}
+
 async function enhanceSummary(
   summary: StorefrontSummaryApiDocument,
   includeMemberDeals: boolean,
@@ -126,6 +203,15 @@ async function enhanceSummary(
   clientPlatform?: 'android' | 'ios' | 'web',
 ) {
   const enhanced = await applyOwnerWorkspaceSummaryEnhancements(summary, viewerContext);
+  const fallbackDetailPromise = hasMeaningfulHours(enhanced.hours ?? [])
+    ? Promise.resolve(null)
+    : withTimeoutFallback(
+        getCachedStorefrontDetail(summary.id, () =>
+          backendStorefrontSource.getDetailsById(summary.id),
+        ),
+        null,
+        SUMMARY_DETAIL_FALLBACK_TIMEOUT_MS,
+      );
   const googleEnrichment = hasGooglePlacesConfig()
     ? await withTimeoutFallback(
         getGooglePlacesEnrichment(enhanced),
@@ -133,23 +219,39 @@ async function enhanceSummary(
         SUMMARY_GOOGLE_ENRICHMENT_TIMEOUT_MS,
       )
     : null;
-  // Owner-set hours take precedence over Google's live openNow signal.
-  // The enhancement layer already computed openNow from owner hours when present,
-  // so only fall back to Google when the enhancement didn't set an owner override.
-  const ownerHoursOverrodeOpenNow = enhanced.openNow !== summary.openNow;
-  const runtimeEnhanced = googleEnrichment
+  const fallbackDetail = await fallbackDetailPromise;
+  const fallbackDetailHours = hasMeaningfulHours(fallbackDetail?.hours ?? [])
+    ? fallbackDetail!.hours
+    : null;
+  const resolvedHours = hasMeaningfulHours(enhanced.hours ?? [])
+    ? enhanced.hours!
+    : (fallbackDetailHours ?? (googleEnrichment?.hours?.length ? googleEnrichment.hours : []));
+  const runtimeEnhanced: StorefrontSummaryApiDocument = googleEnrichment
     ? {
         ...enhanced,
-        openNow: ownerHoursOverrodeOpenNow
-          ? enhanced.openNow
-          : typeof googleEnrichment.openNow === 'boolean'
+        // Keep summary cards aligned with detail screens by preferring the
+        // same stored owner/detail hours before falling back to Google.
+        hours: resolvedHours,
+        openNow:
+          computeOpenNowFromHours(resolvedHours.length ? resolvedHours : null) ??
+          (typeof googleEnrichment.openNow === 'boolean'
             ? googleEnrichment.openNow
-            : enhanced.openNow,
+            : typeof fallbackDetail?.openNow === 'boolean'
+              ? fallbackDetail.openNow
+              : enhanced.openNow),
         menuUrl: enhanced.menuUrl ?? normalizeDetailString(googleEnrichment.website) ?? null,
       }
-    : enhanced;
+    : {
+        ...enhanced,
+        hours: resolvedHours,
+        openNow:
+          computeOpenNowFromHours(resolvedHours.length ? resolvedHours : null) ??
+          (typeof fallbackDetail?.openNow === 'boolean'
+            ? fallbackDetail.openNow
+            : enhanced.openNow),
+      };
 
-  let finalResult = includeMemberDeals
+  let finalResult: StorefrontSummaryApiDocument = includeMemberDeals
     ? runtimeEnhanced
     : stripMemberOnlySummaryPromotionFields(runtimeEnhanced);
 
@@ -239,12 +341,9 @@ export async function getStorefrontSummaries(
             enhanceSummary(item, includeMemberDeals, viewerContext, clientPlatform),
           ),
         );
-        const enhancedItems = enhancedResults
-          .filter(
-            (r): r is PromiseFulfilledResult<(typeof fullPayload.items)[number]> =>
-              r.status === 'fulfilled',
-          )
-          .map((r) => r.value);
+        const enhancedItems = enhancedResults.flatMap((result) =>
+          result.status === 'fulfilled' ? [result.value] : [],
+        );
         const rankedItems = sortSummariesByPriorityPlacement(enhancedItems, {
           surface: prioritySurface,
           areaId: query.areaId,
@@ -264,22 +363,19 @@ export async function getStorefrontSummaries(
                 enhanceSummary(item, includeMemberDeals, viewerContext, clientPlatform),
               ),
             )
-          )
-            .filter(
-              (r): r is PromiseFulfilledResult<(typeof basePayload.items)[number]> =>
-                r.status === 'fulfilled',
-            )
-            .map((r) => r.value),
+          ).flatMap((result) => (result.status === 'fulfilled' ? [result.value] : [])),
         };
       })();
 
-  backfillGooglePlaceIdsForSummaries(payload.items, 8);
+  backfillGooglePlaceIdsForSummaries(payload.items, 1);
 
-  const offset = query.offset ?? 0;
-  const limit = query.limit ?? payload.items.length;
-  if (offset === 0 && limit <= 4) {
-    prewarmGooglePlacesEnrichmentForSummaries(payload.items, Math.min(limit, 3));
-  }
+  // Prewarming disabled — enrichment is fetched on-demand when a user
+  // taps a storefront. Removing speculative API calls to control costs.
+  // const offset = query.offset ?? 0;
+  // const limit = query.limit ?? payload.items.length;
+  // if (offset === 0 && limit <= 4) {
+  //   prewarmGooglePlacesEnrichmentForSummaries(payload.items, Math.min(limit, 3));
+  // }
 
   return {
     ...payload,
@@ -303,12 +399,7 @@ export async function getStorefrontSummariesByIds(
   const enhancedResults = await Promise.allSettled(
     cached.map((item) => enhanceSummary(item, includeMemberDeals, viewerContext, clientPlatform)),
   );
-  return enhancedResults
-    .filter(
-      (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof enhanceSummary>>> =>
-        r.status === 'fulfilled',
-    )
-    .map((r) => r.value);
+  return enhancedResults.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
 }
 
 export async function resolveStorefrontBySlug(slug: string) {
@@ -346,13 +437,16 @@ export async function getStorefrontDetail(
   );
 
   const loadDetail = async (googleEnrichmentMode: 'await' | 'background') => {
-    const [resolvedBaseDetail, appReviews, googleEnrichment, hasOwnerClaim] = await Promise.all([
-      withTimeoutFallback(
+    const [baseDetailResult, appReviews, googleEnrichment, hasOwnerClaim] = await Promise.all([
+      resolveWithTimeoutStatus(
         backendStorefrontSource.getDetailsById(storefrontId),
-        null,
         DETAIL_BASE_TIMEOUT_MS,
       ),
-      withTimeoutFallback(listStorefrontAppReviews(storefrontId), [], DETAIL_QUERY_TIMEOUT_MS),
+      withTimeoutFallback(
+        listStorefrontAppReviews(storefrontId, viewerContext?.profileId ?? null),
+        [],
+        DETAIL_QUERY_TIMEOUT_MS,
+      ),
       googleEnrichmentMode === 'await'
         ? withTimeoutFallback(
             Promise.resolve(cachedGoogleEnrichment).then(
@@ -364,15 +458,31 @@ export async function getStorefrontDetail(
         : Promise.resolve(cachedGoogleEnrichment),
       withTimeoutFallback(hasStorefrontOwnerClaim(storefrontId), false, DETAIL_QUERY_TIMEOUT_MS),
     ]);
-    const baseDetail = resolvedBaseDetail;
+    let baseDetail = baseDetailResult.status === 'fulfilled' ? baseDetailResult.value : null;
     if (!baseDetail) {
       if (summary) {
-        throw new StorefrontDataUnavailableError(
-          `Storefront detail is unavailable for published storefront ${storefrontId}.`,
-        );
-      }
+        if (baseDetailResult.status === 'fulfilled') {
+          throw new StorefrontDataUnavailableError(
+            `Storefront detail is unavailable for published storefront ${storefrontId}.`,
+          );
+        }
 
-      return null;
+        const degradedFrom =
+          baseDetailResult.status === 'timeout' ? 'timeout' : 'transient backend error';
+        console.warn(
+          `[storefrontService] base detail fetch degraded for ${storefrontId}; serving published fallback from summary after ${degradedFrom}.`,
+          baseDetailResult.status === 'rejected' ? baseDetailResult.error : undefined,
+        );
+        baseDetail = createPublishedStorefrontDetailFallback({
+          storefrontId,
+          summary,
+          appReviews,
+          googleEnrichment,
+          hasOwnerClaim,
+        });
+      } else {
+        return null;
+      }
     }
 
     if (googleEnrichmentMode === 'background' && summary && hasGooglePlacesConfig()) {

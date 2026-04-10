@@ -24,6 +24,10 @@ module.exports = ({ config }) => {
     plugins.push('expo-image');
   }
 
+  if (!hasPlugin(plugins, './plugins/withAndroidAdiRegistration')) {
+    plugins.push('./plugins/withAndroidAdiRegistration');
+  }
+
   if (sentryOrganization && sentryProject && !hasPlugin(plugins, '@sentry/react-native/expo')) {
     plugins.push([
       '@sentry/react-native/expo',
@@ -35,8 +39,33 @@ module.exports = ({ config }) => {
     ]);
   }
 
+  // EAS can double-up arrays like associatedDomains and intentFilters when it
+  // merges the pre-resolved config with appJson.expo. Deduplicate defensively.
+  const ios = baseConfig.ios
+    ? {
+        ...baseConfig.ios,
+        associatedDomains: baseConfig.ios.associatedDomains
+          ? [...new Set(baseConfig.ios.associatedDomains)]
+          : baseConfig.ios.associatedDomains,
+      }
+    : baseConfig.ios;
+
+  const android = baseConfig.android
+    ? {
+        ...baseConfig.android,
+        intentFilters: baseConfig.android.intentFilters
+          ? baseConfig.android.intentFilters.filter((item, index, arr) => {
+              const key = JSON.stringify(item);
+              return arr.findIndex((i) => JSON.stringify(i) === key) === index;
+            })
+          : baseConfig.android.intentFilters,
+      }
+    : baseConfig.android;
+
   return {
     ...baseConfig,
+    ios,
+    android,
     plugins,
   };
 };

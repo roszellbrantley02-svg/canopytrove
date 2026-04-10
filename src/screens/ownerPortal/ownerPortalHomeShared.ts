@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import type { OwnerOnboardingStep } from '../../types/ownerPortal';
 
 export type OwnerPortalNextStepRouteName =
@@ -19,28 +20,28 @@ export function getNextStepContent(step: OwnerOnboardingStep): OwnerPortalNextSt
     case 'business_details':
       return {
         title: 'Business details',
-        body: 'Add the legal and public business details for your owner workspace.',
+        body: 'Add the business details that customers and reviewers should see.',
         actionLabel: 'Continue Business Details',
         routeName: 'OwnerPortalBusinessDetails',
       };
     case 'claim_listing':
       return {
         title: 'Claim listing',
-        body: 'Match your owner account to the correct Canopy Trove listing before verification.',
+        body: 'Match your business account to the correct Canopy Trove storefront before verification.',
         actionLabel: 'Claim Dispensary Listing',
         routeName: 'OwnerPortalClaimListing',
       };
     case 'business_verification':
       return {
         title: 'Business verification',
-        body: 'Upload your license and business documents for manual review.',
+        body: 'Upload your license and business documents so we can verify your storefront.',
         actionLabel: 'Submit Business Verification',
         routeName: 'OwnerPortalBusinessVerification',
       };
     case 'identity_verification':
       return {
         title: 'Identity verification',
-        body: 'Upload government ID images and a selfie to complete owner review.',
+        body: 'Upload your ID and a selfie so we can verify the person managing this business account.',
         actionLabel: 'Submit Identity Verification',
         routeName: 'OwnerPortalIdentityVerification',
       };
@@ -54,8 +55,11 @@ export function getNextStepContent(step: OwnerOnboardingStep): OwnerPortalNextSt
     case 'completed':
       return {
         title: 'Owner dashboard',
-        body: 'Onboarding is complete. You can manage your storefront, deal badges, and owner tools from here.',
-        actionLabel: 'Onboarding Complete',
+        body:
+          Platform.OS === 'android'
+            ? 'Everything is ready. You can manage your storefront, updates, and business details from here.'
+            : 'Everything is ready. You can manage your storefront, offers, and business details from here.',
+        actionLabel: 'All Set',
         routeName: null,
       };
     case 'account_created':

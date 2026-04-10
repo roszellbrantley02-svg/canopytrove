@@ -8,7 +8,10 @@ import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { colors, radii, spacing, textStyles, motion } from '../theme/tokens';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { useMemberEmailSubscription } from '../hooks/useMemberEmailSubscription';
-import { getCommunitySafetyState } from '../services/communitySafetyService';
+import {
+  getCommunitySafetyState,
+  subscribeToCommunitySafetyState,
+} from '../services/communitySafetyService';
 import { legalConfig } from '../config/legal';
 import Constants from 'expo-constants';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -112,8 +115,12 @@ function SettingsScreenInner() {
     const unsubscribe = navigation.addListener('focus', () => {
       setCommunitySafetyState(getCommunitySafetyState());
     });
+    const unsubscribeCommunitySafety = subscribeToCommunitySafetyState((state) => {
+      setCommunitySafetyState(state);
+    });
     return () => {
       unsubscribe();
+      unsubscribeCommunitySafety();
     };
   }, [navigation]);
 
@@ -122,7 +129,7 @@ function SettingsScreenInner() {
   const emailSubscribed = emailSubscription.status.subscribed;
   const isLoadingEmailSubscription = emailSubscription.isLoading;
   const hasAcceptedGuidelines = Boolean(communitySafetyState.acceptedGuidelinesVersion);
-  const blockedAuthorCount = communitySafetyState.blockedAuthorProfileIds.length;
+  const blockedAuthorCount = communitySafetyState.blockedReviewAuthors.length;
   const supportEmail = legalConfig.supportEmail;
   const appVersion = Constants.expoConfig?.version || '1.0.0';
 

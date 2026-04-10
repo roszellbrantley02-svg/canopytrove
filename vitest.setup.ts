@@ -7,15 +7,40 @@
  *    (e.g. expect(Vibration.vibrate).toHaveBeenCalled()) get fresh spies.
  */
 
-globalThis.requestAnimationFrame = (cb: FrameRequestCallback) => { cb(0); return 0; };
+globalThis.requestAnimationFrame = (cb: FrameRequestCallback) => {
+  cb(0);
+  return 0;
+};
 globalThis.cancelAnimationFrame = () => {};
 
 // React 19's react-test-renderer uses concurrent rendering. act() must be
 // available for create()/update() to flush synchronously. This flag tells React
 // that the current environment supports act().
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 import { vi } from 'vitest';
+
+// Mock expo-secure-store before any transitive import can reach the native binary.
+// The real module tries to load ExpoSecureStore (a native C++ addon) which doesn't
+// exist in the Node test environment.
+vi.mock('expo-secure-store', () => ({
+  getItemAsync: vi.fn(async () => null),
+  setItemAsync: vi.fn(async () => undefined),
+  deleteItemAsync: vi.fn(async () => undefined),
+  getItem: vi.fn(() => null),
+  setItem: vi.fn(),
+  deleteItem: vi.fn(),
+  AFTER_FIRST_UNLOCK: 0,
+  AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 1,
+  ALWAYS: 2,
+  ALWAYS_THIS_DEVICE_ONLY: 3,
+  WHEN_PASSCODE_SET_THIS_DEVICE_ONLY: 4,
+  WHEN_UNLOCKED: 5,
+  WHEN_UNLOCKED_THIS_DEVICE_ONLY: 6,
+}));
+
 import { Vibration, BackHandler, Alert, Keyboard } from 'react-native';
 
 // Wrap plain functions with vi.fn() so tests can assert on call counts.

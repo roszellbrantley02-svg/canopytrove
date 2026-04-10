@@ -72,4 +72,10 @@ export type StorefrontDiscoveryStatusDocument = {
   nextRunAt: string | null;
   latestRun: StorefrontDiscoveryRunDocument | null;
   state: StorefrontDiscoveryStateDocument;
+  apiBudget?: {
+    used: number;
+    limit: number;
+    remaining: number;
+    resetsAt: string;
+  };
 };

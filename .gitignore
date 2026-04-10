@@ -50,11 +50,18 @@ firestore-debug.log
 # local generated artifacts
 .firebase/
 build-artifacts/
+credentials/
+credentials.json
+lighthouse-report.html
+gcloud
+npm
 
 # stray / generated files
 dy
 *.docx
 npx
+web-app-guide.skill
+webappsheet.txt
 
 # Claude Code
 .claude/

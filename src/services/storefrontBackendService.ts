@@ -9,6 +9,8 @@ export {
   getStorefrontBackendLeaderboard,
   getStorefrontBackendLeaderboardRank,
   getStorefrontBackendMarketAreas,
+  getStorefrontBackendCanonicalProfile,
+  getStorefrontBackendCommunitySafetyState,
   getStorefrontBackendProfile,
   getStorefrontBackendProfileState,
   getStorefrontBackendSeedStatus,
@@ -17,6 +19,7 @@ export {
 export {
   deleteStorefrontBackendProfile,
   postStorefrontBackendGamificationEvent,
+  saveStorefrontBackendCommunitySafetyState,
   saveStorefrontBackendProfile,
   saveStorefrontBackendProfileState,
   seedStorefrontBackendFirestore,

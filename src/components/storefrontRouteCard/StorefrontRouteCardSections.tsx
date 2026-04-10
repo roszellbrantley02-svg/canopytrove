@@ -6,7 +6,6 @@ import { LocationPinIcon } from '../../icons/AppIcons';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import { colors } from '../../theme/tokens';
 import type { StorefrontSummary } from '../../types/storefront';
-import { getUSHolidayInfo } from '../../utils/holidayUtils';
 import { getStorefrontRatingDisplay } from '../../utils/storefrontRatings';
 import {
   formatStorefrontPromotionExpiry,
@@ -23,7 +22,6 @@ import type { StorefrontCardVisualLane } from './storefrontRouteCardVisualState'
 import {
   getStorefrontCardHeroLabel,
   getStorefrontCardPreviewTone,
-  getStorefrontCardVisualLane,
 } from './storefrontRouteCardVisualState';
 
 const heatChipTextStyleMap: Record<HeatLevel, typeof styles.heatChipText1 | null> = {
@@ -50,57 +48,9 @@ type StorefrontRouteCardBodyProps = {
   cardVisualLane: StorefrontCardVisualLane;
   previewStatusLabel: string;
   previewStatusTone: PreviewStatusTone;
+  /** Controls image loading priority — 'high' for above-fold cards. */
+  imagePriority?: 'high' | 'normal' | 'low';
 };
-
-export function getStorefrontRouteCardState({
-  isSaved,
-  isVisited,
-  hasPromotion,
-  premiumCardVariant,
-  openNow,
-  isOperationalStatusPending,
-}: {
-  isSaved: boolean;
-  isVisited: boolean;
-  hasPromotion: boolean;
-  premiumCardVariant?: StorefrontSummary['premiumCardVariant'];
-  openNow: boolean | null;
-  isOperationalStatusPending: boolean;
-}) {
-  const cardVisualLane = getStorefrontCardVisualLane({
-    isSaved,
-    isVisited,
-    hasPromotion,
-    premiumCardVariant,
-  });
-  const previewStatusTone: PreviewStatusTone =
-    typeof openNow === 'boolean'
-      ? openNow
-        ? 'open'
-        : 'closed'
-      : isOperationalStatusPending
-        ? 'checking'
-        : 'default';
-  const baseStatusLabel =
-    typeof openNow === 'boolean'
-      ? openNow
-        ? 'Open Now'
-        : 'Closed'
-      : isOperationalStatusPending
-        ? 'Checking'
-        : 'Check Hours';
-
-  const holiday = getUSHolidayInfo();
-  const previewStatusLabel = holiday
-    ? `${baseStatusLabel} \u00B7 ${holiday.notice}`
-    : baseStatusLabel;
-
-  return {
-    cardVisualLane,
-    previewStatusTone,
-    previewStatusLabel,
-  };
-}
 
 export function StorefrontRouteCardBody({
   storefront,
@@ -117,6 +67,7 @@ export function StorefrontRouteCardBody({
   cardVisualLane,
   previewStatusLabel,
   previewStatusTone,
+  imagePriority = 'normal',
 }: StorefrontRouteCardBodyProps) {
   const promotionText = storefront.promotionText?.trim() || null;
   const promotionBadges = getStorefrontPromotionBadges(storefront).slice(0, 5);
@@ -187,6 +138,7 @@ export function StorefrontRouteCardBody({
           supportingText={`${storefront.city}, ${storefront.state} ${storefront.zip}`}
           height={compact ? 146 : 182}
           imageUrl={storefront.thumbnailUrl}
+          imagePriority={imagePriority}
         />
       </View>
 
@@ -297,7 +249,7 @@ export function StorefrontRouteCardBody({
               <View style={styles.promotionBadgeExpiry}>
                 <Text
                   style={styles.promotionBadgeExpiryText}
-                >{`${activePromotionCount} live now`}</Text>
+                >{`${activePromotionCount} ${isAndroid ? 'updates live' : 'live now'}`}</Text>
               </View>
             ) : null}
           </View>

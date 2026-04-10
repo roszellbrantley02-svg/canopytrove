@@ -10,6 +10,7 @@ import { useStorefrontRemoteProfileSync } from './useStorefrontRemoteProfileSync
 import { useStorefrontProfileModel } from './useStorefrontProfileModel';
 import { useStorefrontQueryModel } from './useStorefrontQueryModel';
 import { useStorefrontRouteState } from './useStorefrontRouteState';
+import { useCommunitySafetyRemoteSync } from './useCommunitySafetyRemoteSync';
 
 export function useStorefrontControllerProviderModel() {
   const cachedPreferences = getCachedStorefrontPreferences();
@@ -21,6 +22,7 @@ export function useStorefrontControllerProviderModel() {
     profileId,
     setProfileId,
     startGuestSession,
+    repairProfileForCurrentSession,
     signOutSession,
     updateDisplayName,
     clearDisplayName,
@@ -107,6 +109,10 @@ export function useStorefrontControllerProviderModel() {
     setSavedStorefrontIds,
     setGamificationState,
   });
+  useCommunitySafetyRemoteSync({
+    authSession,
+    profileId,
+  });
   const deleteAccount = React.useCallback(async () => {
     if (!appProfile) {
       return {
@@ -159,6 +165,7 @@ export function useStorefrontControllerProviderModel() {
     profileId,
     signOutSession,
     startGuestSession,
+    repairProfileForCurrentSession,
     deleteAccount,
     updateDisplayName,
     clearDisplayName,

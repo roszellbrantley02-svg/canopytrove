@@ -18,6 +18,7 @@ set -euo pipefail
 PROJECT="canopy-trove"
 REGION="us-east4"
 SERVICE="canopytrove-api"
+STORAGE_BUCKET="canopy-trove.firebasestorage.app"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${SERVICE}/${SERVICE}:latest"
 
 RED='\033[0;31m'
@@ -71,6 +72,17 @@ deploy_hosting() {
 # Step 2: build and deploy backend to Cloud Run
 # ---------------------------------------------------------------------------
 deploy_backend() {
+  log "Applying Cloud Storage bucket CORS config..."
+  if [ -f "cors.json" ]; then
+    gcloud storage buckets update "gs://${STORAGE_BUCKET}" \
+      --cors-file=cors.json \
+      --project "$PROJECT" 2>/dev/null \
+    && log "Bucket CORS applied." \
+    || warn "Could not apply bucket CORS — gcloud storage command failed. Apply manually: gcloud storage buckets update gs://${STORAGE_BUCKET} --cors-file=cors.json"
+  else
+    warn "cors.json not found in repo root — skipping bucket CORS."
+  fi
+
   log "Building Docker image..."
   gcloud builds submit \
     --tag "$IMAGE" \
@@ -99,8 +111,10 @@ WRITE_RATE_LIMIT_PER_MINUTE=180::\
 ADMIN_RATE_LIMIT_PER_TEN_MINUTES=30::\
 FIREBASE_PROJECT_ID=canopy-trove::\
 FIREBASE_DATABASE_ID=canopytrove::\
+FIREBASE_STORAGE_BUCKET=${STORAGE_BUCKET}::\
 OPENAI_MODEL=gpt-4o-mini::\
-OWNER_PORTAL_PRELAUNCH_ENABLED=false::\
+PHOTO_MODERATION_MODE=auto_approve::\
+OWNER_PORTAL_PRELAUNCH_ENABLED=true::\
 RUNTIME_AUTO_MITIGATION_ENABLED=true::\
 RUNTIME_INCIDENT_THRESHOLD=3::\
 SENTRY_ENVIRONMENT=production::\
@@ -112,10 +126,21 @@ OPS_HEALTHCHECK_FAILURE_CONFIRMATION_SWEEPS=2::\
 OPS_ALERT_COOLDOWN_MINUTES=30::\
 WELCOME_EMAILS_ENABLED=true::\
 EMAIL_DELIVERY_PROVIDER=resend::\
+EMAIL_FROM_ADDRESS=askmehere@canopytrove.com::\
 EMAIL_REPLY_TO_ADDRESS=askmehere@canopytrove.com::\
+STRIPE_VERIFIED_MONTHLY_PRICE_ID=price_1TJiSyLR2Wj4bkt4L02wmKh8::\
+STRIPE_VERIFIED_ANNUAL_PRICE_ID=price_1TJiUFLR2Wj4bkt4rFYMK6kP::\
+STRIPE_GROWTH_MONTHLY_PRICE_ID=price_1TJiVqLR2Wj4bkt41RPSuFUY::\
+STRIPE_GROWTH_ANNUAL_PRICE_ID=price_1TJiWJLR2Wj4bkt4b1HTs3YQ::\
+STRIPE_PRO_MONTHLY_PRICE_ID=price_1TJiX0LR2Wj4bkt439RyQVDg::\
+STRIPE_PRO_ANNUAL_PRICE_ID=price_1TJiXVLR2Wj4bkt48YbISvZC::\
 OWNER_BILLING_SUCCESS_URL=https://canopytrove.com/owner/billing/success::\
 OWNER_BILLING_CANCEL_URL=https://canopytrove.com/owner/billing/cancel::\
-OWNER_BILLING_PORTAL_RETURN_URL=https://canopytrove.com/owner/billing" \
+OWNER_BILLING_PORTAL_RETURN_URL=https://canopytrove.com/owner/billing::\
+LAUNCH_PROGRAM_START_AT=2026-04-08T00:00:00.000Z::\
+LAUNCH_PROGRAM_DURATION_DAYS=91::\
+LAUNCH_EARLY_ADOPTER_LIMIT=100::\
+OWNER_LAUNCH_TRIAL_DAYS=60" \
     --set-secrets "\
 GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,\
 ADMIN_API_KEY=ADMIN_API_KEY:latest,\
@@ -125,7 +150,8 @@ EXPO_ACCESS_TOKEN=EXPO_ACCESS_TOKEN:latest,\
 SENTRY_DSN=SENTRY_DSN:latest,\
 OPENAI_API_KEY=OPENAI_API_KEY:latest,\
 RESEND_API_KEY=RESEND_API_KEY:latest,\
-RESEND_WEBHOOK_SECRET=RESEND_WEBHOOK_SECRET:latest" \
+RESEND_WEBHOOK_SECRET=RESEND_WEBHOOK_SECRET:latest,\
+STRIPE_IDENTITY_WEBHOOK_SECRET=STRIPE_IDENTITY_WEBHOOK_SECRET:latest" \
     --project "$PROJECT"
 
   SERVICE_URL=$(gcloud run services describe "$SERVICE" \

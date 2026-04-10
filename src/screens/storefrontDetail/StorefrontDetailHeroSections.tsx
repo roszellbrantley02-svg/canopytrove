@@ -45,7 +45,7 @@ export function DetailTopBar({
         style={styles.headerBadge}
       >
         <AppUiIcon name="arrow-back" size={16} color={colors.text} />
-        <Text style={styles.headerBadgeText}>Storefront record</Text>
+        <Text style={styles.headerBadgeText}>Back to results</Text>
       </Pressable>
       {verifiedOwnerBadgeLabel ? (
         <View style={styles.headerBadge}>
@@ -70,19 +70,19 @@ export function DetailHero({ storefront, ratingDisplay }: DetailHeroProps) {
       id: 'rating',
       label: 'Rating',
       value: ratingDisplay.badgeLabel,
-      body: ratingDisplay.helperLabel ?? 'Customer score shown in Canopy Trove.',
+      body: ratingDisplay.helperLabel ?? 'Average rating from customer reviews.',
     },
     {
       id: 'reviews',
       label: 'Reviews',
       value: ratingDisplay.countLabel,
-      body: 'Visible customer review volume in Canopy Trove.',
+      body: 'How many customer reviews this storefront has so far.',
     },
     {
       id: 'distance',
       label: 'Distance',
       value: `${storefront.distanceMiles.toFixed(1)} mi`,
-      body: 'Approximate distance from your current browse context.',
+      body: 'About how far this storefront is from the location you are using.',
     },
     ...(typeof storefront.favoriteFollowerCount === 'number'
       ? [
@@ -90,7 +90,7 @@ export function DetailHero({ storefront, ratingDisplay }: DetailHeroProps) {
             id: 'saved',
             label: 'Following',
             value: `${storefront.favoriteFollowerCount}`,
-            body: 'Customers following this storefront for future visits.',
+            body: 'People following this storefront for updates.',
           },
         ]
       : []),
@@ -99,7 +99,7 @@ export function DetailHero({ storefront, ratingDisplay }: DetailHeroProps) {
   return (
     <View style={styles.hero}>
       <View pointerEvents="none" style={styles.heroTone} />
-      <Text style={styles.heroKicker}>Storefront record</Text>
+      <Text style={styles.heroKicker}>Storefront details</Text>
       <Text numberOfLines={2} style={styles.title}>
         {storefront.displayName}
       </Text>
@@ -186,7 +186,7 @@ export function DetailHero({ storefront, ratingDisplay }: DetailHeroProps) {
 
 export function DetailOperationalSection({ body, rows }: { body: string; rows: OperationalRow[] }) {
   return (
-    <SectionCard title="Operational details" body={body}>
+    <SectionCard title="Before you go" body={body}>
       <View style={styles.operationalList}>
         {rows.map((row) => (
           <View key={row.id} style={styles.operationalRow}>
@@ -249,7 +249,7 @@ export function DetailOperationalSection({ body, rows }: { body: string; rows: O
                   ? 'Available'
                   : row.status === 'checking'
                     ? 'Checking'
-                    : 'Not Published'}
+                    : 'Not listed'}
               </Text>
             </View>
           </View>
@@ -423,20 +423,20 @@ export function DetailSecondaryActions({
 export function DetailLoadingCard() {
   return (
     <SectionCard
-      title="Loading storefront information"
-      body="Fetching current hours, contact details, and Canopy Trove customer reviews for this shop."
+      title="Loading storefront details"
+      body="Fetching the latest hours, contact details, and customer reviews for this storefront."
     >
       <CustomerStateCard
-        title="Updating live storefront details"
-        body="Canopy Trove is pulling the best available operational and community detail state for this shop."
+        title="Updating storefront details"
+        body="We are pulling the latest hours, links, and review details for this storefront."
         tone="info"
         iconName="sync-outline"
         eyebrow="Loading"
-        note="You can stay on this screen while the storefront detail payload finishes refreshing."
+        note="You can stay on this screen while the latest storefront details finish loading."
       >
         <View style={styles.loadingInline}>
           <ActivityIndicator color={colors.primary} />
-          <Text style={styles.loadingText}>Refreshing hours, contact, and review signals...</Text>
+          <Text style={styles.loadingText}>Refreshing hours, contact details, and reviews...</Text>
         </View>
       </CustomerStateCard>
     </SectionCard>

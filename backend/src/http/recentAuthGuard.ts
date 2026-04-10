@@ -78,7 +78,9 @@ export function createRecentAuthGuard(options?: RecentAuthGuardOptions): Request
     }
 
     try {
-      const decodedToken = await auth.verifyIdToken(token);
+      // Second argument `true` enables revocation check — ensures revoked
+      // tokens are rejected immediately for sensitive operations (OWASP).
+      const decodedToken = await auth.verifyIdToken(token, true);
       const authTime = decodedToken.auth_time;
       if (typeof authTime !== 'number') {
         response.status(401).json({

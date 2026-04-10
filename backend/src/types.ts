@@ -90,6 +90,19 @@ export type StorefrontProfileStateApiDocument = {
   gamificationState: StorefrontGamificationStateApiDocument;
 };
 
+export type BlockedCommunityAuthorApiDocument = {
+  storefrontId: string;
+  storefrontName: string | null;
+  authorId: string;
+};
+
+export type StorefrontCommunitySafetyStateApiDocument = {
+  profileId: string;
+  acceptedGuidelinesVersion: string | null;
+  blockedReviewAuthors: BlockedCommunityAuthorApiDocument[];
+  updatedAt: string;
+};
+
 export type GamificationLeaderboardEntryApiDocument = {
   profileId: string;
   displayName: string | null;
@@ -129,6 +142,7 @@ export type StorefrontSummaryApiDocument = {
   rating: number;
   reviewCount: number;
   openNow: boolean | null;
+  hours?: string[];
   isVerified: boolean;
   mapPreviewLabel: string;
   promotionText?: string | null;
@@ -177,6 +191,7 @@ export type StorefrontDetailApiDocument = {
     id: string;
     authorName: string;
     authorProfileId: string | null;
+    isOwnReview?: boolean;
     rating: number;
     relativeTime: string;
     text: string;

@@ -94,6 +94,14 @@ export function parseReviewPhotoUploadBody(value: unknown) {
       integer: true,
       min: 1,
     }),
+    forceMemoryMode:
+      body.forceMemoryMode === undefined
+        ? undefined
+        : typeof body.forceMemoryMode === 'boolean'
+          ? body.forceMemoryMode
+          : (() => {
+              throw new RequestValidationError('body.forceMemoryMode must be a boolean.');
+            })(),
   };
 }
 
@@ -106,13 +114,6 @@ export function parseReportSubmissionBody(value: unknown) {
   const reportedReviewId = parseOptionalTrimmedString(
     body.reportedReviewId,
     'body.reportedReviewId',
-    {
-      maxLength: MAX_REASON_LENGTH,
-    },
-  );
-  const reportedReviewAuthorProfileId = parseOptionalTrimmedString(
-    body.reportedReviewAuthorProfileId,
-    'body.reportedReviewAuthorProfileId',
     {
       maxLength: MAX_REASON_LENGTH,
     },
@@ -151,7 +152,6 @@ export function parseReportSubmissionBody(value: unknown) {
     }),
     reportTarget,
     reportedReviewId,
-    reportedReviewAuthorProfileId,
     reportedReviewAuthorName,
     reportedReviewExcerpt,
   };

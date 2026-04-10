@@ -3,6 +3,7 @@ import type { OwnerProfileDocument } from '../../types/ownerPortal';
 import type { OwnerBadgeEvalContext } from './ownerBadgeEvaluation';
 import {
   evaluateOwnerBadges,
+  getOwnerBadgeDefinition,
   isEarlyPartnerEligible,
   validateOwnerSelectedBadges,
   selectedBadgeIdsToLabels,
@@ -235,10 +236,10 @@ describe('validateOwnerSelectedBadges', () => {
     ).toEqual(['owner_verified_business', 'owner_member_30']);
   });
 
-  it('caps at OWNER_MAX_FEATURED_BADGES (4)', () => {
+  it('caps at OWNER_MAX_FEATURED_BADGES (5)', () => {
     const earned = ['a', 'b', 'c', 'd', 'e'];
-    const selected = ['a', 'b', 'c', 'd', 'e'];
-    expect(validateOwnerSelectedBadges(selected, earned)).toHaveLength(4);
+    const selected = ['a', 'b', 'c', 'd', 'e', 'f'];
+    expect(validateOwnerSelectedBadges(selected, earned)).toHaveLength(5);
   });
 });
 
@@ -249,9 +250,29 @@ describe('selectedBadgeIdsToLabels', () => {
     expect(labels).toContain('Early Partner');
   });
 
+  it('uses owner-facing labels for shared consumer badges', () => {
+    const labels = selectedBadgeIdsToLabels(['helpful_25', 'ambassador', 'verified_user']);
+    expect(labels).toContain('Trusted by Shoppers');
+    expect(labels).toContain('Growth Partner');
+    expect(labels).toContain('Verified Operator');
+  });
+
   it('filters out unknown IDs', () => {
     const labels = selectedBadgeIdsToLabels(['nonexistent_badge']);
     expect(labels).toEqual([]);
+  });
+});
+
+describe('getOwnerBadgeDefinition', () => {
+  it('returns owner-facing copy for shared consumer badges in the owner catalog', () => {
+    expect(getOwnerBadgeDefinition('helpful_25')).toMatchObject({
+      name: 'Trusted by Shoppers',
+      description: 'Earn 25 helpful votes across your storefront reviews and replies.',
+    });
+    expect(getOwnerBadgeDefinition('ambassador')).toMatchObject({
+      name: 'Growth Partner',
+      description: 'Bring 5 new shoppers or supporters into your storefront community.',
+    });
   });
 });
 

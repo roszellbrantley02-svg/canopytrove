@@ -40,11 +40,11 @@ export function WriteReviewSnapshotSection({ model }: { model: WriteReviewScreen
   return (
     <MotionInView delay={80}>
       <SectionCard
-        title="Review snapshot"
+        title="Review overview"
         body={
           model.isEditingReview
-            ? 'Use this as a quick readiness check before you save changes to your existing review.'
-            : 'Use this as a quick readiness check before you publish a customer-facing review.'
+            ? 'Give everything one last look before saving changes to your review.'
+            : 'Give everything one last look before posting your review.'
         }
       >
         <View style={styles.summaryStrip}>
@@ -78,7 +78,7 @@ export function WriteReviewSnapshotSection({ model }: { model: WriteReviewScreen
                   ? `${visiblePhotoCount} approved photo${visiblePhotoCount === 1 ? '' : 's'} stay attached while you edit text, tags, and rating.`
                   : 'No approved photos are attached to this review.'
                 : model.reviewPhotos.length > 0
-                  ? `${model.approvedReviewPhotoCount} approved now, ${model.pendingManualReviewPhotoCount} waiting manual review.`
+                  ? `${model.approvedReviewPhotoCount} approved now, ${model.pendingManualReviewPhotoCount} still being checked.`
                   : `You can attach up to ${model.reviewPhotoLimit} review photos.`}
             </Text>
           </View>
@@ -93,7 +93,7 @@ export function WriteReviewRatingSection({ model }: { model: WriteReviewScreenMo
     <MotionInView delay={120}>
       <SectionCard
         title="Rating"
-        body="Leave a clear rating first. It becomes part of the storefront's visible trust signal."
+        body="Start with your rating so people can quickly understand how the visit felt."
       >
         <View style={styles.ratingRow}>
           {[1, 2, 3, 4, 5].map((value) => (
@@ -126,11 +126,15 @@ export function WriteReviewBodySection({ model }: { model: WriteReviewScreenMode
     <MotionInView delay={180}>
       <SectionCard
         title="Review"
-        body="Write at least 20 characters. More detail makes the review more useful and easier to trust."
+        body={
+          model.isEditingReview
+            ? `Keep at least ${model.minimumReviewTextLength} characters. Updating the rating, text, tags, or GIF saves changes to this review.`
+            : `Write at least ${model.minimumReviewTextLength} characters. More detail makes the review more useful and easier to trust.`
+        }
       >
         <TextInput
           accessibilityLabel="Review text"
-          accessibilityHint="Describe your storefront visit in at least twenty characters."
+          accessibilityHint={`Describe your storefront visit in at least ${model.minimumReviewTextLength} characters.`}
           multiline
           value={model.text}
           onChangeText={model.setText}
@@ -171,19 +175,19 @@ export function WriteReviewPhotosSection({ model }: { model: WriteReviewScreenMo
         title="Photos"
         body={
           model.isEditingReview
-            ? 'Existing review photos stay attached. Photo edits are locked for existing reviews right now.'
-            : 'Attach up to four photos. They upload privately first and stay hidden until moderation approves them.'
+            ? 'Your current photos stay attached. You can edit the words and rating here, but not swap photos yet.'
+            : 'Add up to four photos. They stay private until they are approved.'
         }
       >
         {model.isEditingReview ? (
           <>
             <CustomerStateCard
-              title="Photo edits are locked"
-              body="Your existing review can be edited for rating, text, tags, and GIF without creating a duplicate post. Existing approved photos stay attached as-is."
+              title="Photos cannot be changed here yet"
+              body="You can update the rating, text, tags, and GIF without making a second review. Existing approved photos stay attached as they are."
               tone="info"
               iconName="camera-outline"
               eyebrow="Edit mode"
-              note="If you need photo replacements later, that should be a dedicated follow-up flow instead of mixing partial photo replacement into review edits."
+              note="If you want to replace photos later, that should be its own simple flow."
             />
             {model.existingReviewPhotoUrls.length ? (
               <View style={styles.reviewPhotoGrid}>
@@ -261,7 +265,7 @@ export function WriteReviewPhotosSection({ model }: { model: WriteReviewScreenMo
                           : photo.moderationStatus === 'approved'
                             ? 'Approved'
                             : photo.moderationStatus === 'needs_manual_review'
-                              ? 'Manual review'
+                              ? 'Being checked'
                               : photo.moderationStatus === 'rejected'
                                 ? 'Rejected'
                                 : 'Needs retry'}
@@ -304,18 +308,18 @@ export function WriteReviewPhotosSection({ model }: { model: WriteReviewScreenMo
               </View>
             ) : null}
             <Text style={styles.attributionText}>
-              Approved photos publish with the review. Anything uncertain stays hidden until manual
-              review clears it.
+              Approved photos appear with the review. Anything uncertain stays hidden until it is
+              checked.
             </Text>
           </>
         ) : (
           <CustomerStateCard
-            title="Photo uploads are locked"
-            body="Sign in with a member account to add review photos. The app uploads them into a private moderation queue before anything can be published."
+            title="Sign in to add photos"
+            body="You need a member account before you can attach review photos. Photos stay private until they are approved."
             tone="warm"
             iconName="camera-outline"
-            eyebrow="Photo state"
-            note="Text reviews still work without photos. Photo uploads stay private until moderation approves them."
+            eyebrow="Photos"
+            note="You can still post a text review without photos."
           />
         )}
       </SectionCard>
@@ -364,11 +368,11 @@ export function WriteReviewGifSection({ model }: { model: WriteReviewScreenModel
         {!model.hasGiphyConfig ? (
           <CustomerStateCard
             title="Using built-in reaction GIFs"
-            body="This build does not have a live GIPHY key configured, so Canopy Trove is falling back to the built-in reaction GIF set."
+            body="Live GIPHY search is not available in this version, so you are seeing the built-in reaction GIFs instead."
             tone="warm"
             iconName="images-outline"
-            eyebrow="Fallback state"
-            note="You can still attach a reaction GIF and finish the review normally."
+            eyebrow="GIFs"
+            note="You can still add a reaction GIF and finish the review normally."
           />
         ) : null}
         {model.gifUrl ? (
@@ -471,8 +475,8 @@ export function WriteReviewSubmitSection({ model }: { model: WriteReviewScreenMo
         title="Ready to submit?"
         body={
           model.isEditingReview
-            ? 'Saving updates replaces your existing review on the storefront record instead of creating a duplicate.'
-            : 'Reviews publish to the storefront record and help shape the customer-facing quality signal.'
+            ? 'Saving here updates your existing review instead of creating a second one.'
+            : 'Your review will appear on the storefront and help other people decide where to go.'
         }
       >
         <View style={styles.ctaPanel}>
@@ -498,7 +502,7 @@ export function WriteReviewSubmitSection({ model }: { model: WriteReviewScreenMo
               <Text style={styles.summaryTileLabel}>Photos</Text>
               <Text style={styles.summaryTileBody}>
                 {model.reviewPhotoCount > 0
-                  ? 'Uploaded photos are waiting in the private moderation queue.'
+                  ? 'Your photos are uploaded and waiting to be checked.'
                   : 'No review photos selected for this review.'}
               </Text>
             </View>
@@ -514,11 +518,11 @@ export function WriteReviewSubmitSection({ model }: { model: WriteReviewScreenMo
           </View>
           {model.submitError ? (
             <CustomerStateCard
-              title="Review submission did not go through"
+              title="Your review did not post"
               body={model.submitError}
               tone="danger"
               iconName="alert-circle-outline"
-              eyebrow="Submit state"
+              eyebrow="Review"
             />
           ) : null}
           <Text style={model.validationError ? styles.validationText : styles.helperText}>

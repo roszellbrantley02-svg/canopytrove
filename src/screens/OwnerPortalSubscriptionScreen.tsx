@@ -38,6 +38,7 @@ type OwnerPortalSubscriptionRoute = RouteProp<RootStackParamList, 'OwnerPortalSu
 function OwnerPortalSubscriptionScreenInner() {
   const _route = useRoute<OwnerPortalSubscriptionRoute>();
   const { authSession } = useStorefrontProfileController();
+  const isAndroid = Platform.OS === 'android';
   const preview = false;
   const [ownerProfile, setOwnerProfile] = React.useState<OwnerProfileDocument | null>(null);
   const [subscription, setSubscription] = React.useState<OwnerPortalSubscriptionDocument | null>(
@@ -101,6 +102,7 @@ function OwnerPortalSubscriptionScreenInner() {
     isVerifiedStatus(ownerProfile?.businessVerificationStatus) &&
     isVerifiedStatus(ownerProfile?.identityVerificationStatus);
   const billingConfigured = hasConfiguredOwnerBillingFlow();
+  const billingEnabledInThisBuild = billingConfigured && !isAndroid;
   const billingTemporarilyPaused =
     runtimeStatus?.policy.safeModeEnabled === true ||
     runtimeStatus?.policy.ownerPortalWritesEnabled === false;
@@ -132,22 +134,34 @@ function OwnerPortalSubscriptionScreenInner() {
     },
     {
       label: 'Billing backend configured',
-      body: billingConfigured
-        ? 'This build can open the configured billing path.'
-        : 'Billing env or fallback checkout links are still incomplete for this build.',
-      tone: billingConfigured ? ('complete' as const) : ('attention' as const),
+      body: isAndroid
+        ? 'Android shows billing status only. Checkout and billing management stay outside the Android app.'
+        : billingConfigured
+          ? 'This build can open the configured billing path.'
+          : 'Billing env or fallback checkout links are still incomplete for this build.',
+      tone: isAndroid
+        ? ('complete' as const)
+        : billingConfigured
+          ? ('complete' as const)
+          : ('attention' as const),
     },
     {
-      label: 'Runtime protection',
+      label: 'Billing safety',
       body: billingTemporarilyPaused
         ? (runtimeStatus?.policy.reason ??
           'Protected mode is active, so live billing changes should wait until the system stabilizes.')
-        : 'No billing pause is active from runtime protection.',
+        : 'No billing pause is active right now.',
       tone: billingTemporarilyPaused ? ('attention' as const) : ('complete' as const),
     },
   ];
 
   const handleOpenCheckout = async (tier: OwnerSubscriptionTier) => {
+    if (isAndroid) {
+      setStatusText(
+        'Android shows owner plan status only. Checkout stays outside the Android app.',
+      );
+      return;
+    }
     if (!authSession.uid || !ownerProfile?.dispensaryId) {
       setStatusText('Sign in and claim a listing before starting a subscription.');
       return;
@@ -176,6 +190,12 @@ function OwnerPortalSubscriptionScreenInner() {
   };
 
   const handleOpenBillingPortal = async () => {
+    if (isAndroid) {
+      setStatusText(
+        'Android keeps billing management outside the app. Use a non-Android channel to manage owner billing.',
+      );
+      return;
+    }
     if (isSubmitting || billingTemporarilyPaused) {
       return;
     }
@@ -205,7 +225,11 @@ function OwnerPortalSubscriptionScreenInner() {
     <ScreenShell
       eyebrow="Owner Portal"
       title="Business plan."
-      subtitle="Choose your plan, complete checkout, and manage billing."
+      subtitle={
+        isAndroid
+          ? 'Review owner plan status and billing readiness for the Android build.'
+          : 'Choose your plan, complete checkout, and manage billing.'
+      }
       headerPill="Owner"
     >
       <MotionInView delay={70}>
@@ -225,7 +249,7 @@ function OwnerPortalSubscriptionScreenInner() {
             </View>
             <View style={styles.portalHeroMetricCard}>
               <Text style={styles.portalHeroMetricValue}>
-                {billingConfigured ? 'Ready' : 'Setup'}
+                {isAndroid ? 'Outside App' : billingConfigured ? 'Ready' : 'Setup'}
               </Text>
               <Text style={styles.portalHeroMetricLabel}>Billing Flow</Text>
             </View>
@@ -295,14 +319,24 @@ function OwnerPortalSubscriptionScreenInner() {
       <MotionInView delay={270}>
         <SectionCard
           title="Choose your plan"
-          body="Select your tier and billing cycle, then proceed to checkout."
+          body={
+            isAndroid
+              ? 'Review available tiers and the Android billing posture.'
+              : 'Select your tier and billing cycle, then proceed to checkout.'
+          }
         >
           <View style={styles.sectionStack}>
             {statusText ? <Text style={styles.errorText}>{statusText}</Text> : null}
-            {!billingConfigured ? (
+            {!billingConfigured && !isAndroid ? (
               <Text style={styles.errorText}>
                 Billing is not configured for this build yet. Add the hosted backend billing env or
                 the fallback hosted checkout URLs before release.
+              </Text>
+            ) : null}
+            {isAndroid ? (
+              <Text style={styles.helperText}>
+                Android keeps owner billing read-only inside the app. Checkout and subscription
+                management are intentionally unavailable in this build.
               </Text>
             ) : null}
             {!isBillingEligible ? (
@@ -321,7 +355,7 @@ function OwnerPortalSubscriptionScreenInner() {
               currentTier={subscription?.tier ?? null}
               disableButtons={
                 isLoading ||
-                !billingConfigured ||
+                !billingEnabledInThisBuild ||
                 !isBillingEligible ||
                 billingTemporarilyPaused ||
                 Boolean(isSubmitting)
@@ -346,12 +380,17 @@ function OwnerPortalSubscriptionScreenInner() {
       <MotionInView delay={330}>
         <SectionCard
           title="Manage billing"
-          body="Refresh status or manage your active subscription."
+          body={
+            isAndroid
+              ? 'Refresh status only. Billing management stays outside the Android build.'
+              : 'Refresh status or manage your active subscription.'
+          }
         >
           <View style={[styles.ctaPanel, styles.statusPanelSuccess]}>
             <Text style={styles.helperText}>
-              Refresh after checkout if you need the latest synced state, or open billing management
-              once a live customer record exists.
+              {isAndroid
+                ? 'Refresh to see the latest synced subscription state. Billing management is intentionally unavailable in the Android build.'
+                : 'Refresh after checkout if you need the latest synced state, or open billing management once a live customer record exists.'}
             </Text>
             <View style={styles.buttonRow}>
               <Pressable
@@ -364,6 +403,7 @@ function OwnerPortalSubscriptionScreenInner() {
               </Pressable>
               <Pressable
                 disabled={
+                  isAndroid ||
                   !subscription?.externalCustomerId ||
                   billingTemporarilyPaused ||
                   Boolean(isSubmitting)
@@ -373,18 +413,21 @@ function OwnerPortalSubscriptionScreenInner() {
                 }}
                 style={[
                   styles.primaryButton,
-                  (!subscription?.externalCustomerId ||
+                  (isAndroid ||
+                    !subscription?.externalCustomerId ||
                     billingTemporarilyPaused ||
                     Boolean(isSubmitting)) &&
                     styles.buttonDisabled,
                 ]}
               >
                 <Text style={styles.primaryButtonText}>
-                  {billingTemporarilyPaused
-                    ? 'Billing Paused'
-                    : isSubmitting === 'manage'
-                      ? 'Opening...'
-                      : 'Open Billing Management'}
+                  {isAndroid
+                    ? 'Unavailable On Android'
+                    : billingTemporarilyPaused
+                      ? 'Billing Paused'
+                      : isSubmitting === 'manage'
+                        ? 'Opening...'
+                        : 'Open Billing Management'}
                 </Text>
               </Pressable>
             </View>

@@ -14,11 +14,12 @@
     <link rel="canonical" href="https://app.canopytrove.com/" />
     <meta name="theme-color" content="#121614" />
 
-    <!-- Preconnect to critical origins for faster first requests -->
+    <!-- Preconnect to API origin for faster first requests -->
     <link rel="preconnect" href="https://api.canopytrove.com" crossorigin />
-    <link rel="preconnect" href="https://firebaseinstallations.googleapis.com" crossorigin />
-    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin />
     <link rel="dns-prefetch" href="https://api.canopytrove.com" />
+
+    <!-- Font files are bundled by Expo; post-export.js preloads critical
+         weights and adds preload hints for the main JS bundle at build time. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Canopy Trove" />
@@ -108,6 +109,10 @@
     ]
     </script>
 
+    <!-- Web Push VAPID key — injected at build time by post-export.js.
+         When empty, push-register.js gracefully skips subscription. -->
+    <meta name="vapid-public-key" content="" />
+
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" href="/favicon.ico" />
@@ -123,15 +128,15 @@
       #root { display: flex; height: 100%; flex: 1; }
     </style>
 
-    <!-- Font-display swap fallbacks — prevent invisible text (FOIT) during bundle load.
-         Expo bundles fonts in JS; these @font-face rules ensure text renders immediately
-         with system fallbacks and swaps to the real fonts once the bundle runs. -->
+    <!-- Font-display:optional fallbacks — text renders with system fonts immediately;
+         custom fonts load silently and apply on the next navigation (zero CLS).
+         Only the two above-the-fold weights are declared here; the remaining
+         weights (SpaceGrotesk_500Medium, DMSans_500Medium, DMSans_700Bold) load
+         through Expo's normal font system when first used.
+         post-export.js replaces these with url()-backed rules at build time. -->
     <style id="ct-font-fallbacks">
-      @font-face { font-family: 'SpaceGrotesk_700Bold'; font-display: swap; src: local('Space Grotesk Bold'), local('SpaceGrotesk-Bold'); }
-      @font-face { font-family: 'SpaceGrotesk_500Medium'; font-display: swap; src: local('Space Grotesk Medium'), local('SpaceGrotesk-Medium'); }
-      @font-face { font-family: 'DMSans_400Regular'; font-display: swap; src: local('DM Sans'), local('DMSans-Regular'); }
-      @font-face { font-family: 'DMSans_500Medium'; font-display: swap; src: local('DM Sans Medium'), local('DMSans-Medium'); }
-      @font-face { font-family: 'DMSans_700Bold'; font-display: swap; src: local('DM Sans Bold'), local('DMSans-Bold'); }
+      @font-face { font-family: 'SpaceGrotesk_700Bold'; font-display: optional; src: local('Space Grotesk Bold'), local('SpaceGrotesk-Bold'); }
+      @font-face { font-family: 'DMSans_400Regular';      font-display: optional; src: local('DM Sans'), local('DMSans-Regular'); }
     </style>
 
     <!-- CSS shimmer animation — replaces JS-driven Animated.timing on web (INP fix) -->
@@ -148,7 +153,9 @@
       }
     </style>
 
-    <!-- Loading screen styles -->
+    <!-- Static age gate — paints as the LCP element while React boots.
+         Mirrors src/screens/AgeGateScreen.tsx visuals using pure CSS.
+         Hidden by splash-observer.js once React's root has content. -->
     <style id="splash-screen">
       #ct-splash {
         position: fixed;
@@ -157,56 +164,71 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
+        padding: max(5vh, 24px) 16px 0;
+        overflow: hidden;
         background: linear-gradient(135deg, #0a100d 0%, #121614 50%, #151d19 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         transition: opacity 0.4s ease-out;
       }
       #ct-splash.hidden {
         opacity: 0;
         pointer-events: none;
       }
-      #ct-splash-logo {
-        width: 72px;
-        height: 72px;
-        border-radius: 20px;
-        background: rgba(0, 245, 140, 0.08);
-        border: 1.5px solid rgba(143, 255, 209, 0.22);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 24px;
-        animation: ct-pulse 2s ease-in-out infinite;
-      }
-      #ct-splash-logo svg {
-        width: 36px;
-        height: 36px;
-      }
-      #ct-splash-name {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 13px;
-        font-weight: 600;
-        letter-spacing: 1.2px;
-        text-transform: uppercase;
-        color: rgba(255, 251, 247, 0.5);
-        margin-bottom: 32px;
-      }
-      #ct-splash-bar-track {
-        width: 120px;
-        height: 3px;
-        border-radius: 2px;
-        background: rgba(255, 255, 255, 0.06);
+      /* --- Ambient background orbs --- */
+      .ct-splash-orb            { position: absolute; border-radius: 999px; pointer-events: none; }
+      .ct-splash-orb--green     { top: 14%; right: -72px; width: 240px; height: 240px; background: rgba(0,245,140,0.09); }
+      .ct-splash-orb--warm      { bottom: 14%; left: -84px; width: 220px; height: 220px; background: rgba(245,200,106,0.08); }
+
+      /* --- Card --- */
+      #ct-splash-card {
+        position: relative;
+        max-width: 480px;
+        width: 100%;
+        background: linear-gradient(135deg, rgba(18,31,39,0.96), rgba(10,18,24,0.92));
+        border: 1px solid rgba(245,200,106,0.18);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 14px 24px rgba(0,0,0,0.3);
         overflow: hidden;
       }
-      #ct-splash-bar-fill {
-        width: 0%;
-        height: 100%;
-        border-radius: 2px;
+      #ct-splash-card-glow {
+        position: absolute;
+        top: -56px;
+        right: -24px;
+        width: 184px;
+        height: 184px;
+        border-radius: 999px;
+        background: rgba(245,200,106,0.08);
+        pointer-events: none;
+      }
+      /* --- Card content --- */
+      .ct-s-header       { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+      .ct-s-logo         { width: 88px; height: 88px; border-radius: 26px; display: flex; align-items: center; justify-content: center; background: rgba(0,245,140,0.08); border: 1px solid rgba(143,255,209,0.22); }
+      .ct-s-logo svg     { width: 60px; height: 60px; }
+      .ct-s-badge        { border-radius: 999px; border: 1px solid rgba(245,200,106,0.2); background: rgba(245,200,106,0.1); padding: 8px 16px; font-size: 11px; font-weight: 800; letter-spacing: 0.7px; text-transform: uppercase; color: #E8C06A; }
+      .ct-s-eyebrow      { font-size: 11px; font-weight: 800; letter-spacing: 0.9px; text-transform: uppercase; color: #8A8078; margin-bottom: 8px; }
+      .ct-s-title        { font-size: 34px; font-weight: 800; line-height: 39px; color: #FFFBF7; margin: 0 0 8px; }
+      .ct-s-body         { font-size: 15px; line-height: 23px; color: #C4B8B0; margin: 0 0 16px; }
+      .ct-s-trust        { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+      .ct-s-chip         { border-radius: 999px; border: 1px solid rgba(255,255,255,0.08); background: rgba(8,14,19,0.76); padding: 8px 16px; font-size: 12px; font-weight: 700; color: #8A8078; }
+      .ct-s-notice       { border-radius: 12px; border: 1px solid rgba(245,200,106,0.18); background: rgba(245,200,106,0.08); padding: 16px; margin-bottom: 16px; }
+      .ct-s-notice-title { font-size: 15px; font-weight: 700; color: #FFFBF7; margin: 0 0 4px; }
+      .ct-s-notice-body  { font-size: 15px; line-height: 22px; color: #C4B8B0; margin: 0; }
+
+      /* --- Loading bar — absolutely positioned so it never causes layout shift --- */
+      .ct-s-loading {
+        position: absolute;
+        bottom: max(5vh, 24px);
+        left: 50%;
+        transform: translateX(-50%);
+        width: 120px; height: 3px; border-radius: 2px;
+        background: rgba(255,255,255,0.06); overflow: hidden;
+      }
+      .ct-s-loading-fill {
+        width: 0%; height: 100%; border-radius: 2px;
         background: linear-gradient(90deg, #2ECC71, #E8A000);
         animation: ct-load 3s ease-out forwards;
-      }
-      @keyframes ct-pulse {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.04); opacity: 0.85; }
       }
       @keyframes ct-load {
         0% { width: 0%; }
@@ -219,30 +241,44 @@
   </head>
 
   <body>
-    <!-- Splash screen shown while JS bundle loads -->
+    <!-- Static age gate — visible immediately, replaced by React once it mounts -->
     <div id="ct-splash">
-      <div id="ct-splash-logo">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#2ECC71"/>
-        </svg>
+      <div class="ct-splash-orb ct-splash-orb--green"></div>
+      <div class="ct-splash-orb ct-splash-orb--warm"></div>
+      <div id="ct-splash-card">
+        <div id="ct-splash-card-glow"></div>
+        <div class="ct-s-header">
+          <div class="ct-s-logo">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#2ECC71"/>
+            </svg>
+          </div>
+          <div class="ct-s-badge">Adults 21+</div>
+        </div>
+        <div class="ct-s-eyebrow">Canopy Trove</div>
+        <h1 class="ct-s-title">Confirm you are 21 or older.</h1>
+        <p class="ct-s-body">Canopy Trove is an adults-only cannabis storefront directory. You must be at least 21 to continue.</p>
+        <div class="ct-s-trust">
+          <span class="ct-s-chip">21+ only</span>
+          <span class="ct-s-chip">Verified storefronts</span>
+          <span class="ct-s-chip">Official records</span>
+        </div>
+        <div class="ct-s-notice">
+          <p class="ct-s-notice-title">Before you continue</p>
+          <p class="ct-s-notice-body">By entering, you confirm you meet the age requirement for this customer directory.</p>
+        </div>
       </div>
-      <div id="ct-splash-name">Canopy Trove</div>
-      <div id="ct-splash-bar-track">
-        <div id="ct-splash-bar-fill"></div>
-      </div>
+      <div class="ct-s-loading"><div class="ct-s-loading-fill"></div></div>
     </div>
 
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <main style="display:flex;flex:1;height:100%"><div id="root"></div></main>
 
-    <script src="/scripts/standalone-nav.js"></script>
-
-    <script src="/scripts/splash-observer.js"></script>
-
-    <!-- Service Worker registration -->
-    <script src="/scripts/sw-register.js"></script>
-
-    <!-- Web Vitals — field measurement of LCP, INP, CLS (~2KB async) -->
-    <script src="/scripts/web-vitals-reporter.js"></script>
+    <script defer src="/scripts/standalone-nav.js"></script>
+    <script defer src="/scripts/splash-observer.js"></script>
+    <script defer src="/scripts/sw-register.js"></script>
+    <script defer src="/scripts/pwa-install-prompt.js"></script>
+    <script defer src="/scripts/push-register.js"></script>
+    <script defer src="/scripts/web-vitals-reporter.js"></script>
   </body>
 </html>

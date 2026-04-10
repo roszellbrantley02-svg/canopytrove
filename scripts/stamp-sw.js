@@ -9,7 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { getBuildHash } = require('./build-web-hash');
 
 const outputDir = process.argv[2] || 'dist';
 const swFile = path.join(outputDir, 'service-worker.js');
@@ -19,17 +19,14 @@ if (!fs.existsSync(swFile)) {
   process.exit(1);
 }
 
-// Try git short SHA; fall back to timestamp
-let buildHash;
-try {
-  buildHash = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
-} catch {
-  buildHash = String(Math.floor(Date.now() / 1000));
+const content = fs.readFileSync(swFile, 'utf8');
+if (!content.includes('__BUILD_HASH__')) {
+  console.log(`Skipping ${swFile}; build hash already stamped.`);
+  process.exit(0);
 }
 
+const buildHash = getBuildHash();
 console.log(`Stamping service worker with hash: ${buildHash}`);
-
-const content = fs.readFileSync(swFile, 'utf8');
 const stamped = content.replace(/__BUILD_HASH__/g, buildHash);
 fs.writeFileSync(swFile, stamped, 'utf8');
 

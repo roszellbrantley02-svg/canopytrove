@@ -51,6 +51,7 @@ export type StorefrontProfileControllerValue = {
   profileId: string;
   startGuestSession: () => Promise<boolean>;
   signOutSession: () => Promise<boolean>;
+  repairProfileForCurrentSession: () => Promise<AppProfile | null>;
   deleteAccount: () => Promise<{ ok: boolean; partial: boolean; message: string }>;
   updateDisplayName: (value: string) => Promise<boolean>;
   clearDisplayName: () => Promise<boolean>;

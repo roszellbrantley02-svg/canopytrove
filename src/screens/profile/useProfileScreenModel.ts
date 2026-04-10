@@ -22,6 +22,7 @@ import { legalConfig } from '../../config/legal';
 import {
   getCommunitySafetyState,
   initializeCommunitySafetyState,
+  subscribeToCommunitySafetyState,
 } from '../../services/communitySafetyService';
 import { useProfileActions } from './useProfileActions';
 import { useProfileDerivedState } from './useProfileDerivedState';
@@ -118,10 +119,16 @@ export function useProfileScreenModel(navigation: NativeStackNavigationProp<Root
 
     void initializeCommunitySafetyState().then(refresh);
     const unsubscribe = navigation.addListener('focus', refresh);
+    const unsubscribeCommunitySafety = subscribeToCommunitySafetyState((state) => {
+      if (alive) {
+        setCommunitySafetyState(state);
+      }
+    });
 
     return () => {
       alive = false;
       unsubscribe();
+      unsubscribeCommunitySafety();
     };
   }, [navigation]);
 
@@ -178,7 +185,7 @@ export function useProfileScreenModel(navigation: NativeStackNavigationProp<Root
     savedStorefrontIds,
     savedStorefronts,
     hasAcceptedGuidelines: Boolean(communitySafetyState.acceptedGuidelinesVersion),
-    blockedAuthorCount: communitySafetyState.blockedAuthorProfileIds.length,
+    blockedAuthorCount: communitySafetyState.blockedReviewAuthors.length,
     seed,
     seedCounts,
     seedStatus,

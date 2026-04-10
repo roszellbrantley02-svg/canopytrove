@@ -1,8 +1,10 @@
 // Hide splash once React mounts
 (function () {
+  var root = document.getElementById('root');
+  if (!root) return;
+
   var observer = new MutationObserver(function () {
-    var root = document.getElementById('root');
-    if (root && root.children.length > 0) {
+    if (root.children.length > 0) {
       var splash = document.getElementById('ct-splash');
       if (splash) {
         splash.classList.add('hidden');
@@ -13,5 +15,5 @@
       observer.disconnect();
     }
   });
-  observer.observe(document.getElementById('root'), { childList: true });
+  observer.observe(root, { childList: true });
 })();

@@ -3,7 +3,7 @@
     "name": "Canopy Trove",
     "slug": "canopytrove",
     "scheme": "canopytrove",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -69,7 +69,8 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",
-        "android.permission.READ_MEDIA_IMAGES"
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -109,6 +110,12 @@
       "eas": {
         "projectId": "681bbd78-2840-4906-b9e9-01b4f7c99bcb"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/681bbd78-2840-4906-b9e9-01b4f7c99bcb"
     }
   }
 }

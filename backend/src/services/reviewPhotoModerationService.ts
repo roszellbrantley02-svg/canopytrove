@@ -69,7 +69,19 @@ const MAX_REVIEW_PHOTO_BYTES = 8 * 1024 * 1024;
 const MAX_REVIEW_PHOTOS_PER_REVIEW = 4;
 const UPLOAD_URL_TTL_MS = 15 * 60 * 1000;
 const APPROVED_URL_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const ALLOWED_CONTENT_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+]);
+
+/**
+ * Content types that need server-side conversion to JPEG before
+ * moderation and storage. The converted bytes replace the original.
+ */
+const CONVERTIBLE_CONTENT_TYPES = new Set(['image/heic', 'image/heif']);
 
 type StoredReviewPhotoUploadSession = ReviewPhotoUploadSession;
 
@@ -91,6 +103,35 @@ type OpenAiModerationResult = {
 const reviewPhotoUploadStore = new Map<string, StoredReviewPhotoUploadSession>();
 const reviewPhotoBytesStore = new Map<string, Buffer>();
 let reviewPhotoModerationFetch: typeof fetch = fetch;
+let skipBucketCheckForTests = false;
+
+type StorageFileLike = {
+  exists: () => Promise<[boolean]>;
+  download: () => Promise<[Buffer]>;
+  save: (
+    bytes: Buffer,
+    options?: {
+      metadata?: {
+        contentType?: string;
+      };
+    },
+  ) => Promise<unknown>;
+  delete: (options?: { ignoreNotFound?: boolean }) => Promise<unknown>;
+  getSignedUrl: (options: {
+    action: 'write' | 'read';
+    version: 'v4';
+    expires: number;
+    contentType?: string;
+  }) => Promise<[string]>;
+  copy: (target: unknown) => Promise<unknown>;
+};
+
+type StorageBucketLike = {
+  name: string;
+  file: (path: string) => StorageFileLike;
+};
+
+let bucketOverrideForTests: StorageBucketLike | null = null;
 
 export class ReviewPhotoModerationError extends Error {
   constructor(
@@ -115,6 +156,19 @@ function getNowIso() {
 
 function normalizeTrimmedString(value: unknown, fallback = '') {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+}
+
+/**
+ * Convert image bytes (any sharp-supported format including HEIC/HEIF)
+ * to JPEG. Uses dynamic require so the server still starts if sharp is
+ * not installed — callers catch and route to manual review.
+ */
+async function convertToJpeg(inputBytes: Buffer): Promise<Buffer> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const sharp = require('sharp') as (input: Buffer) => {
+    jpeg: (options: { quality: number }) => { toBuffer: () => Promise<Buffer> };
+  };
+  return sharp(inputBytes).jpeg({ quality: 84 }).toBuffer();
 }
 
 function normalizeContentType(value: unknown) {
@@ -222,6 +276,14 @@ function normalizeStoredRecord(
 }
 
 function getBucket() {
+  if (bucketOverrideForTests) {
+    return bucketOverrideForTests;
+  }
+
+  if (skipBucketCheckForTests) {
+    return null;
+  }
+
   const storage = getBackendFirebaseStorage();
   if (!storage) {
     return null;
@@ -292,7 +354,28 @@ function isEligibleForAutoModeration(contentType: string, sizeBytes: number) {
 }
 
 function buildModerationFallbackReason() {
-  return 'Automatic moderation is unavailable. This photo must be reviewed manually before it can be published.';
+  return 'Automatic moderation is unavailable. Photo was auto-approved.';
+}
+
+/**
+ * Returns the current photo moderation mode.
+ *
+ * - `auto_approve` (default): Only reject clearly harmful content (explicit
+ *   nudity, violence, minors, hate). Everything else — including ambiguous,
+ *   low-quality, or uncertain images — is approved automatically. When the
+ *   OpenAI API is unavailable the photo is auto-approved as well.
+ *
+ * - `strict`: Original behaviour. Ambiguous images route to
+ *   `needs_manual_review` (requires a review dashboard to clear them).
+ *
+ * Set via the `PHOTO_MODERATION_MODE` environment variable.
+ */
+function getPhotoModerationMode(): 'auto_approve' | 'strict' {
+  const raw = process.env.PHOTO_MODERATION_MODE?.trim().toLowerCase();
+  if (raw === 'strict') {
+    return 'strict';
+  }
+  return 'auto_approve';
 }
 
 function buildAttachmentMessage(summary: {
@@ -367,22 +450,31 @@ async function deleteStoredPhotoRecord(photoId: string) {
 }
 
 async function getPhotoDownloadBytes(photo: StoredReviewPhotoUploadSession) {
+  const memoryBytes = reviewPhotoBytesStore.get(photo.id) ?? null;
+  if (photo.uploadMode === 'memory' && memoryBytes) {
+    return memoryBytes;
+  }
+
   const bucket = getBucket();
   if (bucket) {
     const file = bucket.file(photo.pendingStoragePath);
     const [exists] = await file.exists();
     if (!exists) {
-      return null;
+      return memoryBytes;
     }
 
     const [buffer] = await file.download();
     return buffer;
   }
 
-  return reviewPhotoBytesStore.get(photo.id) ?? null;
+  return memoryBytes;
 }
 
-async function uploadPhotoToApprovedPath(photo: StoredReviewPhotoUploadSession, reviewId: string) {
+async function uploadPhotoToApprovedPath(
+  photo: StoredReviewPhotoUploadSession,
+  reviewId: string,
+  preloadedBytes?: Buffer | null,
+) {
   const bucket = getBucket();
   if (!bucket) {
     return null;
@@ -398,8 +490,18 @@ async function uploadPhotoToApprovedPath(photo: StoredReviewPhotoUploadSession, 
   // Download → strip EXIF metadata (GPS, device info) → upload to approved path.
   // This protects user privacy by removing location and camera data before
   // the photo becomes publicly readable.
-  const pendingFile = bucket.file(photo.pendingStoragePath);
-  const [rawBytes] = await pendingFile.download();
+  //
+  // When the upload was memory-mode (one-shot endpoint), the bytes never
+  // hit the bucket's pending path, so we accept pre-loaded bytes directly
+  // instead of trying to download from a path that doesn't exist.
+  let rawBytes: Buffer;
+  if (preloadedBytes) {
+    rawBytes = preloadedBytes;
+  } else {
+    const pendingFile = bucket.file(photo.pendingStoragePath);
+    const [downloaded] = await pendingFile.download();
+    rawBytes = downloaded;
+  }
   const strippedBytes = stripImageMetadata(rawBytes, photo.contentType);
 
   const approvedFile = bucket.file(approvedPath);
@@ -407,7 +509,14 @@ async function uploadPhotoToApprovedPath(photo: StoredReviewPhotoUploadSession, 
     metadata: { contentType: photo.contentType },
   });
 
-  await pendingFile.delete({ ignoreNotFound: true }).catch(() => undefined);
+  // Clean up the pending file only when we actually downloaded from it
+  // (signed_url mode). In memory mode there is no pending file in storage.
+  if (!preloadedBytes) {
+    await bucket
+      .file(photo.pendingStoragePath)
+      .delete({ ignoreNotFound: true })
+      .catch(() => undefined);
+  }
   return approvedPath;
 }
 
@@ -438,7 +547,7 @@ async function moveApprovedPhotoToReviewPath(
   }
 
   const targetFile = bucket.file(nextApprovedPath);
-  await sourceFile.copy(targetFile);
+  await sourceFile.copy(targetFile as unknown as string);
   await sourceFile.delete({ ignoreNotFound: true }).catch(() => undefined);
   return nextApprovedPath;
 }
@@ -485,13 +594,22 @@ async function createSignedReadUrl(storagePath: string) {
     return null;
   }
 
-  const [downloadUrl] = await bucket.file(storagePath).getSignedUrl({
-    action: 'read',
-    version: 'v4',
-    expires: Date.now() + APPROVED_URL_TTL_MS,
-  });
+  try {
+    const [downloadUrl] = await bucket.file(storagePath).getSignedUrl({
+      action: 'read',
+      version: 'v4',
+      expires: Date.now() + APPROVED_URL_TTL_MS,
+    });
 
-  return downloadUrl;
+    return downloadUrl;
+  } catch {
+    // Signed URL creation can fail if the service account lacks
+    // iam.serviceAccounts.signBlob permission (common on Cloud Run).
+    // Return null so the upload still succeeds — the photo is stored
+    // in the bucket and the URL can be generated later once the
+    // permission is granted.
+    return null;
+  }
 }
 
 async function promoteUploadedPhoto(
@@ -526,10 +644,14 @@ async function promoteUploadedPhoto(
 
   const imageBytes = await getPhotoDownloadBytes(photo);
   if (!imageBytes) {
-    throw new Error('Review photo upload file not found.');
+    throw new Error('Upload failed: review photo file not found in storage.');
   }
 
-  const copiedPath = await uploadPhotoToApprovedPath(photo, photo.reviewId ?? 'unattached');
+  const copiedPath = await uploadPhotoToApprovedPath(
+    photo,
+    photo.reviewId ?? 'unattached',
+    photo.uploadMode === 'memory' ? imageBytes : null,
+  );
   const publicUrl = copiedPath ? await createSignedReadUrl(copiedPath) : null;
 
   const approved = await saveStoredPhotoRecord({
@@ -553,20 +675,48 @@ async function promoteUploadedPhoto(
 }
 
 function buildPhotoModerationPrompt() {
+  const mode = getPhotoModerationMode();
+
+  if (mode === 'strict') {
+    return [
+      'Evaluate the attached image for a cannabis storefront review.',
+      'Be strict.',
+      'Reject explicit nudity, sexual content, genital exposure, fetish content, sexualized poses, minors, violence, hateful content, or anything unsafe for a dispensary review page.',
+      'Approve only if the image is a normal, non-explicit storefront or product photo with no nudity or sexual content and no policy risk.',
+      'If the image is ambiguous, partially obscured, too low quality, or uncertain, return needs_manual_review.',
+      'Return valid JSON only with keys decision, reason, categories, score.',
+      'decision must be one of approved, rejected, needs_manual_review.',
+    ].join(' ');
+  }
+
+  // auto_approve mode: approve everything except clearly harmful content.
   return [
-    'Evaluate the attached image for a cannabis storefront review.',
-    'Be strict.',
-    'Reject explicit nudity, sexual content, genital exposure, fetish content, sexualized poses, minors, violence, hateful content, or anything unsafe for a dispensary review page.',
-    'Approve only if the image is a normal, non-explicit storefront or product photo with no nudity or sexual content and no policy risk.',
-    'If the image is ambiguous, partially obscured, too low quality, or uncertain, return needs_manual_review.',
+    'Evaluate the attached image for a cannabis dispensary review.',
+    'This is a cannabis industry app — photos of cannabis products, packaging, storefronts, menus, and related items are expected and normal.',
+    'APPROVE the image unless it clearly contains one of these: explicit nudity or sexual content, content involving minors, graphic violence or gore, hateful symbols or slurs.',
+    'Low quality, blurry, dark, partially obscured, or ambiguous photos should be APPROVED — do not penalize image quality.',
+    'Cannabis products, paraphernalia, packaging, dispensary interiors, and exteriors should all be APPROVED.',
     'Return valid JSON only with keys decision, reason, categories, score.',
-    'decision must be one of approved, rejected, needs_manual_review.',
+    'decision must be one of approved, rejected.',
   ].join(' ');
 }
 
 async function runStrictPhotoModeration(photo: StoredReviewPhotoUploadSession, imageBytes: Buffer) {
   const moderationConfig = getOpenAiModerationConfig();
+  const mode = getPhotoModerationMode();
+
   if (!moderationConfig.apiKey) {
+    // No API key → in auto_approve mode we just approve the photo
+    // instead of blocking it in a manual-review limbo.
+    if (mode === 'auto_approve') {
+      return {
+        decision: 'approved' as const,
+        reason: buildModerationFallbackReason(),
+        categories: [] as string[],
+        score: null,
+        model: null,
+      };
+    }
     return {
       decision: 'needs_manual_review' as const,
       reason: buildModerationFallbackReason(),
@@ -652,6 +802,17 @@ async function runStrictPhotoModeration(photo: StoredReviewPhotoUploadSession, i
       model: moderationConfig.model,
     };
   } catch {
+    // API call failed — auto-approve instead of blocking when in
+    // auto_approve mode (there is no manual review dashboard).
+    if (mode === 'auto_approve') {
+      return {
+        decision: 'approved' as const,
+        reason: 'Automatic moderation encountered an error. Photo was auto-approved.',
+        categories: [] as string[],
+        score: null,
+        model: moderationConfig.model,
+      };
+    }
     return {
       decision: 'needs_manual_review' as const,
       reason: buildModerationFallbackReason(),
@@ -667,6 +828,7 @@ export function clearReviewPhotoModerationMemoryStateForTests() {
   reviewPhotoBytesStore.clear();
   reviewPhotoModerationFetch = fetch;
   skipBucketCheckForTests = false;
+  bucketOverrideForTests = null;
 }
 
 export function seedReviewPhotoUploadBytesForTests(photoId: string, bytes: Buffer) {
@@ -677,9 +839,12 @@ export function setReviewPhotoModerationFetchForTests(nextFetch: typeof fetch | 
   reviewPhotoModerationFetch = nextFetch ?? fetch;
 }
 
-let skipBucketCheckForTests = false;
 export function setSkipBucketCheckForTests(skip: boolean) {
   skipBucketCheckForTests = skip;
+}
+
+export function setReviewPhotoStorageBucketForTests(bucket: StorageBucketLike | null) {
+  bucketOverrideForTests = bucket;
 }
 
 export async function createReviewPhotoUploadSession(input: {
@@ -689,11 +854,14 @@ export async function createReviewPhotoUploadSession(input: {
   fileName: string;
   contentType: string;
   sizeBytes: number;
+  /** Force memory-mode upload (skip signed-URL attempt). Used by the
+   *  one-shot endpoint that already has the bytes in hand. */
+  forceMemoryMode?: boolean;
 }) {
   const contentType = normalizeContentType(input.contentType);
   if (!contentType) {
     throw new ReviewPhotoModerationError(
-      'Only JPEG, PNG, and WEBP review photos are supported.',
+      'Unsupported format: only JPEG, PNG, WEBP, and HEIC photos are accepted.',
       400,
     );
   }
@@ -701,19 +869,8 @@ export async function createReviewPhotoUploadSession(input: {
   const sizeBytes = normalizeSizeBytes(input.sizeBytes);
   if (!sizeBytes || sizeBytes > MAX_REVIEW_PHOTO_BYTES) {
     throw new ReviewPhotoModerationError(
-      `Review photos must be smaller than ${Math.floor(MAX_REVIEW_PHOTO_BYTES / (1024 * 1024))}MB.`,
+      `File too large: review photos must be under ${Math.floor(MAX_REVIEW_PHOTO_BYTES / (1024 * 1024))} MB.`,
       400,
-    );
-  }
-
-  // Cloud Storage is required for photo uploads in production.
-  // Without FIREBASE_STORAGE_BUCKET, signed URLs and durable storage
-  // are unavailable — return a clear error instead of a 500.
-  const bucket = getBucket();
-  if (!bucket && !skipBucketCheckForTests) {
-    throw new ReviewPhotoModerationError(
-      'Photo uploads are temporarily unavailable. Please try again later.',
-      503,
     );
   }
 
@@ -732,6 +889,13 @@ export async function createReviewPhotoUploadSession(input: {
     fileName: sanitizedFileName,
   });
 
+  // Attempt to mint a signed upload URL. If Cloud Storage is not
+  // configured or the service account lacks signBlob permission, fall
+  // back to memory-mode so the frontend can upload bytes directly
+  // through the backend instead of to Cloud Storage.
+  const bucket = input.forceMemoryMode ? null : getBucket();
+  let uploadMode: 'signed_url' | 'memory' = bucket ? 'signed_url' : 'memory';
+
   const session: StoredReviewPhotoUploadSession = normalizeStoredRecord({
     id: photoId,
     storefrontId: input.storefrontId,
@@ -748,7 +912,7 @@ export async function createReviewPhotoUploadSession(input: {
     moderationReason: null,
     moderationCategories: [],
     moderationScore: null,
-    uploadMode: getBucket() ? 'signed_url' : 'memory',
+    uploadMode,
     uploadUrl: null,
     uploadExpiresAt: null,
     approvedAt: null,
@@ -759,16 +923,69 @@ export async function createReviewPhotoUploadSession(input: {
     updatedAt: getNowIso(),
   });
 
-  session.uploadUrl = await createSignedUploadUrl(session);
-  session.uploadExpiresAt = session.uploadUrl
-    ? new Date(Date.now() + UPLOAD_URL_TTL_MS).toISOString()
-    : null;
+  if (uploadMode === 'signed_url') {
+    session.uploadUrl = await createSignedUploadUrl(session);
+    if (session.uploadUrl) {
+      session.uploadExpiresAt = new Date(Date.now() + UPLOAD_URL_TTL_MS).toISOString();
+    } else {
+      // Signed URL creation failed (signBlob permission, bucket
+      // misconfiguration, etc.). Downgrade to memory mode so the
+      // frontend can upload bytes through the backend directly.
+      session.uploadMode = 'memory';
+      session.uploadExpiresAt = null;
+    }
+  }
+
   await saveStoredPhotoRecord(session);
 
   return {
     ...session,
     maximumBytes: MAX_REVIEW_PHOTO_BYTES,
   } satisfies ReviewPhotoUploadSessionResponse;
+}
+
+/**
+ * Receives raw photo bytes for a memory-mode upload session. This is the
+ * fallback path used when Cloud Storage signed URLs are unavailable (missing
+ * signBlob permission, bucket misconfiguration, etc.). The bytes are held
+ * in-memory until moderation completes, after which they can be promoted to
+ * Cloud Storage if the bucket becomes available.
+ */
+export async function receiveReviewPhotoBytes(photoId: string, bytes: Buffer) {
+  const session = await getStoredPhotoRecord(photoId);
+  if (!session) {
+    throw new ReviewPhotoModerationError('Review photo upload session not found.', 404);
+  }
+
+  if (session.uploadMode !== 'memory') {
+    throw new ReviewPhotoModerationError(
+      'Upload failed: this session expects a signed-URL upload, not a direct byte upload.',
+      400,
+    );
+  }
+
+  if (session.moderationStatus !== 'pending_upload') {
+    throw new ReviewPhotoModerationError(
+      'Upload failed: this session has already received its photo bytes.',
+      409,
+    );
+  }
+
+  if (bytes.length > MAX_REVIEW_PHOTO_BYTES) {
+    throw new ReviewPhotoModerationError(
+      `File too large: review photos must be under ${Math.floor(MAX_REVIEW_PHOTO_BYTES / (1024 * 1024))} MB.`,
+      400,
+    );
+  }
+
+  reviewPhotoBytesStore.set(photoId, bytes);
+  await saveStoredPhotoRecord({
+    ...session,
+    sizeBytes: bytes.length,
+    updatedAt: getNowIso(),
+  });
+
+  return { ok: true };
 }
 
 export async function completeReviewPhotoUpload(photoId: string) {
@@ -786,11 +1003,24 @@ export async function completeReviewPhotoUpload(photoId: string) {
     };
   }
 
-  if (
-    current.moderationStatus === 'rejected' ||
-    current.moderationStatus === 'needs_manual_review' ||
-    current.moderationStatus === 'failed'
-  ) {
+  if (current.moderationStatus === 'rejected' || current.moderationStatus === 'failed') {
+    return {
+      session: current,
+      publicUrl: null,
+    };
+  }
+
+  // Photos previously stuck in needs_manual_review can be auto-promoted
+  // when auto_approve mode is active, unblocking them without a dashboard.
+  if (current.moderationStatus === 'needs_manual_review') {
+    if (getPhotoModerationMode() === 'auto_approve') {
+      return promoteUploadedPhoto(current, {
+        reason: current.moderationReason ?? 'Auto-approved (no manual review dashboard).',
+        categories: current.moderationCategories,
+        score: current.moderationScore,
+        model: current.moderationModel,
+      });
+    }
     return {
       session: current,
       publicUrl: null,
@@ -805,13 +1035,13 @@ export async function completeReviewPhotoUpload(photoId: string) {
     updatedAt: nowIso,
   });
 
-  const imageBytes = await getPhotoDownloadBytes(nextProcessing);
+  let imageBytes = await getPhotoDownloadBytes(nextProcessing);
   if (!imageBytes) {
     const failed = await saveStoredPhotoRecord({
       ...nextProcessing,
       moderationStatus: 'failed',
       moderationDecision: 'needs_manual_review',
-      moderationReason: 'The uploaded file was not found after upload completion.',
+      moderationReason: 'Upload failed: the photo file was not found after upload.',
       reviewedAt: nowIso,
       updatedAt: nowIso,
     });
@@ -821,12 +1051,71 @@ export async function completeReviewPhotoUpload(photoId: string) {
     };
   }
 
+  // Convert HEIC/HEIF to JPEG so downstream moderation and storage
+  // always deal with a widely-supported format.
+  if (CONVERTIBLE_CONTENT_TYPES.has(nextProcessing.contentType)) {
+    try {
+      imageBytes = await convertToJpeg(imageBytes);
+      nextProcessing.contentType = 'image/jpeg';
+      nextProcessing.sizeBytes = imageBytes.length;
+      await saveStoredPhotoRecord({
+        ...nextProcessing,
+        updatedAt: getNowIso(),
+      });
+      // Replace in-memory bytes if present (memory-mode uploads)
+      if (reviewPhotoBytesStore.has(nextProcessing.id)) {
+        reviewPhotoBytesStore.set(nextProcessing.id, imageBytes);
+      }
+    } catch {
+      // If conversion fails: in auto_approve mode, approve anyway
+      // since there is no manual review dashboard. In strict mode,
+      // route to manual review.
+      if (getPhotoModerationMode() === 'auto_approve') {
+        return promoteUploadedPhoto(
+          nextProcessing,
+          {
+            reason: 'Image format conversion failed. Photo was auto-approved.',
+            categories: [],
+            score: null,
+            model: null,
+          },
+          nowIso,
+        );
+      }
+      const manual = await saveStoredPhotoRecord({
+        ...nextProcessing,
+        moderationStatus: 'needs_manual_review',
+        moderationDecision: 'needs_manual_review',
+        moderationReason:
+          'Needs manual review: the image format could not be converted automatically.',
+        reviewedAt: nowIso,
+        updatedAt: nowIso,
+      });
+      return {
+        session: manual,
+        publicUrl: null,
+      };
+    }
+  }
+
   if (!isEligibleForAutoModeration(nextProcessing.contentType, nextProcessing.sizeBytes)) {
+    if (getPhotoModerationMode() === 'auto_approve') {
+      return promoteUploadedPhoto(
+        nextProcessing,
+        {
+          reason: 'Photo could not be verified automatically. Auto-approved.',
+          categories: [],
+          score: null,
+          model: null,
+        },
+        nowIso,
+      );
+    }
     const manual = await saveStoredPhotoRecord({
       ...nextProcessing,
       moderationStatus: 'needs_manual_review',
       moderationDecision: 'needs_manual_review',
-      moderationReason: 'The upload type or size is not eligible for automatic publication.',
+      moderationReason: 'Needs manual review: this photo could not be verified automatically.',
       reviewedAt: nowIso,
       updatedAt: nowIso,
     });
@@ -860,6 +1149,21 @@ export async function completeReviewPhotoUpload(photoId: string) {
       session: rejected,
       publicUrl: null,
     };
+  }
+
+  // In auto_approve mode, promote needs_manual_review to approved
+  // since there is no manual review dashboard to clear these.
+  if (getPhotoModerationMode() === 'auto_approve') {
+    return promoteUploadedPhoto(
+      nextProcessing,
+      {
+        reason: moderation.reason,
+        categories: moderation.categories,
+        score: moderation.score,
+        model: moderation.model,
+      },
+      nowIso,
+    );
   }
 
   const manual = await saveStoredPhotoRecord({
@@ -926,7 +1230,7 @@ export async function attachReviewPhotosToReview(options: {
 
   if (invalidPhoto) {
     throw new ReviewPhotoModerationError(
-      'Attached review photos must finish moderation for this storefront and profile before review submission.',
+      'Upload still processing: attached photos must finish moderation before review submission.',
       409,
     );
   }

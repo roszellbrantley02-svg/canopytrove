@@ -11,6 +11,7 @@ import {
   primeStoredStorefrontCommunityState,
   saveStorefrontCommunityState,
 } from './storefrontCommunityLocalState';
+import { getCachedAppProfile } from './appProfileService';
 import {
   createCommunityLocalId,
   mapStoredReviewToAppReview,
@@ -30,9 +31,14 @@ export async function mergeLocalStorefrontCommunityIntoDetail(
 ): Promise<StorefrontDetails> {
   const communityState = await loadStorefrontCommunityState();
   const localReviews = communityState.appReviewsByStorefrontId[detail.storefrontId] ?? [];
+  const currentProfileId = getCachedAppProfile()?.id ?? null;
 
   const mergedLocalReviews = localReviews.map((review) =>
-    mapStoredReviewToAppReview(review, communityState.helpfulReviewsById[review.id]),
+    mapStoredReviewToAppReview(
+      review,
+      communityState.helpfulReviewsById[review.id],
+      currentProfileId,
+    ),
   );
 
   const mergedBaseReviews = detail.appReviews.map((review) => ({
@@ -132,25 +138,21 @@ export async function addLocalStorefrontReport(input: StorefrontReportSubmission
   await saveStorefrontCommunityState(state);
 }
 
-export async function markLocalStorefrontReviewHelpful(
-  input: StorefrontReviewHelpfulInput & { reviewAuthorProfileId?: string | null },
-) {
+export async function markLocalStorefrontReviewHelpful(input: StorefrontReviewHelpfulInput) {
   const state = cloneStorefrontCommunityState(await loadStorefrontCommunityState());
   const currentOverlay = state.helpfulReviewsById[input.reviewId] ?? {
     helpfulVoterIds: [],
   };
 
-  if (input.reviewAuthorProfileId && input.reviewAuthorProfileId === input.profileId) {
+  if (input.isOwnReview) {
     return {
       didApply: false,
-      reviewAuthorProfileId: input.reviewAuthorProfileId,
     };
   }
 
   if (currentOverlay.helpfulVoterIds.includes(input.profileId)) {
     return {
       didApply: false,
-      reviewAuthorProfileId: input.reviewAuthorProfileId ?? null,
     };
   }
 
@@ -161,6 +163,5 @@ export async function markLocalStorefrontReviewHelpful(
 
   return {
     didApply: true,
-    reviewAuthorProfileId: input.reviewAuthorProfileId ?? null,
   };
 }

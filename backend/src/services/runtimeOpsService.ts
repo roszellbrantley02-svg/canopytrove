@@ -21,6 +21,12 @@ const INCIDENT_24H_WINDOW_MS = 24 * 60 * 60_000;
 const runtimeIncidentStore = new Map<string, RuntimeIncidentRecord>();
 let runtimePolicyStore: RuntimePolicy | null = null;
 
+type RuntimePolicyContext = {
+  policy: RuntimePolicy;
+  incidents: RuntimeIncidentRecord[];
+  incidentCounts: RuntimeIncidentCounts;
+};
+
 function getNowIso() {
   return new Date().toISOString();
 }
@@ -196,6 +202,11 @@ async function persistRuntimePolicy(policy: RuntimePolicy) {
   return normalized;
 }
 
+export function clearRuntimeOpsMemoryStateForTests() {
+  runtimeIncidentStore.clear();
+  runtimePolicyStore = null;
+}
+
 function computeIncidentCounts(incidents: RuntimeIncidentRecord[]): RuntimeIncidentCounts {
   const now = Date.now();
   let last15Minutes = 0;
@@ -249,6 +260,81 @@ function shouldEnableAutomaticSafeMode(counts: RuntimeIncidentCounts) {
   );
 }
 
+async function loadRuntimePolicyContext(limit = 12): Promise<RuntimePolicyContext> {
+  const [policyResult, incidentsResult] = await Promise.allSettled([
+    getStoredRuntimePolicy(),
+    listRuntimeIncidentRecords(Math.max(limit, 40)),
+  ]);
+  const policy = policyResult.status === 'fulfilled' ? policyResult.value : createDefaultPolicy();
+  const incidents = incidentsResult.status === 'fulfilled' ? incidentsResult.value : [];
+  if (policyResult.status === 'rejected') {
+    console.warn(
+      '[runtimeOpsService] failed to load runtime policy, using default:',
+      policyResult.reason,
+    );
+  }
+  if (incidentsResult.status === 'rejected') {
+    console.warn('[runtimeOpsService] failed to load incident records:', incidentsResult.reason);
+  }
+
+  return {
+    policy,
+    incidents,
+    incidentCounts: computeIncidentCounts(incidents),
+  };
+}
+
+async function reconcileAutomaticRuntimePolicy(context: RuntimePolicyContext) {
+  const currentPolicy = context.policy;
+  const shouldEnableSafeMode = shouldEnableAutomaticSafeMode(context.incidentCounts);
+
+  if (
+    shouldEnableSafeMode &&
+    currentPolicy.trigger !== 'manual' &&
+    (currentPolicy.trigger !== 'automatic' || !currentPolicy.safeModeEnabled)
+  ) {
+    const nextPolicy = await persistRuntimePolicy(
+      createAutomaticSafeModePolicy(
+        `Automatic safe mode engaged after ${context.incidentCounts.criticalLast15Minutes} critical incidents in the last 15 minutes.`,
+      ),
+    );
+    await notifyRuntimeAlertSubscribers({
+      title: 'Canopy Trove entered protected mode',
+      body:
+        nextPolicy.reason ??
+        'Protected mode engaged automatically after elevated incident pressure.',
+      data: {
+        alertType: 'protected_mode_enabled',
+        incidentCount: String(context.incidentCounts.criticalLast15Minutes),
+      },
+      fingerprint: `runtime-policy:protected:${context.incidentCounts.criticalLast15Minutes}`,
+    });
+    return nextPolicy;
+  }
+
+  if (!shouldEnableSafeMode && currentPolicy.trigger === 'automatic') {
+    const nextPolicy = await persistRuntimePolicy(
+      createOpenPolicy('Automatic safe mode cleared after incident pressure dropped.'),
+    );
+    await notifyRuntimeAlertSubscribers({
+      title: 'Canopy Trove resumed normal mode',
+      body: nextPolicy.reason ?? 'Protected mode cleared after runtime incident pressure dropped.',
+      data: {
+        alertType: 'protected_mode_cleared',
+      },
+      fingerprint: 'runtime-policy:normal',
+    });
+    return nextPolicy;
+  }
+
+  return currentPolicy;
+}
+
+async function getEffectiveRuntimePolicy() {
+  const context = await loadRuntimePolicyContext(6);
+  return reconcileAutomaticRuntimePolicy(context);
+}
+
 export async function recordRuntimeIncident(input: {
   kind: RuntimeIncidentRecord['kind'];
   severity: RuntimeIncidentSeverity;
@@ -295,27 +381,14 @@ export async function recordRuntimeIncident(input: {
 }
 
 export async function getRuntimeOpsStatus(limit = 12): Promise<RuntimeOpsStatus> {
-  const [policyResult, incidentsResult] = await Promise.allSettled([
-    getStoredRuntimePolicy(),
-    listRuntimeIncidentRecords(Math.max(limit, 40)),
-  ]);
-  const policy = policyResult.status === 'fulfilled' ? policyResult.value : createDefaultPolicy();
-  const incidents = incidentsResult.status === 'fulfilled' ? incidentsResult.value : [];
-  if (policyResult.status === 'rejected') {
-    console.warn(
-      '[runtimeOpsService] failed to load runtime policy, using default:',
-      policyResult.reason,
-    );
-  }
-  if (incidentsResult.status === 'rejected') {
-    console.warn('[runtimeOpsService] failed to load incident records:', incidentsResult.reason);
-  }
+  const context = await loadRuntimePolicyContext(limit);
+  const policy = await reconcileAutomaticRuntimePolicy(context);
   const { getRuntimeMonitoringStatus } = await import('./healthMonitorService');
 
   return {
     policy,
-    incidentCounts: computeIncidentCounts(incidents),
-    recentIncidents: incidents.slice(0, limit),
+    incidentCounts: context.incidentCounts,
+    recentIncidents: context.incidents.slice(0, limit),
     monitoring: await getRuntimeMonitoringStatus(),
   };
 }
@@ -338,52 +411,14 @@ export async function saveRuntimePolicy(input: RuntimePolicyInput) {
 }
 
 export async function evaluateRuntimePolicy() {
-  const status = await getRuntimeOpsStatus();
-  const currentPolicy = status.policy;
-  const shouldEnableSafeMode = shouldEnableAutomaticSafeMode(status.incidentCounts);
-
-  if (shouldEnableSafeMode && currentPolicy.trigger !== 'manual') {
-    const nextPolicy = await persistRuntimePolicy(
-      createAutomaticSafeModePolicy(
-        `Automatic safe mode engaged after ${status.incidentCounts.criticalLast15Minutes} critical incidents in the last 15 minutes.`,
-      ),
-    );
-    await notifyRuntimeAlertSubscribers({
-      title: 'Canopy Trove entered protected mode',
-      body:
-        nextPolicy.reason ??
-        'Protected mode engaged automatically after elevated incident pressure.',
-      data: {
-        alertType: 'protected_mode_enabled',
-        incidentCount: String(status.incidentCounts.criticalLast15Minutes),
-      },
-      fingerprint: `runtime-policy:protected:${status.incidentCounts.criticalLast15Minutes}`,
-    });
-    return nextPolicy;
-  }
-
-  if (!shouldEnableSafeMode && currentPolicy.trigger === 'automatic') {
-    const nextPolicy = await persistRuntimePolicy(
-      createOpenPolicy('Automatic safe mode cleared after incident pressure dropped.'),
-    );
-    await notifyRuntimeAlertSubscribers({
-      title: 'Canopy Trove resumed normal mode',
-      body: nextPolicy.reason ?? 'Protected mode cleared after runtime incident pressure dropped.',
-      data: {
-        alertType: 'protected_mode_cleared',
-      },
-      fingerprint: 'runtime-policy:normal',
-    });
-    return nextPolicy;
-  }
-
-  return currentPolicy;
+  const context = await loadRuntimePolicyContext();
+  return reconcileAutomaticRuntimePolicy(context);
 }
 
 export async function assertRuntimePolicyAllowsOwnerAction(
   action: 'promotion' | 'review_reply' | 'profile_tools',
 ) {
-  const policy = await getStoredRuntimePolicy();
+  const policy = await getEffectiveRuntimePolicy();
   if (!policy.ownerPortalWritesEnabled) {
     const error = new Error(
       'Owner portal writes are temporarily paused while the system stabilizes.',

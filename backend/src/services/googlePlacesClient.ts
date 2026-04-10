@@ -1,5 +1,6 @@
 import {
   GOOGLE_MAPS_API_KEY,
+  consumeDailyApiBudget,
   hasGooglePlacesConfig,
   markGooglePlacesConfigHealthy,
   markGooglePlacesConfigTemporarilyUnavailable,
@@ -25,6 +26,12 @@ export async function requestGoogleJson<T>(
   }
 
   if (!isAllowedGooglePlacesUrl(url)) {
+    return null;
+  }
+
+  // Enforce daily budget (Firestore-backed, shared across all Cloud Run instances).
+  // Once exhausted, all API calls return null until the next UTC midnight reset.
+  if (!(await consumeDailyApiBudget())) {
     return null;
   }
 

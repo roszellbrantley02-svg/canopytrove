@@ -581,6 +581,16 @@ export const ownerPortalStyles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
+  mediaActionButton: {
+    flexGrow: 1,
+    flexShrink: 1,
+  },
+  mediaActionButtonCompact: {
+    width: '100%',
+  },
+  mediaLinkToggleButton: {
+    alignSelf: 'flex-start',
+  },
   metricCardWarm: {
     borderColor: 'rgba(245, 200, 106, 0.18)',
     backgroundColor: 'rgba(245, 200, 106, 0.08)',
@@ -1156,6 +1166,20 @@ export const ownerPortalStyles = StyleSheet.create({
     borderColor: colors.borderSoft,
     backgroundColor: colors.surface,
     marginTop: spacing.sm,
+  },
+  uploadPreviewRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  uploadPreviewThumb: {
+    width: 72,
+    height: 72,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surface,
   },
   limitNotice: {
     ...textStyles.body,

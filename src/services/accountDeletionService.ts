@@ -7,6 +7,7 @@ import { createFreshAppProfile } from './appProfileService';
 import { buildCanopyTroveAccountDeletionSummary } from './accountDeletionSummary';
 import type { CanopyTroveAuthDeletionResult } from './canopyTroveAuthService';
 import { deleteCanopyTroveAuthAccount, signOutCanopyTroveSession } from './canopyTroveAuthService';
+import { replaceCommunitySafetyState } from './communitySafetyService';
 
 export type CanopyTroveAccountDeletionResult = {
   ok: boolean;
@@ -90,6 +91,10 @@ export async function deleteCanopyTroveAccount(options: {
   }
 
   await clearCanopyTroveLocalStorage();
+  await replaceCommunitySafetyState(null, {
+    persist: false,
+    trackMutation: false,
+  });
   const nextProfile = await createFreshAppProfile();
   const summary = buildCanopyTroveAccountDeletionSummary({
     isAuthenticatedAccount: options.isAuthenticatedAccount,

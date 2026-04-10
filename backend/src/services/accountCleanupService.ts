@@ -1,3 +1,4 @@
+import { deleteCommunitySafetyState } from './communitySafetyStateService';
 import { deleteFavoriteDealAlertRecord } from './favoriteDealAlertService';
 import { deleteGamificationState } from './gamificationPersistenceService';
 import { deleteProfile } from './profileService';
@@ -13,6 +14,7 @@ type AccountCleanupDependencies = {
   deleteGamificationState: typeof deleteGamificationState;
   deleteProfile: typeof deleteProfile;
   deleteRouteState: typeof deleteRouteState;
+  deleteCommunitySafetyState: typeof deleteCommunitySafetyState;
   deleteCommunityContentForProfile: typeof deleteCommunityContentForProfile;
   deleteOwnerLicenseComplianceRecordsForOwner: typeof deleteOwnerLicenseComplianceRecordsForOwner;
   deleteOwnerBusinessVerificationRecord: typeof deleteOwnerBusinessVerificationRecord;
@@ -28,6 +30,7 @@ const defaultDependencies: AccountCleanupDependencies = {
   deleteGamificationState,
   deleteProfile,
   deleteRouteState,
+  deleteCommunitySafetyState,
   deleteCommunityContentForProfile,
   deleteOwnerLicenseComplianceRecordsForOwner,
   deleteOwnerBusinessVerificationRecord,
@@ -69,6 +72,9 @@ export async function deleteProfileAccountData(
       runCleanupStep('gamification_state', () => dependencies.deleteGamificationState(profileId)),
       runCleanupStep('favorite_deal_alerts', () =>
         dependencies.deleteFavoriteDealAlertRecord(profileId),
+      ),
+      runCleanupStep('community_safety_state', () =>
+        dependencies.deleteCommunitySafetyState(profileId),
       ),
       runCleanupStep('community_content', () =>
         dependencies.deleteCommunityContentForProfile(profileId),

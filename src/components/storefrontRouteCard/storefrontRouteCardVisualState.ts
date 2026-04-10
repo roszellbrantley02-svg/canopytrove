@@ -1,5 +1,6 @@
 import type { PreviewTone } from '../mapGridPreview/mapGridPreviewTones';
 import type { StorefrontSummary } from '../../types/storefront';
+import { Platform } from 'react-native';
 
 export type StorefrontCardVisualLane =
   | 'hotDeal'
@@ -72,11 +73,19 @@ export function getStorefrontCardHeroLabel({
   activePromotionCount: number;
   isVerified: boolean;
 }) {
+  const isAndroid = Platform.OS === 'android';
+
   switch (lane) {
     case 'hotDeal':
-      return activePromotionCount > 1 ? `${activePromotionCount} Live Deals` : 'Live deal';
+      return activePromotionCount > 1
+        ? isAndroid
+          ? `${activePromotionCount} Recent Updates`
+          : `${activePromotionCount} Live Deals`
+        : isAndroid
+          ? 'Recent update'
+          : 'Live deal';
     case 'ownerFeatured':
-      return 'Owner featured';
+      return isAndroid ? 'Featured update' : 'Owner featured';
     case 'newToYou':
       return 'New to you';
     case 'saved':

@@ -5,13 +5,17 @@ import {
   StorefrontSummaryDocument,
 } from '../../../src/types/firestoreDocuments';
 import { backendStorefrontSource, backendStorefrontSourceStatus } from '../sources';
-import { clearStorefrontBackendCache } from './storefrontCacheService';
+import {
+  clearStorefrontBackendCache,
+  invalidateCachedStorefrontDetail,
+} from './storefrontCacheService';
 import {
   buildDiscoveryCandidateDocument,
   buildPublishedStorefrontDetailDocument,
   buildPublishedStorefrontSummaryDocument,
   resolveDiscoveryGoogleData,
 } from './storefrontDiscoveryEnrichmentService';
+import { resolveWebsiteHoursFallback } from './storefrontWebsiteHoursService';
 import {
   clearStorefrontDiscoveryRepositoryState,
   getLatestStorefrontDiscoveryRun,
@@ -39,6 +43,8 @@ import {
   listStorefrontDiscoverySources,
 } from './storefrontDiscoverySourceService';
 import { clearBackendStorefrontSourceCaches, warmBackendStorefrontSource } from '../sources';
+import { getDailyApiBudgetStatus } from './googlePlacesShared';
+import { computeOpenNowFromHours } from '../utils/storefrontOperationalStatus';
 
 const STOREFRONT_SUMMARIES_COLLECTION = 'storefront_summaries';
 const STOREFRONT_DETAILS_COLLECTION = 'storefront_details';
@@ -61,11 +67,27 @@ type DiscoveryPersistenceBatch = {
   commit(): Promise<unknown>;
 };
 
+type DiscoveryMergePersistenceBatch = {
+  set(
+    reference: DiscoveryPersistenceDocRef,
+    value: Record<string, unknown>,
+    options?: { merge?: boolean },
+  ): DiscoveryMergePersistenceBatch;
+  commit(): Promise<unknown>;
+};
+
 type DiscoveryPersistenceDb = {
   collection(name: string): {
     doc(id: string): DiscoveryPersistenceDocRef;
   };
   batch(): DiscoveryPersistenceBatch;
+};
+
+type DiscoveryMergePersistenceDb = {
+  collection(name: string): {
+    doc(id: string): DiscoveryPersistenceDocRef;
+  };
+  batch(): DiscoveryMergePersistenceBatch;
 };
 
 function createNowIso() {
@@ -103,6 +125,16 @@ function buildEmptyDiscoveryState(): StorefrontDiscoveryStateDocument {
     lastRunLimit: null,
     lastRunMarketId: null,
   };
+}
+
+function hasMeaningfulHours(hours: string[] | null | undefined) {
+  return Boolean(
+    hours?.some(
+      (entry) =>
+        entry.trim().length > 0 &&
+        !/hours not published yet|verified store hours pending/i.test(entry),
+    ),
+  );
 }
 
 function isProductionLikeEnvironment() {
@@ -204,6 +236,48 @@ async function persistPublishedStorefrontDocuments(
   clearStorefrontBackendCache();
   clearBackendStorefrontSourceCaches();
   await warmBackendStorefrontSource();
+}
+
+async function patchPublishedStorefrontHours(
+  storefrontId: string,
+  hours: string[],
+  openNow: boolean | null,
+  publishedAt: string,
+  options?: {
+    detailExists?: boolean;
+    dbOverride?: DiscoveryMergePersistenceDb | null;
+  },
+) {
+  const db = (options?.dbOverride ?? getBackendFirebaseDb()) as DiscoveryMergePersistenceDb | null;
+  if (!db) {
+    return;
+  }
+
+  const summaryRef = db.collection(STOREFRONT_SUMMARIES_COLLECTION).doc(storefrontId);
+  const detailRef = db.collection(STOREFRONT_DETAILS_COLLECTION).doc(storefrontId);
+  const batch = db.batch();
+  batch.set(
+    summaryRef,
+    stripUndefinedDeep({
+      hours,
+      openNow,
+      publishedAt,
+    }),
+    { merge: true },
+  );
+  if (options?.detailExists !== false) {
+    batch.set(
+      detailRef,
+      stripUndefinedDeep({
+        hours,
+        openNow,
+        publishedAt,
+      }),
+      { merge: true },
+    );
+  }
+
+  await batch.commit();
 }
 
 function buildRunDocument(input: {
@@ -359,7 +433,9 @@ export async function runStorefrontDiscoverySweep(input: {
       for (const source of sourceRecords) {
         try {
           const existing = await getStorefrontDiscoveryCandidate(source.id);
-          const discoveryGoogleData = await resolveDiscoveryGoogleData(source);
+          const discoveryGoogleData = await resolveDiscoveryGoogleData(source, {
+            existingCandidate: existing,
+          });
           const stagedCandidate = buildDiscoveryCandidateDocument(source, {
             googlePlaceId: discoveryGoogleData.googlePlaceId,
             googleEnrichment: discoveryGoogleData.googleEnrichment,
@@ -370,14 +446,18 @@ export async function runStorefrontDiscoverySweep(input: {
           let nextCandidate = stagedCandidate;
 
           if (alreadyPublic && stagedCandidate.publicationStatus !== 'suppressed') {
+            const publishedEnrichment = await resolveWebsiteHoursFallback(
+              source,
+              stagedCandidate.googleEnrichment,
+            );
             const publishedSummary: StorefrontSummaryDocument =
               buildPublishedStorefrontSummaryDocument(
                 source,
                 stagedCandidate.googlePlaceId,
-                stagedCandidate.googleEnrichment,
+                publishedEnrichment,
               );
             const publishedDetail: StorefrontDetailDocument =
-              buildPublishedStorefrontDetailDocument(source, stagedCandidate.googleEnrichment);
+              buildPublishedStorefrontDetailDocument(source, publishedEnrichment);
             await persistPublishedStorefrontDocuments(
               source.id,
               publishedSummary,
@@ -390,6 +470,7 @@ export async function runStorefrontDiscoverySweep(input: {
             refreshedPublishedDocuments = true;
             nextCandidate = {
               ...stagedCandidate,
+              googleEnrichment: publishedEnrichment,
               publicationStatus: 'published',
               publicationReason:
                 existing?.publicationStatus === 'published'
@@ -573,14 +654,15 @@ export async function publishStorefrontDiscoveryCandidate(candidateId: string) {
   }
 
   const source = candidate.source;
+  const publishedEnrichment = await resolveWebsiteHoursFallback(source, candidate.googleEnrichment);
   const publishedSummary: StorefrontSummaryDocument = buildPublishedStorefrontSummaryDocument(
     source,
     candidate.googlePlaceId,
-    candidate.googleEnrichment,
+    publishedEnrichment,
   );
   const publishedDetail: StorefrontDetailDocument = buildPublishedStorefrontDetailDocument(
     source,
-    candidate.googleEnrichment,
+    publishedEnrichment,
   );
 
   await persistPublishedStorefrontDocuments(
@@ -593,6 +675,7 @@ export async function publishStorefrontDiscoveryCandidate(candidateId: string) {
   const nowIso = createNowIso();
   const nextCandidate: StorefrontDiscoveryCandidateDocument = {
     ...candidate,
+    googleEnrichment: publishedEnrichment,
     publicationStatus: 'published',
     publicationReason: 'Published manually from the discovery staging queue.',
     publishedAt: candidate.publishedAt ?? nowIso,
@@ -626,6 +709,108 @@ export async function publishStorefrontDiscoveryCandidate(candidateId: string) {
   };
 }
 
+export async function refreshPublishedStorefrontWebsiteHours(input?: {
+  limit?: number | null;
+  storefrontIds?: string[] | null;
+  marketId?: string | null;
+}) {
+  const normalizedIds = Array.from(
+    new Set((input?.storefrontIds ?? []).map((value) => value.trim()).filter(Boolean)),
+  );
+  const normalizedLimit =
+    typeof input?.limit === 'number' && Number.isFinite(input.limit)
+      ? Math.max(1, Math.floor(input.limit))
+      : 50;
+  const sourceRecords = await listStorefrontDiscoverySources({
+    marketId: input?.marketId ?? null,
+  });
+  const sourceById = new Map(sourceRecords.map((source) => [source.id, source] as const));
+  const allPublishedSummaries = await backendStorefrontSource.getAllSummaries();
+  const targets = allPublishedSummaries
+    .filter((summary) =>
+      normalizedIds.length
+        ? normalizedIds.includes(summary.id)
+        : !hasMeaningfulHours(summary.hours),
+    )
+    .filter((summary) => (input?.marketId ? summary.marketId === input.marketId : true))
+    .slice(0, normalizedLimit);
+
+  const refreshedIds: string[] = [];
+  const skipped: Array<{ storefrontId: string; reason: string }> = [];
+  const nowIso = createNowIso();
+
+  for (const summary of targets) {
+    const source = sourceById.get(summary.id);
+    if (!source) {
+      skipped.push({
+        storefrontId: summary.id,
+        reason: 'Source storefront record was not found in the discovery seed.',
+      });
+      continue;
+    }
+
+    try {
+      const existingCandidate = await getStorefrontDiscoveryCandidate(summary.id);
+      const nextEnrichment = await resolveWebsiteHoursFallback(
+        source,
+        existingCandidate?.googleEnrichment ?? null,
+      );
+      if (!nextEnrichment || !hasMeaningfulHours(nextEnrichment.hours)) {
+        skipped.push({
+          storefrontId: summary.id,
+          reason: 'No website or Google hours were available to backfill.',
+        });
+        continue;
+      }
+
+      const resolvedOpenNow =
+        typeof nextEnrichment.openNow === 'boolean'
+          ? nextEnrichment.openNow
+          : computeOpenNowFromHours(nextEnrichment.hours);
+      const existingDetail = await backendStorefrontSource.getDetailsById(summary.id);
+      await patchPublishedStorefrontHours(
+        summary.id,
+        nextEnrichment.hours,
+        resolvedOpenNow,
+        nowIso,
+        {
+          detailExists: Boolean(existingDetail),
+        },
+      );
+      if (existingCandidate) {
+        await saveStorefrontDiscoveryCandidate({
+          ...existingCandidate,
+          googleEnrichment: nextEnrichment,
+          publicationStatus: existingCandidate.publicationStatus,
+          updatedAt: nowIso,
+          lastCheckedAt: nowIso,
+        });
+      }
+      refreshedIds.push(summary.id);
+    } catch (error) {
+      skipped.push({
+        storefrontId: summary.id,
+        reason: error instanceof Error ? error.message : 'Unknown website-hours refresh failure.',
+      });
+    }
+  }
+
+  if (refreshedIds.length) {
+    clearStorefrontBackendCache();
+    clearBackendStorefrontSourceCaches();
+    refreshedIds.forEach((storefrontId) => invalidateCachedStorefrontDetail(storefrontId));
+    await warmBackendStorefrontSource();
+  }
+
+  return {
+    ok: true as const,
+    scannedCount: targets.length,
+    refreshedCount: refreshedIds.length,
+    refreshedIds,
+    skipped,
+  };
+}
+
 export async function getStorefrontDiscoveryStatus(): Promise<StorefrontDiscoveryStatusDocument> {
   const state = await loadStorefrontDiscoveryState();
   const latestRun = await getLatestStorefrontDiscoveryRun();
@@ -642,6 +827,7 @@ export async function getStorefrontDiscoveryStatus(): Promise<StorefrontDiscover
         : null),
     latestRun,
     state,
+    apiBudget: getDailyApiBudgetStatus(),
   };
 }
 
@@ -791,4 +977,5 @@ export {
   clearStorefrontDiscoveryRepositoryState,
   clearStorefrontDiscoverySourceCacheForTests,
   persistPublishedStorefrontDocuments as persistPublishedStorefrontDocumentsForTests,
+  patchPublishedStorefrontHours as patchPublishedStorefrontHoursForTests,
 };

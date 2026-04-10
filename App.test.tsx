@@ -150,7 +150,9 @@ async function renderApp() {
 
 describe('App entry flow', () => {
   beforeEach(() => {
-    (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    (
+      globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
     vi.useFakeTimers();
     vi.clearAllMocks();
     ageGateMocks.hasAcceptedAgeGate.mockResolvedValue(false);
@@ -179,6 +181,26 @@ describe('App entry flow', () => {
     expect(renderer.root.findAllByType('AgeGateScreen')).toHaveLength(1);
   });
 
+  it('preloads the main app behind the boot screen for returning users who already passed the age gate', async () => {
+    ageGateMocks.hasAcceptedAgeGate.mockResolvedValue(true);
+
+    const renderer = await renderApp();
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findAllByType('AppBootScreen')).toHaveLength(1);
+    expect(renderer.root.findAllByType('AgeGateScreen')).toHaveLength(0);
+    expect(renderer.root.findAllByType('RootNavigator')).toHaveLength(1);
+
+    await flushTimers(MINIMUM_BOOT_DISPLAY_MS);
+
+    expect(renderer.root.findAllByType('AgeGateScreen')).toHaveLength(0);
+    expect(appLifecycleMocks.primeAppBootstrap).toHaveBeenCalledTimes(1);
+  });
+
   it('enters the main app after the user accepts the age gate', async () => {
     const renderer = await renderApp();
 
@@ -194,8 +216,56 @@ describe('App entry flow', () => {
 
     expect(ageGateMocks.acceptAgeGate).toHaveBeenCalledTimes(1);
     expect(renderer.root.findAllByType('RootNavigator')).toHaveLength(1);
-    expect(appLifecycleMocks.initializeAnalytics).toHaveBeenCalledTimes(1);
-    expect(appLifecycleMocks.initializePostVisitPrompts).toHaveBeenCalledTimes(1);
+
+    // primeAppBootstrap runs immediately after age-gate acceptance
     expect(appLifecycleMocks.primeAppBootstrap).toHaveBeenCalledTimes(1);
+
+    // Analytics is deferred by 1500ms to free the main thread.
+    expect(appLifecycleMocks.initializeAnalytics).not.toHaveBeenCalled();
+    expect(appLifecycleMocks.initializePostVisitPrompts).not.toHaveBeenCalled();
+    expect(appLifecycleMocks.getRuntimeOpsStatus).not.toHaveBeenCalled();
+
+    await flushTimers(1500);
+
+    expect(appLifecycleMocks.initializeAnalytics).toHaveBeenCalledTimes(1);
+    expect(appLifecycleMocks.initializeRuntimeReporting).toHaveBeenCalledTimes(1);
+    expect(appLifecycleMocks.initializePostVisitPrompts).not.toHaveBeenCalled();
+    expect(appLifecycleMocks.getRuntimeOpsStatus).not.toHaveBeenCalled();
+
+    // Post-visit prompts and runtime ops status stay deferred longer to protect first paint.
+    await flushTimers(2500);
+
+    expect(appLifecycleMocks.initializePostVisitPrompts).toHaveBeenCalledTimes(1);
+    expect(appLifecycleMocks.getRuntimeOpsStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not block entry when age-gate persistence is slow', async () => {
+    let resolveAcceptGate: (() => void) | null = null;
+    ageGateMocks.acceptAgeGate.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveAcceptGate = resolve;
+        }),
+    );
+
+    const renderer = await renderApp();
+
+    await flushTimers(MINIMUM_BOOT_DISPLAY_MS);
+
+    const ageGate = renderer.root.findByType('AgeGateScreen');
+
+    await act(async () => {
+      ageGate.props.onAccept();
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findAllByType('RootNavigator')).toHaveLength(1);
+    expect(renderer.root.findAllByType('AgeGateScreen')).toHaveLength(0);
+    expect(ageGateMocks.acceptAgeGate).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveAcceptGate?.();
+      await Promise.resolve();
+    });
   });
 });

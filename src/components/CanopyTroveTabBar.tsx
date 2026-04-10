@@ -11,7 +11,7 @@ import type { RootTabParamList } from '../navigation/RootNavigator';
 const TAB_LABELS: Record<keyof RootTabParamList, string> = {
   Nearby: 'Nearby',
   Browse: 'Browse',
-  HotDeals: 'Hot Deals',
+  HotDeals: Platform.OS === 'android' ? 'Updates' : 'Hot Deals',
   Profile: 'Profile',
 };
 

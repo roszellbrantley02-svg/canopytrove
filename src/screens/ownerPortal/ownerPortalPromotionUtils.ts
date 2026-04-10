@@ -171,13 +171,21 @@ export function getPromotionPlannerStateFromPromotion(
 }
 
 export function getPromotionPlannerTitle(editingPromotionId: string | null) {
-  return editingPromotionId ? 'Editing selected promotion' : 'Create a new promotion';
+  if (editingPromotionId) {
+    return Platform.OS === 'android' ? 'Editing selected update' : 'Editing selected promotion';
+  }
+
+  return Platform.OS === 'android' ? 'Create a new update' : 'Create a new promotion';
 }
 
 export function getPromotionPlannerBody(editingPromotionId: string | null) {
   return editingPromotionId
-    ? 'Update timing, lane, placement, or highlight reach without losing the existing promotion state.'
-    : 'Choose a card tone that matches your offer. Hot Deal creates urgency. Owner Highlight feels premium and curated. Standard keeps it clean and neutral.';
+    ? Platform.OS === 'android'
+      ? 'Update timing, lane, placement, or highlight reach without losing the existing update state.'
+      : 'Update timing, lane, placement, or highlight reach without losing the existing promotion state.'
+    : Platform.OS === 'android'
+      ? 'Choose a card tone that matches your update. Featured Update adds urgency. Owner Highlight feels premium and curated. Standard keeps it clean and neutral.'
+      : 'Choose a card tone that matches your offer. Hot Deal creates urgency. Owner Highlight feels premium and curated. Standard keeps it clean and neutral.';
 }
 
 export function getPromotionPlannerModeLabel(editingPromotionId: string | null) {
@@ -193,11 +201,15 @@ export function getPromotionRuntimeMessage(
   safeModeEnabled: boolean,
 ) {
   if (!promotionWritesEnabled) {
-    return 'Promotion writes are temporarily paused while the system stabilizes.';
+    return Platform.OS === 'android'
+      ? 'Update publishing is temporarily paused while the system stabilizes.'
+      : 'Promotion writes are temporarily paused while the system stabilizes.';
   }
 
   if (safeModeEnabled) {
-    return 'Protected mode is active. Promotion analytics remain visible while live changes are monitored more closely.';
+    return Platform.OS === 'android'
+      ? 'Protected mode is active. Update analytics remain visible while live changes are monitored more closely.'
+      : 'Protected mode is active. Promotion analytics remain visible while live changes are monitored more closely.';
   }
 
   return null;
@@ -334,15 +346,23 @@ export function getPromotionSaveButtonLabel({
   editingPromotionId: string | null;
 }) {
   if (preview) {
+    if (Platform.OS === 'android') {
+      return editingPromotionId ? 'Save Preview Update' : 'Create Preview Update';
+    }
+
     return editingPromotionId ? 'Update Preview Promotion' : 'Save Preview Promotion';
   }
 
   if (!promotionWritesEnabled) {
-    return 'Promotions Paused';
+    return Platform.OS === 'android' ? 'Updates Paused' : 'Promotions Paused';
   }
 
   if (isSaving) {
     return 'Saving...';
+  }
+
+  if (Platform.OS === 'android') {
+    return editingPromotionId ? 'Save Update' : 'Create Update';
   }
 
   return editingPromotionId ? 'Update Promotion' : 'Create Promotion';

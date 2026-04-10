@@ -11,6 +11,11 @@ import {
 import { serverConfig } from '../config';
 import { getOwnerPortalWorkspace } from './ownerPortalWorkspaceService';
 import { recordRuntimeIncident } from './runtimeOpsService';
+import {
+  assertOwnerAiInputAllowed,
+  buildOwnerAiUserIdentifier,
+  OwnerAiDraftInput,
+} from './ownerPortalAiSafetyService';
 
 type OpenAiChatCompletionResponse = {
   choices?: Array<{
@@ -21,6 +26,18 @@ type OpenAiChatCompletionResponse = {
 };
 
 const OPENAI_TIMEOUT_MS = 15_000;
+const OWNER_AI_MAX_HEADLINE_LENGTH = 120;
+const OWNER_AI_MAX_SUMMARY_LENGTH = 260;
+const OWNER_AI_MAX_PRIORITY_TITLE_LENGTH = 80;
+const OWNER_AI_MAX_PRIORITY_BODY_LENGTH = 180;
+const OWNER_AI_MAX_PROMOTION_TITLE_LENGTH = 80;
+const OWNER_AI_MAX_PROMOTION_DESCRIPTION_LENGTH = 220;
+const OWNER_AI_MAX_BADGE_LENGTH = 32;
+const OWNER_AI_MAX_REASONING_LENGTH = 220;
+const OWNER_AI_MAX_REPLY_TEXT_LENGTH = 220;
+const OWNER_AI_MAX_REPLY_TONE_LENGTH = 40;
+const OWNER_AI_MAX_PROFILE_SUMMARY_LENGTH = 240;
+const OWNER_AI_MAX_VERIFIED_BADGE_LABEL_LENGTH = 40;
 
 function getNowIso() {
   return new Date().toISOString();
@@ -86,17 +103,47 @@ function parseRequiredString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function parseOptionalString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
+function parseBoundedRequiredString(value: unknown, maxLength: number) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (!normalized || normalized.length > maxLength) {
+    return null;
+  }
+
+  return normalized;
 }
 
-function parseStringArray(value: unknown, options?: { maxItems?: number }) {
+function parseBoundedOptionalString(value: unknown, maxLength: number) {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (!normalized || normalized.length > maxLength) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function parseStringArray(value: unknown, options?: { maxItems?: number; maxItemLength?: number }) {
   if (!Array.isArray(value)) {
     return null;
   }
 
   const normalized = value
-    .map((entry) => parseRequiredString(entry))
+    .map((entry) =>
+      options?.maxItemLength
+        ? parseBoundedRequiredString(entry, options.maxItemLength)
+        : parseRequiredString(entry),
+    )
     .filter((entry): entry is string => Boolean(entry));
 
   return options?.maxItems ? normalized.slice(0, options.maxItems) : normalized;
@@ -119,8 +166,8 @@ function validateOwnerAiActionPlanPayload(
     return null;
   }
 
-  const headline = parseRequiredString(payload.headline);
-  const summary = parseRequiredString(payload.summary);
+  const headline = parseBoundedRequiredString(payload.headline, OWNER_AI_MAX_HEADLINE_LENGTH);
+  const summary = parseBoundedRequiredString(payload.summary, OWNER_AI_MAX_SUMMARY_LENGTH);
   const priorityItems = Array.isArray(payload.priorities) ? payload.priorities : null;
   if (!headline || !summary || !priorityItems) {
     return null;
@@ -133,8 +180,8 @@ function validateOwnerAiActionPlanPayload(
         return null;
       }
 
-      const title = parseRequiredString(record.title);
-      const body = parseRequiredString(record.body);
+      const title = parseBoundedRequiredString(record.title, OWNER_AI_MAX_PRIORITY_TITLE_LENGTH);
+      const body = parseBoundedRequiredString(record.body, OWNER_AI_MAX_PRIORITY_BODY_LENGTH);
       const tone = parseEnumValue(record.tone, OWNER_AI_PRIORITY_TONES);
       if (!title || !body || !tone) {
         return null;
@@ -164,9 +211,15 @@ function validateOwnerAiPromotionDraftPayload(
     return null;
   }
 
-  const title = parseRequiredString(payload.title);
-  const description = parseRequiredString(payload.description);
-  const badges = parseStringArray(payload.badges, { maxItems: 5 });
+  const title = parseBoundedRequiredString(payload.title, OWNER_AI_MAX_PROMOTION_TITLE_LENGTH);
+  const description = parseBoundedRequiredString(
+    payload.description,
+    OWNER_AI_MAX_PROMOTION_DESCRIPTION_LENGTH,
+  );
+  const badges = parseStringArray(payload.badges, {
+    maxItems: 5,
+    maxItemLength: OWNER_AI_MAX_BADGE_LENGTH,
+  });
   const audienceRaw = Array.isArray(payload.audiences)
     ? payload.audiences
     : payload.audience
@@ -183,7 +236,7 @@ function validateOwnerAiPromotionDraftPayload(
     payload.placementScope,
     OWNER_AI_PROMOTION_PLACEMENT_SCOPES,
   );
-  const reasoning = parseRequiredString(payload.reasoning);
+  const reasoning = parseBoundedRequiredString(payload.reasoning, OWNER_AI_MAX_REASONING_LENGTH);
 
   if (
     !title ||
@@ -229,9 +282,9 @@ function validateOwnerAiReviewReplyDraftPayload(
     return null;
   }
 
-  const text = parseRequiredString(payload.text);
-  const tone = parseRequiredString(payload.tone);
-  const reasoning = parseRequiredString(payload.reasoning);
+  const text = parseBoundedRequiredString(payload.text, OWNER_AI_MAX_REPLY_TEXT_LENGTH);
+  const tone = parseBoundedRequiredString(payload.tone, OWNER_AI_MAX_REPLY_TONE_LENGTH);
+  const reasoning = parseBoundedRequiredString(payload.reasoning, OWNER_AI_MAX_REASONING_LENGTH);
   if (!text || !tone || !reasoning) {
     return null;
   }
@@ -251,11 +304,19 @@ function validateOwnerAiProfileSuggestionPayload(
     return null;
   }
 
-  const cardSummary = parseRequiredString(payload.cardSummary);
-  const featuredBadges = parseStringArray(payload.featuredBadges, { maxItems: 5 });
-  const reasoning = parseRequiredString(payload.reasoning);
-  const verifiedBadgeLabel =
-    payload.verifiedBadgeLabel === null ? null : parseOptionalString(payload.verifiedBadgeLabel);
+  const cardSummary = parseBoundedRequiredString(
+    payload.cardSummary,
+    OWNER_AI_MAX_PROFILE_SUMMARY_LENGTH,
+  );
+  const featuredBadges = parseStringArray(payload.featuredBadges, {
+    maxItems: 5,
+    maxItemLength: OWNER_AI_MAX_BADGE_LENGTH,
+  });
+  const reasoning = parseBoundedRequiredString(payload.reasoning, OWNER_AI_MAX_REASONING_LENGTH);
+  const verifiedBadgeLabel = parseBoundedOptionalString(
+    payload.verifiedBadgeLabel,
+    OWNER_AI_MAX_VERIFIED_BADGE_LABEL_LENGTH,
+  );
 
   if (!cardSummary || !featuredBadges || !reasoning) {
     return null;
@@ -270,10 +331,12 @@ function validateOwnerAiProfileSuggestionPayload(
 }
 
 async function generateJsonWithFallback<T extends GeneratedOwnerAiPayload>(options: {
+  ownerUid: string;
   systemPrompt: string;
   userPrompt: string;
   fallback: () => GeneratedOwnerAiPayloadBase<T>;
   validate: OwnerAiPayloadValidator<T>;
+  maxTokens?: number;
 }): Promise<T> {
   const generatedAt = getNowIso();
 
@@ -302,6 +365,8 @@ async function generateJsonWithFallback<T extends GeneratedOwnerAiPayload>(optio
           body: JSON.stringify({
             model: serverConfig.openAiModel,
             temperature: 0.7,
+            max_tokens: options.maxTokens ?? serverConfig.ownerAiMaxCompletionTokens,
+            user: buildOwnerAiUserIdentifier(options.ownerUid),
             response_format: {
               type: 'json_object',
             },
@@ -421,6 +486,7 @@ export async function getOwnerAiActionPlan(ownerUid: string): Promise<OwnerAiAct
   };
 
   return generateJsonWithFallback<OwnerAiActionPlan>({
+    ownerUid,
     systemPrompt:
       'You are the Canopy Trove owner operator assistant. Produce concise, tactical weekly guidance for a dispensary owner. Keep it premium, calm, and practical.',
     userPrompt: JSON.stringify({
@@ -438,11 +504,9 @@ export async function getOwnerAiActionPlan(ownerUid: string): Promise<OwnerAiAct
 
 export async function generateOwnerAiPromotionDraft(
   ownerUid: string,
-  input: {
-    goal?: string | null;
-    tone?: string | null;
-  },
+  input: OwnerAiDraftInput,
 ): Promise<OwnerAiPromotionDraft> {
+  await assertOwnerAiInputAllowed(ownerUid, input);
   const workspace = await getOwnerPortalWorkspace(ownerUid);
   const storefrontName =
     workspace.storefrontSummary?.displayName ??
@@ -473,6 +537,7 @@ export async function generateOwnerAiPromotionDraft(
   });
 
   return generateJsonWithFallback<OwnerAiPromotionDraft>({
+    ownerUid,
     systemPrompt:
       'You are the Canopy Trove campaign assistant. Return a promotion draft that is concise, premium, local, and plausible for a legal cannabis storefront. Never promise things not in context.',
     userPrompt: JSON.stringify({
@@ -491,10 +556,9 @@ export async function generateOwnerAiPromotionDraft(
 export async function generateOwnerAiReviewReplyDraft(
   ownerUid: string,
   reviewId: string,
-  input: {
-    tone?: string | null;
-  },
+  input: OwnerAiDraftInput,
 ): Promise<OwnerAiReviewReplyDraft> {
+  await assertOwnerAiInputAllowed(ownerUid, input);
   const workspace = await getOwnerPortalWorkspace(ownerUid);
   const review = workspace.recentReviews.find((candidate) => candidate.id === reviewId);
   if (!review) {
@@ -520,6 +584,7 @@ export async function generateOwnerAiReviewReplyDraft(
   };
 
   return generateJsonWithFallback<OwnerAiReviewReplyDraft>({
+    ownerUid,
     systemPrompt:
       'You draft owner replies for Canopy Trove. Sound calm, accountable, premium, and human. Keep replies under 90 words.',
     userPrompt: JSON.stringify({
@@ -534,10 +599,9 @@ export async function generateOwnerAiReviewReplyDraft(
 
 export async function generateOwnerAiProfileSuggestion(
   ownerUid: string,
-  input: {
-    focus?: string | null;
-  },
+  input: OwnerAiDraftInput,
 ): Promise<OwnerAiProfileSuggestion> {
+  await assertOwnerAiInputAllowed(ownerUid, input);
   const workspace = await getOwnerPortalWorkspace(ownerUid);
   const storefrontName =
     workspace.storefrontSummary?.displayName ??
@@ -561,6 +625,7 @@ export async function generateOwnerAiProfileSuggestion(
   });
 
   return generateJsonWithFallback<OwnerAiProfileSuggestion>({
+    ownerUid,
     systemPrompt:
       'You improve premium storefront copy inside the Canopy Trove owner portal. Keep outputs short, credible, and polished.',
     userPrompt: JSON.stringify({

@@ -6,32 +6,72 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://canopytrove.com/about</loc>
+    <loc>https://canopytrove.com/about/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://canopytrove.com/privacy</loc>
+    <loc>https://canopytrove.com/dispensaries/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://canopytrove.com/dispensaries/new-york/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://canopytrove.com/dispensaries/brooklyn/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://canopytrove.com/dispensaries/bronx/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://canopytrove.com/dispensaries/buffalo/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://canopytrove.com/dispensaries/rochester/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://canopytrove.com/dispensaries/albany/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://canopytrove.com/dispensaries/syracuse/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://canopytrove.com/privacy/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://canopytrove.com/terms</loc>
+    <loc>https://canopytrove.com/terms/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://canopytrove.com/community-guidelines</loc>
+    <loc>https://canopytrove.com/community-guidelines/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://canopytrove.com/support</loc>
+    <loc>https://canopytrove.com/support/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://canopytrove.com/account-deletion</loc>
+    <loc>https://canopytrove.com/account-deletion/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

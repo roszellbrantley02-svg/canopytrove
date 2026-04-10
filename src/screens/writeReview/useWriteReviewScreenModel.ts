@@ -24,18 +24,37 @@ import {
 } from '../../services/storefrontCommunityService';
 import {
   discardPendingReviewPhoto,
+  getReviewPhotoUploadErrorMessage,
   MAX_REVIEW_PHOTOS,
   uploadPendingReviewPhoto,
 } from '../../services/storefrontReviewPhotoService';
+import { compressImage } from '../../utils/compressImage';
 import type { AppReview, StorefrontSummary } from '../../types/storefront';
 import {
   getReviewSubmitErrorMessage,
   getReviewValidationError,
   getReviewValidationHint,
+  MIN_EDIT_REVIEW_TEXT_LENGTH,
+  MIN_REVIEW_TEXT_LENGTH,
   parseGifUrl,
   REVIEW_EMOJIS,
   REVIEW_TAGS,
 } from './reviewComposerShared';
+
+type ReviewPhotoAttachment = {
+  id: string;
+  previewUri: string;
+  fileName: string;
+  mimeType: string | null;
+  size: number | null;
+  webFile: Blob | File | null;
+  photoUploadId: string | null;
+  uploadStatus: 'uploading' | 'ready' | 'failed';
+  moderationStatus: 'uploading' | 'approved' | 'needs_manual_review' | 'rejected' | 'failed';
+  moderationReason: string | null;
+  publicUrl: string | null;
+  errorMessage: string | null;
+};
 
 export function useWriteReviewScreenModel(input: {
   storefront: StorefrontSummary;
@@ -44,7 +63,8 @@ export function useWriteReviewScreenModel(input: {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { storefront, existingReview = null } = input;
   const isEditingReview = Boolean(existingReview);
-  const { appProfile, profileId } = useStorefrontProfileController();
+  const { appProfile, profileId, repairProfileForCurrentSession } =
+    useStorefrontProfileController();
   const { applyRewardResult, trackReviewSubmittedReward } = useStorefrontRewardsController();
   const [rating, setRating] = React.useState(existingReview?.rating ?? 5);
   const [text, setText] = React.useState(existingReview?.text ?? '');
@@ -63,24 +83,13 @@ export function useWriteReviewScreenModel(input: {
   const [hasAcceptedGuidelines, setHasAcceptedGuidelines] = React.useState(
     hasAcceptedCommunityGuidelines(),
   );
-  const [reviewPhotos, setReviewPhotos] = React.useState<
-    Array<{
-      id: string;
-      previewUri: string;
-      fileName: string;
-      mimeType: string | null;
-      size: number | null;
-      photoUploadId: string | null;
-      uploadStatus: 'uploading' | 'ready' | 'failed';
-      moderationStatus: 'uploading' | 'approved' | 'needs_manual_review' | 'rejected' | 'failed';
-      moderationReason: string | null;
-      publicUrl: string | null;
-      errorMessage: string | null;
-    }>
-  >([]);
+  const [reviewPhotos, setReviewPhotos] = React.useState<ReviewPhotoAttachment[]>([]);
   const [reviewPhotoError, setReviewPhotoError] = React.useState<string | null>(null);
   const existingReviewPhotoUrls = existingReview?.photoUrls ?? [];
   const textLength = text.trim().length;
+  const minimumReviewTextLength = isEditingReview
+    ? MIN_EDIT_REVIEW_TEXT_LENGTH
+    : MIN_REVIEW_TEXT_LENGTH;
   const readyReviewPhotoCount = reviewPhotos.filter(
     (photo) => photo.uploadStatus === 'ready',
   ).length;
@@ -93,23 +102,38 @@ export function useWriteReviewScreenModel(input: {
   const hasPendingReviewPhotoUpload = reviewPhotos.some(
     (photo) => photo.uploadStatus === 'uploading',
   );
-  const hasFailedReviewPhotoUpload = reviewPhotos.some((photo) => photo.uploadStatus === 'failed');
+  const hasRejectedReviewPhoto = reviewPhotos.some(
+    (photo) => photo.uploadStatus === 'failed' && photo.moderationStatus === 'rejected',
+  );
+  const hasFailedReviewPhotoUpload = reviewPhotos.some(
+    (photo) => photo.uploadStatus === 'failed' && photo.moderationStatus !== 'rejected',
+  );
   const canAttachReviewPhotos =
     appProfile?.kind === 'authenticated' && Boolean(appProfile.accountId) && !isEditingReview;
   const reviewPhotoValidationError =
     !canAttachReviewPhotos && reviewPhotos.length > 0
-      ? 'Photo uploads require a signed-in member account.'
-      : hasFailedReviewPhotoUpload
-        ? 'Remove any rejected photos and retry any failed uploads before submitting.'
-        : hasPendingReviewPhotoUpload
-          ? 'Wait for photo uploads to finish before submitting.'
-          : null;
+      ? isEditingReview
+        ? 'Photos cannot be changed while you are editing a review.'
+        : 'Sign in to upload review photos.'
+      : hasRejectedReviewPhoto && hasFailedReviewPhotoUpload
+        ? 'Some photos were rejected and others did not upload. Remove the rejected ones and retry the rest before posting.'
+        : hasRejectedReviewPhoto
+          ? 'Some photos were rejected. Remove them before posting.'
+          : hasFailedReviewPhotoUpload
+            ? 'Some photos did not upload. Retry them before posting.'
+            : hasPendingReviewPhotoUpload
+              ? 'Your photos are still uploading. Wait for them to finish before posting.'
+              : null;
   const validationError =
-    getReviewValidationError(textLength, gifUrlInput, readyReviewPhotoCount) ??
-    reviewPhotoValidationError;
+    getReviewValidationError(
+      textLength,
+      gifUrlInput,
+      readyReviewPhotoCount,
+      minimumReviewTextLength,
+    ) ?? reviewPhotoValidationError;
   const validationHint = hasAcceptedGuidelines
-    ? getReviewValidationHint(textLength, readyReviewPhotoCount)
-    : 'Review and accept the Canopy Trove community guidelines before posting a review.';
+    ? getReviewValidationHint(textLength, readyReviewPhotoCount, minimumReviewTextLength)
+    : 'Review and accept the community guidelines before posting.';
   const canSubmit =
     !isSubmitting && !validationError && hasAcceptedGuidelines && !hasPendingReviewPhotoUpload;
   const gifRequestVersionRef = React.useRef(0);
@@ -259,6 +283,7 @@ export function useWriteReviewScreenModel(input: {
             fileName: string;
             mimeType: string | null;
             size: number | null;
+            webFile: Blob | File | null;
             photoUploadId: string | null;
             uploadStatus: 'uploading' | 'ready' | 'failed';
             moderationStatus:
@@ -271,28 +296,12 @@ export function useWriteReviewScreenModel(input: {
             publicUrl: string | null;
             errorMessage: string | null;
           }>
-        | ((current: {
-            id: string;
+        | ((current: ReviewPhotoAttachment) => Partial<{
             previewUri: string;
             fileName: string;
             mimeType: string | null;
             size: number | null;
-            photoUploadId: string | null;
-            uploadStatus: 'uploading' | 'ready' | 'failed';
-            moderationStatus:
-              | 'uploading'
-              | 'approved'
-              | 'needs_manual_review'
-              | 'rejected'
-              | 'failed';
-            moderationReason: string | null;
-            publicUrl: string | null;
-            errorMessage: string | null;
-          }) => Partial<{
-            previewUri: string;
-            fileName: string;
-            mimeType: string | null;
-            size: number | null;
+            webFile: Blob | File | null;
             photoUploadId: string | null;
             uploadStatus: 'uploading' | 'ready' | 'failed';
             moderationStatus:
@@ -323,10 +332,49 @@ export function useWriteReviewScreenModel(input: {
     [],
   );
 
+  const uploadReviewPhotoFile = React.useCallback(
+    async (file: {
+      uri: string;
+      name: string;
+      mimeType: string | null;
+      size: number | null;
+      webFile: Blob | File | null;
+    }) => {
+      try {
+        return await uploadPendingReviewPhoto({
+          storefrontId: storefront.id,
+          profileId,
+          file,
+        });
+      } catch (error) {
+        const rawMessage = error instanceof Error ? error.message : '';
+        if (!rawMessage.includes('This profile belongs to a different account.')) {
+          throw error;
+        }
+
+        const repairedProfile = await repairProfileForCurrentSession();
+        if (!repairedProfile) {
+          throw error;
+        }
+
+        return uploadPendingReviewPhoto({
+          storefrontId: storefront.id,
+          profileId: repairedProfile.id,
+          file,
+        });
+      }
+    },
+    [profileId, repairProfileForCurrentSession, storefront.id],
+  );
+
   const uploadReviewPhotoAssets = React.useCallback(
     async (assets: ImagePicker.ImagePickerAsset[]) => {
       if (!canAttachReviewPhotos || !appProfile?.accountId) {
-        setReviewPhotoError('Photo uploads require a signed-in member account.');
+        setReviewPhotoError(
+          isEditingReview
+            ? 'Photo edits not allowed here: photos cannot be changed while editing a review.'
+            : 'Sign-in required: photo uploads need a signed-in account.',
+        );
         return;
       }
 
@@ -350,6 +398,7 @@ export function useWriteReviewScreenModel(input: {
         fileName: asset.fileName ?? `review-photo-${Date.now().toString(36)}.jpg`,
         mimeType: asset.mimeType ?? 'image/jpeg',
         size: typeof asset.fileSize === 'number' ? asset.fileSize : null,
+        webFile: asset.file ?? null,
         photoUploadId: null,
         uploadStatus: 'uploading' as const,
         moderationStatus: 'uploading' as const,
@@ -368,21 +417,28 @@ export function useWriteReviewScreenModel(input: {
             moderationStatus: 'failed',
             moderationReason: null,
             publicUrl: null,
-            errorMessage: 'Could not prepare the selected photo.',
+            errorMessage: 'Could not prepare that photo. Please try again.',
           });
           continue;
         }
 
         try {
-          const uploaded = await uploadPendingReviewPhoto({
-            storefrontId: storefront.id,
-            profileId,
-            file: {
-              uri: asset.uri,
-              name: asset.fileName ?? queuedPhoto.fileName,
-              mimeType: asset.mimeType ?? queuedPhoto.mimeType,
-              size: typeof asset.fileSize === 'number' ? asset.fileSize : queuedPhoto.size,
-            },
+          // Compress and resize the image before upload. On web this re-encodes
+          // via canvas (JPEG, max 1200px, quality 0.72). On native the picker's
+          // quality param already compresses, so this just measures the blob size.
+          const compressed = await compressImage({
+            uri: asset.uri,
+            file: asset.file ?? null,
+          });
+
+          const uploaded = await uploadReviewPhotoFile({
+            uri: compressed.uri,
+            name: asset.fileName ?? queuedPhoto.fileName,
+            mimeType: compressed.mimeType,
+            size:
+              compressed.size ||
+              (typeof asset.fileSize === 'number' ? asset.fileSize : queuedPhoto.size),
+            webFile: compressed.blob ?? asset.file ?? null,
           });
 
           const moderationStatus =
@@ -396,8 +452,11 @@ export function useWriteReviewScreenModel(input: {
           upsertReviewPhotoUpload(queuedPhoto.id, {
             photoUploadId: uploaded.photoUploadId,
             fileName: asset.fileName ?? queuedPhoto.fileName,
-            mimeType: asset.mimeType ?? queuedPhoto.mimeType,
-            size: typeof asset.fileSize === 'number' ? asset.fileSize : queuedPhoto.size,
+            mimeType: compressed.mimeType,
+            size:
+              compressed.size ||
+              (typeof asset.fileSize === 'number' ? asset.fileSize : queuedPhoto.size),
+            webFile: compressed.blob ?? asset.file ?? queuedPhoto.webFile,
             uploadStatus:
               moderationStatus === 'approved' || moderationStatus === 'needs_manual_review'
                 ? 'ready'
@@ -407,17 +466,19 @@ export function useWriteReviewScreenModel(input: {
             publicUrl: uploaded.publicUrl,
             errorMessage:
               moderationStatus === 'rejected'
-                ? (uploaded.moderationReason ?? 'This photo was rejected by strict moderation.')
+                ? (uploaded.moderationReason ??
+                  'This photo could not be approved under the community guidelines.')
                 : null,
           });
         } catch (error) {
+          const errorMessage = getReviewPhotoUploadErrorMessage(error);
+          setReviewPhotoError(errorMessage);
           upsertReviewPhotoUpload(queuedPhoto.id, {
             uploadStatus: 'failed',
             moderationStatus: 'failed',
             moderationReason: null,
             publicUrl: null,
-            errorMessage:
-              error instanceof Error ? error.message : 'Unable to upload this review photo.',
+            errorMessage,
           });
         }
       }
@@ -426,16 +487,20 @@ export function useWriteReviewScreenModel(input: {
       appProfile?.accountId,
       canAttachReviewPhotos,
       createReviewPhotoAttachmentId,
-      profileId,
+      isEditingReview,
       reviewPhotos.length,
-      storefront.id,
+      uploadReviewPhotoFile,
       upsertReviewPhotoUpload,
     ],
   );
 
   const pickReviewPhotosFromLibrary = React.useCallback(async () => {
     if (!canAttachReviewPhotos) {
-      setReviewPhotoError('Photo uploads require a signed-in member account.');
+      setReviewPhotoError(
+        isEditingReview
+          ? 'Photos cannot be changed while you are editing a review.'
+          : 'Sign in to upload review photos.',
+      );
       return;
     }
 
@@ -452,7 +517,7 @@ export function useWriteReviewScreenModel(input: {
       if (Platform.OS !== 'web') {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
-          setReviewPhotoError('Media library permission is required to add review photos.');
+          setReviewPhotoError('Allow photo access to add pictures from your library.');
           return;
         }
       }
@@ -462,7 +527,7 @@ export function useWriteReviewScreenModel(input: {
         allowsEditing: false,
         allowsMultipleSelection: true,
         selectionLimit: remainingSlots,
-        quality: 0.84,
+        quality: 0.7,
       });
 
       if (result.canceled || !result.assets?.length) {
@@ -475,11 +540,15 @@ export function useWriteReviewScreenModel(input: {
         error instanceof Error ? error.message : 'Could not open the photo library.',
       );
     }
-  }, [canAttachReviewPhotos, reviewPhotos.length, uploadReviewPhotoAssets]);
+  }, [canAttachReviewPhotos, isEditingReview, reviewPhotos.length, uploadReviewPhotoAssets]);
 
   const takeReviewPhoto = React.useCallback(async () => {
     if (!canAttachReviewPhotos) {
-      setReviewPhotoError('Photo uploads require a signed-in member account.');
+      setReviewPhotoError(
+        isEditingReview
+          ? 'Photos cannot be changed while you are editing a review.'
+          : 'Sign in to upload review photos.',
+      );
       return;
     }
 
@@ -494,7 +563,7 @@ export function useWriteReviewScreenModel(input: {
       if (Platform.OS !== 'web') {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
         if (!permission.granted) {
-          setReviewPhotoError('Camera permission is required to take review photos.');
+          setReviewPhotoError('Allow camera access to take a photo.');
           return;
         }
       }
@@ -502,7 +571,7 @@ export function useWriteReviewScreenModel(input: {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
         allowsEditing: false,
-        quality: 0.84,
+        quality: 0.7,
       });
 
       if (result.canceled || !result.assets?.length) {
@@ -513,7 +582,7 @@ export function useWriteReviewScreenModel(input: {
     } catch (error) {
       setReviewPhotoError(error instanceof Error ? error.message : 'Could not open the camera.');
     }
-  }, [canAttachReviewPhotos, reviewPhotos.length, uploadReviewPhotoAssets]);
+  }, [canAttachReviewPhotos, isEditingReview, reviewPhotos.length, uploadReviewPhotoAssets]);
 
   const removeReviewPhoto = React.useCallback(
     async (attachmentId: string) => {
@@ -538,7 +607,9 @@ export function useWriteReviewScreenModel(input: {
 
   const clearReviewPhotos = React.useCallback(async () => {
     if (hasPendingReviewPhotoUpload) {
-      setReviewPhotoError('Wait for uploads to finish before clearing all review photos.');
+      setReviewPhotoError(
+        'Upload still processing: wait for uploads to finish before clearing photos.',
+      );
       return;
     }
 
@@ -591,15 +662,17 @@ export function useWriteReviewScreenModel(input: {
       });
 
       try {
-        const uploaded = await uploadPendingReviewPhoto({
-          storefrontId: storefront.id,
-          profileId,
-          file: {
-            uri: attachment.previewUri,
-            name: attachment.fileName,
-            mimeType: attachment.mimeType,
-            size: attachment.size,
-          },
+        const compressed = await compressImage({
+          uri: attachment.previewUri,
+          file: attachment.webFile,
+        });
+
+        const uploaded = await uploadReviewPhotoFile({
+          uri: compressed.uri,
+          name: attachment.fileName,
+          mimeType: compressed.mimeType,
+          size: compressed.size || attachment.size,
+          webFile: compressed.blob ?? attachment.webFile,
         });
 
         const moderationStatus =
@@ -612,6 +685,9 @@ export function useWriteReviewScreenModel(input: {
 
         upsertReviewPhotoUpload(attachmentId, {
           photoUploadId: uploaded.photoUploadId,
+          mimeType: compressed.mimeType,
+          size: compressed.size || attachment.size,
+          webFile: compressed.blob ?? attachment.webFile,
           uploadStatus:
             moderationStatus === 'approved' || moderationStatus === 'needs_manual_review'
               ? 'ready'
@@ -621,21 +697,23 @@ export function useWriteReviewScreenModel(input: {
           publicUrl: uploaded.publicUrl,
           errorMessage:
             moderationStatus === 'rejected'
-              ? (uploaded.moderationReason ?? 'This photo was rejected by strict moderation.')
+              ? (uploaded.moderationReason ??
+                'Rejected by moderation: this photo does not meet community guidelines.')
               : null,
         });
       } catch (error) {
+        const errorMessage = getReviewPhotoUploadErrorMessage(error);
+        setReviewPhotoError(errorMessage);
         upsertReviewPhotoUpload(attachmentId, {
           uploadStatus: 'failed',
           moderationStatus: 'failed',
           moderationReason: null,
           publicUrl: null,
-          errorMessage:
-            error instanceof Error ? error.message : 'Unable to upload this review photo.',
+          errorMessage,
         });
       }
     },
-    [profileId, reviewPhotos, storefront.id, upsertReviewPhotoUpload],
+    [reviewPhotos, storefront.id, uploadReviewPhotoFile, upsertReviewPhotoUpload],
   );
 
   const submit = React.useCallback(async () => {
@@ -767,6 +845,7 @@ export function useWriteReviewScreenModel(input: {
     isLoadingGifs,
     isEditingReview,
     isSubmitting,
+    minimumReviewTextLength,
     existingReviewPhotoUrls,
     openLegalCenter: () => navigation.navigate('LegalCenter'),
     pickReviewPhotosFromLibrary: () => {
@@ -815,12 +894,22 @@ export function useWriteReviewScreenModel(input: {
     reviewPhotoSummaryText: reviewPhotos.length
       ? [
           `${approvedReviewPhotoCount} approved now`,
-          `${pendingManualReviewPhotoCount} waiting manual review`,
+          `${pendingManualReviewPhotoCount} awaiting approval`,
           (() => {
-            const blockedCount = reviewPhotos.filter(
-              (photo) => photo.uploadStatus === 'failed',
+            const rejectedCount = reviewPhotos.filter(
+              (photo) => photo.uploadStatus === 'failed' && photo.moderationStatus === 'rejected',
             ).length;
-            return blockedCount ? `${blockedCount} blocked` : null;
+            const failedCount = reviewPhotos.filter(
+              (photo) => photo.uploadStatus === 'failed' && photo.moderationStatus !== 'rejected',
+            ).length;
+            return (
+              [
+                rejectedCount ? `${rejectedCount} rejected` : null,
+                failedCount ? `${failedCount} failed, tap to retry` : null,
+              ]
+                .filter(Boolean)
+                .join(', ') || null
+            );
           })(),
         ]
           .filter((value): value is string => Boolean(value))

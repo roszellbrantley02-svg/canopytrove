@@ -186,6 +186,7 @@ test('builds published storefront documents from the discovery staging source', 
   assert.equal(summary.rating, 4.8);
   assert.equal(summary.reviewCount, 128);
   assert.equal(summary.openNow, true);
+  assert.deepEqual(summary.hours, ['Monday: 10:00 AM - 8:00 PM', 'Tuesday: 10:00 AM - 8:00 PM']);
   assert.equal(summary.latitude, 40.751);
   assert.equal(summary.longitude, -73.983);
   assert.equal(summary.menuUrl, 'https://store.example');

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import type { OwnerPortalWorkspaceDocument, OwnerProfileDocument } from '../../types/ownerPortal';
 import type { RuntimeOpsStatus } from '../../types/runtimeOps';
 import {
@@ -55,35 +56,37 @@ export function getJourneyItems(input: {
 }): OwnerPortalStageItem[] {
   return [
     {
-      label: 'Account access',
+      label: 'Signed in',
       body: input.preview
-        ? 'Preview mode is open for full local testing. Live owner access still depends on the approved email path.'
+        ? 'Preview mode is open, so you can look around before anything goes live.'
         : input.signedIn
-          ? 'The real owner account is signed in and can continue onboarding from this dashboard.'
-          : 'Sign in first so the owner workspace can attach to the correct account.',
+          ? 'You are signed in and ready to keep setting up the business side of the app.'
+          : 'Sign in first so this space can connect to the right business account.',
       tone: input.preview || input.signedIn ? 'complete' : 'current',
     },
     {
-      label: 'Business profile',
+      label: 'Business details',
       body: input.hasBusinessDetails
-        ? 'Legal and company details are present and ready for the storefront claim step.'
-        : 'Business details still need to be finished before claim and verification feel complete.',
+        ? 'Your business name and company details are already in place.'
+        : 'Add the core business details so the storefront and verification steps feel complete.',
       tone: input.hasBusinessDetails ? 'complete' : 'current',
     },
     {
-      label: 'Claimed listing',
+      label: 'Storefront connected',
       body: input.hasClaimedListing
-        ? 'A storefront is linked to the owner workspace.'
-        : 'Claim the correct dispensary listing before business verification can be treated as live.',
+        ? 'Your business is connected to a storefront in the app.'
+        : Platform.OS === 'android'
+          ? 'Connect the right storefront so you can update photos, details, and updates.'
+          : 'Connect the right storefront so you can update photos, details, and offers.',
       tone: input.hasClaimedListing ? 'complete' : 'pending',
     },
     {
-      label: 'Business verification',
+      label: 'Business approved',
       body: isVerifiedStatus(input.businessVerificationStatus)
-        ? 'Business review is complete.'
+        ? 'Your business details have been approved.'
         : isPendingReviewStatus(input.businessVerificationStatus)
-          ? 'Business documents are in review.'
-          : 'Business proof still needs to be submitted and approved.',
+          ? 'Your business details are being reviewed.'
+          : 'Send in your business details so this step can be approved.',
       tone: isVerifiedStatus(input.businessVerificationStatus)
         ? 'complete'
         : isPendingReviewStatus(input.businessVerificationStatus)
@@ -93,12 +96,12 @@ export function getJourneyItems(input: {
             : 'pending',
     },
     {
-      label: 'Identity verification',
+      label: 'Owner identity',
       body: isVerifiedStatus(input.identityVerificationStatus)
-        ? 'Identity review is complete.'
+        ? 'Your identity has been verified.'
         : isPendingReviewStatus(input.identityVerificationStatus)
-          ? 'Identity package is in review.'
-          : 'Identity review still needs to be completed before premium access can go live.',
+          ? 'Your identity documents are being reviewed.'
+          : 'Finish identity verification so the business account is fully ready.',
       tone: isVerifiedStatus(input.identityVerificationStatus)
         ? 'complete'
         : isPendingReviewStatus(input.identityVerificationStatus)
@@ -106,11 +109,11 @@ export function getJourneyItems(input: {
           : 'pending',
     },
     {
-      label: 'Subscription access',
+      label: 'Plan',
       body:
         input.subscriptionStatus && input.subscriptionStatus !== 'inactive'
-          ? 'Premium owner access is active or in trial.'
-          : 'Billing is the final step after claim and verification are complete.',
+          ? 'Your business plan is active or currently in trial.'
+          : 'Pick a plan when you are ready for the full owner experience.',
       tone:
         input.subscriptionStatus && input.subscriptionStatus !== 'inactive'
           ? 'complete'
@@ -121,21 +124,21 @@ export function getJourneyItems(input: {
 
 export function getRuntimeStatusMessage(status: RuntimeOpsStatus | null) {
   if (!status) {
-    return 'Runtime monitoring is still loading for this owner workspace.';
+    return 'Checking whether storefront updates are ready.';
   }
 
   if (status.policy.safeModeEnabled) {
     return (
       status.policy.reason ??
-      'Protected mode is active while the system stabilizes. Live owner writes may be limited.'
+      'Some updates are temporarily paused while we smooth things out behind the scenes.'
     );
   }
 
   if (status.incidentCounts.criticalLast24Hours > 0) {
-    return 'Monitoring is elevated because the system logged recent critical incidents, but live tools are still available.';
+    return 'Everything is still available, but we are watching the system a little more closely right now.';
   }
 
-  return 'Runtime monitoring is clear. Owner AI, storefront tools, and incident tracking are available.';
+  return 'Everything is running normally.';
 }
 
 export function getRuntimeStatusTone(status: RuntimeOpsStatus | null) {
@@ -156,11 +159,11 @@ export function getOwnerStatusChips(input: {
   ownerProfile: OwnerProfileDocument | null;
 }) {
   return [
-    input.allowlisted ? 'Approved owner' : 'Invite flow',
+    input.allowlisted ? 'Owner approved' : 'Invite only',
     input.ownerProfile?.subscriptionStatus
       ? formatOwnerValue(input.ownerProfile.subscriptionStatus)
-      : 'Plan inactive',
-    input.ownerProfile?.dispensaryId ? 'Storefront connected' : 'No listing claimed',
+      : 'No active plan',
+    input.ownerProfile?.dispensaryId ? 'Storefront connected' : 'Storefront not connected',
   ];
 }
 
@@ -173,19 +176,19 @@ export function getProfileSummaryTiles(
 
   return [
     {
-      label: 'Badge Level',
+      label: 'Level',
       value: `${ownerProfile.badgeLevel}`,
-      body: 'Current premium storefront badge level.',
+      body: 'Your current business level in the app.',
     },
     {
-      label: 'Onboarding',
+      label: 'Next step',
       value: formatOwnerValue(ownerProfile.onboardingStep),
-      body: 'Where the owner journey currently resumes.',
+      body: 'Where you left off in setup.',
     },
     {
-      label: 'Subscription',
+      label: 'Plan',
       value: formatOwnerValue(ownerProfile.subscriptionStatus),
-      body: 'Current plan for your business account.',
+      body: 'Your current business plan.',
     },
   ];
 }

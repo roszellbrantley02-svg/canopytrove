@@ -170,15 +170,48 @@ function BrowseScreenInner() {
   }, [items]);
 
   React.useEffect(() => {
-    const nextCandidates = items.slice(0, PAGE_SIZE);
-    nextCandidates.forEach((storefront) => {
-      if (prefetchedDetailIdsRef.current.has(storefront.id)) {
-        return;
-      }
+    if (!items.length) {
+      return;
+    }
 
-      prefetchedDetailIdsRef.current.add(storefront.id);
-      void storefrontRepository.prefetchStorefrontDetails(storefront.id);
-    });
+    const nextCandidates = items.slice(0, PAGE_SIZE);
+    const idsToFetch = nextCandidates
+      .filter((s) => !prefetchedDetailIdsRef.current.has(s.id))
+      .map((s) => s.id);
+
+    if (!idsToFetch.length) {
+      return;
+    }
+
+    // Mark immediately to avoid duplicate scheduling
+    idsToFetch.forEach((id) => prefetchedDetailIdsRef.current.add(id));
+
+    // Defer prefetch until browser is idle so it doesn't compete
+    // with the primary data fetch for network connections.
+    let cancelled = false;
+    const cancel = () => {
+      cancelled = true;
+    };
+
+    const run = () => {
+      if (!cancelled) {
+        void storefrontRepository.prefetchStorefrontDetailsBatch(idsToFetch);
+      }
+    };
+
+    if (typeof requestIdleCallback === 'function') {
+      const handle = requestIdleCallback(run);
+      return () => {
+        cancel();
+        cancelIdleCallback(handle);
+      };
+    }
+
+    const timer = setTimeout(run, 200);
+    return () => {
+      cancel();
+      clearTimeout(timer);
+    };
   }, [items]);
 
   const prepareStorefrontDetail = React.useCallback((storefrontId: string) => {
@@ -206,9 +239,9 @@ function BrowseScreenInner() {
 
   return (
     <ScreenShell
-      eyebrow="Discovery"
-      title="Browse verified storefronts."
-      subtitle="Set a location, then refine the verified storefront view by distance, rating, reviews, or live offers."
+      eyebrow="Browse"
+      title="Browse storefronts"
+      subtitle="Pick a location, then narrow things down by distance, rating, reviews, or live offers."
       showTopBar={false}
       showHero={false}
       resetScrollOnFocus={true}

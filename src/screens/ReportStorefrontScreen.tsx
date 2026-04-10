@@ -13,6 +13,7 @@ import {
   useStorefrontProfileController,
   useStorefrontRewardsController,
 } from '../context/StorefrontController';
+import { crossPlatformAlert } from '../utils/crossPlatformAlert';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import { submitStorefrontReport } from '../services/storefrontCommunityService';
@@ -45,7 +46,7 @@ function ReportStorefrontScreenInner() {
   const routeParams =
     (route.params as Partial<RootStackParamList['ReportStorefront']> | undefined) ?? undefined;
   const storefront = routeParams?.storefront ?? null;
-  const { appProfile, profileId } = useStorefrontProfileController();
+  const { appProfile, authSession, profileId } = useStorefrontProfileController();
   const { applyRewardResult, trackReportSubmittedReward } = useStorefrontRewardsController();
   const entryMode: StorefrontReportEntryMode = routeParams?.entryMode ?? 'general_report';
   const initialReason = routeParams?.initialReason;
@@ -81,12 +82,12 @@ function ReportStorefrontScreenInner() {
       <ScreenShell
         eyebrow="Report"
         title="Storefront unavailable"
-        subtitle="The report flow needs storefront context before it can submit a moderation issue."
+        subtitle="This report screen needs a storefront before you can send a report."
         headerPill="Report"
       >
         <CustomerStateCard
           title="Report could not start"
-          body="This report was opened without a storefront record. Return to the storefront and try again."
+          body="This report opened without a storefront. Head back to the storefront page and try again."
           tone="warm"
           iconName="flag-outline"
           eyebrow="Navigation"
@@ -97,6 +98,30 @@ function ReportStorefrontScreenInner() {
 
   const handleSubmit = async () => {
     if (isSubmitting) {
+      return;
+    }
+
+    if (authSession.status !== 'authenticated') {
+      if (authSession.status === 'disabled') {
+        crossPlatformAlert(
+          'Sign in unavailable',
+          'Reporting storefronts requires a signed-in account, but sign-in is not available in this build right now.',
+          [{ text: 'OK', style: 'cancel' }],
+        );
+        return;
+      }
+
+      crossPlatformAlert(
+        'Sign in required',
+        'You need to sign in before you can send a storefront report.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign In',
+            onPress: () => navigation.navigate('Tabs', { screen: 'Profile' }),
+          },
+        ],
+      );
       return;
     }
 
@@ -152,7 +177,7 @@ function ReportStorefrontScreenInner() {
       headerPill="Report"
     >
       <MotionInView delay={80}>
-        <SectionCard title="Report snapshot" body={getReportSnapshotBody(entryMode)}>
+        <SectionCard title="About this report" body={getReportSnapshotBody(entryMode)}>
           <View style={styles.overviewCard}>
             <Text style={styles.storefrontName}>{storefront.displayName}</Text>
             <Text style={styles.storefrontAddress}>
@@ -163,7 +188,7 @@ function ReportStorefrontScreenInner() {
                 <Text style={styles.summaryTileValue}>{reason}</Text>
                 <Text style={styles.summaryTileLabel}>Current reason</Text>
                 <Text style={styles.summaryTileBody}>
-                  The selected routing reason for moderation review.
+                  The issue you have selected for this report.
                 </Text>
               </View>
               <View style={styles.summaryTile}>
@@ -177,9 +202,9 @@ function ReportStorefrontScreenInner() {
                 <Text style={styles.summaryTileValue}>
                   {storefrontSourceMode === 'api' ? 'Backend' : 'Preview'}
                 </Text>
-                <Text style={styles.summaryTileLabel}>Routing mode</Text>
+                <Text style={styles.summaryTileLabel}>Review path</Text>
                 <Text style={styles.summaryTileBody}>
-                  Where this report will be stored for moderation follow-up.
+                  How this report will be handled after you send it.
                 </Text>
               </View>
             </View>
@@ -188,10 +213,7 @@ function ReportStorefrontScreenInner() {
       </MotionInView>
 
       <MotionInView delay={140}>
-        <SectionCard
-          title="Reason"
-          body="Pick the closest reason so Canopy Trove can route the report correctly."
-        >
+        <SectionCard title="Reason" body="Pick the reason that best matches the problem.">
           <View style={styles.reasonRow}>
             {REPORT_REASONS.map((value) => {
               const selected = reason === value;
@@ -216,7 +238,10 @@ function ReportStorefrontScreenInner() {
       </MotionInView>
 
       <MotionInView delay={200}>
-        <SectionCard title="Details" body="Add enough detail so the issue can be reviewed clearly.">
+        <SectionCard
+          title="Details"
+          body="Add enough detail so our team can understand what happened."
+        >
           <TextInput
             multiline
             value={description}
@@ -237,10 +262,10 @@ function ReportStorefrontScreenInner() {
       </MotionInView>
 
       <MotionInView delay={260}>
-        <SectionCard title="What gets stored" body={getReportStorageBody()}>
+        <SectionCard title="What we save with your report" body={getReportStorageBody()}>
           <ReportStorefrontInfoCard
-            title="Report audit trail"
-            body="Reports store the storefront id, reporting profile, selected reason, notes, and a timestamp so the moderation trail stays reviewable."
+            title="Saved with this report"
+            body="We save the storefront, the reason you picked, your notes, and the time you sent the report."
             iconName="archive-outline"
             iconColor={colors.goldSoft}
           />
@@ -248,9 +273,9 @@ function ReportStorefrontScreenInner() {
       </MotionInView>
 
       <MotionInView delay={300}>
-        <SectionCard title="Where this report goes" body={getReportRoutingBody()}>
+        <SectionCard title="How this gets reviewed" body={getReportRoutingBody()}>
           <ReportStorefrontInfoCard
-            title="Moderation routing"
+            title="Review path"
             body={getReportRoutingBody()}
             iconName={getReportRoutingIconName()}
             iconColor={colors.cyan}
@@ -265,9 +290,7 @@ function ReportStorefrontScreenInner() {
               <View style={styles.summaryTile}>
                 <Text style={styles.summaryTileValue}>{reason}</Text>
                 <Text style={styles.summaryTileLabel}>Selected reason</Text>
-                <Text style={styles.summaryTileBody}>
-                  Current moderation reason attached to this report.
-                </Text>
+                <Text style={styles.summaryTileBody}>The issue this report is being sent for.</Text>
               </View>
               <View style={styles.summaryTile}>
                 <Text style={styles.summaryTileValue}>
@@ -281,11 +304,11 @@ function ReportStorefrontScreenInner() {
             </View>
             {submitErrorText ? (
               <CustomerStateCard
-                title="Report submission did not go through"
+                title="Report could not be sent"
                 body={submitErrorText}
                 tone="danger"
                 iconName="alert-circle-outline"
-                eyebrow="Submit state"
+                eyebrow="Send report"
               />
             ) : null}
             <Pressable
@@ -296,7 +319,7 @@ function ReportStorefrontScreenInner() {
               style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
               accessibilityRole="button"
               accessibilityLabel="Submit report"
-              accessibilityHint="Submits the storefront report for moderation review."
+              accessibilityHint="Sends this storefront report to our team."
             >
               <AppUiIcon name="flag-outline" size={16} color={colors.backgroundDeep} />
               <Text style={styles.submitButtonText}>

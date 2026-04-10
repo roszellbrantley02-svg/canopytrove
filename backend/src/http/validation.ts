@@ -30,6 +30,7 @@ export {
   parseRuntimePolicyBody,
 } from './validationRuntimeOps';
 export {
+  parseCommunitySafetyStateBody,
   parseProfileStateBody,
   parseProfileUpdateBody,
   parseRouteStateBody,

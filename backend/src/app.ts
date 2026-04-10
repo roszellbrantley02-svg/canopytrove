@@ -7,7 +7,7 @@ import { createRateLimitMiddleware } from './http/rateLimit';
 import { securityHeadersMiddleware } from './http/securityHeaders';
 import { suspiciousActivityMiddleware } from './http/suspiciousActivityDetector';
 import { etagMiddleware } from './http/etag';
-import { createRequestTimeoutMiddleware } from './http/requestTimeout';
+import { createRequestTimeoutMiddleware, disableRequestTimeout } from './http/requestTimeout';
 import { responseValidatorMiddleware } from './http/responseValidator';
 import { isIpFlagged } from './http/abuseScoring';
 import { createOriginGuardMiddleware } from './http/originGuard';
@@ -17,6 +17,7 @@ import { adminRoutes } from './routes/adminRoutes';
 import { analyticsRoutes } from './routes/analyticsRoutes';
 import { clientRuntimeRoutes } from './routes/clientRuntimeRoutes';
 import { communityRoutes } from './routes/communityRoutes';
+import { communitySafetyStateRoutes } from './routes/communitySafetyStateRoutes';
 import { favoriteDealAlertRoutes } from './routes/favoriteDealAlertRoutes';
 import { gamificationRoutes } from './routes/gamificationRoutes';
 import { leaderboardRoutes } from './routes/leaderboardRoutes';
@@ -24,6 +25,7 @@ import { locationRoutes } from './routes/locationRoutes';
 import { marketAreaRoutes } from './routes/marketAreaRoutes';
 import { memberEmailRoutes } from './routes/memberEmailRoutes';
 import { ownerBillingRoutes, ownerBillingWebhookHandler } from './routes/ownerBillingRoutes';
+import { stripeIdentityWebhookHandler } from './routes/stripeIdentityRoutes';
 import { ownerPortalAiRoutes } from './routes/ownerPortalAiRoutes';
 import { ownerWelcomeEmailRoutes } from './routes/ownerWelcomeEmailRoutes';
 import { ownerPortalWorkspaceRoutes } from './routes/ownerPortalWorkspaceRoutes';
@@ -37,7 +39,18 @@ import { giphyGatewayRoutes } from './routes/giphyGatewayRoutes';
 import { storefrontRoutes } from './routes/storefrontRoutes';
 import { accountSecurityRoutes } from './routes/accountSecurityRoutes';
 import { usernameRequestRoutes } from './routes/usernameRequestRoutes';
+import { pushSubscriptionRoutes } from './routes/pushSubscriptionRoutes';
 import { webBeaconRoutes } from './routes/webBeaconRoutes';
+import { photoUploadBytesRoute } from './routes/photoUploadBytesRoute';
+import {
+  createReviewPhotoUploadSession,
+  receiveReviewPhotoBytes,
+  completeReviewPhotoUpload,
+  ReviewPhotoModerationError,
+} from './services/reviewPhotoModerationService';
+import { parseStorefrontIdParam } from './http/validation';
+import { ensureProfileWriteAccess } from './services/profileAccessService';
+import { checkCommunityVelocity } from './http/communityVelocityGuard';
 import { assertSecureServerConfig, serverConfig } from './config';
 import { hasBackendFirebaseConfig } from './firebase';
 import { backendStorefrontSourceStatus } from './sources';
@@ -72,6 +85,12 @@ export function createApp() {
     max: 120,
     methods: ['POST'],
   });
+  const reviewPhotoUploadRateLimiter = createRateLimitMiddleware({
+    name: 'review-photo-upload',
+    windowMs: 60_000,
+    max: 12,
+    methods: ['POST', 'PUT'],
+  });
   app.post(
     '/owner-billing/stripe/webhook',
     webhookRateLimiter,
@@ -84,6 +103,12 @@ export function createApp() {
     express.raw({ type: 'application/json', limit: '256kb' }),
     resendWebhookHandler,
   );
+  app.post(
+    '/identity-verification/stripe/webhook',
+    webhookRateLimiter,
+    express.raw({ type: 'application/json', limit: '256kb' }),
+    stripeIdentityWebhookHandler,
+  );
   // Beacon routes (CSP reports, web vitals) must be mounted BEFORE the
   // JSON-only content-type enforcement. Browsers send CSP violation reports
   // with Content-Type: application/csp-report, which would be rejected by
@@ -92,10 +117,146 @@ export function createApp() {
     '/',
     express.json({
       limit: '64kb',
-      type: ['application/json', 'application/csp-report', 'application/reports+json'],
+      type: [
+        'application/json',
+        'application/csp-report',
+        'application/reports+json',
+        'text/plain',
+      ],
     }),
     webBeaconRoutes,
   );
+
+  // One-shot photo upload (JSON + base64). Must be mounted BEFORE the
+  // global 128 KB JSON parser so it gets the higher 12 MB limit.
+  // Inlined here instead of a separate file to guarantee deployment.
+  const PHOTO_CONTENT_TYPES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'image/heif',
+  ]);
+  app.post(
+    '/storefront-details/:storefrontId/reviews/photo-uploads/one-shot',
+    reviewPhotoUploadRateLimiter,
+    disableRequestTimeout(),
+    createRequestTimeoutMiddleware(90_000),
+    express.json({ limit: '12mb' }),
+    async (request, response) => {
+      try {
+        const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
+        const body = request.body as {
+          profileId?: unknown;
+          fileName?: unknown;
+          contentType?: unknown;
+          imageBase64?: unknown;
+        };
+
+        const profileId = typeof body.profileId === 'string' ? body.profileId.trim() : '';
+        const fileName =
+          typeof body.fileName === 'string' && body.fileName.trim()
+            ? body.fileName.trim()
+            : `photo-${Date.now().toString(36)}.jpg`;
+        const contentType =
+          typeof body.contentType === 'string' && PHOTO_CONTENT_TYPES.has(body.contentType.trim())
+            ? body.contentType.trim()
+            : 'image/jpeg';
+        const imageBase64 = typeof body.imageBase64 === 'string' ? body.imageBase64.trim() : '';
+
+        if (!profileId) {
+          response.status(400).json({ ok: false, error: 'Upload failed: profileId is required.' });
+          return;
+        }
+        if (!imageBase64) {
+          response
+            .status(400)
+            .json({ ok: false, error: 'Upload failed: imageBase64 is required.' });
+          return;
+        }
+
+        const { accountId } = await ensureProfileWriteAccess(request, profileId);
+        if (!accountId) {
+          response.status(403).json({
+            ok: false,
+            error: 'Sign-in required: a signed-in account is needed for photo uploads.',
+          });
+          return;
+        }
+
+        const velocityResult = checkCommunityVelocity(
+          profileId,
+          'photo_upload',
+          request.ip || 'unknown',
+        );
+        if (!velocityResult.allowed) {
+          response.status(429).json({
+            ok: false,
+            error: velocityResult.reason,
+          });
+          return;
+        }
+
+        let imageBytes: Buffer;
+        try {
+          imageBytes = Buffer.from(imageBase64, 'base64');
+        } catch {
+          response
+            .status(400)
+            .json({ ok: false, error: 'Upload failed: imageBase64 is not valid base64.' });
+          return;
+        }
+        if (imageBytes.length === 0) {
+          response.status(400).json({ ok: false, error: 'Upload failed: image data is empty.' });
+          return;
+        }
+
+        const uploadSession = await createReviewPhotoUploadSession({
+          storefrontId,
+          profileId,
+          fileName,
+          contentType,
+          sizeBytes: imageBytes.length,
+          forceMemoryMode: true,
+        });
+
+        await receiveReviewPhotoBytes(uploadSession.id, imageBytes);
+        const completed = await completeReviewPhotoUpload(uploadSession.id);
+
+        response.json({
+          ok: true,
+          uploadSession: {
+            id: completed.session.id,
+            contentType: completed.session.contentType,
+            sizeBytes: completed.session.sizeBytes,
+            uploadMode: completed.session.uploadMode,
+            uploadUrl: null,
+          },
+          session: {
+            id: completed.session.id,
+            moderationStatus: completed.session.moderationStatus,
+            moderationDecision: completed.session.moderationDecision,
+            moderationReason: completed.session.moderationReason,
+          },
+          publicUrl: completed.publicUrl,
+        });
+      } catch (error) {
+        if (error instanceof ReviewPhotoModerationError) {
+          response.status(error.statusCode).json({ ok: false, error: error.message });
+          return;
+        }
+        console.error('[photo-upload-one-shot] Unexpected error:', error);
+        response
+          .status(500)
+          .json({ ok: false, error: 'Upload failed: an unexpected error occurred.' });
+      }
+    },
+  );
+
+  // Raw review-photo byte upload. This lets the web client avoid base64
+  // overhead when the browser already has a Blob/File from a phone camera
+  // or photo library selection.
+  app.use('/', photoUploadBytesRoute);
 
   app.use(express.json({ limit: '128kb' }));
   app.use(contentTypeEnforcementMiddleware);
@@ -138,27 +299,9 @@ export function createApp() {
     }
   });
 
+  // Public health check — safe, no infrastructure details
   app.get('/health', (_request, response) => {
-    const storageMode =
-      backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory';
-
-    response.json({
-      ok: true,
-      source: {
-        requestedMode: backendStorefrontSourceStatus.requestedMode,
-        activeMode: backendStorefrontSourceStatus.activeMode,
-        fallbackReason: backendStorefrontSourceStatus.fallbackReason,
-      },
-      profileStorage: storageMode,
-      routeStateStorage: storageMode,
-      gamificationStorage: storageMode,
-      authVerification: hasBackendFirebaseConfig ? 'firebase-admin' : 'disabled',
-      allowDevSeed: serverConfig.allowDevSeed,
-      uptime: Math.round(process.uptime()),
-      nodeVersion: process.version,
-      memoryUsageMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-      environment: process.env.NODE_ENV || 'development',
-    });
+    response.json({ ok: true });
   });
 
   app.use(readRateLimiter);
@@ -166,6 +309,7 @@ export function createApp() {
   app.use('/', analyticsRoutes);
   app.use('/', clientRuntimeRoutes);
   app.use('/', communityRoutes);
+  app.use('/', communitySafetyStateRoutes);
   app.use('/', favoriteDealAlertRoutes);
   app.use('/', gamificationRoutes);
   app.use('/', leaderboardRoutes);
@@ -179,6 +323,7 @@ export function createApp() {
   app.use('/', ownerMultiLocationRoutes);
   app.use('/', opsRoutes);
   app.use('/', adminRoutes);
+  app.use('/push', pushSubscriptionRoutes);
   app.use('/', profileRoutes);
   app.use('/', profileStateRoutes);
   app.use('/', giphyGatewayRoutes);

@@ -15,11 +15,18 @@ import {
   parseReviewSubmissionBody,
   parseStorefrontIdParam,
 } from '../http/validation';
-import { invalidateCachedStorefrontDetail } from '../services/storefrontCacheService';
+import {
+  clearStorefrontBackendCache,
+  invalidateCachedStorefrontDetail,
+} from '../services/storefrontCacheService';
 import { applyGamificationEvent } from '../services/gamificationEventService';
-import { ensureProfileWriteAccess } from '../services/profileAccessService';
+import {
+  ensureAuthenticatedProfileWriteAccess,
+  ensureProfileWriteAccess,
+} from '../services/profileAccessService';
 import { notifyOwnersOfStorefrontActivity } from '../services/ownerPortalAlertService';
 import {
+  clearStorefrontAppReviewAggregateCache,
   markStorefrontAppReviewHelpful,
   StorefrontCommunityError,
   submitStorefrontAppReview,
@@ -123,7 +130,7 @@ communityRoutes.post(
     if (reviewInput.photoUploadIds.length && !accountId) {
       response.status(403).json({
         ok: false,
-        error: 'Signed-in access is required to attach review photos.',
+        error: 'Sign-in required: a signed-in account is needed to attach review photos.',
       });
       return;
     }
@@ -148,6 +155,8 @@ communityRoutes.post(
       throw error;
     }
     const review = reviewSubmission.review;
+    clearStorefrontAppReviewAggregateCache();
+    clearStorefrontBackendCache();
     invalidateCachedStorefrontDetail(storefrontId);
 
     void notifyOwnersOfStorefrontActivity({
@@ -261,7 +270,7 @@ communityRoutes.put(
     if (reviewInput.photoUploadIds.length && !accountId) {
       response.status(403).json({
         ok: false,
-        error: 'Signed-in access is required to attach review photos.',
+        error: 'Sign-in required: a signed-in account is needed to attach review photos.',
       });
       return;
     }
@@ -286,6 +295,8 @@ communityRoutes.put(
       throw error;
     }
 
+    clearStorefrontAppReviewAggregateCache();
+    clearStorefrontBackendCache();
     invalidateCachedStorefrontDetail(storefrontId);
 
     // Detail refresh is a convenience — must not fail the primary write response
@@ -317,7 +328,7 @@ communityRoutes.post(
     if (!accountId) {
       response.status(403).json({
         ok: false,
-        error: 'Signed-in access is required to upload review photos.',
+        error: 'Sign-in required: a signed-in account is needed to upload review photos.',
       });
       return;
     }
@@ -343,6 +354,7 @@ communityRoutes.post(
       fileName: body.fileName,
       contentType: body.contentType,
       sizeBytes: body.sizeBytes,
+      forceMemoryMode: body.forceMemoryMode ?? false,
     });
 
     response.status(201).json({
@@ -371,7 +383,7 @@ communityRoutes.post(
     if (!accountId) {
       response.status(403).json({
         ok: false,
-        error: 'Signed-in access is required to complete review photo uploads.',
+        error: 'Sign-in required: a signed-in account is needed to complete photo uploads.',
       });
       return;
     }
@@ -412,7 +424,7 @@ communityRoutes.delete(
     if (!accountId) {
       response.status(403).json({
         ok: false,
-        error: 'Signed-in access is required to delete review photo uploads.',
+        error: 'Sign-in required: a signed-in account is needed to delete photo uploads.',
       });
       return;
     }
@@ -449,12 +461,15 @@ communityRoutes.post(
       description: body.description,
       reportTarget: body.reportTarget,
       reportedReviewId: body.reportedReviewId,
-      reportedReviewAuthorProfileId: body.reportedReviewAuthorProfileId ?? null,
       reportedReviewAuthorName: body.reportedReviewAuthorName ?? null,
       reportedReviewExcerpt: body.reportedReviewExcerpt ?? null,
     };
 
-    await ensureProfileWriteAccess(request, input.profileId);
+    await ensureAuthenticatedProfileWriteAccess(
+      request,
+      input.profileId,
+      'You must be signed in to report a storefront or review.',
+    );
 
     // Per-profile velocity check for reports
     const velocityResult = checkCommunityVelocity(
@@ -470,7 +485,25 @@ communityRoutes.post(
       return;
     }
 
-    const report = await submitStorefrontReport(input);
+    let report: Awaited<ReturnType<typeof submitStorefrontReport>>;
+    try {
+      report = await submitStorefrontReport(input);
+    } catch (error) {
+      if (error instanceof StorefrontCommunityError) {
+        const requestId = response.getHeader('X-CanopyTrove-Request-Id');
+        response.status(error.statusCode).json({
+          ok: false,
+          error: getSafeErrorMessage(
+            error,
+            error.statusCode,
+            typeof requestId === 'string' ? requestId : null,
+          ),
+        });
+        return;
+      }
+
+      throw error;
+    }
 
     // Gamification is a side effect — must not fail the primary write response
     let rewardResult: Awaited<ReturnType<typeof applyGamificationEvent>> | null = null;
@@ -521,7 +554,11 @@ communityRoutes.post(
     const reviewId = parseReviewIdParam(request.params.reviewId);
     const body = parseHelpfulVoteBody(request.body);
 
-    await ensureProfileWriteAccess(request, body.profileId);
+    await ensureAuthenticatedProfileWriteAccess(
+      request,
+      body.profileId,
+      'You must be signed in to mark a review as helpful.',
+    );
 
     // Per-profile velocity check for helpful votes
     const velocityResult = checkCommunityVelocity(
@@ -583,7 +620,6 @@ communityRoutes.post(
     response.json({
       detail,
       didApply: helpfulResult.didApply,
-      reviewAuthorProfileId: helpfulResult.reviewAuthorProfileId,
     });
   },
 );

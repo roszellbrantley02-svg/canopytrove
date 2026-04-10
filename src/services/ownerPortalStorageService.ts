@@ -25,8 +25,12 @@ function getFileExtension(file: OwnerPortalUploadedFile) {
   return '.bin';
 }
 
-async function createBlobFromUri(uri: string) {
-  const response = await fetch(uri);
+async function createBlobFromUploadFile(file: OwnerPortalUploadedFile) {
+  if (file.blob instanceof Blob) {
+    return file.blob;
+  }
+
+  const response = await fetch(file.uri);
   if (!response.ok) {
     throw new Error('Unable to read the selected file.');
   }
@@ -47,6 +51,7 @@ export async function uploadOwnerPrivateFile(
   filePrefix: string,
   file: OwnerPortalUploadedFile,
 ) {
+  await ensureOwnerPortalSessionReady();
   const storage = getFirebaseStorage();
   if (!storage) {
     throw new Error('Firebase Storage is not configured.');
@@ -57,7 +62,7 @@ export async function uploadOwnerPrivateFile(
   const fileName = `${sanitizeFileSegment(filePrefix)}-${timestamp}${extension}`;
   const filePath = `owner-private/${ownerUid}/${category}/${fileName}`;
   const fileRef = ref(storage, filePath);
-  const blob = await createBlobFromUri(file.uri);
+  const blob = await createBlobFromUploadFile(file);
 
   await uploadBytes(fileRef, blob, {
     contentType: file.mimeType ?? undefined,
@@ -83,7 +88,7 @@ export async function uploadOwnerApprovedStorefrontMediaFile(input: {
   const fileName = `${sanitizeFileSegment(input.mediaType)}-${timestamp}${extension}`;
   const filePath = `dispensary-media/${input.dispensaryId}/approved/owner/${input.ownerUid}/${input.mediaType}/${fileName}`;
   const fileRef = ref(storage, filePath);
-  const blob = await createBlobFromUri(input.file.uri);
+  const blob = await createBlobFromUploadFile(input.file);
 
   await uploadBytes(fileRef, blob, {
     contentType: input.file.mimeType ?? undefined,

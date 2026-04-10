@@ -11,6 +11,10 @@ const appProfileMocks = vi.hoisted(() => ({
   saveAppProfile: vi.fn(),
 }));
 
+const backendProfileMocks = vi.hoisted(() => ({
+  getStorefrontBackendCanonicalProfile: vi.fn(),
+}));
+
 const authMocks = vi.hoisted(() => {
   let listener:
     | ((session: {
@@ -58,6 +62,10 @@ vi.mock('../services/canopyTroveAuthService', () => ({
   subscribeToCanopyTroveAuthSession: authMocks.subscribeToCanopyTroveAuthSession,
 }));
 
+vi.mock('../services/storefrontBackendService', () => ({
+  getStorefrontBackendCanonicalProfile: backendProfileMocks.getStorefrontBackendCanonicalProfile,
+}));
+
 import { useStorefrontProfileModel } from './useStorefrontProfileModel';
 
 function createProfile(id: string, overrides?: Partial<AppProfile>): AppProfile {
@@ -90,11 +98,19 @@ describe('useStorefrontProfileModel', () => {
     appProfileMocks.ensureAppProfile.mockReset();
     appProfileMocks.getCachedAppProfile.mockReset();
     appProfileMocks.saveAppProfile.mockReset();
+    backendProfileMocks.getStorefrontBackendCanonicalProfile.mockReset();
     authMocks.getInitialCanopyTroveAuthSession.mockReset();
     authMocks.signOutCanopyTroveSession.mockReset();
     authMocks.startCanopyTroveGuestSession.mockReset();
     authMocks.subscribeToCanopyTroveAuthSession.mockClear();
     appProfileMocks.createAppProfileId.mockReturnValue('generated-profile');
+    appProfileMocks.getCachedAppProfile.mockReturnValue(null);
+    appProfileMocks.saveAppProfile.mockImplementation(async (profile: AppProfile) => {
+      appProfileMocks.getCachedAppProfile.mockReturnValue(profile);
+    });
+    backendProfileMocks.getStorefrontBackendCanonicalProfile.mockRejectedValue(
+      new Error('not available'),
+    );
     authMocks.getInitialCanopyTroveAuthSession.mockReturnValue({
       status: 'signed-out',
       uid: null,
@@ -147,15 +163,16 @@ describe('useStorefrontProfileModel', () => {
     expect(latestValue?.appProfile?.displayName).toBe('CanopyTrove User');
   });
 
-  it('projects authenticated session data into the profile', async () => {
+  it('rotates an anonymous profile to a fresh authenticated profile on sign-in', async () => {
     const cachedProfile = createProfile('cached-profile');
     appProfileMocks.getCachedAppProfile.mockReturnValue(cachedProfile);
+    appProfileMocks.createAppProfileId.mockReturnValue('authenticated-profile');
 
     act(() => {
       renderer = create(<HookHarness />);
     });
 
-    await act(async () => {
+    act(() => {
       authMocks.emit({
         status: 'authenticated',
         uid: 'user-123',
@@ -163,15 +180,113 @@ describe('useStorefrontProfileModel', () => {
         displayName: 'Real User',
         email: 'user@example.com',
       });
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    await act(async () => {
       await flushPromises();
     });
 
     expect(latestValue?.authSession.status).toBe('authenticated');
-    expect(latestValue?.appProfile).toEqual(
+    expect(appProfileMocks.createAppProfileId).toHaveBeenCalled();
+    expect(appProfileMocks.saveAppProfile).toHaveBeenCalledWith(
       expect.objectContaining({
+        id: 'authenticated-profile',
         kind: 'authenticated',
         accountId: 'user-123',
         displayName: 'Real User',
+      }),
+    );
+  });
+
+  it('reuses the canonical authenticated profile returned by the backend', async () => {
+    const cachedProfile = createProfile('cached-profile');
+    const canonicalProfile = createProfile('canonical-profile', {
+      kind: 'authenticated',
+      accountId: 'user-123',
+      displayName: 'Daniellett',
+      createdAt: '2026-04-06T14:28:51.387Z',
+      updatedAt: '2026-04-10T10:26:26.796Z',
+    });
+    appProfileMocks.getCachedAppProfile.mockReturnValue(cachedProfile);
+    backendProfileMocks.getStorefrontBackendCanonicalProfile.mockResolvedValue(canonicalProfile);
+
+    act(() => {
+      renderer = create(<HookHarness />);
+    });
+
+    act(() => {
+      authMocks.emit({
+        status: 'authenticated',
+        uid: 'user-123',
+        isAnonymous: false,
+        displayName: 'Daniellett',
+        email: 'danielle@example.com',
+      });
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    expect(latestValue?.profileId).toBe('canonical-profile');
+    expect(appProfileMocks.saveAppProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'canonical-profile',
+        kind: 'authenticated',
+        accountId: 'user-123',
+        displayName: 'Daniellett',
+      }),
+    );
+  });
+
+  it('reconciles an already-authenticated cached profile to the canonical backend profile', async () => {
+    const cachedProfile = createProfile('duplicate-profile', {
+      kind: 'authenticated',
+      accountId: 'user-123',
+      displayName: 'Daniellett',
+    });
+    const canonicalProfile = createProfile('canonical-profile', {
+      kind: 'authenticated',
+      accountId: 'user-123',
+      displayName: 'Daniellett',
+      createdAt: '2026-04-06T14:28:51.387Z',
+      updatedAt: '2026-04-10T10:26:26.796Z',
+    });
+    appProfileMocks.getCachedAppProfile.mockReturnValue(cachedProfile);
+    authMocks.getInitialCanopyTroveAuthSession.mockReturnValue({
+      status: 'authenticated',
+      uid: 'user-123',
+      isAnonymous: false,
+      displayName: 'Daniellett',
+      email: 'danielle@example.com',
+    });
+    backendProfileMocks.getStorefrontBackendCanonicalProfile.mockResolvedValue(canonicalProfile);
+
+    act(() => {
+      renderer = create(<HookHarness />);
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    expect(latestValue?.profileId).toBe('canonical-profile');
+    expect(appProfileMocks.saveAppProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'canonical-profile',
+        accountId: 'user-123',
       }),
     );
   });

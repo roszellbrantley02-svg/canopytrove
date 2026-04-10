@@ -10,7 +10,7 @@ import {
   parseStorefrontSummariesQuery,
   parseStorefrontSummaryIdsQuery,
 } from '../http/validation';
-import { resolveVerifiedRequestAccountId } from '../services/profileAccessService';
+import { resolveVerifiedRequestIdentity } from '../services/profileAccessService';
 import { StorefrontSummariesApiResponse } from '../types';
 
 function setCacheHeaders(
@@ -41,34 +41,49 @@ function getClientPlatform(request: {
 
 export const storefrontRoutes = Router();
 
+function getViewerProfileId(request: { headers: Record<string, string | string[] | undefined> }) {
+  const header = request.headers['x-canopy-profile-id'];
+  const value = Array.isArray(header) ? header[0] : header;
+  const normalizedValue = typeof value === 'string' ? value.trim() : '';
+  if (!normalizedValue || normalizedValue.length > 160) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
 storefrontRoutes.get('/storefront-summaries', async (request, response) => {
-  const accountId = await resolveVerifiedRequestAccountId(request, {
+  const identity = await resolveVerifiedRequestIdentity(request, {
     allowTestHeader: process.env.NODE_ENV === 'test' && !process.env.K_SERVICE,
     invalidTokenBehavior: 'ignore',
   });
-  const viewerContext = accountId ? { profileId: accountId } : null;
+  const memberAccountId = identity.role === 'member' ? identity.accountId : null;
+  const viewerProfileId = getViewerProfileId(request);
+  const viewerContext = memberAccountId && viewerProfileId ? { profileId: viewerProfileId } : null;
   const payload: StorefrontSummariesApiResponse = await getStorefrontSummaries(
     parseStorefrontSummariesQuery(request.query as Record<string, unknown>),
     {
-      includeMemberDeals: Boolean(accountId),
+      includeMemberDeals: Boolean(memberAccountId),
       viewerContext,
       clientPlatform: getClientPlatform(request),
     },
   );
 
-  setCacheHeaders(response, { authenticated: Boolean(accountId), maxAge: 60, swr: 120 });
+  setCacheHeaders(response, { authenticated: Boolean(memberAccountId), maxAge: 60, swr: 120 });
   response.json(payload);
 });
 
 storefrontRoutes.get('/storefront-summaries/by-ids', async (request, response) => {
-  const accountId = await resolveVerifiedRequestAccountId(request, {
+  const identity = await resolveVerifiedRequestIdentity(request, {
     allowTestHeader: process.env.NODE_ENV === 'test' && !process.env.K_SERVICE,
     invalidTokenBehavior: 'ignore',
   });
-  const viewerContext = accountId ? { profileId: accountId } : null;
+  const memberAccountId = identity.role === 'member' ? identity.accountId : null;
+  const viewerProfileId = getViewerProfileId(request);
+  const viewerContext = memberAccountId && viewerProfileId ? { profileId: viewerProfileId } : null;
   const ids = parseStorefrontSummaryIdsQuery(request.query as Record<string, unknown>);
   const items = await getStorefrontSummariesByIds(ids, {
-    includeMemberDeals: Boolean(accountId),
+    includeMemberDeals: Boolean(memberAccountId),
     viewerContext,
     clientPlatform: getClientPlatform(request),
   });
@@ -80,7 +95,7 @@ storefrontRoutes.get('/storefront-summaries/by-ids', async (request, response) =
     offset: 0,
   };
 
-  setCacheHeaders(response, { authenticated: Boolean(accountId), maxAge: 60, swr: 120 });
+  setCacheHeaders(response, { authenticated: Boolean(memberAccountId), maxAge: 60, swr: 120 });
   response.json(payload);
 });
 
@@ -99,15 +114,60 @@ storefrontRoutes.get('/storefront-summaries/resolve-slug/:slug', async (request,
   response.json({ storefrontId: resolvedId });
 });
 
-storefrontRoutes.get('/storefront-details/:storefrontId', async (request, response) => {
-  const accountId = await resolveVerifiedRequestAccountId(request, {
+storefrontRoutes.get('/storefront-details/batch', async (request, response) => {
+  const idsParam = request.query.ids;
+  const rawIds = typeof idsParam === 'string' ? idsParam : '';
+  const ids = rawIds
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .slice(0, 12); // cap at 12 to limit fan-out
+
+  if (!ids.length) {
+    response.status(400).json({ error: 'Missing or empty ids query parameter.' });
+    return;
+  }
+
+  const identity = await resolveVerifiedRequestIdentity(request, {
     allowTestHeader: process.env.NODE_ENV === 'test' && !process.env.K_SERVICE,
     invalidTokenBehavior: 'ignore',
   });
-  const viewerContext = accountId ? { profileId: accountId } : null;
+  const memberAccountId = identity.role === 'member' ? identity.accountId : null;
+  const viewerProfileId = getViewerProfileId(request);
+  const viewerContext = memberAccountId && viewerProfileId ? { profileId: viewerProfileId } : null;
+  const clientPlatform = getClientPlatform(request);
+
+  const results = await Promise.allSettled(
+    ids.map((id) =>
+      getStorefrontDetail(id, {
+        includeMemberDeals: Boolean(memberAccountId),
+        viewerContext,
+        clientPlatform,
+      }),
+    ),
+  );
+
+  const items: Record<string, unknown> = {};
+  ids.forEach((id, index) => {
+    const result = results[index];
+    items[id] = result.status === 'fulfilled' ? result.value : null;
+  });
+
+  setCacheHeaders(response, { authenticated: Boolean(memberAccountId), maxAge: 120, swr: 300 });
+  response.json({ items });
+});
+
+storefrontRoutes.get('/storefront-details/:storefrontId', async (request, response) => {
+  const identity = await resolveVerifiedRequestIdentity(request, {
+    allowTestHeader: process.env.NODE_ENV === 'test' && !process.env.K_SERVICE,
+    invalidTokenBehavior: 'ignore',
+  });
+  const memberAccountId = identity.role === 'member' ? identity.accountId : null;
+  const viewerProfileId = getViewerProfileId(request);
+  const viewerContext = memberAccountId && viewerProfileId ? { profileId: viewerProfileId } : null;
   const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
   const detail = await getStorefrontDetail(storefrontId, {
-    includeMemberDeals: Boolean(accountId),
+    includeMemberDeals: Boolean(memberAccountId),
     viewerContext,
     clientPlatform: getClientPlatform(request),
   });
@@ -118,6 +178,6 @@ storefrontRoutes.get('/storefront-details/:storefrontId', async (request, respon
     return;
   }
 
-  setCacheHeaders(response, { authenticated: Boolean(accountId), maxAge: 120, swr: 300 });
+  setCacheHeaders(response, { authenticated: Boolean(memberAccountId), maxAge: 120, swr: 300 });
   response.json(detail);
 });
