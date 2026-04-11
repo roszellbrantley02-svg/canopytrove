@@ -16,6 +16,15 @@ import { deriveAuthFetchKey } from './authFetchKey';
 
 const FOLLOW_UP_REFRESH_DELAYS_MS = [1_250, 2_500];
 
+/**
+ * Apply jitter to a delay to spread requests and avoid thundering herd.
+ * Multiplies by a random value between 0.8 and 1.2 (±20%).
+ */
+function applyJitterToDelay(delayMs: number): number {
+  const jitterFactor = 0.8 + Math.random() * 0.4;
+  return Math.round(delayMs * jitterFactor);
+}
+
 function createStorefrontOperationalDependencyKey(storefront?: StorefrontSummary | null) {
   if (!storefront) {
     return null;
@@ -84,6 +93,7 @@ export function useStorefrontDetails(
   const [error, setError] = useState<string | null>(null);
   const followUpRefreshKeyRef = useRef<string | null>(null);
   const followUpTimeoutHandlesRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const currentStorefrontIdRef = useRef<string | null>(storefrontId);
   const storefrontOperationalDependencyKey = createStorefrontOperationalDependencyKey(storefront);
   const shouldRunOperationalFollowUp =
     storefrontSourceMode === 'api' && Boolean(storefrontOperationalDependencyKey);
@@ -112,6 +122,7 @@ export function useStorefrontDetails(
 
   useEffect(() => {
     let alive = true;
+    currentStorefrontIdRef.current = storefrontId;
     const cached =
       (storefrontId ? storefrontRepository.getCachedStorefrontDetails(storefrontId) : null) ??
       (storefrontId && storefrontSourceMode !== 'api'
@@ -147,7 +158,7 @@ export function useStorefrontDetails(
         }
 
         const liveData = await storefrontRepository.getStorefrontDetails(storefrontId);
-        if (!alive) {
+        if (!alive || currentStorefrontIdRef.current !== storefrontId) {
           return;
         }
 
@@ -176,22 +187,23 @@ export function useStorefrontDetails(
 
             try {
               for (const delayMs of FOLLOW_UP_REFRESH_DELAYS_MS) {
+                const jitteredDelayMs = applyJitterToDelay(delayMs);
                 await new Promise<void>((resolve) => {
                   const timeoutHandle = setTimeout(() => {
                     followUpTimeoutHandlesRef.current = followUpTimeoutHandlesRef.current.filter(
                       (candidate) => candidate !== timeoutHandle,
                     );
                     resolve();
-                  }, delayMs);
+                  }, jitteredDelayMs);
                   followUpTimeoutHandlesRef.current.push(timeoutHandle);
                 });
-                if (!alive || nextStorefrontId !== storefrontId) {
+                if (!alive || currentStorefrontIdRef.current !== nextStorefrontId) {
                   return;
                 }
 
                 const refreshedDetail =
                   await storefrontRepository.getStorefrontDetails(nextStorefrontId);
-                if (!alive || nextStorefrontId !== storefrontId) {
+                if (!alive || currentStorefrontIdRef.current !== nextStorefrontId) {
                   return;
                 }
 
@@ -212,7 +224,7 @@ export function useStorefrontDetails(
             } catch {
               // Follow-up refresh failures should not replace the main detail payload.
             } finally {
-              if (!alive || nextStorefrontId !== storefrontId) {
+              if (!alive || currentStorefrontIdRef.current !== nextStorefrontId) {
                 return;
               }
 

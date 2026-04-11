@@ -576,6 +576,70 @@ describe('useStorefrontDetails', () => {
       randomSpy.mockRestore();
     }
   });
+
+  it('ignores stale detail responses after the requested storefront id changes', async () => {
+    let setStorefrontId: React.Dispatch<React.SetStateAction<string>> | null = null;
+    let resolveFirstRequest: ((value: StorefrontDetails) => void) | null = null;
+    let resolveSecondRequest: ((value: StorefrontDetails) => void) | null = null;
+
+    repositoryMocks.getCachedStorefrontDetails.mockReturnValue(null);
+    repositoryMocks.getStorefrontDetails.mockImplementation(
+      (storefrontId: string) =>
+        new Promise<StorefrontDetails>((resolve) => {
+          if (storefrontId === 'store-1') {
+            resolveFirstRequest = resolve;
+            return;
+          }
+
+          resolveSecondRequest = resolve;
+        }),
+    );
+
+    function SwitchingHarness() {
+      const [storefrontId, setStorefrontIdState] = React.useState('store-1');
+      setStorefrontId = setStorefrontIdState;
+      latestValue = useStorefrontDetails(storefrontId);
+      return null;
+    }
+
+    act(() => {
+      renderer = create(<SwitchingHarness />);
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    expect(resolveFirstRequest).toBeTypeOf('function');
+    expect(latestValue.isLoading).toBe(true);
+
+    act(() => {
+      setStorefrontId?.('store-2');
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    expect(resolveSecondRequest).toBeTypeOf('function');
+
+    await act(async () => {
+      resolveFirstRequest?.(createDetail('store-1', { phone: '555-1111' }));
+      await flushPromises();
+    });
+
+    expect(latestValue.data).toBeNull();
+    expect(latestValue.isLoading).toBe(true);
+
+    const secondDetail = createDetail('store-2', { phone: '555-2222' });
+    await act(async () => {
+      resolveSecondRequest?.(secondDetail);
+      await flushPromises();
+    });
+
+    expect(latestValue.data).toEqual(secondDetail);
+    expect(latestValue.isLoading).toBe(false);
+  });
 });
 
 describe('useSavedSummaries', () => {
