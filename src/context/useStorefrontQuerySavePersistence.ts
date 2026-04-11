@@ -6,11 +6,13 @@ import {
 } from './storefrontQueryPersistenceShared';
 
 type UseStorefrontQuerySavePersistenceArgs = StorefrontQueryPersistencePayload & {
+  accountId?: string | null;
   hasHydratedPreferences: boolean;
   lastSavedPreferencesPayloadRef: React.MutableRefObject<string | null>;
 };
 
 export function useStorefrontQuerySavePersistence({
+  accountId,
   hasHydratedPreferences,
   lastSavedPreferencesPayloadRef,
   ...payload
@@ -27,11 +29,11 @@ export function useStorefrontQuerySavePersistence({
 
     const timeoutId = setTimeout(() => {
       lastSavedPreferencesPayloadRef.current = serializedPreferences;
-      void persistStorefrontQueryPreferences(payload);
+      void persistStorefrontQueryPreferences(payload, accountId);
     }, 300);
 
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [hasHydratedPreferences, lastSavedPreferencesPayloadRef, payload]);
+  }, [accountId, hasHydratedPreferences, lastSavedPreferencesPayloadRef, payload]);
 }

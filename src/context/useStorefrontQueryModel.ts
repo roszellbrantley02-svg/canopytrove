@@ -18,6 +18,7 @@ import { useStorefrontQueryPersistence } from './useStorefrontQueryPersistence';
 type UseStorefrontQueryModelArgs = {
   cachedPreferences: StoredStorefrontPreferences | null;
   profileId: string;
+  accountId?: string | null;
   profileCreatedAt?: string | null;
   savedStorefrontIds: string[];
   gamificationState: StorefrontGamificationState;
@@ -28,6 +29,7 @@ type UseStorefrontQueryModelArgs = {
 export function useStorefrontQueryModel({
   cachedPreferences,
   profileId,
+  accountId,
   profileCreatedAt,
   savedStorefrontIds,
   gamificationState,
@@ -35,7 +37,8 @@ export function useStorefrontQueryModel({
   setGamificationState,
 }: UseStorefrontQueryModelArgs) {
   const [availableAreas, setAvailableAreas] = useState<MarketArea[]>(getCachedMarketAreas());
-  const defaultArea = getDefaultMarketArea(availableAreas);
+  // Memoize defaultArea independently so area selection stays in sync with available areas
+  const defaultArea = useMemo(() => getDefaultMarketArea(availableAreas), [availableAreas]);
   const [selectedAreaId, setSelectedAreaIdState] = useState<string>(
     cachedPreferences?.selectedAreaId ?? defaultArea.id,
   );
@@ -99,6 +102,7 @@ export function useStorefrontQueryModel({
   const { hasHydratedPreferences, markQueryInputTouched } = useStorefrontQueryPersistence({
     cachedPreferences,
     profileId,
+    accountId,
     profileCreatedAt,
     defaultAreaLabel: defaultArea.label,
     selectedAreaId,

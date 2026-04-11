@@ -1,7 +1,8 @@
 import React from 'react';
 import type { ReactTestRenderer } from 'react-test-renderer';
 import { act, create } from 'react-test-renderer';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { StoredStorefrontPreferences } from '../services/storefrontPreferencesService';
 import type { MarketArea, StorefrontGamificationState } from '../types/storefront';
 
 const marketAreaMocks = vi.hoisted(() => ({
@@ -96,6 +97,11 @@ function flushPromises() {
   });
 }
 
+type HookHarnessProps = {
+  accountId?: string | null;
+  cachedPreferences: StoredStorefrontPreferences | null;
+};
+
 describe('useStorefrontQueryModel', () => {
   let renderer: ReactTestRenderer | null = null;
   let latestValue: ReturnType<typeof useStorefrontQueryModel> | null = null;
@@ -121,26 +127,23 @@ describe('useStorefrontQueryModel', () => {
     locationMocks.findNearestArea.mockImplementation((_areas, coordinates) =>
       coordinates.latitude > 42 ? marketAreas[1] : marketAreas[0],
     );
+    vi.useRealTimers();
   });
 
-  function HookHarness() {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function HookHarness({ accountId = null, cachedPreferences }: HookHarnessProps) {
     const [savedStorefrontIds, setSavedStorefrontIds] = React.useState<string[]>([]);
     const [gamificationState, setGamificationState] = React.useState<StorefrontGamificationState>(
       createGamificationState('profile-1'),
     );
 
     latestValue = useStorefrontQueryModel({
-      cachedPreferences: {
-        selectedAreaId: 'nyc',
-        searchQuery: 'Union',
-        locationQuery: '10012',
-        searchLocation: { latitude: 40.725, longitude: -73.997 },
-        searchLocationLabel: 'NoHo, Manhattan',
-        browseSortKey: 'distance',
-        browseHotDealsOnly: false,
-        deviceLocationLabel: null,
-      },
+      cachedPreferences,
       profileId: 'profile-1',
+      accountId,
       profileCreatedAt: '2026-03-01T00:00:00.000Z',
       savedStorefrontIds,
       gamificationState,
@@ -153,7 +156,20 @@ describe('useStorefrontQueryModel', () => {
 
   it('hydrates active search context from cached preferences', () => {
     act(() => {
-      renderer = create(<HookHarness />);
+      renderer = create(
+        <HookHarness
+          cachedPreferences={{
+            selectedAreaId: 'nyc',
+            searchQuery: 'Union',
+            locationQuery: '10012',
+            searchLocation: { latitude: 40.725, longitude: -73.997 },
+            searchLocationLabel: 'NoHo, Manhattan',
+            browseSortKey: 'distance',
+            browseHotDealsOnly: false,
+            deviceLocationLabel: null,
+          }}
+        />,
+      );
     });
 
     expect(latestValue?.selectedAreaId).toBe('nyc');
@@ -176,7 +192,20 @@ describe('useStorefrontQueryModel', () => {
     });
 
     act(() => {
-      renderer = create(<HookHarness />);
+      renderer = create(
+        <HookHarness
+          cachedPreferences={{
+            selectedAreaId: 'nyc',
+            searchQuery: 'Union',
+            locationQuery: '10012',
+            searchLocation: { latitude: 40.725, longitude: -73.997 },
+            searchLocationLabel: 'NoHo, Manhattan',
+            browseSortKey: 'distance',
+            browseHotDealsOnly: false,
+            deviceLocationLabel: null,
+          }}
+        />,
+      );
     });
 
     await act(async () => {
@@ -258,6 +287,7 @@ describe('useStorefrontQueryModel', () => {
       latestValue = useStorefrontQueryModel({
         cachedPreferences: null,
         profileId: 'profile-1',
+        accountId: null,
         profileCreatedAt: '2026-03-01T00:00:00.000Z',
         savedStorefrontIds,
         gamificationState,
@@ -288,5 +318,105 @@ describe('useStorefrontQueryModel', () => {
 
     expect(latestValue?.searchQuery).toBe('Buffalo');
     expect(latestValue?.selectedAreaId).toBe('nyc');
+  });
+
+  it('loads and saves storefront preferences in the authenticated account scope', async () => {
+    vi.useFakeTimers();
+    preferenceMocks.loadStorefrontPreferences.mockResolvedValue(null);
+
+    act(() => {
+      renderer = create(<HookHarness accountId="account-123" cachedPreferences={null} />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(preferenceMocks.loadStorefrontPreferences).toHaveBeenCalledWith('account-123');
+
+    await act(async () => {
+      latestValue?.setSearchQuery('Albany');
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    expect(preferenceMocks.saveStorefrontPreferences).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        searchQuery: 'Albany',
+      }),
+      'account-123',
+    );
+  });
+
+  it('does not persist guest preferences into an authenticated account before hydration finishes', async () => {
+    vi.useFakeTimers();
+
+    let resolvePreferences: ((value: StoredStorefrontPreferences | null) => void) | null = null;
+    preferenceMocks.loadStorefrontPreferences.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePreferences = resolve;
+        }),
+    );
+
+    act(() => {
+      renderer = create(
+        <HookHarness
+          accountId={null}
+          cachedPreferences={{
+            selectedAreaId: 'nyc',
+            searchQuery: 'Guest search',
+            locationQuery: 'Guest location',
+          }}
+        />,
+      );
+    });
+
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+      await Promise.resolve();
+    });
+
+    preferenceMocks.saveStorefrontPreferences.mockClear();
+
+    act(() => {
+      renderer?.update(<HookHarness accountId="account-456" cachedPreferences={null} />);
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    expect(preferenceMocks.loadStorefrontPreferences).toHaveBeenCalledWith('account-456');
+    expect(preferenceMocks.saveStorefrontPreferences).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolvePreferences?.({
+        selectedAreaId: 'central-ny',
+        searchQuery: 'Member search',
+        locationQuery: 'Syracuse, NY',
+      });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      latestValue?.setSearchQuery('Member update');
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    expect(preferenceMocks.saveStorefrontPreferences).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        searchQuery: 'Member update',
+      }),
+      'account-456',
+    );
   });
 });

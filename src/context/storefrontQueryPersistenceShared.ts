@@ -61,6 +61,7 @@ export function createStorefrontQueryPreferencesPayload(
 
 export async function persistStorefrontQueryPreferences(
   payload: StorefrontQueryPersistencePayload,
+  accountId?: string | null,
 ) {
-  await saveStorefrontPreferences(payload);
+  await saveStorefrontPreferences(payload, accountId);
 }

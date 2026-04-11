@@ -13,7 +13,7 @@ import { useStorefrontRouteState } from './useStorefrontRouteState';
 import { useCommunitySafetyRemoteSync } from './useCommunitySafetyRemoteSync';
 
 export function useStorefrontControllerProviderModel() {
-  const cachedPreferences = getCachedStorefrontPreferences();
+  const bootstrapCachedPreferences = getCachedStorefrontPreferences();
   const {
     appProfile,
     setAppProfile,
@@ -27,8 +27,11 @@ export function useStorefrontControllerProviderModel() {
     updateDisplayName,
     clearDisplayName,
   } = useStorefrontProfileModel({
-    cachedProfileId: cachedPreferences?.profileId ?? cachedPreferences?.routeProfileId,
+    cachedProfileId:
+      bootstrapCachedPreferences?.profileId ?? bootstrapCachedPreferences?.routeProfileId,
   });
+  const preferenceAccountId = authSession.status === 'authenticated' ? authSession.uid : null;
+  const cachedPreferences = getCachedStorefrontPreferences(preferenceAccountId);
   const routeState = useStorefrontRouteState(cachedPreferences?.savedStorefrontIds ?? []);
   const {
     lastLocalSavedStorefrontMutationAtRef,
@@ -85,6 +88,7 @@ export function useStorefrontControllerProviderModel() {
   } = useStorefrontQueryModel({
     cachedPreferences,
     profileId,
+    accountId: preferenceAccountId,
     profileCreatedAt: appProfile?.createdAt,
     savedStorefrontIds: routeState.savedStorefrontIds,
     gamificationState,

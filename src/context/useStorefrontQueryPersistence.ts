@@ -7,6 +7,7 @@ import { useStorefrontQuerySavePersistence } from './useStorefrontQuerySavePersi
 type UseStorefrontQueryPersistenceArgs = {
   cachedPreferences: StoredStorefrontPreferences | null;
   profileId: string;
+  accountId?: string | null;
   profileCreatedAt?: string | null;
   defaultAreaLabel: string;
   selectedAreaId: string;
@@ -34,6 +35,7 @@ type UseStorefrontQueryPersistenceArgs = {
 export function useStorefrontQueryPersistence({
   cachedPreferences,
   profileId,
+  accountId,
   profileCreatedAt,
   defaultAreaLabel,
   selectedAreaId,
@@ -60,6 +62,7 @@ export function useStorefrontQueryPersistence({
   const [hasHydratedPreferences, setHasHydratedPreferences] = useState(Boolean(cachedPreferences));
   const lastSavedPreferencesPayloadRef = useRef<string | null>(null);
   const queryInputMutationCountRef = useRef(0);
+  const lastPreferenceScopeKeyRef = useRef<string | null>(null);
   const latestHydratableStateRef = useRef({
     selectedAreaId,
     searchQuery,
@@ -72,8 +75,34 @@ export function useStorefrontQueryPersistence({
     deviceLocationLabel,
     gamificationState,
   });
+  const preferenceScopeKey = accountId ?? '__guest__';
 
-  latestHydratableStateRef.current = {
+  React.useEffect(() => {
+    if (lastPreferenceScopeKeyRef.current === preferenceScopeKey) {
+      return;
+    }
+
+    lastPreferenceScopeKeyRef.current = preferenceScopeKey;
+    queryInputMutationCountRef.current = 0;
+    lastSavedPreferencesPayloadRef.current = null;
+    setHasHydratedPreferences(Boolean(cachedPreferences));
+  }, [cachedPreferences, preferenceScopeKey]);
+
+  // Move updates into useEffect to avoid race conditions during hydration
+  React.useEffect(() => {
+    latestHydratableStateRef.current = {
+      selectedAreaId,
+      searchQuery,
+      locationQuery,
+      browseSortKey,
+      browseHotDealsOnly,
+      savedStorefrontIds,
+      searchLocation,
+      searchLocationLabel,
+      deviceLocationLabel,
+      gamificationState,
+    };
+  }, [
     selectedAreaId,
     searchQuery,
     locationQuery,
@@ -84,7 +113,7 @@ export function useStorefrontQueryPersistence({
     searchLocationLabel,
     deviceLocationLabel,
     gamificationState,
-  };
+  ]);
 
   const markQueryInputTouched = React.useCallback(() => {
     queryInputMutationCountRef.current += 1;
@@ -93,6 +122,7 @@ export function useStorefrontQueryPersistence({
   useStorefrontQueryHydration({
     cachedPreferences,
     profileId,
+    accountId,
     profileCreatedAt,
     defaultAreaLabel,
     selectedAreaId,
@@ -115,6 +145,7 @@ export function useStorefrontQueryPersistence({
   useStorefrontQuerySavePersistence({
     hasHydratedPreferences,
     lastSavedPreferencesPayloadRef,
+    accountId,
     profileId,
     selectedAreaId,
     searchQuery,
