@@ -40,6 +40,11 @@ export function useOwnerPortalAccessState(authSession: CanopyTroveAuthSession) {
 
         setClaimRole(nextClaimRole);
       } catch (error) {
+        // SECURITY: Clear stale claim role on failure to prevent
+        // a previous user's owner/admin state carrying over.
+        if (active) {
+          setClaimRole(null);
+        }
         if (__DEV__) {
           console.warn('[useOwnerPortalAccessState] failed to fetch claim role:', error);
         }

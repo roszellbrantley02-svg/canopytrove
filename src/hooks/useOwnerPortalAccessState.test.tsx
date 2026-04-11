@@ -42,10 +42,12 @@ describe('useOwnerPortalAccessState', () => {
     vi.mocked(getCurrentOwnerPortalClaimRole).mockReset();
     vi.mocked(ensureOwnerPortalSessionReady).mockReset();
     vi.mocked(hasOwnerProfileDocument).mockReset();
+    vi.stubGlobal('__DEV__', false);
   });
 
   afterEach(() => {
     renderer?.unmount();
+    vi.unstubAllGlobals();
   });
 
   function HookHarness({ authSession }: { authSession: CanopyTroveAuthSession }) {
@@ -107,6 +109,50 @@ describe('useOwnerPortalAccessState', () => {
 
     expect(hasOwnerProfileDocument).toHaveBeenCalledWith('member-1');
     expect(ensureOwnerPortalSessionReady).not.toHaveBeenCalled();
+    expect(latestValue?.claimRole).toBe(null);
+    expect(latestValue?.accessState.allowlisted).toBe(false);
+    expect(latestValue?.isCheckingAccess).toBe(false);
+  });
+
+  it('clears a stale owner claim when a later claim lookup fails', async () => {
+    vi.mocked(getCurrentOwnerPortalClaimRole)
+      .mockResolvedValueOnce('owner')
+      .mockRejectedValueOnce(new Error('claim lookup failed'));
+
+    await act(async () => {
+      renderer = create(
+        <HookHarness
+          authSession={{
+            status: 'authenticated',
+            uid: 'owner-1',
+            isAnonymous: false,
+            displayName: 'Owner',
+            email: 'owner@example.com',
+          }}
+        />,
+      );
+      await flushEffects();
+    });
+
+    expect(latestValue?.claimRole).toBe('owner');
+    expect(latestValue?.accessState.allowlisted).toBe(true);
+
+    await act(async () => {
+      renderer?.update(
+        <HookHarness
+          authSession={{
+            status: 'authenticated',
+            uid: 'owner-2',
+            isAnonymous: false,
+            displayName: 'New Owner',
+            email: 'new-owner@example.com',
+          }}
+        />,
+      );
+      await flushEffects();
+      await flushEffects();
+    });
+
     expect(latestValue?.claimRole).toBe(null);
     expect(latestValue?.accessState.allowlisted).toBe(false);
     expect(latestValue?.isCheckingAccess).toBe(false);
