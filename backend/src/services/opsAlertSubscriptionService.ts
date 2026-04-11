@@ -7,6 +7,7 @@ import { serverConfig } from '../config';
 import { getOptionalFirestoreCollection } from '../firestoreCollections';
 import { backendStorefrontSourceStatus } from '../sources';
 import { sendExpoPushMessages } from './expoPushService';
+import { logger } from '../observability/logger';
 
 type RuntimeAlertSubscriptionRecord = {
   id: string;
@@ -98,12 +99,40 @@ async function getSubscriptionRecordById(subscriptionId: string) {
 async function listRuntimeAlertSubscriptionRecords() {
   const collectionRef = getRuntimeAlertSubscriptionCollection();
   if (collectionRef) {
-    const snapshot = await collectionRef.get();
-    return snapshot.docs.map((documentSnapshot) =>
-      normalizeRuntimeAlertSubscriptionRecord(
-        documentSnapshot.data() as RuntimeAlertSubscriptionRecord,
-      ),
-    );
+    const records: RuntimeAlertSubscriptionRecord[] = [];
+    let lastDocument:
+      | {
+          id: string;
+        }
+      | null = null;
+
+    while (true) {
+      let query = collectionRef.limit(500);
+      if (lastDocument) {
+        query = query.startAfter(lastDocument);
+      }
+
+      const snapshot = await query.get();
+      if (snapshot.empty) {
+        break;
+      }
+
+      records.push(
+        ...snapshot.docs.map((documentSnapshot) =>
+          normalizeRuntimeAlertSubscriptionRecord(
+            documentSnapshot.data() as RuntimeAlertSubscriptionRecord,
+          ),
+        ),
+      );
+
+      if (snapshot.docs.length < 500) {
+        break;
+      }
+
+      lastDocument = snapshot.docs[snapshot.docs.length - 1] ?? null;
+    }
+
+    return records;
   }
 
   return Array.from(alertSubscriptionStore.values()).map((record) =>
@@ -287,7 +316,7 @@ export async function notifyRuntimeAlertSubscribers(options: {
   );
   for (const result of tokenCleanupResults) {
     if (result.status === 'rejected') {
-      console.warn(
+      logger.warn(
         '[opsAlertSubscriptionService] failed to clear stale subscription token:',
         result.reason,
       );

@@ -40,9 +40,36 @@ async function loadOwnerAccountIds(): Promise<Set<string>> {
     return new Set();
   }
 
-  const snapshot = await collectionRef.where('role', 'in', ['owner', 'admin']).select('uid').get();
+  const ownerAccountIds = new Set<string>();
+  let lastDocument:
+    | {
+        id: string;
+      }
+    | null = null;
 
-  return new Set(snapshot.docs.map((doc) => doc.id));
+  while (true) {
+    let query = collectionRef.where('role', 'in', ['owner', 'admin']).select('uid').limit(1000);
+    if (lastDocument) {
+      query = query.startAfter(lastDocument);
+    }
+
+    const snapshot = await query.get();
+    if (snapshot.empty) {
+      break;
+    }
+
+    for (const documentSnapshot of snapshot.docs) {
+      ownerAccountIds.add(documentSnapshot.id);
+    }
+
+    if (snapshot.docs.length < 1000) {
+      break;
+    }
+
+    lastDocument = snapshot.docs[snapshot.docs.length - 1] ?? null;
+  }
+
+  return ownerAccountIds;
 }
 
 /**
