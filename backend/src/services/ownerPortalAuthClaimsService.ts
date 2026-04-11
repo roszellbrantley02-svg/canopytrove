@@ -37,10 +37,8 @@ export function isOwnerPortalEmailAllowlisted(email: string | null | undefined) 
     return false;
   }
 
-  if (!serverConfig.ownerPortalPrelaunchEnabled) {
-    return true;
-  }
-
+  // Always enforce the allowlist — prelaunch mode only controls UI gating,
+  // not the security boundary for who can become an owner.
   return serverConfig.ownerPortalAllowlist.includes(normalizedEmail);
 }
 
@@ -97,14 +95,27 @@ export async function syncOwnerPortalAuthClaims(input: {
     throw new OwnerPortalAuthClaimsError('Owner email is required to finalize access.', 400);
   }
 
-  const nextClaims = buildNextCustomClaims(userRecord.customClaims);
-  const nextRole = resolveOwnerPortalClaimRole(nextClaims);
-  const now = createNow();
   const userRef = db.collection(USERS_COLLECTION).doc(input.ownerUid);
   const existingUserSnapshot = await userRef.get();
   const existingUser = existingUserSnapshot.exists
     ? (existingUserSnapshot.data() as Partial<OwnerUserDocument>)
     : null;
+
+  // Security gate: The allowlist check above (isOwnerPortalEmailAllowlisted) is the
+  // authoritative server-side boundary for who can receive owner claims. It checks
+  // serverConfig.ownerPortalAllowlist, which is a backend-only config that cannot be
+  // modified from the client.
+  //
+  // We intentionally do NOT require ownerProfiles/{uid} to exist before granting
+  // first-time claims. During signup, the client creates the ownerProfile document
+  // AFTER claim-sync succeeds (and Firestore rules require the owner claim for that
+  // write). Requiring the doc here would create a chicken-and-egg deadlock:
+  //   1. Backend refuses claims without ownerProfile → 2. Client can't create
+  //   ownerProfile without owner claim → 3. Firestore rules block the write → deadlock.
+
+  const nextClaims = buildNextCustomClaims(userRecord.customClaims);
+  const nextRole = resolveOwnerPortalClaimRole(nextClaims);
+  const now = createNow();
 
   await auth.setCustomUserClaims(input.ownerUid, nextClaims);
   await userRef.set(
