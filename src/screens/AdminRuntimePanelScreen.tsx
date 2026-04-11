@@ -358,6 +358,10 @@ export function AdminRuntimePanelScreen() {
                 onPress={() => {
                   void runMonitoringSweep();
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isRunningSweep ? 'Sweeping health targets' : 'Run manual health sweep'
+                }
                 style={[
                   sharedStyles.secondaryButton,
                   (isSaving || isRunningSweep || !hasConfiguredAdminRuntimeApi()) &&
@@ -449,6 +453,10 @@ export function AdminRuntimePanelScreen() {
               onPress={() => {
                 void enableRuntimeAlerts();
               }}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isEnablingAlerts ? 'Enabling incident alerts' : 'Enable incident alerts'
+              }
               style={[
                 sharedStyles.primaryButton,
                 (isEnablingAlerts || !hasConfiguredAdminRuntimeApi()) &&
@@ -474,6 +482,8 @@ export function AdminRuntimePanelScreen() {
                 <Pressable
                   disabled={isSaving}
                   onPress={handleQuickProtect}
+                  accessibilityRole="button"
+                  accessibilityLabel={isSaving ? 'Saving protected mode' : 'Enable protected mode'}
                   style={[sharedStyles.primaryButton, isSaving && sharedStyles.buttonDisabled]}
                 >
                   <Text style={sharedStyles.primaryButtonText}>
@@ -483,6 +493,8 @@ export function AdminRuntimePanelScreen() {
                 <Pressable
                   disabled={isSaving}
                   onPress={handleResumeNormal}
+                  accessibilityRole="button"
+                  accessibilityLabel={isSaving ? 'Saving normal mode' : 'Resume normal mode'}
                   style={[sharedStyles.secondaryButton, isSaving && sharedStyles.buttonDisabled]}
                 >
                   <Text style={sharedStyles.secondaryButtonText}>Resume Normal Mode</Text>
@@ -494,6 +506,10 @@ export function AdminRuntimePanelScreen() {
                 onPress={() => {
                   void handleEvaluate();
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isSaving ? 'Checking incident pressure' : 'Re-evaluate from incident pressure'
+                }
                 style={[sharedStyles.secondaryButton, isSaving && sharedStyles.buttonDisabled]}
               >
                 <Text style={sharedStyles.secondaryButtonText}>
@@ -524,6 +540,9 @@ export function AdminRuntimePanelScreen() {
                           [toggle.key]: !current[toggle.key],
                         }))
                       }
+                      accessibilityRole="switch"
+                      accessibilityLabel={toggle.label}
+                      accessibilityState={{ checked: selected }}
                       style={[sharedStyles.choiceChip, selected && sharedStyles.choiceChipSelected]}
                     >
                       <Text
@@ -544,6 +563,8 @@ export function AdminRuntimePanelScreen() {
                 onPress={() => {
                   void savePolicy(draftPolicy, reasonInput);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={isSaving ? 'Applying policy' : 'Apply current policy'}
                 style={[sharedStyles.primaryButton, isSaving && sharedStyles.buttonDisabled]}
               >
                 <Text style={sharedStyles.primaryButtonText}>
@@ -619,6 +640,8 @@ export function AdminRuntimePanelScreen() {
             onPress={() => {
               void refresh();
             }}
+            accessibilityRole="button"
+            accessibilityLabel={isLoading ? 'Refreshing runtime panel' : 'Refresh runtime panel'}
             style={[
               sharedStyles.primaryButton,
               (isLoading || isSaving || !hasConfiguredAdminRuntimeApi()) &&
