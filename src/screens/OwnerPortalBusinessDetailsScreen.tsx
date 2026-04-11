@@ -26,16 +26,16 @@ const ONBOARDING_STEPS = ['Account', 'Business Details', 'Claim Listing', 'Verif
 function OwnerPortalBusinessDetailsScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<BusinessDetailsRoute>();
-  const preview = false;
-  const ownerUid = route.params?.ownerUid ?? OWNER_PORTAL_PREVIEW_UID;
+  const preview = route.params?.preview ?? false;
+  const ownerUid = route.params?.ownerUid ?? (preview ? OWNER_PORTAL_PREVIEW_UID : null);
   const [legalName, setLegalName] = React.useState(
-    route.params?.initialLegalName ?? ownerPortalPreviewProfile.legalName,
+    route.params?.initialLegalName ?? (preview ? ownerPortalPreviewProfile.legalName : ''),
   );
   const [companyName, setCompanyName] = React.useState(
-    route.params?.initialCompanyName ?? ownerPortalPreviewProfile.companyName,
+    route.params?.initialCompanyName ?? (preview ? ownerPortalPreviewProfile.companyName : ''),
   );
   const [phone, setPhone] = React.useState(
-    route.params?.initialPhone ?? ownerPortalPreviewProfile.phone ?? '',
+    route.params?.initialPhone ?? (preview ? (ownerPortalPreviewProfile.phone ?? '') : ''),
   );
   const [isSaving, setIsSaving] = React.useState(false);
   const [errorText, setErrorText] = React.useState<string | null>(null);
@@ -48,6 +48,11 @@ function OwnerPortalBusinessDetailsScreenInner() {
 
     if (preview) {
       navigation.replace('OwnerPortalClaimListing', { preview: true });
+      return;
+    }
+
+    if (!ownerUid) {
+      setErrorText('Owner session is missing. Please sign in again from the Owner Portal.');
       return;
     }
 
