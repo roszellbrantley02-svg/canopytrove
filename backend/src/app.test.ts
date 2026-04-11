@@ -44,6 +44,8 @@ afterEach(async () => {
   clearRateLimitState();
   const { clearAbuseState } = await import('./http/abuseScoring');
   clearAbuseState();
+  const { clearBolaTrackingState } = await import('./http/ownershipGuard');
+  clearBolaTrackingState();
   const { clearStorefrontBackendCache } = await import('./services/storefrontCacheService');
   clearStorefrontBackendCache();
   const { clearAnalyticsEventState } = await import('./services/analyticsEventService');
@@ -283,6 +285,43 @@ test('returns the canonical authenticated profile for the current account', asyn
   assert.equal(response.status, 200);
   assert.equal(response.json?.id, 'profile-rich');
   assert.equal(response.json?.accountId, 'member-1');
+});
+
+test('strips client-supplied gamification state from profile writes', async () => {
+  const { baseUrl } = await startTestServer();
+  const response = await request(baseUrl, '/profile-state/profile-forged', {
+    method: 'PUT',
+    headers: {
+      Authorization: 'Bearer test-authenticated:member-9',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      profile: {
+        accountId: 'member-9',
+        kind: 'authenticated',
+        displayName: 'Forged Player',
+      },
+      gamificationState: {
+        totalPoints: 9999,
+        totalReviews: 50,
+        dispensariesVisited: 25,
+        badges: ['admin_badge'],
+      },
+    }),
+  });
+
+  const gamificationState = response.json?.gamificationState as
+    | {
+        totalPoints?: unknown;
+        totalReviews?: unknown;
+        dispensariesVisited?: unknown;
+      }
+    | undefined;
+
+  assert.equal(response.status, 200);
+  assert.equal(gamificationState?.totalPoints, 0);
+  assert.equal(gamificationState?.totalReviews, 0);
+  assert.equal(gamificationState?.dispensariesVisited, 0);
 });
 
 test('exports subscribed member emails through the admin route', async () => {
@@ -1578,6 +1617,69 @@ test('rejects unauthenticated client runtime error reports', async () => {
   });
 
   assert.equal(response.status, 401);
+});
+
+test('rejects authenticated client runtime error reports from disallowed origins', async () => {
+  const { baseUrl } = await startTestServer();
+  const response = await request(baseUrl, '/client-errors', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer test-authenticated:account-1',
+      Origin: 'https://evil.example',
+    },
+    body: JSON.stringify({
+      message: 'Detail fetch failed',
+      source: 'storefront-detail-fetch',
+      screen: 'StorefrontDetail',
+      isFatal: false,
+      platform: 'android',
+      reportedAt: new Date().toISOString(),
+    }),
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal(response.json?.error, 'Origin not allowed.');
+});
+
+test('requires auth for push subscription writes and deletes', async () => {
+  const { baseUrl } = await startTestServer();
+  const subscribeResponse = await request(baseUrl, '/push/subscribe', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      subscription: {
+        endpoint: 'https://push.example/subscriptions/abc123',
+        keys: {
+          p256dh: 'test-p256dh-key',
+          auth: 'test-auth-key',
+        },
+      },
+      platform: 'web',
+    }),
+  });
+  const unsubscribeResponse = await request(baseUrl, '/push/subscribe', {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      endpoint: 'https://push.example/subscriptions/abc123',
+    }),
+  });
+
+  assert.equal(subscribeResponse.status, 401);
+  assert.equal(
+    subscribeResponse.json?.error,
+    'Authentication required for push subscriptions.',
+  );
+  assert.equal(unsubscribeResponse.status, 401);
+  assert.equal(
+    unsubscribeResponse.json?.error,
+    'Authentication required for push subscription management.',
+  );
 });
 
 test('accepts analytics event batches', async () => {

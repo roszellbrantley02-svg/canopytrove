@@ -81,8 +81,10 @@ function registerShutdownHandlers(server: Server, cleanup: () => void) {
     shuttingDown = true;
     const { markShuttingDown } = require('./observability/shutdownState');
     const { logger } = require('./observability/logger');
+    const { clearBolaTrackingState } = require('./http/ownershipGuard');
 
     markShuttingDown();
+    clearBolaTrackingState();
     logger.info('Graceful shutdown initiated');
 
     cleanup();

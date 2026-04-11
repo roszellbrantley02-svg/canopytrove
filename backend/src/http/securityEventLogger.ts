@@ -14,7 +14,8 @@ export type SecurityEventType =
   | 'email_change_initiated'
   | 'email_change_confirmed'
   | 'reauth_required'
-  | 'user_rate_limited';
+  | 'user_rate_limited'
+  | 'bola_alert';
 
 interface SecurityEvent {
   type: 'security_event';

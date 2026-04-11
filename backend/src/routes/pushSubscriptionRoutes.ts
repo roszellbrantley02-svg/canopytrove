@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { createRateLimitMiddleware } from '../http/rateLimit';
 import { getBackendFirebaseDb } from '../firebase';
 import { logger } from '../observability/logger';
+import { resolveVerifiedRequestIdentity } from '../services/profileAccessService';
 
 const PUSH_SUBSCRIPTIONS_COLLECTION = 'pushSubscriptions';
 const MAX_ENDPOINT_LENGTH = 2048;
@@ -35,6 +36,15 @@ function isValidPushString(value: unknown, maxLength: number) {
  */
 router.post('/subscribe', async (request: Request, response: Response) => {
   try {
+    // Require authentication to prevent anonymous subscription flooding
+    const identity = await resolveVerifiedRequestIdentity(request, {
+      invalidTokenBehavior: 'ignore',
+    });
+    if (identity.role === null) {
+      response.status(401).json({ error: 'Authentication required for push subscriptions.' });
+      return;
+    }
+
     const { subscription, platform } = request.body ?? {};
 
     if (
@@ -75,6 +85,7 @@ router.post('/subscribe', async (request: Request, response: Response) => {
             auth: subscription.keys.auth.trim(),
           },
           platform: platform || 'web',
+          accountId: identity.accountId,
           updatedAt: now,
           createdAt: now,
         },
@@ -101,6 +112,16 @@ router.post('/subscribe', async (request: Request, response: Response) => {
  */
 router.delete('/subscribe', async (request: Request, response: Response) => {
   try {
+    const identity = await resolveVerifiedRequestIdentity(request, {
+      invalidTokenBehavior: 'ignore',
+    });
+    if (identity.role === null) {
+      response
+        .status(401)
+        .json({ error: 'Authentication required for push subscription management.' });
+      return;
+    }
+
     const { endpoint } = request.body ?? {};
 
     if (!isValidPushString(endpoint, MAX_ENDPOINT_LENGTH)) {
@@ -119,9 +140,29 @@ router.delete('/subscribe', async (request: Request, response: Response) => {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const docId = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 
+    // Verify the subscription belongs to the authenticated user before deleting.
+    // Legacy docs without accountId are also rejected — the client should
+    // re-subscribe (which now stores accountId) before unsubscribing.
+    const existingDoc = await db.collection(PUSH_SUBSCRIPTIONS_COLLECTION).doc(docId).get();
+    if (existingDoc.exists) {
+      const storedAccountId = existingDoc.data()?.accountId;
+      if (!storedAccountId) {
+        logger.warn('[push] Rejecting delete of legacy subscription without accountId', { docId });
+        response.status(403).json({
+          error:
+            'This subscription must be refreshed before it can be removed. Please re-subscribe first.',
+        });
+        return;
+      }
+      if (storedAccountId !== identity.accountId) {
+        response.status(403).json({ error: 'You can only remove your own push subscriptions.' });
+        return;
+      }
+    }
+
     await db.collection(PUSH_SUBSCRIPTIONS_COLLECTION).doc(docId).delete();
 
-    logger.info('[push] Subscription removed', { docId });
+    logger.info('[push] Subscription removed', { docId, accountId: identity.accountId });
     response.json({ ok: true });
   } catch (error) {
     logger.error('[push] Failed to remove subscription', {

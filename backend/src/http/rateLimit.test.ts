@@ -3,6 +3,7 @@ import { describe, beforeEach, afterEach, test } from 'node:test';
 import { createServer, Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createRateLimitMiddleware, clearRateLimitState } from './rateLimit';
+import { clearAbuseState, getAbuseScore } from './abuseScoring';
 
 function createTestServer(maxRequests: number, windowMs: number, methods?: string[]) {
   const middleware = createRateLimitMiddleware({
@@ -51,6 +52,7 @@ describe('rateLimit middleware', () => {
 
   afterEach(async () => {
     clearRateLimitState();
+    clearAbuseState();
     if (server) {
       await new Promise<void>((resolve, reject) => {
         server?.close((err) => {
@@ -316,6 +318,40 @@ describe('rateLimit middleware', () => {
         done();
       } catch (error) {
         done(error);
+      }
+    });
+  });
+
+  test('can disable abuse scoring for rate limit hits', (t, done) => {
+    const middleware = createRateLimitMiddleware({
+      name: 'public-read',
+      max: 1,
+      windowMs: 60000,
+      methods: ['GET'],
+      abuseSignalPoints: 0,
+    });
+
+    const server2 = createServer((req, res) => {
+      middleware(req as any, res as any, () => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      });
+    });
+
+    server2.listen(0, async () => {
+      const address = server2.address() as AddressInfo;
+      const url = `http://localhost:${address.port}/`;
+
+      try {
+        await makeRequest(url);
+        const result = await makeRequest(url);
+        assert.equal(result.status, 429);
+        assert.equal(getAbuseScore('::ffff:127.0.0.1') || getAbuseScore('127.0.0.1'), 0);
+        done();
+      } catch (error) {
+        done(error);
+      } finally {
+        server2.close();
       }
     });
   });
