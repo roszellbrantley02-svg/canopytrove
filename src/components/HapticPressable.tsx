@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { GestureResponderEvent, PressableProps, ViewStyle } from 'react-native';
 import { Animated, Platform, Pressable, Vibration } from 'react-native';
 
@@ -32,6 +32,7 @@ export function HapticPressable({
   ...props
 }: HapticPressableProps) {
   const scaleValue = useRef(new Animated.Value(1)).current;
+  const currentAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   const handlePressIn = useCallback(
     (event: GestureResponderEvent) => {
@@ -39,12 +40,16 @@ export function HapticPressable({
         triggerHaptic(hapticType);
       }
       if (enableScale) {
-        Animated.spring(scaleValue, {
+        if (currentAnimationRef.current) {
+          currentAnimationRef.current.stop();
+        }
+        currentAnimationRef.current = Animated.spring(scaleValue, {
           toValue: 0.97,
           useNativeDriver: Platform.OS !== 'web',
           speed: 50,
           bounciness: 0,
-        }).start();
+        });
+        currentAnimationRef.current.start();
       }
       onPressIn?.(event);
     },
@@ -54,12 +59,16 @@ export function HapticPressable({
   const handlePressOut = useCallback(
     (event: GestureResponderEvent) => {
       if (enableScale) {
-        Animated.spring(scaleValue, {
+        if (currentAnimationRef.current) {
+          currentAnimationRef.current.stop();
+        }
+        currentAnimationRef.current = Animated.spring(scaleValue, {
           toValue: 1,
           useNativeDriver: Platform.OS !== 'web',
           speed: 40,
           bounciness: 4,
-        }).start();
+        });
+        currentAnimationRef.current.start();
       }
       onPressOut?.(event);
     },
@@ -67,6 +76,14 @@ export function HapticPressable({
   );
 
   const [hovered, setHovered] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (currentAnimationRef.current) {
+        currentAnimationRef.current.stop();
+      }
+    };
+  }, []);
 
   const webHoverProps = isWeb
     ? {

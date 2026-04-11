@@ -57,14 +57,15 @@ function NativeMotionInView({
   style,
 }: MotionInViewProps) {
   const progress = useRef(new Animated.Value(0)).current;
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const frameIdRef = useRef<number | null>(null);
   const resolvedDistance = dense ? motion.denseRevealDistance : distance;
   const resolvedDuration = dense ? motion.dense : duration;
 
   useEffect(() => {
-    let animation: Animated.CompositeAnimation | null = null;
-    const frameId = requestAnimationFrame(() => {
+    frameIdRef.current = requestAnimationFrame(() => {
       progress.setValue(0);
-      animation = Animated.timing(progress, {
+      animationRef.current = Animated.timing(progress, {
         toValue: 1,
         duration: resolvedDuration,
         delay,
@@ -72,12 +73,16 @@ function NativeMotionInView({
         useNativeDriver: true,
       });
 
-      animation.start();
+      animationRef.current.start();
     });
 
     return () => {
-      cancelAnimationFrame(frameId);
-      animation?.stop();
+      if (frameIdRef.current !== null) {
+        cancelAnimationFrame(frameIdRef.current);
+      }
+      if (animationRef.current) {
+        animationRef.current.stop();
+      }
     };
   }, [delay, progress, resolvedDuration]);
 

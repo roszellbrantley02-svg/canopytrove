@@ -7,6 +7,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   vibrate: vi.fn(),
   cancel: vi.fn(),
+  springStart: vi.fn(),
+  springStop: vi.fn(),
 }));
 
 vi.mock('react-native', () => ({
@@ -31,7 +33,13 @@ vi.mock('react-native', () => ({
     },
     View: 'Animated.View',
     timing: (_value: any, _config: any) => ({ start: (cb?: () => void) => cb?.() }),
-    spring: (_value: any, _config: any) => ({ start: (cb?: () => void) => cb?.() }),
+    spring: (_value: any, _config: any) => ({
+      start: (cb?: () => void) => {
+        mocks.springStart();
+        cb?.();
+      },
+      stop: mocks.springStop,
+    }),
   },
   StyleSheet: {
     create: <T,>(styles: T): T => styles,
@@ -154,6 +162,32 @@ describe('HapticPressable', () => {
     renderer = rendered.renderer;
 
     expect(rendered.pressable.props.onPress).toBe(onPress);
-    expect(rendered.pressable.props.style).toEqual(pressableStyle);
+    expect(rendered.pressable.props.style).toEqual(
+      expect.arrayContaining([pressableStyle]),
+    );
+  });
+
+  it('stops the previous scale animation before starting the next one', () => {
+    const rendered = renderHapticPressable({ enableScale: true });
+    renderer = rendered.renderer;
+
+    rendered.pressable.props.onPressIn({ nativeEvent: {} });
+    rendered.pressable.props.onPressOut({ nativeEvent: {} });
+
+    expect(mocks.springStart).toHaveBeenCalledTimes(2);
+    expect(mocks.springStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops the active scale animation when unmounted', () => {
+    const rendered = renderHapticPressable({ enableScale: true });
+    renderer = rendered.renderer;
+
+    rendered.pressable.props.onPressIn({ nativeEvent: {} });
+
+    act(() => {
+      rendered.renderer.unmount();
+    });
+
+    expect(mocks.springStop).toHaveBeenCalled();
   });
 });
