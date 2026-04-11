@@ -33,11 +33,12 @@ afterEach(() => {
 });
 
 test('falls back to the existing card photo url when signed card resolution fails', async () => {
-  const warnings: string[] = [];
-  const originalWarn = console.warn;
-  console.warn = (...args: unknown[]) => {
-    warnings.push(args.map((value) => String(value)).join(' '));
-  };
+  const { logger } = await import('../observability/logger');
+  const warnings: unknown[][] = [];
+  const originalWarn = logger.warn;
+  logger.warn = ((...args: unknown[]) => {
+    warnings.push(args);
+  }) as any;
 
   try {
     const profileTools = createProfileTools();
@@ -62,18 +63,19 @@ test('falls back to the existing card photo url when signed card resolution fail
       profileTools.featuredPhotoUrls[0],
     ]);
     assert.equal(warnings.length, 1);
-    assert.match(warnings[0] ?? '', /card photo/i);
+    assert.match(String(warnings[0]?.[0] ?? ''), /card photo/i);
   } finally {
-    console.warn = originalWarn;
+    logger.warn = originalWarn;
   }
 });
 
 test('keeps successful featured photo urls when one featured path fails', async () => {
-  const warnings: string[] = [];
-  const originalWarn = console.warn;
-  console.warn = (...args: unknown[]) => {
-    warnings.push(args.map((value) => String(value)).join(' '));
-  };
+  const { logger } = await import('../observability/logger');
+  const warnings: unknown[][] = [];
+  const originalWarn = logger.warn;
+  logger.warn = ((...args: unknown[]) => {
+    warnings.push(args);
+  }) as any;
 
   try {
     const profileTools = createProfileTools();
@@ -102,8 +104,8 @@ test('keeps successful featured photo urls when one featured path fails', async 
       profileTools.featuredPhotoUrls[0],
     ]);
     assert.equal(warnings.length, 1);
-    assert.match(warnings[0] ?? '', /featured photo/i);
+    assert.match(String(warnings[0]?.[0] ?? ''), /featured photo/i);
   } finally {
-    console.warn = originalWarn;
+    logger.warn = originalWarn;
   }
 });

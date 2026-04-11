@@ -1,4 +1,5 @@
 import { getOptionalFirestoreCollection } from '../firestoreCollections';
+import { logger } from '../observability/logger';
 import { backendStorefrontSourceStatus } from '../sources';
 import { getStorefrontSummariesByIds } from '../storefrontService';
 import { sendExpoPushMessages } from './expoPushService';
@@ -127,15 +128,25 @@ export async function syncFavoriteDealAlerts(options: {
       ? previousRecordResult.value
       : createEmptyRecord(options.profileId);
   if (previousRecordResult.status === 'rejected') {
-    console.warn(
-      `[favoriteDealAlertService] failed to load previous alert state for ${options.profileId}:`,
-      previousRecordResult.reason,
+    logger.warn(
+      `[favoriteDealAlertService] failed to load previous alert state for ${options.profileId}`,
+      {
+        error:
+          previousRecordResult.reason instanceof Error
+            ? previousRecordResult.reason.message
+            : String(previousRecordResult.reason),
+      },
     );
   }
   if (savedSummariesResult.status !== 'fulfilled') {
-    console.warn(
-      `[favoriteDealAlertService] failed to load saved storefront summaries for ${options.profileId}:`,
-      savedSummariesResult.reason,
+    logger.warn(
+      `[favoriteDealAlertService] failed to load saved storefront summaries for ${options.profileId}`,
+      {
+        error:
+          savedSummariesResult.reason instanceof Error
+            ? savedSummariesResult.reason.message
+            : String(savedSummariesResult.reason),
+      },
     );
     return {
       notifications: [],
@@ -146,10 +157,14 @@ export async function syncFavoriteDealAlerts(options: {
   }
   const savedSummaries = savedSummariesResult.value;
 
+  // DEFENSIVE: Ensure we don't track visibility-gated storefronts in deal alerts.
+  // If a storefront was hidden or deleted, skip it to prevent stale notifications.
+  const visibleSummaries = savedSummaries.filter((summary) => summary.isVisible !== false);
+
   const nextFingerprints: Record<string, string> = {};
   const notifications: FavoriteDealAlertNotification[] = [];
 
-  savedSummaries.forEach((summary) => {
+  visibleSummaries.forEach((summary) => {
     const fingerprint = createDealFingerprint(summary.promotionText);
     if (!fingerprint || !summary.promotionText?.trim()) {
       return;
@@ -244,9 +259,9 @@ export async function dispatchFavoriteDealAlertsForAllProfiles() {
       return [result.value];
     }
 
-    console.warn(
-      `[favoriteDealAlertService] failed to dispatch alerts for profile ${profiles[index]?.id ?? 'unknown'}:`,
-      result.reason,
+    logger.warn(
+      `[favoriteDealAlertService] failed to dispatch alerts for profile ${profiles[index]?.id ?? 'unknown'}`,
+      { error: result.reason instanceof Error ? result.reason.message : String(result.reason) },
     );
     return [];
   });
@@ -291,9 +306,9 @@ export async function dispatchFavoriteDealAlertsForStorefront(storefrontId: stri
       return result.value ? [result.value] : [];
     }
 
-    console.warn(
-      `[favoriteDealAlertService] failed to dispatch storefront alerts for profile ${profiles[index]?.id ?? 'unknown'}:`,
-      result.reason,
+    logger.warn(
+      `[favoriteDealAlertService] failed to dispatch storefront alerts for profile ${profiles[index]?.id ?? 'unknown'}`,
+      { error: result.reason instanceof Error ? result.reason.message : String(result.reason) },
     );
     return [];
   });

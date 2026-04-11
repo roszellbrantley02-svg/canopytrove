@@ -1,4 +1,5 @@
 import { getOptionalFirestoreCollection } from '../firestoreCollections';
+import { logger } from '../observability/logger';
 import { backendStorefrontSourceStatus } from '../sources';
 import { sendExpoPushMessages } from './expoPushService';
 import { syncOwnerRuntimeAlertSubscription } from './opsAlertSubscriptionService';
@@ -148,9 +149,9 @@ export async function notifyOwnersOfStorefrontActivity(options: {
     if (result.status === 'fulfilled') {
       return [result.value];
     }
-    console.warn(
-      `[ownerPortalAlertService] failed to load alert record for ${ownerUids[index] ?? 'unknown'}:`,
-      result.reason,
+    logger.warn(
+      `[ownerPortalAlertService] failed to load alert record for ${ownerUids[index] ?? 'unknown'}`,
+      { error: result.reason instanceof Error ? result.reason.message : String(result.reason) },
     );
     return [];
   });
@@ -191,7 +192,9 @@ export async function notifyOwnersOfStorefrontActivity(options: {
   );
   for (const result of tokenCleanupResults) {
     if (result.status === 'rejected') {
-      console.warn('[ownerPortalAlertService] failed to clear stale device token:', result.reason);
+      logger.warn('[ownerPortalAlertService] failed to clear stale device token', {
+        error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+      });
     }
   }
 
