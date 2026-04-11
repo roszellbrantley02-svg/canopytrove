@@ -12,15 +12,16 @@ test('owner portal allowlist normalizes and matches approved emails', async () =
   assert.equal(isOwnerPortalEmailAllowlisted('not-approved@example.com'), false);
 });
 
-test('owner portal claim sync stops requiring a private allowlist when prelaunch is disabled', async () => {
+test('owner portal allowlist stays enforced when prelaunch is disabled', async () => {
   process.env.OWNER_PORTAL_PRELAUNCH_ENABLED = 'false';
-  process.env.OWNER_PORTAL_ALLOWLIST = '';
+  process.env.OWNER_PORTAL_ALLOWLIST = 'owner@example.com';
   const { isOwnerPortalEmailAllowlisted } = await import(
     `./ownerPortalAuthClaimsService?public=${Date.now()}`
   );
 
   assert.equal(isOwnerPortalEmailAllowlisted('owner@example.com'), true);
   assert.equal(isOwnerPortalEmailAllowlisted('OWNER@example.com'), true);
+  assert.equal(isOwnerPortalEmailAllowlisted('not-approved@example.com'), false);
 });
 
 test('admin claims stay admin while non-admin claims resolve to owner', async () => {

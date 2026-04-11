@@ -9,6 +9,10 @@ const GAMIFICATION_STATE_COLLECTION = 'gamification_state';
 
 const gamificationStateStore = new Map<string, StorefrontGamificationStateApiDocument>();
 
+export function clearGamificationPersistenceStateForTests() {
+  gamificationStateStore.clear();
+}
+
 function getGamificationStateCollection() {
   return getOptionalFirestoreCollection<StorefrontGamificationStateApiDocument>(
     GAMIFICATION_STATE_COLLECTION,

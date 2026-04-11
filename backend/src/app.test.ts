@@ -64,6 +64,11 @@ afterEach(async () => {
   clearResendWebhookMemoryStateForTests();
   const { clearRouteStateMemoryStateForTests } = await import('./services/routeStateService');
   clearRouteStateMemoryStateForTests();
+  const { clearProfileMemoryStateForTests } = await import('./services/profileService');
+  clearProfileMemoryStateForTests();
+  const { clearGamificationPersistenceStateForTests } =
+    await import('./services/gamificationPersistenceService');
+  clearGamificationPersistenceStateForTests();
   const { clearReviewPhotoModerationMemoryStateForTests } =
     await import('./services/reviewPhotoModerationService');
   clearReviewPhotoModerationMemoryStateForTests();
@@ -219,6 +224,9 @@ test('rejects malformed community review payloads', async () => {
 
 test('returns the canonical authenticated profile for the current account', async () => {
   const { baseUrl } = await startTestServer();
+  // Import after startTestServer(), which clears backend modules from the cache.
+  // The test needs to write through the same in-memory service instance the app uses.
+  const { saveGamificationState } = await import('./services/gamificationPersistenceService');
   await fetch(`${baseUrl}/profile-state/profile-empty`, {
     method: 'PUT',
     headers: {
@@ -232,12 +240,6 @@ test('returns the canonical authenticated profile for the current account', asyn
         displayName: 'Daniellett',
         createdAt: '2026-04-07T15:17:54.720Z',
         updatedAt: '2026-04-10T10:26:26.796Z',
-      },
-      gamificationState: {
-        totalPoints: 0,
-        totalReviews: 0,
-        dispensariesVisited: 0,
-        badges: ['early_adopter'],
       },
     }),
   });
@@ -255,13 +257,21 @@ test('returns the canonical authenticated profile for the current account', asyn
         createdAt: '2026-04-06T14:28:51.387Z',
         updatedAt: '2026-04-09T01:18:18.995Z',
       },
-      gamificationState: {
-        totalPoints: 1195,
-        totalReviews: 3,
-        dispensariesVisited: 0,
-        badges: ['reviewer_1', 'early_adopter'],
-      },
     }),
+  });
+  // Gamification state is server-authoritative (stripped by the PUT endpoint),
+  // so set it directly via the persistence service.
+  await saveGamificationState('profile-empty', {
+    totalPoints: 0,
+    totalReviews: 0,
+    dispensariesVisited: 0,
+    badges: ['early_adopter'],
+  });
+  await saveGamificationState('profile-rich', {
+    totalPoints: 1195,
+    totalReviews: 3,
+    dispensariesVisited: 0,
+    badges: ['reviewer_1', 'early_adopter'],
   });
   const response = await request(baseUrl, '/profiles/me/canonical', {
     headers: {
@@ -558,7 +568,10 @@ test('requires signed-in access for review photo uploads', async () => {
   );
 
   assert.equal(response.status, 403);
-  assert.equal(response.json?.error, 'Signed-in access is required for this profile.');
+  assert.equal(
+    response.json?.error,
+    'Sign-in required: a signed-in account is needed to upload review photos.',
+  );
 });
 
 test('requires signed-in access for storefront reports', async () => {

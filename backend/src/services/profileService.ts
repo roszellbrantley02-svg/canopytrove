@@ -6,6 +6,10 @@ const PROFILE_COLLECTION = 'profiles';
 
 const profileStore = new Map<string, AppProfileApiDocument>();
 
+export function clearProfileMemoryStateForTests() {
+  profileStore.clear();
+}
+
 function getProfileCollection() {
   return getOptionalFirestoreCollection<AppProfileApiDocument>(PROFILE_COLLECTION);
 }
