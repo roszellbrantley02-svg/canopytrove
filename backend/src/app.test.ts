@@ -675,9 +675,9 @@ test('requires signed-in access for helpful votes', async () => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: 'Bearer test-authenticated:account-1',
+      Authorization: 'Bearer test-authenticated:account-helpful',
     },
-    body: JSON.stringify(createReviewPayload('profile-1')),
+    body: JSON.stringify(createReviewPayload('profile-helpful')),
   });
 
   const createdDetail = createResponse.json?.detail as
