@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ReactTestRenderer } from 'react-test-renderer';
 import { act, create } from 'react-test-renderer';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultGamificationState } from '../services/canopyTroveGamificationService';
 import type { GamificationRewardResult } from '../types/storefront';
 
@@ -34,12 +34,18 @@ function HookHarness({ capture }: { capture: (value: HookResult) => void }) {
 describe('useStorefrontRewardsModel', () => {
   let renderer: ReactTestRenderer | null = null;
   let latestValue: HookResult | null = null;
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn> | null = null;
 
   beforeEach(() => {
     vi.clearAllMocks();
     renderer?.unmount();
     renderer = null;
     latestValue = null;
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    consoleWarnSpy?.mockRestore();
   });
 
   it('tracks verified route starts as visits and syncs the event', async () => {
@@ -107,5 +113,56 @@ describe('useStorefrontRewardsModel', () => {
     expect(previewReward.updatedState.dispensariesVisited).toBe(0);
     expect(previewReward.updatedState.totalRoutesStarted).toBe(0);
     expect(syncMocks.syncStorefrontGamificationEvent).not.toHaveBeenCalled();
+  });
+
+  it('continues syncing later events after a previous sync rejection', async () => {
+    const remoteHelpfulState = {
+      ...createDefaultGamificationState('profile-1', '2026-04-01T00:00:00.000Z'),
+      totalPoints: 15,
+      totalHelpfulVotes: 5,
+      lastActiveDate: '2026-04-11T00:00:00.000Z',
+    };
+
+    syncMocks.syncStorefrontGamificationEvent
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce({
+        activityType: 'helpful_vote_received',
+        pointsEarned: 15,
+        badgesEarned: [],
+        levelBefore: 1,
+        levelAfter: 1,
+        updatedState: remoteHelpfulState,
+      } as any);
+
+    act(() => {
+      renderer = create(
+        <HookHarness
+          capture={(value) => {
+            latestValue = value;
+          }}
+        />,
+      );
+    });
+
+    await act(async () => {
+      latestValue!.trackPhotoUploadedReward();
+      latestValue!.trackHelpfulVoteReceivedReward(2);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(syncMocks.syncStorefrontGamificationEvent).toHaveBeenCalledTimes(2);
+    expect(syncMocks.syncStorefrontGamificationEvent).toHaveBeenNthCalledWith(1, 'profile-1', {
+      activityType: 'photo_uploaded',
+    });
+    expect(syncMocks.syncStorefrontGamificationEvent).toHaveBeenNthCalledWith(2, 'profile-1', {
+      activityType: 'helpful_vote_received',
+      payload: { count: 2 },
+    });
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[useStorefrontRewardEventSync] Event sync failed:',
+      expect.any(Error),
+    );
+    expect(latestValue?.gamificationState.totalHelpfulVotes).toBe(5);
   });
 });

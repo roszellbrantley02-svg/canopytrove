@@ -35,7 +35,10 @@ export function useStorefrontRewardEventSync({
       }
 
       gamificationSyncChainRef.current = gamificationSyncChainRef.current
-        .catch(() => undefined)
+        .catch((error) => {
+          // Log sync failures but don't block subsequent events
+          console.warn('[useStorefrontRewardEventSync] Event sync failed:', error);
+        })
         .then(async () => {
           const remoteRewardResult = await syncStorefrontGamificationEvent(profileId, event);
           if (!remoteRewardResult) {
@@ -49,6 +52,7 @@ export function useStorefrontRewardEventSync({
           );
 
           onGamificationStateMutation?.();
+          // Write directly to ref at call time to avoid stale closure
           gamificationStateRef.current = normalizedRemoteReward.updatedState;
           setGamificationState((current) =>
             areGamificationStatesEqual(current, normalizedRemoteReward.updatedState)
