@@ -716,6 +716,18 @@ export async function createOwnerBillingCheckoutSession(
   });
 
   const currentSubscription = await getOwnerSubscription(ownerUid);
+
+  // SECURITY: Prevent duplicate subscriptions
+  if (
+    currentSubscription &&
+    (currentSubscription.status === 'active' || currentSubscription.status === 'trial')
+  ) {
+    throw new OwnerBillingError(
+      'You already have an active subscription. Use the billing portal to manage your plan.',
+      409,
+    );
+  }
+
   const tierPriceId = getStripeTierPriceId(tier, cycle);
   const priceId =
     tierPriceId ?? (cycle === 'annual' ? stripeOwnerAnnualPriceId : stripeOwnerMonthlyPriceId);
