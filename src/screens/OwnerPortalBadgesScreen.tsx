@@ -27,8 +27,8 @@ import { getOwnerTierDefinition } from '../types/ownerTiers';
 type OwnerPortalBadgesRoute = RouteProp<RootStackParamList, 'OwnerPortalBadges'>;
 
 function OwnerPortalBadgesScreenInner() {
-  const _route = useRoute<OwnerPortalBadgesRoute>();
-  const preview = false;
+  const route = useRoute<OwnerPortalBadgesRoute>();
+  const preview = route.params?.preview ?? false;
   const { workspace, isLoading, isSaving, errorText, saveBadgeDisplaySettings } =
     useOwnerPortalWorkspace(preview);
   const tierDef = getOwnerTierDefinition(workspace?.tier);

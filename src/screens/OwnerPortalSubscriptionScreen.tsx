@@ -36,10 +36,10 @@ import {
 type OwnerPortalSubscriptionRoute = RouteProp<RootStackParamList, 'OwnerPortalSubscription'>;
 
 function OwnerPortalSubscriptionScreenInner() {
-  const _route = useRoute<OwnerPortalSubscriptionRoute>();
+  const route = useRoute<OwnerPortalSubscriptionRoute>();
   const { authSession } = useStorefrontProfileController();
   const isAndroid = Platform.OS === 'android';
-  const preview = false;
+  const preview = route.params?.preview ?? false;
   const [ownerProfile, setOwnerProfile] = React.useState<OwnerProfileDocument | null>(null);
   const [subscription, setSubscription] = React.useState<OwnerPortalSubscriptionDocument | null>(
     null,

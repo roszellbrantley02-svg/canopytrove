@@ -16,6 +16,7 @@ import { colors } from '../theme/tokens';
 import type { StorefrontSummary } from '../types/storefront';
 import { styles } from './storefrontDetail/storefrontDetailStyles';
 import {
+  DetailComplianceWarningSection,
   DetailHero,
   DetailHoursSection,
   DetailLockedLiveDealsSection,
@@ -185,6 +186,12 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
             </MotionInView>
           ) : null}
 
+          {model.detailData.hasOwnerClaim ? (
+            <MotionInView delay={440}>
+              <DetailComplianceWarningSection storefrontId={storefront.id} />
+            </MotionInView>
+          ) : null}
+
           {model.hasAppReviews ? (
             <MotionInView delay={470}>
               <DetailReviewsSection
@@ -243,6 +250,7 @@ function StorefrontDetailScreenInner() {
   // Slug resolution: if the raw ID doesn't match a Firestore doc, try resolving it as a slug.
   const [resolvedId, setResolvedId] = useState<string | null>(null);
   const [isResolvingSlug, setIsResolvingSlug] = useState(false);
+  const currentStorefrontIdRef = React.useRef<string | null>(null);
   const storefrontId = resolvedId ?? rawStorefrontId;
 
   const storefrontLookup = useStorefrontSummariesByIds(
@@ -261,9 +269,12 @@ function StorefrontDetailScreenInner() {
   useEffect(() => {
     if (!needsSlugResolution || !rawStorefrontId) return;
     let alive = true;
+    // Track the current storefront ID to detect if it changes during resolution
+    currentStorefrontIdRef.current = rawStorefrontId;
     setIsResolvingSlug(true);
     void resolveStorefrontSlug(rawStorefrontId).then((id) => {
-      if (!alive) return;
+      // Bail out if the storefront ID changed during resolution (race condition)
+      if (!alive || currentStorefrontIdRef.current !== rawStorefrontId) return;
       if (id && id !== rawStorefrontId) {
         setResolvedId(id);
       }

@@ -197,7 +197,9 @@ export async function resolveDetailWithCache(
 }
 
 export function createSavedKey(storefrontIds: string[]) {
-  return `${storefrontIds.join('|')}::${getStorefrontMemberAccessCacheKey()}`;
+  // Use null byte as separator to avoid collisions, then separate sections with ::
+  const encodedIds = storefrontIds.join('\x00');
+  return `${encodedIds}::${getStorefrontMemberAccessCacheKey()}`;
 }
 
 export function createNearbyKey(query: StorefrontListQuery) {

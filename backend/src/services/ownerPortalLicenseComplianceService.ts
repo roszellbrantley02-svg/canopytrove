@@ -2,6 +2,7 @@ import {
   OwnerLicenseComplianceDocument,
   OwnerPortalLicenseComplianceInput,
 } from '../../../src/types/ownerPortal';
+import { logger } from '../observability/logger';
 import { getBackendFirebaseDb } from '../firebase';
 import { notifyOwnerPortalUser } from './ownerPortalAlertService';
 import { getOwnerLicenseComplianceCollection } from './ownerPortalWorkspaceCollections';
@@ -370,7 +371,7 @@ export async function deleteOwnerLicenseComplianceRecordsForOwner(ownerUid: stri
     );
     for (const result of deleteResults) {
       if (result.status === 'rejected') {
-        console.warn(
+        logger.warn(
           '[ownerPortalLicenseComplianceService] failed to delete a compliance record during owner cleanup:',
           result.reason,
         );
@@ -507,7 +508,7 @@ export async function runOwnerLicenseComplianceSweep() {
   );
   for (const result of reminderResults) {
     if (result.status === 'rejected') {
-      console.warn(
+      logger.warn(
         '[ownerPortalLicenseComplianceService] failed to process a license compliance reminder:',
         result.reason,
       );
@@ -532,6 +533,15 @@ export function startOwnerLicenseComplianceScheduler(intervalHours: number) {
   schedulerHandle = setInterval(() => {
     void runOwnerLicenseComplianceSweep().catch(() => undefined);
   }, intervalMs);
+
+  // NOTE: This scheduler is process-local and non-durable.
+  // In production with multiple Cloud Run instances, license reminder notifications may duplicate.
+  // For production durability, migrate to Cloud Scheduler + Pub/Sub or use Firestore-based distributed locks.
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info(
+      '[ownerPortalLicenseComplianceScheduler] Started (process-local, single-instance only)',
+    );
+  }
 }
 
 export function stopOwnerLicenseComplianceScheduler() {

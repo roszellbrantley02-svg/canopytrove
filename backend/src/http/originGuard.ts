@@ -5,14 +5,13 @@ import { logSecurityEvent } from './securityEventLogger';
 /**
  * Origin / Referer validation for state-changing requests.
  *
- * Since the API uses Bearer tokens (not cookies), traditional CSRF via
- * cross-origin form submission won't include the Authorization header.
- * This middleware is defense-in-depth: it rejects state-changing requests
- * whose Origin header doesn't match the configured CORS origins.
+ * This middleware enforces strict origin checking on all state-changing requests
+ * to prevent CSRF attacks. Even though the API uses Bearer tokens (not cookies),
+ * an attacker can still craft cross-origin requests with a valid token if the
+ * user is logged in elsewhere. This is especially important for authenticated endpoints.
  *
  * Exceptions:
  * - GET, HEAD, OPTIONS requests (safe methods)
- * - Requests with a valid Bearer token (already auth-gated)
  * - Webhook endpoints (use their own signature verification)
  * - Requests from mobile apps (no Origin header)
  */
@@ -28,12 +27,6 @@ export function createOriginGuardMiddleware(): RequestHandler {
       return;
     }
 
-    // Requests with Authorization header (Bearer token) — CSRF not applicable
-    if (request.header('authorization')) {
-      next();
-      return;
-    }
-
     // Webhook paths use their own signature verification
     if (
       request.path.includes('/webhook') ||
@@ -44,7 +37,7 @@ export function createOriginGuardMiddleware(): RequestHandler {
       return;
     }
 
-    // Check Origin header
+    // Check Origin header for all state-changing requests (authenticated or not)
     const origin = request.header('origin');
     if (origin && !allowedOrigins.has(origin)) {
       logSecurityEvent({
@@ -59,7 +52,7 @@ export function createOriginGuardMiddleware(): RequestHandler {
     }
 
     // No Origin header — could be mobile app, server-to-server, or curl.
-    // For unauthenticated state-changing requests without Origin, we're more lenient
+    // For state-changing requests without Origin, we're more lenient
     // because the rate limiter and other guards cover abuse.
     next();
   };

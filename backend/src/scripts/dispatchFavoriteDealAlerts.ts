@@ -1,3 +1,4 @@
+import { logger } from '../observability/logger';
 import { dispatchFavoriteDealAlertsForAllProfiles } from '../services/favoriteDealAlertService';
 
 async function main() {
@@ -6,6 +7,6 @@ async function main() {
 }
 
 void main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  logger.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

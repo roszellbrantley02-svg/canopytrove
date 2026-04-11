@@ -25,6 +25,7 @@ type HydratableStorefrontQueryState = {
 type UseStorefrontQueryHydrationArgs = {
   cachedPreferences: StoredStorefrontPreferences | null;
   profileId: string;
+  accountId?: string | null;
   profileCreatedAt?: string | null;
   defaultAreaLabel: string;
   selectedAreaId: string;
@@ -47,6 +48,7 @@ type UseStorefrontQueryHydrationArgs = {
 export function useStorefrontQueryHydration({
   cachedPreferences,
   profileId,
+  accountId,
   profileCreatedAt,
   defaultAreaLabel,
   selectedAreaId,
@@ -75,7 +77,7 @@ export function useStorefrontQueryHydration({
     void (async () => {
       const hydrationStartMutationCount = queryInputMutationCountRef.current;
       const hydrationStartState = latestHydratableStateRef.current;
-      const storedPreferences = await loadStorefrontPreferences();
+      const storedPreferences = await loadStorefrontPreferences(accountId);
       if (!alive) {
         return;
       }
@@ -158,6 +160,7 @@ export function useStorefrontQueryHydration({
       alive = false;
     };
   }, [
+    accountId,
     cachedPreferences,
     defaultAreaLabel,
     lastSavedPreferencesPayloadRef,

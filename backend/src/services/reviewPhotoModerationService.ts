@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { getOptionalFirestoreCollection } from '../firestoreCollections';
+import { logger } from '../observability/logger';
 import { serverConfig } from '../config';
 import { getBackendFirebaseStorage } from '../firebase';
 import { stripImageMetadata } from './imageExifStripper';
@@ -1340,7 +1341,7 @@ export async function listReviewPhotoModerationQueue(limit = 50) {
     if (result.status === 'fulfilled') {
       return [result.value];
     }
-    console.warn(
+    logger.warn(
       `[reviewPhotoModerationService] failed to build queue entry for record ${records[index]?.id ?? 'unknown'}:`,
       result.reason,
     );
@@ -1436,7 +1437,7 @@ export async function deleteReviewPhotoUploadsForProfile(profileId: string) {
     );
     for (const result of deleteResults) {
       if (result.status === 'rejected') {
-        console.warn(
+        logger.warn(
           '[reviewPhotoModerationService] failed to delete a photo upload during profile cleanup:',
           result.reason,
         );
@@ -1473,7 +1474,7 @@ export async function getApprovedReviewPhotoUrls(photoIds: string[]) {
     if (result.status === 'fulfilled') {
       return result.value ? [result.value] : [];
     }
-    console.warn(
+    logger.warn(
       `[reviewPhotoModerationService] failed to fetch photo record ${photoIds[index] ?? 'unknown'}:`,
       result.reason,
     );
@@ -1494,7 +1495,7 @@ export async function getApprovedReviewPhotoUrls(photoIds: string[]) {
       return [result.value.url];
     }
     if (result.status === 'rejected') {
-      console.warn(
+      logger.warn(
         `[reviewPhotoModerationService] failed to generate signed URL for photo ${approvedRecords[index]?.id ?? 'unknown'}:`,
         result.reason,
       );

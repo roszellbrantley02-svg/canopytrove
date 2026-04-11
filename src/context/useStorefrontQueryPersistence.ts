@@ -73,7 +73,21 @@ export function useStorefrontQueryPersistence({
     gamificationState,
   });
 
-  latestHydratableStateRef.current = {
+  // Move updates into useEffect to avoid race conditions during hydration
+  React.useEffect(() => {
+    latestHydratableStateRef.current = {
+      selectedAreaId,
+      searchQuery,
+      locationQuery,
+      browseSortKey,
+      browseHotDealsOnly,
+      savedStorefrontIds,
+      searchLocation,
+      searchLocationLabel,
+      deviceLocationLabel,
+      gamificationState,
+    };
+  }, [
     selectedAreaId,
     searchQuery,
     locationQuery,
@@ -84,7 +98,7 @@ export function useStorefrontQueryPersistence({
     searchLocationLabel,
     deviceLocationLabel,
     gamificationState,
-  };
+  ]);
 
   const markQueryInputTouched = React.useCallback(() => {
     queryInputMutationCountRef.current += 1;

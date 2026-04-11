@@ -7,6 +7,7 @@ import { serverConfig } from '../config';
 import { getOptionalFirestoreCollection } from '../firestoreCollections';
 import { backendStorefrontSourceStatus } from '../sources';
 import { sendExpoPushMessages } from './expoPushService';
+import { logger } from '../observability/logger';
 
 type RuntimeAlertSubscriptionRecord = {
   id: string;
@@ -98,7 +99,7 @@ async function getSubscriptionRecordById(subscriptionId: string) {
 async function listRuntimeAlertSubscriptionRecords() {
   const collectionRef = getRuntimeAlertSubscriptionCollection();
   if (collectionRef) {
-    const snapshot = await collectionRef.get();
+    const snapshot = await collectionRef.limit(500).get();
     return snapshot.docs.map((documentSnapshot) =>
       normalizeRuntimeAlertSubscriptionRecord(
         documentSnapshot.data() as RuntimeAlertSubscriptionRecord,
@@ -287,7 +288,7 @@ export async function notifyRuntimeAlertSubscribers(options: {
   );
   for (const result of tokenCleanupResults) {
     if (result.status === 'rejected') {
-      console.warn(
+      logger.warn(
         '[opsAlertSubscriptionService] failed to clear stale subscription token:',
         result.reason,
       );

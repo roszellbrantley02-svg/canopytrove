@@ -40,7 +40,11 @@ async function loadOwnerAccountIds(): Promise<Set<string>> {
     return new Set();
   }
 
-  const snapshot = await collectionRef.where('role', 'in', ['owner', 'admin']).select('uid').get();
+  const snapshot = await collectionRef
+    .where('role', 'in', ['owner', 'admin'])
+    .select('uid')
+    .limit(1000)
+    .get();
 
   return new Set(snapshot.docs.map((doc) => doc.id));
 }

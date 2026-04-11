@@ -14,6 +14,7 @@ import {
   getApprovedReviewPhotoUrls,
 } from './reviewPhotoModerationService';
 import { createPublicCommunityAuthorId } from './publicCommunityIdentityService';
+import { logger } from '../observability/logger';
 
 type StoredAppReviewRecord = {
   id: string;
@@ -264,7 +265,7 @@ function createStorefrontReviewAggregateMap(reviews: StoredAppReviewRecord[]) {
 async function loadAllStoredAppReviews() {
   const collectionRef = getAppReviewCollection();
   if (collectionRef) {
-    const snapshot = await collectionRef.get();
+    const snapshot = await collectionRef.limit(10000).get();
     return snapshot.docs.map((documentSnapshot) =>
       normalizeStoredReviewRecord(documentSnapshot.data() as StoredAppReviewRecord),
     );
@@ -345,7 +346,9 @@ export async function listStorefrontAppReviews(
       if (result.status === 'fulfilled') {
         return [result.value];
       }
-      console.warn('[storefrontCommunityService] failed to map a review:', result.reason);
+      logger.warn('[storefrontCommunityService] failed to map a review', {
+        error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+      });
       return [];
     });
   }
@@ -361,7 +364,9 @@ export async function listStorefrontAppReviews(
     if (result.status === 'fulfilled') {
       return [result.value];
     }
-    console.warn('[storefrontCommunityService] failed to map a review:', result.reason);
+    logger.warn('[storefrontCommunityService] failed to map a review', {
+      error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+    });
     return [];
   });
 }
@@ -849,7 +854,7 @@ export async function deleteCommunityContentForProfile(profileId: string) {
     );
     for (const result of reviewDeleteResults) {
       if (result.status === 'rejected') {
-        console.warn(
+        logger.warn(
           '[storefrontCommunityService] failed to delete a review during profile cleanup:',
           result.reason,
         );
@@ -874,7 +879,7 @@ export async function deleteCommunityContentForProfile(profileId: string) {
     );
     for (const result of reportDeleteResults) {
       if (result.status === 'rejected') {
-        console.warn(
+        logger.warn(
           '[storefrontCommunityService] failed to delete a report during profile cleanup:',
           result.reason,
         );

@@ -55,6 +55,7 @@ export function useGamificationLeaderboard(limit = 25, offset = 0) {
     offset,
   }));
   const [isLoading, setIsLoading] = useState(storefrontSourceMode === 'api');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -80,14 +81,25 @@ export function useGamificationLeaderboard(limit = 25, offset = 0) {
     }
 
     setIsLoading(true);
+    setError(null);
     void (async () => {
-      const nextData = await loadStorefrontLeaderboard(limit, offset);
-      if (!alive) {
-        return;
-      }
+      try {
+        const nextData = await loadStorefrontLeaderboard(limit, offset);
+        if (!alive) {
+          return;
+        }
 
-      setData(nextData);
-      setIsLoading(false);
+        setData(nextData);
+      } catch (err) {
+        if (!alive) {
+          return;
+        }
+        setError(err instanceof Error ? err.message : 'Failed to load leaderboard');
+      } finally {
+        if (alive) {
+          setIsLoading(false);
+        }
+      }
     })();
 
     return () => {
@@ -95,7 +107,7 @@ export function useGamificationLeaderboard(limit = 25, offset = 0) {
     };
   }, [appProfile?.displayName, appProfile?.kind, gamificationState, limit, offset, profileId]);
 
-  return { data, isLoading };
+  return { data, isLoading, error };
 }
 
 export function useGamificationLeaderboardRank() {
@@ -107,6 +119,7 @@ export function useGamificationLeaderboardRank() {
     total: storefrontSourceMode === 'api' ? 0 : gamificationState.totalPoints > 0 ? 1 : 0,
   }));
   const [isLoading, setIsLoading] = useState(storefrontSourceMode === 'api');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -124,14 +137,25 @@ export function useGamificationLeaderboardRank() {
     }
 
     setIsLoading(true);
+    setError(null);
     void (async () => {
-      const nextRank = await loadStorefrontLeaderboardRank(profileId);
-      if (!alive) {
-        return;
-      }
+      try {
+        const nextRank = await loadStorefrontLeaderboardRank(profileId);
+        if (!alive) {
+          return;
+        }
 
-      setData(nextRank);
-      setIsLoading(false);
+        setData(nextRank);
+      } catch (err) {
+        if (!alive) {
+          return;
+        }
+        setError(err instanceof Error ? err.message : 'Failed to load rank');
+      } finally {
+        if (alive) {
+          setIsLoading(false);
+        }
+      }
     })();
 
     return () => {
@@ -139,5 +163,5 @@ export function useGamificationLeaderboardRank() {
     };
   }, [gamificationState.totalPoints, profileId]);
 
-  return { data, isLoading };
+  return { data, isLoading, error };
 }

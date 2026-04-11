@@ -137,13 +137,22 @@ async function seedLegacyDealRecord(options?: {
 }
 
 beforeAll(async () => {
+  // The production storage rules reference /databases/canopytrove/documents/ for
+  // cross-service Firestore reads (named database). The emulator uses (default),
+  // so we substitute the database name at test time to make cross-service lookups
+  // resolve correctly.
+  const storageRules = readFileSync(new URL('./storage.rules', import.meta.url), 'utf8').replace(
+    /\/databases\/canopytrove\/documents\//g,
+    '/databases/(default)/documents/',
+  );
+
   testEnv = await initializeTestEnvironment({
     projectId,
     firestore: {
       rules: readFileSync(new URL('./firestore.rules', import.meta.url), 'utf8'),
     },
     storage: {
-      rules: readFileSync(new URL('./storage.rules', import.meta.url), 'utf8'),
+      rules: storageRules,
     },
   });
 });

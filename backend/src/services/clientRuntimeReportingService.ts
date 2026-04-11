@@ -9,13 +9,14 @@ type ClientRuntimeErrorReport = {
   reportedAt?: string;
 };
 
+import { logger } from '../observability/logger';
 import { recordRuntimeIncident } from './runtimeOpsService';
 
 export async function recordClientRuntimeError(
   report: ClientRuntimeErrorReport,
   ip: string | undefined,
 ) {
-  console.error(
+  logger.error(
     JSON.stringify({
       type: 'client_runtime_error',
       ip: ip ?? null,

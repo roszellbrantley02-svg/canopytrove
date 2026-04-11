@@ -70,7 +70,8 @@ function buildWebBackResetState(routeName: string) {
     };
   }
 
-  if (OWNER_PORTAL_WORKSPACE_ROUTES.has(routeName)) {
+  // Treat any route starting with 'OwnerPortal' as a workspace route, even if not explicitly listed
+  if (OWNER_PORTAL_WORKSPACE_ROUTES.has(routeName) || routeName.startsWith('OwnerPortal')) {
     return {
       index: 1,
       routes: [profileTabsRoute, { name: 'OwnerPortalHome' }],
@@ -114,7 +115,8 @@ function getWebBackLabel(routeName: string) {
     routeName === 'OwnerPortalSignUp' ||
     routeName === 'OwnerPortalForgotPassword' ||
     routeName === 'OwnerPortalHome' ||
-    OWNER_PORTAL_WORKSPACE_ROUTES.has(routeName)
+    OWNER_PORTAL_WORKSPACE_ROUTES.has(routeName) ||
+    routeName.startsWith('OwnerPortal')
   ) {
     return 'Back to Profile';
   }

@@ -30,6 +30,7 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
     cachedAppProfile?.id ?? cachedProfileId ?? createAppProfileId(),
   );
   const lastCanonicalResolutionKeyRef = useRef<string | null>(null);
+  const authSessionSubscriberRef = useRef<((session: CanopyTroveAuthSession) => void) | null>(null);
 
   const areProfilesEquivalent = useCallback(
     (left: AppProfile | null | undefined, right: AppProfile | null | undefined) =>
@@ -144,8 +145,14 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
       authSession,
       appProfile?.displayName ?? null,
     );
+
+    // If canonical lookup returned null but we already have a profile for this
+    // account, keep it rather than minting a duplicate. Only create fresh when
+    // there's genuinely no profile to work with.
     const nextProfile =
-      canonicalProfile ?? createProfileForSession(authSession, appProfile?.displayName ?? null);
+      canonicalProfile ??
+      (appProfile?.accountId === authSession.uid ? appProfile : null) ??
+      createProfileForSession(authSession, appProfile?.displayName ?? null);
 
     if (areProfilesEquivalent(appProfile, nextProfile)) {
       return appProfile;
@@ -260,11 +267,19 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
   const clearDisplayName = useCallback(() => updateDisplayName(''), [updateDisplayName]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToCanopyTroveAuthSession((nextSession) => {
+    // Always call through ref to avoid stale closure
+    authSessionSubscriberRef.current = (nextSession: CanopyTroveAuthSession) => {
       setAuthSession(nextSession);
+    };
+
+    const unsubscribe = subscribeToCanopyTroveAuthSession((nextSession) => {
+      authSessionSubscriberRef.current?.(nextSession);
     });
 
-    return unsubscribe;
+    return () => {
+      authSessionSubscriberRef.current = null;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -336,14 +351,22 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
         return;
       }
 
-      const nextProfile = await ensureAppProfile();
-      if (!alive) {
-        return;
-      }
+      try {
+        const nextProfile = await ensureAppProfile();
+        if (!alive) {
+          return;
+        }
 
-      setAppProfile(nextProfile);
-      if (nextProfile.id !== profileId) {
-        setProfileId(nextProfile.id);
+        setAppProfile(nextProfile);
+        if (nextProfile.id !== profileId) {
+          setProfileId(nextProfile.id);
+        }
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        console.error('[useStorefrontProfileModel] Failed to ensure app profile:', error);
+        // Fail gracefully — let the app continue with default profile
       }
     })();
 

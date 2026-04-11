@@ -162,6 +162,8 @@ export type StorefrontSummaryApiDocument = {
   thumbnailUrl?: string | null;
   /** Android moderation: platform visibility for this storefront's active promotion. */
   promotionAndroidEligible?: boolean;
+  /** Whether this storefront is visible in listings (false = hidden/delisted). */
+  isVisible?: boolean;
 };
 
 export type StorefrontDetailApiDocument = {

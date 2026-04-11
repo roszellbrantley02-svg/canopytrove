@@ -1,4 +1,5 @@
 import { Router, json } from 'express';
+import { logger } from '../observability/logger';
 import { parseStorefrontIdParam } from '../http/validation';
 import { createRequestTimeoutMiddleware, disableRequestTimeout } from '../http/requestTimeout';
 import { ensureProfileWriteAccess } from '../services/profileAccessService';
@@ -164,7 +165,9 @@ photoUploadOneShotRoute.post(
         return;
       }
 
-      console.error('[photo-upload-one-shot] Unexpected error:', error);
+      logger.error('[photo-upload-one-shot] Unexpected error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       response.status(500).json({
         ok: false,
         error: 'Upload failed: an unexpected error occurred.',

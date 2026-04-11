@@ -58,9 +58,14 @@ function SavedStorefrontsScreenInner() {
         </MotionInView>
       ) : Platform.OS === 'web' ? (
         <View style={styles.list}>
-          {savedStorefronts.map((item, index) => (
+          {savedStorefronts.slice(0, 50).map((item, index) => (
             <React.Fragment key={item.id}>{renderStorefrontCard({ item, index })}</React.Fragment>
           ))}
+          {savedStorefronts.length > 50 && (
+            <Text style={styles.moreItemsNote}>
+              Showing 50 of {savedStorefronts.length} saved storefronts
+            </Text>
+          )}
         </View>
       ) : (
         <FlatList
@@ -110,5 +115,11 @@ const styles = StyleSheet.create({
     ...textStyles.body,
     color: colors.textMuted,
     textAlign: 'center',
+  },
+  moreItemsNote: {
+    ...textStyles.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.md,
   },
 });

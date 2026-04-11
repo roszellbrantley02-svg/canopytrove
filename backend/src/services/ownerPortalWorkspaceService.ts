@@ -382,19 +382,19 @@ export async function applyOwnerWorkspaceDetailEnhancements(
   const allActivePromotions =
     activePromotionsResult.status === 'fulfilled' ? activePromotionsResult.value : [];
   if (rawProfileToolsResult.status === 'rejected') {
-    console.warn(
+    logger.warn(
       `[owner-workspace-service] detail enhancement: profileTools failed for ${detail.storefrontId}:`,
       rawProfileToolsResult.reason,
     );
   }
   if (followerCountResult.status === 'rejected') {
-    console.warn(
+    logger.warn(
       `[owner-workspace-service] detail enhancement: followerCount failed for ${detail.storefrontId}:`,
       followerCountResult.reason,
     );
   }
   if (activePromotionsResult.status === 'rejected') {
-    console.warn(
+    logger.warn(
       `[owner-workspace-service] detail enhancement: activePromotions failed for ${detail.storefrontId}:`,
       activePromotionsResult.reason,
     );

@@ -1,5 +1,6 @@
 import { OwnerStorefrontPromotionDocument } from '../../../src/types/ownerPortal';
 import { serverConfig } from '../config';
+import { logger } from '../observability/logger';
 import { dispatchFavoriteDealAlertsForStorefront } from './favoriteDealAlertService';
 import { getOwnerStorefrontPromotionsCollection } from './ownerPortalWorkspaceCollections';
 import {
@@ -247,6 +248,14 @@ export function startOwnerPromotionScheduler(
   promotionSchedulerHandle = setInterval(() => {
     void runOwnerPromotionStartSweep().catch(() => undefined);
   }, intervalMs);
+
+  // NOTE: This scheduler is process-local and non-durable.
+  // In production with multiple Cloud Run instances, promotion alerts may duplicate.
+  // For production durability, migrate to Cloud Scheduler + Pub/Sub or Firestore distributed locks.
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info('[ownerPortalPromotionScheduler] Started (process-local, single-instance only)');
+  }
+
   return true;
 }
 

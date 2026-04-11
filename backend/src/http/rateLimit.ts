@@ -10,6 +10,7 @@ type RateLimitOptions = {
   max: number;
   methods?: string[];
   persistent?: boolean;
+  abuseSignalPoints?: number;
 };
 
 type RateLimitBucket = {
@@ -19,13 +20,20 @@ type RateLimitBucket = {
 
 const rateLimitBuckets = new Map<string, RateLimitBucket>();
 const RATE_LIMIT_COLLECTION = 'ops_rate_limit_buckets';
+const MAX_MEMORY_BUCKETS = parseInt(process.env.RATE_LIMIT_MAX_BUCKETS || '2048', 10);
 
 function getClientIp(request: Request) {
   return request.ip || request.socket.remoteAddress || 'unknown';
 }
 
 function hashClientIp(ip: string) {
-  const hash = createHash('sha256').update(ip, 'utf8').digest('hex');
+  const pepper = process.env.RATE_LIMIT_PEPPER || 'canopytrove-dev-pepper';
+  if (!process.env.RATE_LIMIT_PEPPER && process.env.NODE_ENV === 'production') {
+    logger.warn('RATE_LIMIT_PEPPER not set in production — using insecure default');
+  }
+  const hash = createHash('sha256')
+    .update(ip + pepper, 'utf8')
+    .digest('hex');
   return hash.substring(0, 16);
 }
 
@@ -43,10 +51,15 @@ function shouldApplyToMethod(method: string, allowedMethods?: string[]) {
 }
 
 function sweepExpiredBuckets(now: number) {
+  const keysToDelete: string[] = [];
   for (const [key, bucket] of rateLimitBuckets.entries()) {
     if (bucket.resetAt <= now) {
-      rateLimitBuckets.delete(key);
+      keysToDelete.push(key);
     }
+  }
+  // Delete in separate pass to avoid modifying Map during iteration
+  for (const key of keysToDelete) {
+    rateLimitBuckets.delete(key);
   }
 }
 
@@ -114,8 +127,17 @@ async function consumePersistentBucket(bucketKey: string, windowMs: number) {
 
 function consumeMemoryBucket(bucketKey: string, windowMs: number) {
   const now = Date.now();
-  if (rateLimitBuckets.size > 2048) {
+  if (rateLimitBuckets.size > MAX_MEMORY_BUCKETS) {
     sweepExpiredBuckets(now);
+  }
+
+  // Log warning when memory buckets reach 80% capacity
+  const bucketCapacityPercent = (rateLimitBuckets.size / MAX_MEMORY_BUCKETS) * 100;
+  if (bucketCapacityPercent >= 80) {
+    logger.warn(`Rate limit memory buckets at ${bucketCapacityPercent.toFixed(1)}% capacity`, {
+      current: rateLimitBuckets.size,
+      max: MAX_MEMORY_BUCKETS,
+    });
   }
 
   const currentBucket = rateLimitBuckets.get(bucketKey);
@@ -134,7 +156,7 @@ function consumeMemoryBucket(bucketKey: string, windowMs: number) {
 }
 
 export function createRateLimitMiddleware(options: RateLimitOptions): RequestHandler {
-  const { max, methods, name, windowMs } = options;
+  const { abuseSignalPoints = 2, max, methods, name, windowMs } = options;
   const persistent = shouldUsePersistentBuckets(options);
 
   return async (request, response, next) => {
@@ -179,9 +201,10 @@ export function createRateLimitMiddleware(options: RateLimitOptions): RequestHan
         const jitter = Math.floor(Math.random() * Math.min(5, retryAfterSeconds));
         response.setHeader('Retry-After', String(retryAfterSeconds + jitter));
 
-        // Record abuse signal for this rate limit hit
-        const ip = getClientIp(request);
-        recordAbuseSignal(ip, 2, request.originalUrl);
+        if (abuseSignalPoints > 0) {
+          const ip = getClientIp(request);
+          recordAbuseSignal(ip, abuseSignalPoints, request.originalUrl);
+        }
 
         const payload = {
           error: 'Too many requests. Please retry shortly.',

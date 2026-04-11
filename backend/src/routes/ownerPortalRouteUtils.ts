@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import {
   ensureOwnerPortalAccess,
+  ensureOwnerPortalClaimSyncAccess,
   getOwnerPortalAccessErrorStatus,
 } from '../services/ownerPortalAccessService';
 import { TierAccessError } from '../services/ownerTierGatingService';
@@ -88,6 +89,28 @@ export function createOwnerPortalJsonRoute(
   return async (request: Request, response: Response) => {
     try {
       const { ownerUid, ownerEmail } = await resolveOwnerPortalRequestAccess(request);
+      response.json(await handler({ ownerUid, ownerEmail, request, response }));
+    } catch (error) {
+      response
+        .status(getOwnerPortalRouteErrorStatus(error))
+        .json(getOwnerPortalRouteErrorPayload(error, fallbackMessage));
+    }
+  };
+}
+
+/**
+ * Route creator for the sync-claims endpoint only.
+ * This uses ensureOwnerPortalClaimSyncAccess instead of the standard access check
+ * because sync-claims is the mechanism that GRANTS owner access. Requiring the
+ * owner claim to already exist would be a chicken-and-egg problem.
+ */
+export function createOwnerPortalClaimSyncRoute(
+  fallbackMessage: string,
+  handler: OwnerPortalRouteHandler,
+) {
+  return async (request: Request, response: Response) => {
+    try {
+      const { ownerUid, ownerEmail } = await ensureOwnerPortalClaimSyncAccess(request);
       response.json(await handler({ ownerUid, ownerEmail, request, response }));
     } catch (error) {
       response

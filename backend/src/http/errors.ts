@@ -91,10 +91,10 @@ export const backendErrorHandler: ErrorRequestHandler = (error, request, respons
   }
 
   const status = getErrorStatus(error);
-  const message = status < 500 && error instanceof Error ? error.message : 'Internal server error';
+  const message = getSafeErrorMessage(error, status, requestIdValue);
 
   if (status >= 500) {
-    console.error('Backend request failed', {
+    logger.error('Backend request failed', {
       requestId: requestIdValue,
       method: request.method,
       path: request.originalUrl,

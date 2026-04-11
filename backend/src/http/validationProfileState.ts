@@ -67,6 +67,11 @@ function parsePartialProfileDocument(
   return nextProfile;
 }
 
+/**
+ * Parse gamification state fields. NOTE: This function is retained for
+ * internal server-side use (e.g. launch program). Client requests MUST
+ * NOT pass gamification state — it is stripped in profileStateRoutes.
+ */
 function parsePartialGamificationState(
   value: unknown,
   field: string,

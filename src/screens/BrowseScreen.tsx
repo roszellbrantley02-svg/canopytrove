@@ -118,8 +118,11 @@ function BrowseScreenInner() {
   }, [setSearchQuery]);
 
   const handleRetryError = React.useCallback(() => {
-    // The error will be cleared on the next data fetch when dependencies change
-    // or user can manually trigger a refresh by changing filters
+    // Clear items first to ensure error is visible if retry also fails,
+    // then reset offset to trigger a fresh data fetch
+    React.startTransition(() => {
+      setItems([]);
+    });
     setOffset(0);
   }, []);
 

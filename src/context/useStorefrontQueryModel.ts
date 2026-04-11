@@ -35,7 +35,8 @@ export function useStorefrontQueryModel({
   setGamificationState,
 }: UseStorefrontQueryModelArgs) {
   const [availableAreas, setAvailableAreas] = useState<MarketArea[]>(getCachedMarketAreas());
-  const defaultArea = getDefaultMarketArea(availableAreas);
+  // Memoize defaultArea independently so area selection stays in sync with available areas
+  const defaultArea = useMemo(() => getDefaultMarketArea(availableAreas), [availableAreas]);
   const [selectedAreaId, setSelectedAreaIdState] = useState<string>(
     cachedPreferences?.selectedAreaId ?? defaultArea.id,
   );

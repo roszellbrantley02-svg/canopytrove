@@ -26,8 +26,8 @@ const ONBOARDING_STEPS = ['Account', 'Business Details', 'Claim Listing', 'Verif
 
 export function OwnerPortalClaimListingScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const _route = useRoute<ClaimListingRoute>();
-  const preview = false;
+  const route = useRoute<ClaimListingRoute>();
+  const preview = route.params?.preview ?? false;
   const { authSession } = useStorefrontProfileController();
   const { activeLocation, activeLocationLabel } = useStorefrontQueryController();
   const [draftQuery, setDraftQuery] = React.useState('');

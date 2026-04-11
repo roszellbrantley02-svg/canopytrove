@@ -35,8 +35,8 @@ function getReviewRuntimeMessage(reviewRepliesEnabled: boolean, safeModeEnabled:
 }
 
 function OwnerPortalReviewInboxScreenInner() {
-  const _route = useRoute<OwnerPortalReviewInboxRoute>();
-  const preview = false;
+  const route = useRoute<OwnerPortalReviewInboxRoute>();
+  const preview = route.params?.preview ?? false;
   const {
     workspace,
     runtimeStatus,

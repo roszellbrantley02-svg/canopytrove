@@ -311,8 +311,8 @@ const localStyles = StyleSheet.create({
 });
 
 export function OwnerPortalIdentityVerificationScreen() {
-  const _route = useRoute<IdentityVerificationRoute>();
-  const preview = false;
+  const route = useRoute<IdentityVerificationRoute>();
+  const preview = route.params?.preview ?? false;
 
   if (preview) {
     return <OwnerPortalIdentityVerificationPreview />;

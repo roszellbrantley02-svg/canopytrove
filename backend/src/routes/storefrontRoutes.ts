@@ -11,6 +11,7 @@ import {
   parseStorefrontSummaryIdsQuery,
 } from '../http/validation';
 import { resolveVerifiedRequestIdentity } from '../services/profileAccessService';
+import { getProfile } from '../services/profileService';
 import { StorefrontSummariesApiResponse } from '../types';
 
 function setCacheHeaders(
@@ -41,15 +42,32 @@ function getClientPlatform(request: {
 
 export const storefrontRoutes = Router();
 
-function getViewerProfileId(request: { headers: Record<string, string | string[] | undefined> }) {
-  const header = request.headers['x-canopy-profile-id'];
-  const value = Array.isArray(header) ? header[0] : header;
-  const normalizedValue = typeof value === 'string' ? value.trim() : '';
-  if (!normalizedValue || normalizedValue.length > 160) {
+async function resolveVerifiedViewerContext(
+  identity: { accountId: string | null; role: string | null },
+  request: { headers: Record<string, string | string[] | undefined> },
+): Promise<{ profileId: string } | null> {
+  if (!identity.accountId || identity.role !== 'member') {
     return null;
   }
 
-  return normalizedValue;
+  const header = request.headers['x-canopy-profile-id'];
+  const value = Array.isArray(header) ? header[0] : header;
+  const profileId = typeof value === 'string' ? value.trim() : '';
+  if (!profileId || profileId.length > 160 || !profileId.startsWith('profile-')) {
+    return null;
+  }
+
+  // Verify the profile belongs to this account
+  try {
+    const profile = await getProfile(profileId);
+    if (profile.accountId !== identity.accountId) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  return { profileId };
 }
 
 storefrontRoutes.get('/storefront-summaries', async (request, response) => {
@@ -58,8 +76,7 @@ storefrontRoutes.get('/storefront-summaries', async (request, response) => {
     invalidTokenBehavior: 'ignore',
   });
   const memberAccountId = identity.role === 'member' ? identity.accountId : null;
-  const viewerProfileId = getViewerProfileId(request);
-  const viewerContext = memberAccountId && viewerProfileId ? { profileId: viewerProfileId } : null;
+  const viewerContext = await resolveVerifiedViewerContext(identity, request);
   const payload: StorefrontSummariesApiResponse = await getStorefrontSummaries(
     parseStorefrontSummariesQuery(request.query as Record<string, unknown>),
     {
@@ -79,8 +96,7 @@ storefrontRoutes.get('/storefront-summaries/by-ids', async (request, response) =
     invalidTokenBehavior: 'ignore',
   });
   const memberAccountId = identity.role === 'member' ? identity.accountId : null;
-  const viewerProfileId = getViewerProfileId(request);
-  const viewerContext = memberAccountId && viewerProfileId ? { profileId: viewerProfileId } : null;
+  const viewerContext = await resolveVerifiedViewerContext(identity, request);
   const ids = parseStorefrontSummaryIdsQuery(request.query as Record<string, unknown>);
   const items = await getStorefrontSummariesByIds(ids, {
     includeMemberDeals: Boolean(memberAccountId),
@@ -133,8 +149,7 @@ storefrontRoutes.get('/storefront-details/batch', async (request, response) => {
     invalidTokenBehavior: 'ignore',
   });
   const memberAccountId = identity.role === 'member' ? identity.accountId : null;
-  const viewerProfileId = getViewerProfileId(request);
-  const viewerContext = memberAccountId && viewerProfileId ? { profileId: viewerProfileId } : null;
+  const viewerContext = await resolveVerifiedViewerContext(identity, request);
   const clientPlatform = getClientPlatform(request);
 
   const results = await Promise.allSettled(
@@ -163,8 +178,7 @@ storefrontRoutes.get('/storefront-details/:storefrontId', async (request, respon
     invalidTokenBehavior: 'ignore',
   });
   const memberAccountId = identity.role === 'member' ? identity.accountId : null;
-  const viewerProfileId = getViewerProfileId(request);
-  const viewerContext = memberAccountId && viewerProfileId ? { profileId: viewerProfileId } : null;
+  const viewerContext = await resolveVerifiedViewerContext(identity, request);
   const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
   const detail = await getStorefrontDetail(storefrontId, {
     includeMemberDeals: Boolean(memberAccountId),

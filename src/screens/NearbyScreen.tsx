@@ -126,8 +126,6 @@ function NearbyScreenInner() {
           source: 'nearby',
           locationMode: 'device',
         });
-      }
-      if (didRefresh) {
         setIsLocationPanelOpen(false);
       }
     });

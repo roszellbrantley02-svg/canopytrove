@@ -38,7 +38,7 @@ export const securityHeadersMiddleware: RequestHandler = (request, response, nex
   response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
 
   // Prevent unrelated sites from embedding API responses
-  response.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  response.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
 
   next();
 };

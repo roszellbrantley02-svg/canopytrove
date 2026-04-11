@@ -10,7 +10,10 @@ import {
   parseOwnerPortalReviewReplyBody,
   parseReviewIdParam,
 } from '../http/validation';
-import { createOwnerPortalJsonRoute } from './ownerPortalRouteUtils';
+import {
+  createOwnerPortalJsonRoute,
+  createOwnerPortalClaimSyncRoute,
+} from './ownerPortalRouteUtils';
 import { syncOwnerPortalAlerts } from '../services/ownerPortalAlertService';
 import { syncOwnerPortalAuthClaims } from '../services/ownerPortalAuthClaimsService';
 import {
@@ -79,7 +82,7 @@ ownerPortalWorkspaceRoutes.get(
 ownerPortalWorkspaceRoutes.post(
   '/owner-portal/auth/sync-claims',
   ownerClaimSyncRateLimiter,
-  createOwnerPortalJsonRoute(
+  createOwnerPortalClaimSyncRoute(
     'Unknown owner auth claim sync failure',
     async ({ ownerUid, ownerEmail }) =>
       syncOwnerPortalAuthClaims({

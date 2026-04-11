@@ -25,6 +25,8 @@ async function seedCollections() {
   const expectedSummaryIds = new Set(Object.keys(mockStorefrontSummaryDocuments));
   const expectedDetailIds = new Set(Object.keys(mockStorefrontDetailDocuments));
 
+  // Safe to fetch all docs without .limit() since seedCollections are bounded by mock data size (~627 docs)
+  // and the function needs ALL docs to diff against expected mock data.
   const [existingSummarySnapshots, existingDetailSnapshots] = await Promise.all([
     db.collection(COLLECTIONS.STOREFRONT_SUMMARIES).get(),
     db.collection(COLLECTIONS.STOREFRONT_DETAILS).get(),

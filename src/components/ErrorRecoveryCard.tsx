@@ -11,6 +11,13 @@ export type ErrorRecoveryCardProps = {
   retryLabel?: string;
 };
 
+function truncateError(message: string, maxChars: number = 200): string {
+  if (message.length <= maxChars) {
+    return message;
+  }
+  return message.slice(0, maxChars) + '…';
+}
+
 export function ErrorRecoveryCard({
   title,
   message,
@@ -28,7 +35,7 @@ export function ErrorRecoveryCard({
           {title}
         </Text>
         <Text style={styles.message} maxFontSizeMultiplier={1.3}>
-          {message}
+          {truncateError(message)}
         </Text>
 
         <HapticPressable

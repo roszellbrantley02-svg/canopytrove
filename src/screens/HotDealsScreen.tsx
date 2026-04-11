@@ -101,9 +101,11 @@ function HotDealsScreenInner() {
     });
   }, [data.items, data.offset, isLoading]);
 
+  const platformLabel = isAndroid ? 'Updates' : 'Hot Deals';
+
   return (
     <ScreenShell
-      eyebrow={isAndroid ? 'Updates' : 'Hot Deals'}
+      eyebrow={platformLabel}
       title={isAndroid ? 'Recent storefront updates.' : 'Live deals near you.'}
       subtitle={
         isAndroid
@@ -135,7 +137,7 @@ function HotDealsScreenInner() {
       ) : error && items.length === 0 ? (
         <View style={{ padding: spacing.xl, paddingTop: spacing.xxl }}>
           <ErrorRecoveryCard
-            title={isAndroid ? 'Unable to load updates' : 'Unable to load deals'}
+            title={`Unable to load ${platformLabel.toLowerCase()}`}
             message={error}
             onRetry={handleRetryError}
             retryLabel="Refresh"

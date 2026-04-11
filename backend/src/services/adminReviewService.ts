@@ -1,4 +1,5 @@
 import { serverConfig } from '../config';
+import { logger } from '../observability/logger';
 import { getBackendFirebaseDb, hasBackendFirebaseConfig } from '../firebase';
 import {
   listReviewPhotoModerationQueue,
@@ -128,7 +129,9 @@ function unwrapAdminReviewQueueSection<T>(
   }
 
   warnings.push(section);
-  console.warn(`[admin-review] failed to load ${section} queue section`, result.reason);
+  logger.warn(`[admin-review] failed to load ${section} queue section`, {
+    error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+  });
   return fallback;
 }
 
@@ -238,6 +241,9 @@ export async function reviewOwnerClaim(
   claimId: string,
   body: { status: ReviewDecision; reviewNotes: string | null },
 ) {
+  // Validate decision value before database transaction
+  const validatedStatus = parseReviewDecision(body.status);
+
   const db = getAdminReviewDb();
   const now = createNow();
   const claimRef = db.collection(DISPENSARY_CLAIMS_COLLECTION).doc(claimId);
@@ -261,7 +267,7 @@ export async function reviewOwnerClaim(
   const updates: Array<Promise<unknown>> = [
     claimRef.set(
       {
-        claimStatus: body.status,
+        claimStatus: validatedStatus,
         reviewedAt: now,
         reviewNotes: body.reviewNotes,
       },
@@ -269,7 +275,7 @@ export async function reviewOwnerClaim(
     ),
   ];
 
-  if (body.status === 'approved') {
+  if (validatedStatus === 'approved') {
     if (isAdditionalLocation) {
       // Multi-location: add to additionalLocationIds instead of overwriting dispensaryId
       const currentAdditional: string[] = existingProfile?.additionalLocationIds ?? [];
@@ -333,7 +339,7 @@ export async function reviewOwnerClaim(
   return {
     ok: true,
     claimId,
-    status: body.status,
+    status: validatedStatus,
   };
 }
 

@@ -29,6 +29,9 @@ profileStateRoutes.put('/profile-state/:profileId', async (request, response) =>
   const body = parseProfileStateBody(request.body, profileId);
   const { accountId, profile } = await ensureProfileWriteAccess(request, profileId);
   const now = new Date().toISOString();
+  // SECURITY: Strip gamification state from client input.
+  // Gamification can only be updated server-side via applyGamificationEvent.
+  delete body.gamificationState;
   response.json(
     await saveProfileState(profileId, {
       ...body,

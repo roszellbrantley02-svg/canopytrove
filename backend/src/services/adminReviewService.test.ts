@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { afterEach, test } from 'node:test';
 import { loadAdminReviewQueueSections } from './adminReviewService';
 import type { ReviewPhotoModerationQueueItem } from './reviewPhotoModerationService';
 
@@ -35,12 +35,21 @@ function createQueuePhoto(id: string): ReviewPhotoModerationQueueItem {
   };
 }
 
+afterEach(() => {
+  // Clear logger mocks after each test
+  const loggerModule = require('../observability/logger');
+  if (loggerModule.logger.warn.restore) {
+    loggerModule.logger.warn.restore();
+  }
+});
+
 test('keeps partial admin review queue data when one loader fails', async () => {
-  const originalWarn = console.warn;
+  const { logger } = await import('../observability/logger');
   const loggedWarnings: unknown[][] = [];
-  console.warn = (...args: unknown[]) => {
+  const originalWarn = logger.warn;
+  logger.warn = ((...args: unknown[]) => {
     loggedWarnings.push(args);
-  };
+  }) as any;
 
   try {
     const result = await loadAdminReviewQueueSections({
@@ -65,7 +74,7 @@ test('keeps partial admin review queue data when one loader fails', async () => 
     assert.equal(loggedWarnings.length, 1);
     assert.match(String(loggedWarnings[0]?.[0] ?? ''), /businessVerifications/);
   } finally {
-    console.warn = originalWarn;
+    logger.warn = originalWarn;
   }
 });
 

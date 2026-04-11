@@ -35,6 +35,17 @@ import {
 } from '../services/memberEmailSubscriptionService';
 import { listResendWebhookEvents } from '../services/resendWebhookService';
 
+/**
+ * Validates and bounds limit query parameter to safe integer [1, 100]
+ */
+function parseAdminLimitParam(value: unknown, fallback = 25): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.min(100, Math.floor(parsed));
+}
+
 export const adminRoutes = Router();
 adminRoutes.use(
   '/admin',
@@ -177,9 +188,7 @@ adminRoutes.get('/admin/email-subscriptions', async (request, response) => {
 
 adminRoutes.get('/admin/email-delivery-events', async (request, response) => {
   try {
-    const rawLimit =
-      typeof request.query.limit === 'string' ? Number.parseInt(request.query.limit, 10) : NaN;
-    const limit = Number.isFinite(rawLimit) ? rawLimit : undefined;
+    const limit = parseAdminLimitParam(request.query.limit, 25);
     response.json({
       ok: true,
       ...(await listResendWebhookEvents({ limit })),
@@ -200,7 +209,8 @@ adminRoutes.use('/admin/push', adminPushNotificationRoutes);
 
 adminRoutes.get('/admin/reviews/queue', async (request, response) => {
   try {
-    response.json(await getAdminReviewQueue(request.query.limit));
+    const limit = parseAdminLimitParam(request.query.limit, 25);
+    response.json(await getAdminReviewQueue(limit));
   } catch (error) {
     response.status(500).json({
       ok: false,
@@ -211,9 +221,10 @@ adminRoutes.get('/admin/reviews/queue', async (request, response) => {
 
 adminRoutes.get('/admin/reviews/photo-moderation/queue', async (request, response) => {
   try {
+    const limit = parseAdminLimitParam(request.query.limit, 25);
     response.json({
       ok: true,
-      reviewPhotos: await getAdminReviewPhotoQueue(request.query.limit),
+      reviewPhotos: await getAdminReviewPhotoQueue(limit),
     });
   } catch (error) {
     response.status(500).json({

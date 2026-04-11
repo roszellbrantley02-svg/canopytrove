@@ -260,6 +260,7 @@ test('returns the canonical authenticated profile for the current account', asyn
     }),
   });
   // Gamification state is server-authoritative (stripped by the PUT endpoint),
+
   // so set it directly via the persistence service.
   await saveGamificationState('profile-empty', {
     totalPoints: 0,
@@ -700,6 +701,7 @@ test('keeps public storefront reads on the shared read limiter instead of the ad
 });
 
 test('keeps one featured live deal visible while hiding signed-out storefront card thumbnails', async () => {
+  const { baseUrl } = await startTestServer();
   const {
     ownerStorefrontPromotionStore,
     ownerStorefrontPromotionCache,
@@ -726,8 +728,6 @@ test('keeps one featured live deal visible while hiding signed-out storefront ca
   ]);
   ownerStorefrontPromotionCache.clear();
   storefrontSummaryEnhancementCache.clear();
-
-  const { baseUrl } = await startTestServer();
   const response = await request(
     baseUrl,
     `/storefront-summaries/by-ids?ids=${encodeURIComponent(testStorefrontId)}`,
@@ -745,6 +745,7 @@ test('keeps one featured live deal visible while hiding signed-out storefront ca
 
 test('publishes live owner promotions onto member storefront card payloads', async () => {
   process.env.NODE_ENV = 'test';
+  const { baseUrl } = await startTestServer();
   const {
     ownerStorefrontPromotionStore,
     ownerStorefrontPromotionCache,
@@ -771,8 +772,6 @@ test('publishes live owner promotions onto member storefront card payloads', asy
   ]);
   ownerStorefrontPromotionCache.clear();
   storefrontSummaryEnhancementCache.clear();
-
-  const { baseUrl } = await startTestServer();
   const response = await request(
     baseUrl,
     `/storefront-summaries/by-ids?ids=${encodeURIComponent(testStorefrontId)}`,
@@ -793,6 +792,7 @@ test('publishes live owner promotions onto member storefront card payloads', asy
 });
 
 test('keeps one featured live deal visible while hiding signed-out paginated storefront browse thumbnails', async () => {
+  const { baseUrl } = await startTestServer();
   const {
     ownerStorefrontPromotionStore,
     ownerStorefrontPromotionCache,
@@ -807,8 +807,6 @@ test('keeps one featured live deal visible while hiding signed-out paginated sto
   ]);
   ownerStorefrontPromotionCache.clear();
   storefrontSummaryEnhancementCache.clear();
-
-  const { baseUrl } = await startTestServer();
   const response = await request(baseUrl, '/storefront-summaries?limit=4&offset=0');
 
   assert.equal(response.status, 200);
@@ -823,6 +821,7 @@ test('keeps one featured live deal visible while hiding signed-out paginated sto
 
 test('publishes live owner promotions onto member paginated storefront browse payloads', async () => {
   process.env.NODE_ENV = 'test';
+  const { baseUrl } = await startTestServer();
   const {
     ownerStorefrontPromotionStore,
     ownerStorefrontPromotionCache,
@@ -837,8 +836,6 @@ test('publishes live owner promotions onto member paginated storefront browse pa
   ]);
   ownerStorefrontPromotionCache.clear();
   storefrontSummaryEnhancementCache.clear();
-
-  const { baseUrl } = await startTestServer();
   const response = await request(baseUrl, '/storefront-summaries?limit=4&offset=0', {
     headers: {
       Authorization: 'Bearer test-authenticated:member-1',
@@ -856,6 +853,7 @@ test('publishes live owner promotions onto member paginated storefront browse pa
 
 test('treats invalid bearer auth on public storefront browse routes as guest access', async () => {
   process.env.NODE_ENV = 'test';
+  const { baseUrl } = await startTestServer();
   const {
     ownerStorefrontPromotionStore,
     ownerStorefrontPromotionCache,
@@ -870,8 +868,6 @@ test('treats invalid bearer auth on public storefront browse routes as guest acc
   ]);
   ownerStorefrontPromotionCache.clear();
   storefrontSummaryEnhancementCache.clear();
-
-  const { baseUrl } = await startTestServer();
   const response = await request(baseUrl, '/storefront-summaries?limit=4&offset=0', {
     headers: {
       Authorization: 'Bearer test-invalid-token',
@@ -890,6 +886,7 @@ test('treats invalid bearer auth on public storefront browse routes as guest acc
 
 test('treats owner bearer auth on public storefront browse routes as guest access', async () => {
   process.env.NODE_ENV = 'test';
+  const { baseUrl } = await startTestServer();
   const {
     ownerStorefrontPromotionStore,
     ownerStorefrontPromotionCache,
@@ -904,8 +901,6 @@ test('treats owner bearer auth on public storefront browse routes as guest acces
   ]);
   ownerStorefrontPromotionCache.clear();
   storefrontSummaryEnhancementCache.clear();
-
-  const { baseUrl } = await startTestServer();
   const response = await request(baseUrl, '/storefront-summaries?limit=4&offset=0', {
     headers: {
       Authorization: 'Bearer test-owner:owner-1',
@@ -919,6 +914,61 @@ test('treats owner bearer auth on public storefront browse routes as guest acces
   assert.ok(item);
   assert.equal(item?.activePromotionId, 'promotion-owner-bearer');
   assert.equal(item?.promotionText, 'Owner sessions should browse as guests');
+  assert.equal(item?.activePromotionCount, 1);
+  assert.equal(item?.thumbnailUrl, null);
+});
+
+test('ignores owner bearer auth plus X-Canopy-Profile-Id on public storefront browse routes', async () => {
+  process.env.NODE_ENV = 'test';
+  const { baseUrl } = await startTestServer();
+  const {
+    ownerStorefrontPromotionStore,
+    ownerStorefrontPromotionCache,
+    storefrontSummaryEnhancementCache,
+  } = await import('./services/ownerPortalWorkspaceData');
+
+  ownerStorefrontPromotionStore.set(testStorefrontId, [
+    createPromotionRecord({
+      id: 'promotion-owner-header-guest',
+      description: 'Owner sessions with a profile header should still browse as guests',
+    }),
+  ]);
+  ownerStorefrontPromotionCache.clear();
+  storefrontSummaryEnhancementCache.clear();
+  await fetch(`${baseUrl}/profile-state/profile-owner-header`, {
+    method: 'PUT',
+    headers: {
+      Authorization: 'Bearer test-owner:owner-1',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      profile: {
+        accountId: 'owner-1',
+        kind: 'authenticated',
+        displayName: 'Owner Session',
+        createdAt: '2026-04-10T12:00:00.000Z',
+        updatedAt: '2026-04-11T12:00:00.000Z',
+      },
+    }),
+  });
+
+  const response = await request(baseUrl, '/storefront-summaries?limit=4&offset=0', {
+    headers: {
+      Authorization: 'Bearer test-owner:owner-1',
+      'X-Canopy-Profile-Id': 'profile-owner-header',
+    },
+  });
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('cache-control') ?? '', /^public,/);
+  const payload = response.json as { items?: Array<Record<string, unknown>> } | null;
+  const item = payload?.items?.find((candidate) => candidate.id === testStorefrontId);
+  assert.ok(item);
+  assert.equal(item?.activePromotionId, 'promotion-owner-header-guest');
+  assert.equal(
+    item?.promotionText,
+    'Owner sessions with a profile header should still browse as guests',
+  );
   assert.equal(item?.activePromotionCount, 1);
   assert.equal(item?.thumbnailUrl, null);
 });
@@ -1184,6 +1234,46 @@ test('exempts /health from the shared public read limiter', async () => {
   assert.ok(lastPublicRead);
   assert.equal(lastPublicRead.status, 429);
   assert.equal(lastPublicRead.json?.error, 'Too many requests. Please retry shortly.');
+});
+
+test('keeps public GET routes available when an IP is abuse-flagged', async () => {
+  const { isIpFlagged, recordAbuseSignal } = await import('./http/abuseScoring');
+  const flaggedIp = '198.51.100.24';
+  const { baseUrl } = await startTestServer();
+
+  for (let index = 0; index < 10; index += 1) {
+    recordAbuseSignal(flaggedIp, 2, '/load-test');
+  }
+
+  assert.equal(isIpFlagged(flaggedIp), true);
+
+  const healthResponse = await request(baseUrl, '/health', {
+    headers: {
+      'x-forwarded-for': flaggedIp,
+    },
+  });
+  const marketAreasResponse = await request(baseUrl, '/market-areas', {
+    headers: {
+      'x-forwarded-for': flaggedIp,
+    },
+  });
+  const analyticsWriteResponse = await request(baseUrl, '/analytics/events', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-forwarded-for': flaggedIp,
+    },
+    body: JSON.stringify({}),
+  });
+
+  assert.equal(healthResponse.status, 200);
+  assert.equal(healthResponse.json?.ok, true);
+  assert.equal(marketAreasResponse.status, 200);
+  assert.equal(analyticsWriteResponse.status, 429);
+  assert.equal(
+    analyticsWriteResponse.json?.error,
+    'Request rate exceeded. Please slow down and try again later.',
+  );
 });
 
 test('rejects invalid admin api keys without exposing admin routes', async () => {
@@ -1454,6 +1544,7 @@ test('accepts client runtime error reports', async () => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: 'Bearer test-authenticated:account-1',
     },
     body: JSON.stringify({
       message: 'Detail fetch failed',
@@ -1467,6 +1558,26 @@ test('accepts client runtime error reports', async () => {
 
   assert.equal(response.status, 202);
   assert.equal(response.json?.ok, true);
+});
+
+test('rejects unauthenticated client runtime error reports', async () => {
+  const { baseUrl } = await startTestServer();
+  const response = await request(baseUrl, '/client-errors', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      message: 'Detail fetch failed',
+      source: 'storefront-detail-fetch',
+      screen: 'StorefrontDetail',
+      isFatal: false,
+      platform: 'android',
+      reportedAt: new Date().toISOString(),
+    }),
+  });
+
+  assert.equal(response.status, 401);
 });
 
 test('accepts analytics event batches', async () => {

@@ -12,6 +12,7 @@ import { responseValidatorMiddleware } from './http/responseValidator';
 import { isIpFlagged } from './http/abuseScoring';
 import { createOriginGuardMiddleware } from './http/originGuard';
 import { setupExpressErrorMonitoring } from './observability/sentry';
+import { logger } from './observability/logger';
 import { requestTelemetryMiddleware } from './observability/requestTelemetry';
 import { adminRoutes } from './routes/adminRoutes';
 import { analyticsRoutes } from './routes/analyticsRoutes';
@@ -56,6 +57,13 @@ import { hasBackendFirebaseConfig } from './firebase';
 import { backendStorefrontSourceStatus } from './sources';
 import { isShuttingDown } from './observability/shutdownState';
 
+function shouldBypassAbuseGate(method: string) {
+  const normalizedMethod = method.toUpperCase();
+  return (
+    normalizedMethod === 'GET' || normalizedMethod === 'HEAD' || normalizedMethod === 'OPTIONS'
+  );
+}
+
 export function createApp() {
   assertSecureServerConfig();
   const app = express();
@@ -64,6 +72,7 @@ export function createApp() {
     windowMs: 60_000,
     max: serverConfig.readRateLimitPerMinute,
     methods: ['GET'],
+    abuseSignalPoints: 0,
   });
 
   app.set('trust proxy', serverConfig.trustProxyHops);
@@ -137,6 +146,16 @@ export function createApp() {
     'image/heic',
     'image/heif',
   ]);
+
+  function sanitizePhotoFileName(input: string): string {
+    // Strip path traversal characters and allow only alphanumeric, dots, hyphens, underscores
+    const sanitized = input
+      .replace(/[^a-zA-Z0-9._-]/g, '') // Remove unsafe characters
+      .replace(/^\.+/, ''); // Remove leading dots
+
+    // Return sanitized name or safe default if empty
+    return sanitized && sanitized.length > 0 ? sanitized : `photo-${Date.now().toString(36)}.jpg`;
+  }
   app.post(
     '/storefront-details/:storefrontId/reviews/photo-uploads/one-shot',
     reviewPhotoUploadRateLimiter,
@@ -154,10 +173,9 @@ export function createApp() {
         };
 
         const profileId = typeof body.profileId === 'string' ? body.profileId.trim() : '';
-        const fileName =
-          typeof body.fileName === 'string' && body.fileName.trim()
-            ? body.fileName.trim()
-            : `photo-${Date.now().toString(36)}.jpg`;
+        const fileName = sanitizePhotoFileName(
+          typeof body.fileName === 'string' ? body.fileName : '',
+        );
         const contentType =
           typeof body.contentType === 'string' && PHOTO_CONTENT_TYPES.has(body.contentType.trim())
             ? body.contentType.trim()
@@ -245,7 +263,9 @@ export function createApp() {
           response.status(error.statusCode).json({ ok: false, error: error.message });
           return;
         }
-        console.error('[photo-upload-one-shot] Unexpected error:', error);
+        logger.error('[photo-upload-one-shot] Unexpected error', {
+          error: error instanceof Error ? error.message : String(error),
+        });
         response
           .status(500)
           .json({ ok: false, error: 'Upload failed: an unexpected error occurred.' });
@@ -258,23 +278,7 @@ export function createApp() {
   // or photo library selection.
   app.use('/', photoUploadBytesRoute);
 
-  app.use(express.json({ limit: '128kb' }));
-  app.use(contentTypeEnforcementMiddleware);
-  app.use(createAuditLogMiddleware());
-  app.use(suspiciousActivityMiddleware);
-
-  // Abuse-scored IP gate — flagged IPs get rejected before route handlers
-  app.use((request, response, next) => {
-    const ip = request.ip || request.socket.remoteAddress || 'unknown';
-    if (request.method !== 'OPTIONS' && isIpFlagged(ip)) {
-      response.status(429).json({
-        error: 'Request rate exceeded. Please slow down and try again later.',
-      });
-      return;
-    }
-    next();
-  });
-
+  // Health probes — must be above abuse middleware so Cloud Run health checks are never blocked
   app.get('/livez', (_request, response) => {
     response.status(200).json({ status: 'alive' });
   });
@@ -302,6 +306,23 @@ export function createApp() {
   // Public health check — safe, no infrastructure details
   app.get('/health', (_request, response) => {
     response.json({ ok: true });
+  });
+
+  app.use(express.json({ limit: '128kb' }));
+  app.use(contentTypeEnforcementMiddleware);
+  app.use(createAuditLogMiddleware());
+  app.use(suspiciousActivityMiddleware);
+
+  // Abuse-scored IP gate — flagged IPs get rejected before route handlers
+  app.use((request, response, next) => {
+    const ip = request.ip || request.socket.remoteAddress || 'unknown';
+    if (!shouldBypassAbuseGate(request.method) && isIpFlagged(ip)) {
+      response.status(429).json({
+        error: 'Request rate exceeded. Please slow down and try again later.',
+      });
+      return;
+    }
+    next();
   });
 
   app.use(readRateLimiter);

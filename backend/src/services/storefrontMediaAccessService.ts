@@ -1,4 +1,5 @@
 import { OwnerStorefrontProfileToolsDocument } from '../../../src/types/ownerPortal';
+import { logger } from '../observability/logger';
 import { getBackendFirebaseStorage } from '../firebase';
 
 const STOREFRONT_MEDIA_READ_URL_TTL_MS = 24 * 60 * 60 * 1000;
@@ -142,7 +143,7 @@ export async function hydrateOwnerStorefrontProfileToolsMedia(
       ? cardPhotoResult[0].value
       : normalizeOptionalHttpUrl(profileTools.cardPhotoUrl);
   if (cardPhotoResult[0]?.status === 'rejected') {
-    console.warn(
+    logger.warn(
       `[storefrontMediaAccess] failed to resolve card photo URL for path ${profileTools.cardPhotoPath ?? 'unknown'}:`,
       cardPhotoResult[0].reason,
     );
@@ -160,7 +161,7 @@ export async function hydrateOwnerStorefrontProfileToolsMedia(
     if (result.status === 'fulfilled') {
       return result.value ? [result.value] : [];
     }
-    console.warn(
+    logger.warn(
       `[storefrontMediaAccess] failed to resolve featured photo URL for path ${(profileTools.featuredPhotoPaths ?? [])[index] ?? 'unknown'}:`,
       result.reason,
     );

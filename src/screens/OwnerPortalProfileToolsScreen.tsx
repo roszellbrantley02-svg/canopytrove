@@ -244,11 +244,11 @@ function getProfileToolsRuntimeMessage(
 }
 
 function OwnerPortalProfileToolsScreenInner() {
-  const _route = useRoute<OwnerPortalProfileToolsRoute>();
+  const route = useRoute<OwnerPortalProfileToolsRoute>();
   const { authSession } = useStorefrontProfileController();
   const { width } = useWindowDimensions();
   const isAndroid = Platform.OS === 'android';
-  const preview = false;
+  const preview = route.params?.preview ?? false;
   const {
     workspace,
     runtimeStatus,

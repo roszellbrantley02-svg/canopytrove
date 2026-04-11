@@ -292,7 +292,7 @@ router.post('/backfill-hours', async (request: Request, response: Response) => {
 
     await Promise.all(writes);
 
-    logger.info('[hours-backfill] Complete', results);
+    logger.info('[hours-backfill] Complete', results as Record<string, unknown>);
     response.json(results);
   } catch (error) {
     logger.error('[hours-backfill] Failed', {

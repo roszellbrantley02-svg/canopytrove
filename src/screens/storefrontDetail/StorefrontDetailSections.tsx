@@ -20,3 +20,4 @@ export {
   DetailPhotosSection,
   DetailLockedPhotosSection,
 } from './StorefrontDetailCommunitySections';
+export { DetailComplianceWarningSection } from './DetailComplianceWarningSection';

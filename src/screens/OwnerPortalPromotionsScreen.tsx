@@ -59,9 +59,9 @@ const ignoreAsyncError = () => undefined;
 const metricGridMinWidthStyle = { minWidth: 920 } as const;
 
 function OwnerPortalPromotionsScreenInner() {
-  const _route = useRoute<OwnerPortalPromotionsRoute>();
+  const route = useRoute<OwnerPortalPromotionsRoute>();
   const isAndroid = Platform.OS === 'android';
-  const preview = false;
+  const preview = route.params?.preview ?? false;
   const {
     workspace,
     runtimeStatus,

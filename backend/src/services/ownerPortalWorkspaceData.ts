@@ -884,7 +884,7 @@ async function getOwnerPortalWorkspace(ownerUid: string): Promise<OwnerPortalWor
     if (result.status === 'fulfilled') {
       return [result.value];
     }
-    console.warn(
+    logger.warn(
       `[owner-workspace] failed to aggregate metrics for promotion ${promotions[index]?.id ?? 'unknown'}:`,
       result.reason,
     );

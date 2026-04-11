@@ -168,8 +168,8 @@ function TimePicker({
 }
 
 function OwnerPortalHoursScreenInner() {
-  const _route = useRoute<OwnerPortalHoursRoute>();
-  const preview = false;
+  const route = useRoute<OwnerPortalHoursRoute>();
+  const preview = route.params?.preview ?? false;
   const { workspace, isLoading, isSaving, errorText, saveProfileTools } =
     useOwnerPortalWorkspace(preview);
 
