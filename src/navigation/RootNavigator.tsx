@@ -115,6 +115,13 @@ export function RootNavigator() {
   const routeNameRef = React.useRef<string | null>(null);
   const [navigationReady, setNavigationReady] = React.useState(false);
 
+  // Reset routeNameRef on mount/unmount to prevent duplicate analytics events
+  React.useEffect(() => {
+    return () => {
+      routeNameRef.current = null;
+    };
+  }, []);
+
   return (
     <NavigationContainer
       ref={navigationRef}
