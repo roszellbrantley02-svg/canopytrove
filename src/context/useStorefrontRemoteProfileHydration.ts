@@ -90,14 +90,24 @@ export function useStorefrontRemoteProfileHydration({
         return remoteHydrationInFlightRef.current;
       }
 
+      const aliveRef = { current: true };
       resolvedRemoteHydrationStartedAtRef.current = Date.now();
       const task = (async () => {
+        const hydrationStartedAt = resolvedRemoteHydrationStartedAtRef.current;
+
+        // Capture start snapshots BEFORE the async fetch so we can detect
+        // whether local state changed while the network request was in flight.
         const hydrationStartProfile = latestAppProfileRef.current;
         const hydrationStartSavedStorefrontIds = latestSavedStorefrontIdsRef.current;
         const hydrationStartRecentStorefrontIds = latestRecentStorefrontIdsRef.current;
         const hydrationStartGamificationState = gamificationStateRef.current;
-        const hydrationStartedAt = resolvedRemoteHydrationStartedAtRef.current;
+
         const remoteProfileState = await loadRemoteStorefrontProfileState(profileId);
+
+        if (!aliveRef.current) {
+          return;
+        }
+
         const remoteProfile = remoteProfileState?.profile ?? null;
         const remoteRouteState = remoteProfileState?.routeState ?? null;
         const remoteSavedStorefrontIds = remoteRouteState?.savedStorefrontIds ?? [];
@@ -130,7 +140,12 @@ export function useStorefrontRemoteProfileHydration({
           setAppProfile((current) =>
             areProfilesEquivalent(current, remoteProfile) ? current : remoteProfile,
           );
-          if (remoteProfile.id !== profileId) {
+          // Only update profileId if the current account ID still matches
+          // (prevents cross-profile state bleed from stale hydration)
+          if (
+            remoteProfile.id !== profileId &&
+            remoteProfile.id === latestAppProfileRef.current?.id
+          ) {
             setProfileId(remoteProfile.id);
           }
         }
@@ -207,8 +222,10 @@ export function useStorefrontRemoteProfileHydration({
           });
         }
 
-        lastRemoteHydrationAtRef.current = Date.now();
-        setHasHydratedRemoteProfileState(true);
+        if (aliveRef.current) {
+          lastRemoteHydrationAtRef.current = Date.now();
+          setHasHydratedRemoteProfileState(true);
+        }
       })();
 
       remoteHydrationInFlightRef.current = task;
@@ -216,6 +233,7 @@ export function useStorefrontRemoteProfileHydration({
       try {
         await task;
       } finally {
+        aliveRef.current = false;
         remoteHydrationInFlightRef.current = null;
       }
     },
