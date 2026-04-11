@@ -290,4 +290,39 @@ describe('useStorefrontProfileModel', () => {
       }),
     );
   });
+
+  it('keeps the existing authenticated profile when canonical lookup returns null for the same account', async () => {
+    const cachedProfile = createProfile('cached-authenticated-profile', {
+      kind: 'authenticated',
+      accountId: 'user-123',
+      displayName: 'Daniellett',
+    });
+    appProfileMocks.getCachedAppProfile.mockReturnValue(cachedProfile);
+    backendProfileMocks.getStorefrontBackendCanonicalProfile.mockResolvedValue(null);
+
+    act(() => {
+      renderer = create(<HookHarness />);
+    });
+
+    act(() => {
+      authMocks.emit({
+        status: 'authenticated',
+        uid: 'user-123',
+        isAnonymous: false,
+        displayName: 'Daniellett',
+        email: 'danielle@example.com',
+      });
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    expect(latestValue?.profileId).toBe('cached-authenticated-profile');
+    expect(appProfileMocks.createAppProfileId).not.toHaveBeenCalled();
+  });
 });
