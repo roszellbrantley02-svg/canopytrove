@@ -290,7 +290,9 @@ service cloud.firestore {
 
     match /storefront_app_reviews/{reviewId} {
       allow create: if isSignedIn() &&
-        request.resource.data.profileId == request.auth.uid;
+        request.resource.data.profileId == request.auth.uid &&
+        request.resource.data.text.size() <= 2000 &&
+        request.resource.data.authorName.size() <= 100;
       allow read: if isSignedIn();
       allow update: if isSignedIn() &&
         resource.data.profileId == request.auth.uid;

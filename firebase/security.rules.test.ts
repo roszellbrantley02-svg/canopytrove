@@ -137,13 +137,22 @@ async function seedLegacyDealRecord(options?: {
 }
 
 beforeAll(async () => {
+  // The production storage rules reference /databases/canopytrove/documents/ for
+  // cross-service Firestore reads (named database). The emulator uses (default),
+  // so we substitute the database name at test time to make cross-service lookups
+  // resolve correctly.
+  const storageRules = readFileSync(new URL('./storage.rules', import.meta.url), 'utf8').replace(
+    /\/databases\/canopytrove\/documents\//g,
+    '/databases/(default)/documents/',
+  );
+
   testEnv = await initializeTestEnvironment({
     projectId,
     firestore: {
       rules: readFileSync(new URL('./firestore.rules', import.meta.url), 'utf8'),
     },
     storage: {
-      rules: readFileSync(new URL('./storage.rules', import.meta.url), 'utf8'),
+      rules: storageRules,
     },
   });
 });
@@ -607,6 +616,56 @@ describe('Firestore deals rules', () => {
         },
         { merge: false },
       ),
+    );
+  });
+});
+
+describe('Firestore storefront_app_reviews rules', () => {
+  it('allows signed-in members to create their own review within the text limits', async () => {
+    const db = testEnv
+      .authenticatedContext('customer-1', {
+        role: 'customer',
+      })
+      .firestore();
+
+    await assertSucceeds(
+      setDoc(doc(db, 'storefront_app_reviews', 'review-1'), {
+        profileId: 'customer-1',
+        authorName: 'Customer One',
+        text: 'Helpful storefront review',
+      }),
+    );
+  });
+
+  it('denies signed-in members when the review text exceeds 2000 characters', async () => {
+    const db = testEnv
+      .authenticatedContext('customer-1', {
+        role: 'customer',
+      })
+      .firestore();
+
+    await assertFails(
+      setDoc(doc(db, 'storefront_app_reviews', 'review-2'), {
+        profileId: 'customer-1',
+        authorName: 'Customer One',
+        text: 'x'.repeat(2001),
+      }),
+    );
+  });
+
+  it('denies signed-in members when the author name exceeds 100 characters', async () => {
+    const db = testEnv
+      .authenticatedContext('customer-1', {
+        role: 'customer',
+      })
+      .firestore();
+
+    await assertFails(
+      setDoc(doc(db, 'storefront_app_reviews', 'review-3'), {
+        profileId: 'customer-1',
+        authorName: 'x'.repeat(101),
+        text: 'Helpful storefront review',
+      }),
     );
   });
 });
