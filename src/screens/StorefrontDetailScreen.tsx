@@ -16,6 +16,7 @@ import { colors } from '../theme/tokens';
 import type { StorefrontSummary } from '../types/storefront';
 import { styles } from './storefrontDetail/storefrontDetailStyles';
 import {
+  DetailComplianceWarningSection,
   DetailHero,
   DetailHoursSection,
   DetailLockedLiveDealsSection,
@@ -185,6 +186,12 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
             </MotionInView>
           ) : null}
 
+          {model.detailData.hasOwnerClaim ? (
+            <MotionInView delay={440}>
+              <DetailComplianceWarningSection storefrontId={storefront.id} />
+            </MotionInView>
+          ) : null}
+
           {model.hasAppReviews ? (
             <MotionInView delay={470}>
               <DetailReviewsSection
@@ -241,9 +248,14 @@ function StorefrontDetailScreenInner() {
   const rawStorefrontId = routeParams?.storefrontId ?? storefrontFromRoute?.id ?? null;
 
   // Slug resolution: if the raw ID doesn't match a Firestore doc, try resolving it as a slug.
-  const [resolvedId, setResolvedId] = useState<string | null>(null);
-  const [isResolvingSlug, setIsResolvingSlug] = useState(false);
-  const storefrontId = resolvedId ?? rawStorefrontId;
+  const [resolvedSlug, setResolvedSlug] = useState<{ rawId: string; resolvedId: string } | null>(
+    null,
+  );
+  const [resolvingSlugFor, setResolvingSlugFor] = useState<string | null>(null);
+  const currentStorefrontIdRef = React.useRef<string | null>(null);
+  const storefrontId =
+    resolvedSlug?.rawId === rawStorefrontId ? resolvedSlug.resolvedId : rawStorefrontId;
+  const isResolvingSlug = resolvingSlugFor === rawStorefrontId;
 
   const storefrontLookup = useStorefrontSummariesByIds(
     storefrontFromRoute || !storefrontId ? [] : [storefrontId],
@@ -253,7 +265,7 @@ function StorefrontDetailScreenInner() {
   const needsSlugResolution =
     !storefrontFromRoute &&
     rawStorefrontId &&
-    !resolvedId &&
+    resolvedSlug?.rawId !== rawStorefrontId &&
     !isResolvingSlug &&
     !storefrontLookup.isLoading &&
     storefrontLookup.data.length === 0;
@@ -261,13 +273,17 @@ function StorefrontDetailScreenInner() {
   useEffect(() => {
     if (!needsSlugResolution || !rawStorefrontId) return;
     let alive = true;
-    setIsResolvingSlug(true);
+    currentStorefrontIdRef.current = rawStorefrontId;
+    setResolvingSlugFor(rawStorefrontId);
     void resolveStorefrontSlug(rawStorefrontId).then((id) => {
-      if (!alive) return;
+      if (!alive || currentStorefrontIdRef.current !== rawStorefrontId) return;
       if (id && id !== rawStorefrontId) {
-        setResolvedId(id);
+        setResolvedSlug({
+          rawId: rawStorefrontId,
+          resolvedId: id,
+        });
       }
-      setIsResolvingSlug(false);
+      setResolvingSlugFor((current) => (current === rawStorefrontId ? null : current));
     });
     return () => {
       alive = false;
