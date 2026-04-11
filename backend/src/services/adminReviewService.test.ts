@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
-import { loadAdminReviewQueueSections } from './adminReviewService';
+import { afterEach, test } from 'node:test';
+import { loadAdminReviewQueueSections, parseAdminReviewBody } from './adminReviewService';
 import type { ReviewPhotoModerationQueueItem } from './reviewPhotoModerationService';
 
 function createQueuePhoto(id: string): ReviewPhotoModerationQueueItem {
@@ -35,12 +35,21 @@ function createQueuePhoto(id: string): ReviewPhotoModerationQueueItem {
   };
 }
 
+afterEach(() => {
+  // Clear logger mocks after each test
+  const loggerModule = require('../observability/logger');
+  if (loggerModule.logger.warn.restore) {
+    loggerModule.logger.warn.restore();
+  }
+});
+
 test('keeps partial admin review queue data when one loader fails', async () => {
-  const originalWarn = console.warn;
+  const { logger } = await import('../observability/logger');
   const loggedWarnings: unknown[][] = [];
-  console.warn = (...args: unknown[]) => {
+  const originalWarn = logger.warn;
+  logger.warn = ((...args: unknown[]) => {
     loggedWarnings.push(args);
-  };
+  }) as any;
 
   try {
     const result = await loadAdminReviewQueueSections({
@@ -65,7 +74,7 @@ test('keeps partial admin review queue data when one loader fails', async () => 
     assert.equal(loggedWarnings.length, 1);
     assert.match(String(loggedWarnings[0]?.[0] ?? ''), /businessVerifications/);
   } finally {
-    console.warn = originalWarn;
+    logger.warn = originalWarn;
   }
 });
 
@@ -86,5 +95,16 @@ test('returns a clean admin review queue result when every loader succeeds', asy
   assert.deepEqual(
     result.reviewPhotos.map((photo) => photo.id),
     ['photo-1'],
+  );
+});
+
+test('parseAdminReviewBody rejects invalid review decisions', () => {
+  assert.throws(
+    () =>
+      parseAdminReviewBody({
+        status: 'escalate',
+        reviewNotes: 'unexpected action',
+      }),
+    /Invalid review decision\./,
   );
 });
