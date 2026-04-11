@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { getOptionalFirestoreCollection } from '../firestoreCollections';
+import { logger } from '../observability/logger';
 import { serverConfig } from '../config';
 import { backendStorefrontSourceStatus } from '../sources';
 import {
@@ -268,13 +269,20 @@ async function loadRuntimePolicyContext(limit = 12): Promise<RuntimePolicyContex
   const policy = policyResult.status === 'fulfilled' ? policyResult.value : createDefaultPolicy();
   const incidents = incidentsResult.status === 'fulfilled' ? incidentsResult.value : [];
   if (policyResult.status === 'rejected') {
-    console.warn(
-      '[runtimeOpsService] failed to load runtime policy, using default:',
-      policyResult.reason,
-    );
+    logger.warn('[runtimeOpsService] failed to load runtime policy, using default', {
+      error:
+        policyResult.reason instanceof Error
+          ? policyResult.reason.message
+          : String(policyResult.reason),
+    });
   }
   if (incidentsResult.status === 'rejected') {
-    console.warn('[runtimeOpsService] failed to load incident records:', incidentsResult.reason);
+    logger.warn('[runtimeOpsService] failed to load incident records', {
+      error:
+        incidentsResult.reason instanceof Error
+          ? incidentsResult.reason.message
+          : String(incidentsResult.reason),
+    });
   }
 
   return {

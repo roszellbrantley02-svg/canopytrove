@@ -1,4 +1,5 @@
 import { getOptionalFirestoreCollection } from '../firestoreCollections';
+import { logger } from '../observability/logger';
 import { serverConfig } from '../config';
 import { backendStorefrontSourceStatus } from '../sources';
 import type { StorefrontSummaryApiDocument } from '../types';
@@ -1112,7 +1113,7 @@ async function emitTransitionIncidents(
   );
   incidentResults.forEach((result, index) => {
     if (result.status === 'rejected') {
-      console.warn(
+      logger.warn(
         `[healthMonitorService] failed to emit transition incident for ${confirmedNextTargets[index]?.id ?? 'unknown'}:`,
         result.reason,
       );
@@ -1185,7 +1186,7 @@ export async function runRuntimeHealthSweep(options?: { reason?: string }) {
       }
 
       const target = targets[index];
-      console.warn(
+      logger.warn(
         `[healthMonitorService] failed to evaluate target ${target?.id ?? 'unknown'}:`,
         result.reason,
       );
