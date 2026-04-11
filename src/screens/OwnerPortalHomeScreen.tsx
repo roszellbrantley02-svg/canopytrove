@@ -9,6 +9,7 @@ import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { signOutCanopyTroveSession } from '../services/canopyTroveAuthService';
+import { captureMonitoringException } from '../services/sentryMonitoringService';
 
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { AttentionCard } from '../components/AttentionCard';
@@ -34,6 +35,12 @@ function logSilentError(label: string) {
   return (error: unknown) => {
     if (__DEV__) {
       console.warn(`[OwnerPortalHome] ${label}:`, error);
+    } else {
+      // Report to Sentry in production
+      captureMonitoringException(error, {
+        source: 'OwnerPortalHome',
+        tags: { errorContext: label },
+      });
     }
   };
 }
@@ -98,8 +105,8 @@ function getAttentionItems(workspace: OwnerPortalWorkspaceDocument | null): Atte
 function OwnerPortalHomeScreenInner() {
   const isAndroid = Platform.OS === 'android';
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const _route = useRoute<OwnerPortalHomeRoute>();
-  const preview = false;
+  const route = useRoute<OwnerPortalHomeRoute>();
+  const preview = route.params?.preview ?? false;
   const scrollViewRef = React.useRef<ScrollView>(null);
   const roiSectionY = React.useRef(0);
   const {

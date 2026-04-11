@@ -17,8 +17,8 @@ import {
 } from '../../services/ownerPortalPreviewService';
 import type { StorefrontSummary } from '../../types/storefront';
 
-export function useOwnerPortalHomeScreenModel(_preview = false) {
-  const isPreview = false;
+export function useOwnerPortalHomeScreenModel(preview = false) {
+  const isPreview = preview;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { authSession } = useStorefrontProfileController();
   const liveAccessState = useOwnerPortalAccessState(authSession);
