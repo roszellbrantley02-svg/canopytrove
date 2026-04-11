@@ -1,4 +1,5 @@
 import { RequestHandler } from 'express';
+import * as Sentry from '@sentry/node';
 import { serverConfig } from '../config';
 import { backendStorefrontSourceStatus } from '../sources';
 import { logger } from './logger';
@@ -19,6 +20,9 @@ export const requestTelemetryMiddleware: RequestHandler = (request, response, ne
 
   response.setHeader('X-CanopyTrove-Request-Id', requestId);
   response.setHeader('X-Correlation-ID', correlationId);
+
+  // Add request ID to Sentry scope for all events in this request
+  Sentry.setTag('requestId', requestId);
 
   response.end = ((...args: Parameters<typeof response.end>) => {
     const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
