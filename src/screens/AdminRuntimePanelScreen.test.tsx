@@ -167,9 +167,7 @@ describe('AdminRuntimePanelScreen', () => {
     expect(findPressableByLabel(root, 'Enable protected mode').props.accessibilityRole).toBe(
       'button',
     );
-    expect(findPressableByLabel(root, 'Resume normal mode').props.accessibilityRole).toBe(
-      'button',
-    );
+    expect(findPressableByLabel(root, 'Resume normal mode').props.accessibilityRole).toBe('button');
     expect(
       findPressableByLabel(root, 'Re-evaluate from incident pressure').props.accessibilityRole,
     ).toBe('button');

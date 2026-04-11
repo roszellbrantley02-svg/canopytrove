@@ -40,7 +40,9 @@ describe('ErrorRecoveryCard', () => {
     });
 
     const textValues = renderer!.root.findAllByType(Text as any).map((node) => node.props.children);
-    const renderedMessage = textValues.find((value) => typeof value === 'string' && value.includes('…'));
+    const renderedMessage = textValues.find(
+      (value) => typeof value === 'string' && value.includes('…'),
+    );
 
     expect(renderedMessage).toBe('x'.repeat(200) + '…');
   });

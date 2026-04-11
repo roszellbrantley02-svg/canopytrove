@@ -58,13 +58,11 @@ describe('useGamificationData', () => {
 
   it('returns leaderboard errors without leaving the hook loading forever', async () => {
     const capture: {
-      current:
-        | {
-            data: { items: unknown[] };
-            isLoading: boolean;
-            error: string | null;
-          }
-        | null;
+      current: {
+        data: { items: unknown[] };
+        isLoading: boolean;
+        error: string | null;
+      } | null;
     } = { current: null };
     leaderboardMocks.loadStorefrontLeaderboard.mockRejectedValue(new Error('leaderboard failed'));
 
@@ -91,13 +89,11 @@ describe('useGamificationData', () => {
 
   it('returns rank errors without leaving the hook loading forever', async () => {
     const capture: {
-      current:
-        | {
-            data: { profileId: string };
-            isLoading: boolean;
-            error: string | null;
-          }
-        | null;
+      current: {
+        data: { profileId: string };
+        isLoading: boolean;
+        error: string | null;
+      } | null;
     } = { current: null };
     leaderboardMocks.loadStorefrontLeaderboardRank.mockRejectedValue(new Error('rank failed'));
 

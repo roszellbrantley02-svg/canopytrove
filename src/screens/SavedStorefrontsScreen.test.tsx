@@ -77,9 +77,7 @@ describe('SavedStorefrontsScreen', () => {
       renderer = create(<SavedStorefrontsScreen />);
     });
 
-    const cards = renderer.root.findAll(
-      (node) => (node.type as unknown) === 'StorefrontRouteCard',
-    );
+    const cards = renderer.root.findAll((node) => (node.type as unknown) === 'StorefrontRouteCard');
     const textContent = renderer.root
       .findAllByType(Text as any)
       .flatMap((node) => node.props.children)

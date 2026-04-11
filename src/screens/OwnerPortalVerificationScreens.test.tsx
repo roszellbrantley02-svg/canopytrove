@@ -69,9 +69,7 @@ vi.mock('./ownerPortal/useOwnerPortalIdentityVerificationModel', () => ({
   useOwnerPortalIdentityVerificationModel: modelMocks.useOwnerPortalIdentityVerificationModel,
 }));
 
-import {
-  OwnerPortalBusinessVerificationScreen,
-} from './OwnerPortalBusinessVerificationScreen';
+import { OwnerPortalBusinessVerificationScreen } from './OwnerPortalBusinessVerificationScreen';
 import { OwnerPortalIdentityVerificationScreen } from './OwnerPortalIdentityVerificationScreen';
 
 function flattenText(

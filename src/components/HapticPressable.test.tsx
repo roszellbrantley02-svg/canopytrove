@@ -162,9 +162,7 @@ describe('HapticPressable', () => {
     renderer = rendered.renderer;
 
     expect(rendered.pressable.props.onPress).toBe(onPress);
-    expect(rendered.pressable.props.style).toEqual(
-      expect.arrayContaining([pressableStyle]),
-    );
+    expect(rendered.pressable.props.style).toEqual(expect.arrayContaining([pressableStyle]));
   });
 
   it('stops the previous scale animation before starting the next one', () => {

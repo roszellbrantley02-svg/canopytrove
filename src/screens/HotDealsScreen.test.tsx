@@ -35,7 +35,8 @@ vi.mock('../context/StorefrontController', () => ({
 }));
 
 vi.mock('../components/ErrorRecoveryCard', () => ({
-  ErrorRecoveryCard: (props: Record<string, unknown>) => React.createElement('ErrorRecoveryCard', props),
+  ErrorRecoveryCard: (props: Record<string, unknown>) =>
+    React.createElement('ErrorRecoveryCard', props),
 }));
 
 vi.mock('../components/ScreenShell', () => ({
@@ -125,9 +126,7 @@ describe('HotDealsScreen', () => {
       renderer = create(<HotDealsScreen />);
     });
 
-    const errorCard = renderer!.root.find(
-      (node) => String(node.type) === 'ErrorRecoveryCard',
-    );
+    const errorCard = renderer!.root.find((node) => String(node.type) === 'ErrorRecoveryCard');
 
     expect(errorCard.props.title).toBe('Unable to load hot deals');
   });

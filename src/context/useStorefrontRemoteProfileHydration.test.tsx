@@ -74,15 +74,13 @@ describe('useStorefrontRemoteProfileHydration', () => {
     remoteProfileMocks.loadRemoteStorefrontProfileState.mockReturnValue(deferred.promise);
 
     const capture: {
-      current:
-        | {
-            appProfile: AppProfile | null;
-            profileId: string;
-            hasHydratedRemoteProfileState: boolean;
-            setAppProfile: React.Dispatch<React.SetStateAction<AppProfile | null>>;
-            setProfileId: React.Dispatch<React.SetStateAction<string>>;
-          }
-        | null;
+      current: {
+        appProfile: AppProfile | null;
+        profileId: string;
+        hasHydratedRemoteProfileState: boolean;
+        setAppProfile: React.Dispatch<React.SetStateAction<AppProfile | null>>;
+        setProfileId: React.Dispatch<React.SetStateAction<string>>;
+      } | null;
     } = { current: null };
 
     function HookHarness() {
@@ -95,7 +93,8 @@ describe('useStorefrontRemoteProfileHydration', () => {
       const [gamificationState, setGamificationState] = React.useState(
         createDefaultGamificationState('profile-1', '2026-04-01T00:00:00.000Z'),
       );
-      const [hasHydratedRemoteProfileState, setHasHydratedRemoteProfileState] = React.useState(false);
+      const [hasHydratedRemoteProfileState, setHasHydratedRemoteProfileState] =
+        React.useState(false);
       const gamificationStateRef = React.useRef(gamificationState);
       const latestAppProfileRef = React.useRef(appProfile);
       const latestSavedStorefrontIdsRef = React.useRef(savedStorefrontIds);
