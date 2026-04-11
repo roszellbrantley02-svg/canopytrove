@@ -76,6 +76,7 @@
     "@types/react": "~19.2.2",
     "@types/react-test-renderer": "^19.1.0",
     "babel-plugin-transform-remove-console": "^6.9.4",
+    "babel-preset-expo": "^55.0.17",
     "eslint": "^9.27.0",
     "eslint-config-prettier": "^10.1.0",
     "eslint-plugin-react": "^7.37.0",

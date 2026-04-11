@@ -16,6 +16,7 @@
       "supportsTablet": true,
       "icon": "./assets/ios-icon.png",
       "bundleIdentifier": "com.rezell.canopytrove",
+      "minimumOSVersion": "14.0",
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
           {

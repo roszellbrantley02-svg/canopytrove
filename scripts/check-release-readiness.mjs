@@ -444,6 +444,38 @@ pushCheck(
     : 'Set expo.android.package to com.rezell.canopytrove in app.json.'
 );
 
+const iconPath = path.join(projectRoot, appIdentity.icon || './assets/icon.png');
+const splashPath = path.join(projectRoot, appIdentity.splash?.image || './assets/splash-icon.png');
+const hasIconFile = fs.existsSync(iconPath);
+const hasSplashFile = fs.existsSync(splashPath);
+
+pushCheck(
+  'App icon file exists',
+  hasIconFile,
+  hasIconFile
+    ? `App icon found at ${appIdentity.icon || 'assets/icon.png'}.`
+    : `App icon file not found. Ensure ${appIdentity.icon || 'assets/icon.png'} exists.`
+);
+
+pushCheck(
+  'Splash icon file exists',
+  hasSplashFile,
+  hasSplashFile
+    ? `Splash icon found at ${appIdentity.splash?.image || 'assets/splash-icon.png'}.`
+    : `Splash icon file not found. Ensure ${appIdentity.splash?.image || 'assets/splash-icon.png'} exists.`
+);
+
+const iosMinimumOsVersion = appIdentity.ios?.minimumOSVersion;
+const hasValidIosVersion = iosMinimumOsVersion && /^\d+\.\d+/.test(iosMinimumOsVersion);
+
+pushCheck(
+  'iOS minimum OS version configured',
+  hasValidIosVersion,
+  hasValidIosVersion
+    ? `iOS minimum OS version set to ${iosMinimumOsVersion}.`
+    : 'Set expo.ios.minimumOSVersion to a valid version in app.json.'
+);
+
 let passedRequired = 0;
 let passedRecommended = 0;
 const failedRequired = [];

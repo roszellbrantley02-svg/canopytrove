@@ -127,7 +127,7 @@ function Deploy-Backend {
         "FIREBASE_DATABASE_ID=canopytrove",
         "FIREBASE_STORAGE_BUCKET=$STORAGE_BUCKET",
         "OPENAI_MODEL=gpt-4o-mini",
-        "PHOTO_MODERATION_MODE=auto_approve",
+        "PHOTO_MODERATION_MODE=moderated",
         "OWNER_PORTAL_PRELAUNCH_ENABLED=false",
         "RUNTIME_AUTO_MITIGATION_ENABLED=true",
         "RUNTIME_INCIDENT_THRESHOLD=3",
@@ -159,8 +159,7 @@ function Deploy-Backend {
         "LAUNCH_EARLY_ADOPTER_LIMIT=500",
         "GOOGLE_PLACES_DAILY_BUDGET=20",
         "OPS_HEALTHCHECK_API_URL=https://api.canopytrove.com/health",
-        "OPS_HEALTHCHECK_API_RAW_URL=https://canopytrove-api-948351810374.us-east4.run.app/readyz",
-        "OPS_ALERT_WEBHOOK_URL=https://discordapp.com/api/webhooks/1490105384680296663/5ZlA1P4oUQrCmB-sxulAr9Guy-F5lsAz9ng3pjeJ4Iwgzoqf8g_WDD_A0Xdf8eJqJfDH"
+        "OPS_HEALTHCHECK_API_RAW_URL=https://canopytrove-api-948351810374.us-east4.run.app/readyz"
     ) -join "::"
     $envVars = "^::^$envVars"
 
@@ -173,7 +172,8 @@ function Deploy-Backend {
         "SENTRY_DSN=SENTRY_DSN:latest",
         "OPENAI_API_KEY=OPENAI_API_KEY:latest",
         "RESEND_API_KEY=RESEND_API_KEY:latest",
-        "RESEND_WEBHOOK_SECRET=RESEND_WEBHOOK_SECRET:latest"
+        "RESEND_WEBHOOK_SECRET=RESEND_WEBHOOK_SECRET:latest",
+        "OPS_ALERT_WEBHOOK_URL=OPS_ALERT_WEBHOOK_URL:latest"
     ) -join ","
 
     gcloud run deploy $SERVICE `
