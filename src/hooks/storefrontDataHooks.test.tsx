@@ -546,30 +546,35 @@ describe('useStorefrontDetails', () => {
       .mockResolvedValueOnce(emptyOperationalDetail)
       .mockResolvedValueOnce(enrichedDetail);
     vi.useFakeTimers();
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
 
-    function OperationalHookHarness() {
-      latestValue = useStorefrontDetails('store-1', createSummary('store-1'));
-      return null;
+    try {
+      function OperationalHookHarness() {
+        latestValue = useStorefrontDetails('store-1', createSummary('store-1'));
+        return null;
+      }
+
+      act(() => {
+        renderer = create(<OperationalHookHarness />);
+      });
+
+      await act(async () => {
+        await flushPromises();
+      });
+
+      expect(latestValue.isOperationalDataPending).toBe(true);
+
+      await act(async () => {
+        vi.advanceTimersByTime(1_300);
+        await flushPromises();
+      });
+
+      expect(repositoryMocks.getStorefrontDetails).toHaveBeenCalledTimes(2);
+      expect(latestValue.isOperationalDataPending).toBe(false);
+      expect(latestValue.data).toEqual(enrichedDetail);
+    } finally {
+      randomSpy.mockRestore();
     }
-
-    act(() => {
-      renderer = create(<OperationalHookHarness />);
-    });
-
-    await act(async () => {
-      await flushPromises();
-    });
-
-    expect(latestValue.isOperationalDataPending).toBe(true);
-
-    await act(async () => {
-      vi.advanceTimersByTime(1_300);
-      await flushPromises();
-    });
-
-    expect(repositoryMocks.getStorefrontDetails).toHaveBeenCalledTimes(2);
-    expect(latestValue.isOperationalDataPending).toBe(false);
-    expect(latestValue.data).toEqual(enrichedDetail);
   });
 });
 

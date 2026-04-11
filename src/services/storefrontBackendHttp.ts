@@ -139,6 +139,17 @@ function getClientPlatformHeader(): string {
   return 'web';
 }
 
+function hashRequestBody(body: unknown): string {
+  const json = JSON.stringify(body);
+  let hash = 0;
+  for (let i = 0; i < json.length; i++) {
+    const char = json.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash.toString(36);
+}
+
 async function buildRequestHeaders(headers?: HeadersInit) {
   const nextHeaders = new Headers(headers);
   const idToken = await getCanopyTroveAuthIdToken();
@@ -174,6 +185,23 @@ export function createLeaderboardRankCacheKey(profileId: string) {
   return `leaderboard-rank:${profileId}`;
 }
 
+function shouldRetryRequest(response: Response | null, error: unknown): boolean {
+  // Retry on 5xx server errors
+  if (response && !response.ok) {
+    return response.status >= 500 && response.status < 600;
+  }
+
+  // Retry on network errors (fetch throws TypeError for network issues)
+  if (
+    error instanceof TypeError &&
+    (error.message.includes('fetch') || error.message.includes('network'))
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 async function throwBackendError(response: Response): Promise<never> {
   try {
     const payload = (await response.json()) as {
@@ -207,6 +235,13 @@ async function throwBackendError(response: Response): Promise<never> {
         : null;
     throw new Error(requestId ? `${errorText} (request ${requestId})` : errorText);
   } catch (parseError) {
+    // Distinguish JSON parse errors from intentional error throws
+    if (parseError instanceof SyntaxError) {
+      throw new Error(
+        `Failed to parse backend response: ${response.status} ${response.statusText}`,
+      );
+    }
+
     if (
       parseError instanceof BackendTierAccessError ||
       (parseError instanceof Error &&
@@ -223,14 +258,19 @@ export async function requestJson<T>(
   init?: RequestInit,
   options?: { cacheKey?: string; ttlMs?: number; timeoutMs?: number },
 ): Promise<T> {
-  const cacheKey = !init?.method || init.method === 'GET' ? options?.cacheKey : undefined;
-  const ttlMs = options?.ttlMs ?? 0;
   const method = init?.method || 'GET';
+  const cacheKey = method === 'GET' ? options?.cacheKey : undefined;
+  const ttlMs = options?.ttlMs ?? 0;
   const isMutation = method !== 'GET';
+
+  // Allow callers to override timeout for long-running operations (e.g., photo uploads)
+  // Mutations can optionally specify a longer timeout via options.timeoutMs
+  const effectiveTimeoutMs = options?.timeoutMs ?? BACKEND_REQUEST_TIMEOUT_MS;
 
   // For mutations (POST, PUT, DELETE), check if a request is already in-flight
   if (isMutation) {
-    const mutationKey = `${method}:${pathname}`;
+    const bodyHash = init?.body ? hashRequestBody(init.body) : '';
+    const mutationKey = `${method}:${pathname}${bodyHash ? `:${bodyHash}` : ''}`;
     if (backendMutationInFlight.has(mutationKey)) {
       throw new Error(`Request already in progress: ${method} ${pathname}`);
     }
@@ -250,35 +290,61 @@ export async function requestJson<T>(
   }
 
   const request = (async () => {
-    const controller = new AbortController();
-    const effectiveTimeout = options?.timeoutMs ?? BACKEND_REQUEST_TIMEOUT_MS;
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, effectiveTimeout);
+    // Exponential backoff retry: max 2 retries with 1s and 3s delays
+    const maxRetries = 2;
+    const delayMs = [1000, 3000];
 
-    try {
-      const headers = await buildRequestHeaders(init?.headers);
-      const response = await fetch(createBackendUrl(pathname), {
-        ...init,
-        headers,
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        await throwBackendError(response);
-      }
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, effectiveTimeoutMs);
 
-      const payload = (await response.json()) as T;
-      if (cacheKey && ttlMs > 0) {
-        setCachedValue(cacheKey, payload, ttlMs);
+      try {
+        const headers = await buildRequestHeaders(init?.headers);
+        const response = await fetch(createBackendUrl(pathname), {
+          ...init,
+          headers,
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          // Only retry idempotent GET reads. Retrying mutations on a 5xx can
+          // duplicate writes when the backend commits before returning an error.
+          if (attempt < maxRetries && method === 'GET' && shouldRetryRequest(response, null)) {
+            // Wait before retrying
+            await new Promise((resolve) =>
+              setTimeout(resolve, delayMs[attempt] ?? delayMs[delayMs.length - 1]),
+            );
+            continue;
+          }
+          await throwBackendError(response);
+        }
+
+        const payload = (await response.json()) as T;
+        if (cacheKey && ttlMs > 0) {
+          setCachedValue(cacheKey, payload, ttlMs);
+        }
+        return payload;
+      } catch (error) {
+        // Retry GET requests on network errors
+        if (attempt < maxRetries && method === 'GET' && shouldRetryRequest(null, error)) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, delayMs[attempt] ?? delayMs[delayMs.length - 1]),
+          );
+          continue;
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
       }
-      return payload;
-    } finally {
-      clearTimeout(timeoutId);
     }
+
+    throw new Error('Request failed after retries');
   })();
 
   if (isMutation) {
-    const mutationKey = `${method}:${pathname}`;
+    const bodyHash = init?.body ? hashRequestBody(init.body) : '';
+    const mutationKey = `${method}:${pathname}${bodyHash ? `:${bodyHash}` : ''}`;
     backendMutationInFlight.add(mutationKey);
     try {
       return await request;
@@ -315,10 +381,10 @@ export async function requestRawUpload<T>(
   },
 ): Promise<T> {
   const controller = new AbortController();
-  const effectiveTimeout = options.timeoutMs ?? BACKEND_REQUEST_TIMEOUT_MS;
+  const effectiveTimeoutMs = options.timeoutMs ?? BACKEND_REQUEST_TIMEOUT_MS;
   const timeoutId = setTimeout(() => {
     controller.abort();
-  }, effectiveTimeout);
+  }, effectiveTimeoutMs);
 
   try {
     const headers = await buildRequestHeaders();
