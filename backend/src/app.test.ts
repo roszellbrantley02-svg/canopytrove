@@ -513,11 +513,12 @@ test('allows a review author to edit their existing review', async () => {
 
   const createdDetail = createResponse.json?.detail as
     | {
-        appReviews?: Array<{ id?: string }>;
+        appReviews?: Array<{ id?: string; isOwnReview?: boolean }>;
       }
     | undefined;
   const reviewId = createdDetail?.appReviews?.[0]?.id;
   assert.ok(reviewId);
+  assert.equal(createdDetail?.appReviews?.[0]?.isOwnReview, true);
 
   const updateResponse = await request(
     baseUrl,
@@ -537,10 +538,11 @@ test('allows a review author to edit their existing review', async () => {
   assert.equal(updateResponse.status, 200);
   const updatedDetail = updateResponse.json?.detail as
     | {
-        appReviews?: Array<{ id?: string; rating?: number; text?: string }>;
+        appReviews?: Array<{ id?: string; isOwnReview?: boolean; rating?: number; text?: string }>;
       }
     | undefined;
   assert.equal(updatedDetail?.appReviews?.[0]?.id, reviewId);
+  assert.equal(updatedDetail?.appReviews?.[0]?.isOwnReview, true);
   assert.equal(updatedDetail?.appReviews?.[0]?.rating, 4);
   assert.equal(
     updatedDetail?.appReviews?.[0]?.text,
@@ -586,6 +588,45 @@ test('rejects review edits from a different profile', async () => {
 
   assert.equal(updateResponse.status, 403);
   assert.equal(updateResponse.json?.error, 'Only the author can edit this review.');
+});
+
+test('requires signed-in access to update a review', async () => {
+  const { baseUrl } = await startTestServer();
+  const createResponse = await request(baseUrl, `/storefront-details/${testStorefrontId}/reviews`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer test-authenticated:account-1',
+    },
+    body: JSON.stringify(createReviewPayload('profile-1')),
+  });
+
+  const createdDetail = createResponse.json?.detail as
+    | {
+        appReviews?: Array<{ id?: string }>;
+      }
+    | undefined;
+  const reviewId = createdDetail?.appReviews?.[0]?.id;
+  assert.ok(reviewId);
+
+  const updateResponse = await request(
+    baseUrl,
+    `/storefront-details/${testStorefrontId}/reviews/${reviewId}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(
+        createReviewPayload('profile-1', {
+          text: 'Unsigned users should not be able to update an existing review.',
+        }),
+      ),
+    },
+  );
+
+  assert.equal(updateResponse.status, 403);
+  assert.equal(updateResponse.json?.error, 'You must be signed in to update a review.');
 });
 
 test('requires signed-in access for review photo uploads', async () => {

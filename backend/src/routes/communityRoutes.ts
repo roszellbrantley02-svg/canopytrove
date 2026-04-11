@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { logger } from '../observability/logger';
 import {
   StorefrontReportSubmissionInput,
   StorefrontReviewSubmissionInput,
@@ -23,6 +24,7 @@ import { applyGamificationEvent } from '../services/gamificationEventService';
 import {
   ensureAuthenticatedProfileWriteAccess,
   ensureProfileWriteAccess,
+  resolveVerifiedRequestIdentity,
 } from '../services/profileAccessService';
 import { notifyOwnersOfStorefrontActivity } from '../services/ownerPortalAlertService';
 import {
@@ -169,15 +171,19 @@ communityRoutes.post(
       },
     });
 
-    // Detail refresh is a convenience — must not fail the primary write response
+    // Detail refresh is a convenience — must not fail the primary write response.
+    // Include viewer context so the caller gets a personalized payload (e.g. isOwnReview).
     let detail: Awaited<ReturnType<typeof getStorefrontDetail>> | null = null;
     try {
-      detail = await getStorefrontDetail(storefrontId);
+      detail = await getStorefrontDetail(storefrontId, {
+        includeMemberDeals: true,
+        viewerContext: { profileId: body.profileId },
+        clientPlatform: 'web',
+      });
     } catch (detailError) {
-      console.error(
-        '[community] post-write detail refresh failed for review_submitted:',
-        detailError,
-      );
+      logger.error('[community] post-write detail refresh failed for review_submitted', {
+        error: detailError instanceof Error ? detailError.message : String(detailError),
+      });
     }
 
     // Gamification is a side effect — must not fail the primary write response
@@ -198,10 +204,12 @@ communityRoutes.post(
         },
       );
     } catch (gamificationError) {
-      console.error(
-        '[community] gamification side effect failed for review_submitted:',
-        gamificationError,
-      );
+      logger.error('[community] gamification side effect failed for review_submitted', {
+        error:
+          gamificationError instanceof Error
+            ? gamificationError.message
+            : String(gamificationError),
+      });
     }
 
     response.json({
@@ -219,7 +227,11 @@ communityRoutes.put(
     const storefrontId = parseStorefrontIdParam(request.params.storefrontId);
     const reviewId = parseReviewIdParam(request.params.reviewId);
     const body = parseReviewSubmissionBody(request.body);
-    const { accountId } = await ensureProfileWriteAccess(request, body.profileId);
+    const { accountId } = await ensureAuthenticatedProfileWriteAccess(
+      request,
+      body.profileId,
+      'You must be signed in to update a review.',
+    );
 
     // Content quality check on update
     const qualityResult = checkContentQuality(body.text, {
@@ -302,12 +314,15 @@ communityRoutes.put(
     // Detail refresh is a convenience — must not fail the primary write response
     let detail: Awaited<ReturnType<typeof getStorefrontDetail>> | null = null;
     try {
-      detail = await getStorefrontDetail(storefrontId);
+      detail = await getStorefrontDetail(storefrontId, {
+        includeMemberDeals: true,
+        viewerContext: { profileId: body.profileId },
+        clientPlatform: 'web',
+      });
     } catch (detailError) {
-      console.error(
-        '[community] post-write detail refresh failed for review_updated:',
-        detailError,
-      );
+      logger.error('[community] post-write detail refresh failed for review_updated', {
+        error: detailError instanceof Error ? detailError.message : String(detailError),
+      });
     }
 
     response.json({
@@ -518,10 +533,12 @@ communityRoutes.post(
         },
       );
     } catch (gamificationError) {
-      console.error(
-        '[community] gamification side effect failed for report_submitted:',
-        gamificationError,
-      );
+      logger.error('[community] gamification side effect failed for report_submitted', {
+        error:
+          gamificationError instanceof Error
+            ? gamificationError.message
+            : String(gamificationError),
+      });
     }
 
     void notifyOwnersOfStorefrontActivity({
@@ -602,10 +619,12 @@ communityRoutes.post(
           },
         );
       } catch (gamificationError) {
-        console.error(
-          '[community] gamification side effect failed for helpful_vote_received:',
-          gamificationError,
-        );
+        logger.error('[community] gamification side effect failed for helpful_vote_received', {
+          error:
+            gamificationError instanceof Error
+              ? gamificationError.message
+              : String(gamificationError),
+        });
       }
     }
 
@@ -614,7 +633,9 @@ communityRoutes.post(
     try {
       detail = await getStorefrontDetail(storefrontId);
     } catch (detailError) {
-      console.error('[community] post-write detail refresh failed for helpful_vote:', detailError);
+      logger.error('[community] post-write detail refresh failed for helpful_vote', {
+        error: detailError instanceof Error ? detailError.message : String(detailError),
+      });
     }
 
     response.json({
