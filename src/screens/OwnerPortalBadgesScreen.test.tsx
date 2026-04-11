@@ -1,9 +1,13 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const workspaceMocks = vi.hoisted(() => ({
   useOwnerPortalWorkspace: vi.fn(),
+}));
+
+const navigationMocks = vi.hoisted(() => ({
+  routeParams: {} as Record<string, unknown>,
 }));
 
 vi.mock('react-native', () => ({
@@ -28,7 +32,7 @@ vi.mock('react-native-svg', () => ({
 }));
 
 vi.mock('@react-navigation/native', () => ({
-  useRoute: () => ({ params: {} }),
+  useRoute: () => ({ params: navigationMocks.routeParams }),
 }));
 
 vi.mock('../components/withScreenErrorBoundary', () => ({
@@ -58,6 +62,11 @@ vi.mock('./ownerPortal/useOwnerPortalWorkspace', () => ({
 import { OwnerPortalBadgesScreen } from './OwnerPortalBadgesScreen';
 
 describe('OwnerPortalBadgesScreen', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    navigationMocks.routeParams = {};
+  });
+
   it('renders locked owner badges without crashing on icon lookup', () => {
     workspaceMocks.useOwnerPortalWorkspace.mockReturnValue({
       workspace: {
@@ -80,5 +89,30 @@ describe('OwnerPortalBadgesScreen', () => {
         create(<OwnerPortalBadgesScreen />);
       });
     }).not.toThrow();
+  });
+
+  it('passes preview mode through to the owner workspace hook', () => {
+    navigationMocks.routeParams = { preview: true };
+    workspaceMocks.useOwnerPortalWorkspace.mockReturnValue({
+      workspace: {
+        tier: 'growth',
+        ownerProfile: {
+          earnedBadgeIds: ['founding-member'],
+          selectedBadgeIds: [],
+          badgeLevel: 1,
+        },
+        profileTools: null,
+      },
+      isLoading: false,
+      isSaving: false,
+      errorText: null,
+      saveBadgeDisplaySettings: vi.fn(),
+    });
+
+    act(() => {
+      create(<OwnerPortalBadgesScreen />);
+    });
+
+    expect(workspaceMocks.useOwnerPortalWorkspace).toHaveBeenCalledWith(true);
   });
 });

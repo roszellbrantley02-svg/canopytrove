@@ -443,8 +443,8 @@ function OwnerPortalBusinessVerificationLive() {
 }
 
 export function OwnerPortalBusinessVerificationScreen() {
-  const _route = useRoute<BusinessVerificationRoute>();
-  const preview = false;
+  const route = useRoute<BusinessVerificationRoute>();
+  const preview = route.params?.preview ?? false;
 
   if (preview) {
     return <OwnerPortalBusinessVerificationPreview />;
