@@ -61,6 +61,7 @@ async function getCanonicalStorefrontRecord(ownerUid: string) {
   const snapshot = await db
     .collection(DISPENSARIES_COLLECTION)
     .where('ownerUid', '==', ownerUid)
+    .orderBy('__name__')
     .limit(1)
     .get();
 
@@ -163,9 +164,10 @@ export async function getOwnerAuthorizationState(
       getOwnerSubscriptionRecord(ownerUid),
     ]);
 
-  const storefrontId = hasBackendDb
-    ? (canonicalStorefront?.storefrontId ?? null)
-    : (canonicalStorefront?.storefrontId ?? ownerProfile?.dispensaryId ?? null);
+  // Fall back to ownerProfile.dispensaryId when the canonical storefront query
+  // returns nothing (e.g. the dispensary doc doesn't have ownerUid set yet).
+  // This applies in both production and mock mode.
+  const storefrontId = canonicalStorefront?.storefrontId ?? ownerProfile?.dispensaryId ?? null;
   const ownerClaim = await getLatestOwnerClaimRecord(ownerUid, storefrontId);
   const businessVerificationStatus =
     businessVerification?.verificationStatus ?? ownerProfile?.businessVerificationStatus ?? null;
