@@ -1,4 +1,5 @@
 import { backendStorefrontSource } from './sources';
+import { logger } from './observability/logger';
 import {
   Coordinates,
   StorefrontDetailApiDocument,
@@ -469,9 +470,16 @@ export async function getStorefrontDetail(
 
         const degradedFrom =
           baseDetailResult.status === 'timeout' ? 'timeout' : 'transient backend error';
-        console.warn(
+        logger.warn(
           `[storefrontService] base detail fetch degraded for ${storefrontId}; serving published fallback from summary after ${degradedFrom}.`,
-          baseDetailResult.status === 'rejected' ? baseDetailResult.error : undefined,
+          baseDetailResult.status === 'rejected'
+            ? {
+                error:
+                  baseDetailResult.error instanceof Error
+                    ? baseDetailResult.error.message
+                    : String(baseDetailResult.error),
+              }
+            : undefined,
         );
         baseDetail = createPublishedStorefrontDetailFallback({
           storefrontId,
@@ -485,12 +493,24 @@ export async function getStorefrontDetail(
       }
     }
 
+    // DEFENSIVE: Cross-check that we're not serving a hidden storefront detail.
+    // If summary is available, verify visibility consistency.
+    if (summary && baseDetail) {
+      const isSummaryVisible = summary.isVisible !== false;
+      if (!isSummaryVisible) {
+        logger.warn(
+          `[storefrontService] refusing to serve detail for hidden storefront ${storefrontId}`,
+        );
+        return null;
+      }
+    }
+
     if (googleEnrichmentMode === 'background' && summary && hasGooglePlacesConfig()) {
       void withTimeoutFallback(getGooglePlacesEnrichment(summary), null, DETAIL_BASE_TIMEOUT_MS)
         .catch((error) => {
-          console.warn(
-            `[storefrontService] background Google enrichment failed for ${storefrontId}:`,
-            error,
+          logger.warn(
+            `[storefrontService] background Google enrichment failed for ${storefrontId}`,
+            { error: error instanceof Error ? error.message : String(error) },
           );
         })
         .finally(() => {
