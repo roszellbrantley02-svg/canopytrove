@@ -17,7 +17,7 @@ Updated: March 29, 2026
 - [x] Added backend support for `openNow` on storefront detail responses.
 - [x] Normalized placeholder `Hours not published yet` seed values so the app no longer marks missing hours as live published hours.
 - [x] Locked the `preview` EAS profile to the hosted API path instead of the dead LAN API path.
-- [x] Created `MOVE_OFF_COMPUTER_CANOPYTROVE_BASELINE.md` as the canonical exportable recovery baseline file.
+- [x] Created `docs/audits/2026-04/MOVE_OFF_COMPUTER_CANOPYTROVE_BASELINE.md` as the canonical exportable recovery baseline file.
 - [x] Repaired the review composer so submit state is explicit and the GIF picker still works without a live GIPHY API key.
 - [x] Added a storefront rating waiting-state with a `10`-rating threshold before public averages appear.
 - [x] Clarified the report-review destination in-app so preview builds show local-device storage and API mode shows the backend moderation path.

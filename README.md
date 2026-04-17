@@ -6,7 +6,7 @@ Public-facing brand: Canopy Trove.
 
 Start here first:
 
-- `CURRENT_MERGE_SUMMARY.md`
+- `docs/audits/2026-04/CURRENT_MERGE_SUMMARY.md`
 
 The canonical working recovery copy is:
 
@@ -16,8 +16,8 @@ Use this project folder as the main source of truth going forward.
 
 If anything goes wrong again, start with:
 
-- `CURRENT_MERGE_SUMMARY.md`
-- `MOVE_OFF_COMPUTER_CANOPYTROVE_BASELINE.md`
+- `docs/audits/2026-04/CURRENT_MERGE_SUMMARY.md`
+- `docs/audits/2026-04/MOVE_OFF_COMPUTER_CANOPYTROVE_BASELINE.md`
 - `docs/RECOVERY_CHECKLIST.md`
 - `docs/GOOGLE_MAPS_KEY_HARDENING.md`
 - `docs/OWNER_PORTAL_PREVIEW.md`

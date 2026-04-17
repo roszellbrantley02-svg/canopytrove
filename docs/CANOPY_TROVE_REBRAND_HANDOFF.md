@@ -63,7 +63,7 @@ Thread `2` should avoid touching:
 - `app.json`
 - `eas.json`
 - `backend/**`
-- `CURRENT_MERGE_SUMMARY.md`
+- `docs/audits/2026-04/CURRENT_MERGE_SUMMARY.md`
 - release-check scripts or env wiring
 
 ## Start Points
@@ -106,7 +106,7 @@ Do not touch:
 - app.json
 - eas.json
 - backend/**
-- CURRENT_MERGE_SUMMARY.md
+- docs/audits/2026-04/CURRENT_MERGE_SUMMARY.md
 - release env or release-check scripts
 
 Brand rules:
@@ -292,7 +292,7 @@ When finished, append a short file summary to docs/CANOPY_TROVE_REBRAND_HANDOFF.
   - `scripts/**`
   - `backend/scripts/**`
   - renamed internal files and folders that still carried `GreenRoutes`, `greenRoutes`, `greenroutes`, or `green-routes`
-  - `MOVE_OFF_COMPUTER_CANOPYTROVE_BASELINE.md`
+  - `docs/audits/2026-04/MOVE_OFF_COMPUTER_CANOPYTROVE_BASELINE.md`
 - Summary:
   - Renamed the remaining internal auth, route, tab-bar, gamification, identity, and service identifiers from `GreenRoutes`/`greenRoutes` to `CanopyTrove`/`canopyTrove`.
   - Updated Expo slug and scheme, package names, Android namespace/application id, Android app label, and storage namespace so the shipped config no longer carries the old brand.
@@ -329,4 +329,3 @@ When finished, append a short file summary to docs/CANOPY_TROVE_REBRAND_HANDOFF.
 - Files changed:
 - Summary:
 - Verification:
-
