@@ -73,7 +73,7 @@ export function OwnerPortalAiActionPlanCard({
           accessibilityHint="Loads a fresh set of suggestions for your storefront."
         >
           <Text style={styles.secondaryButtonText}>
-            {isLoading ? 'Loading...' : actionPlan ? 'Refresh Suggestions' : 'Get Suggestions'}
+            {isLoading ? 'Loading\u2026' : actionPlan ? 'Refresh Suggestions' : 'Get Suggestions'}
           </Text>
         </Pressable>
       </View>

@@ -9,6 +9,9 @@ export const CANOPYTROVE_POINTS = {
   follow_received: 1,
   report_submitted: 0,
   friend_invited: 20,
+  scan_completed: 5,
+  scan_new_brand_bonus: 5,
+  coa_opened: 2,
 };
 
 export const MAX_GAMIFICATION_LEVEL = 200;

@@ -169,7 +169,7 @@ export function ProfileEmailUpdatesSection({
         <View style={styles.contactRow}>
           <Text style={styles.contactLabel}>Subscription</Text>
           <Text style={styles.contactValue}>
-            {isLoading ? 'Loading...' : subscribed ? 'Subscribed' : 'Off'}
+            {isLoading ? 'Loading\u2026' : subscribed ? 'Subscribed' : 'Off'}
           </Text>
         </View>
         <View style={styles.contactRow}>

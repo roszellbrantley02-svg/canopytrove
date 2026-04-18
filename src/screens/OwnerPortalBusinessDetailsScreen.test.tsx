@@ -147,7 +147,7 @@ describe('OwnerPortalBusinessDetailsScreen', () => {
     expect(serviceMocks.saveOwnerBusinessDetails).not.toHaveBeenCalled();
     expect(navigationMocks.replace).not.toHaveBeenCalled();
     expect(renderedText).toContain(
-      'Owner session is missing. Please sign in again from the Owner Portal.',
+      'You are not signed in as an owner. Please sign in again from the Owner Portal.',
     );
   });
 });

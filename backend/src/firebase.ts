@@ -7,6 +7,7 @@ import {
   getApps,
   initializeApp,
 } from 'firebase-admin/app';
+import { AppCheck, getAppCheck } from 'firebase-admin/app-check';
 import { Auth, getAuth } from 'firebase-admin/auth';
 import { Firestore, getFirestore } from 'firebase-admin/firestore';
 import { Storage, getStorage } from 'firebase-admin/storage';
@@ -86,6 +87,7 @@ let cachedApp: App | null = null;
 let cachedAuth: Auth | null = null;
 let cachedDb: Firestore | null = null;
 let cachedStorage: Storage | null = null;
+let cachedAppCheck: AppCheck | null = null;
 
 export function getBackendFirebaseApp(): App | null {
   if (!hasBackendFirebaseConfig) {
@@ -160,6 +162,24 @@ export function getBackendFirebaseAuth(): Auth | null {
   return cachedAuth;
 }
 
+export function getBackendFirebaseAppCheck(): AppCheck | null {
+  if (!hasBackendFirebaseConfig) {
+    return null;
+  }
+
+  if (cachedAppCheck) {
+    return cachedAppCheck;
+  }
+
+  const app = getBackendFirebaseApp();
+  if (!app) {
+    return null;
+  }
+
+  cachedAppCheck = getAppCheck(app);
+  return cachedAppCheck;
+}
+
 export function getBackendFirebaseStorage(): Storage | null {
   if (!hasBackendFirebaseConfig) {
     return null;
@@ -200,4 +220,5 @@ export function clearBackendFirebaseTestStateForTests() {
   cachedAuth = null;
   cachedDb = null;
   cachedStorage = null;
+  cachedAppCheck = null;
 }

@@ -209,7 +209,7 @@ function OwnerPortalPromotionsScreenInner() {
               <Text style={styles.portalHeroMetricValue}>
                 {workspace?.metrics.storefrontImpressions7d ?? 0}
               </Text>
-              <Text style={styles.portalHeroMetricLabel}>Storefront Views 7D</Text>
+              <Text style={styles.portalHeroMetricLabel}>Views this week</Text>
             </View>
           </View>
           <View style={styles.portalHeroMetaRow}>

@@ -64,6 +64,9 @@ Env overrides:
 - `READ_RATE_LIMIT_PER_MINUTE`
 - `WRITE_RATE_LIMIT_PER_MINUTE`
 - `ADMIN_RATE_LIMIT_PER_TEN_MINUTES`
+- `RATE_LIMIT_PEPPER`
+  - required in production-like runtimes
+  - set it via a hosted secret manager instead of checking it into local env files
 - `REQUEST_LOGGING_ENABLED`
 - `CORS_ORIGIN`
   - use an explicit comma-separated allowlist only

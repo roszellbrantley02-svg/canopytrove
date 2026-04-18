@@ -182,7 +182,7 @@ function OwnerPortalReviewInboxScreenInner() {
                     ]}
                     title="Average Rating"
                     tone="warm"
-                    value={metrics.averageRating?.toFixed(1) ?? 'N/A'}
+                    value={metrics.averageRating?.toFixed(1) ?? '—'}
                   />
                   <OwnerPortalAnalyticsCard
                     body="Recent reviews that already received an owner response."

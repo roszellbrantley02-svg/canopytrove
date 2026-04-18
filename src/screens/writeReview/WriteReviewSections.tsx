@@ -66,7 +66,7 @@ export function WriteReviewSnapshotSection({ model }: { model: WriteReviewScreen
             </Text>
             <Text style={styles.summaryTileLabel}>Guidelines</Text>
             <Text style={styles.summaryTileBody}>
-              Community-guideline acceptance is required before submission.
+              Accept the community guidelines before you submit.
             </Text>
           </View>
           <View style={styles.summaryTile}>

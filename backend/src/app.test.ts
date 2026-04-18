@@ -1391,6 +1391,24 @@ test('assertSecureServerConfig rejects wildcard cors origins', async () => {
   }
 });
 
+test('assertSecureServerConfig rejects missing RATE_LIMIT_PEPPER in production-like runtimes', async () => {
+  const { assertSecureServerConfig, serverConfig } = await import('./config');
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalRateLimitPepper = serverConfig.rateLimitPepper;
+
+  try {
+    process.env.NODE_ENV = 'production';
+    (serverConfig as { rateLimitPepper: string | null }).rateLimitPepper = null;
+    assert.throws(
+      () => assertSecureServerConfig(),
+      /RATE_LIMIT_PEPPER must be configured in production-like runtimes\./,
+    );
+  } finally {
+    process.env.NODE_ENV = originalNodeEnv;
+    (serverConfig as { rateLimitPepper: string | null }).rateLimitPepper = originalRateLimitPepper;
+  }
+});
+
 test('rate limits repeated storefront report submissions before they can be spammed', async () => {
   const { baseUrl } = await startTestServer();
   let lastResponse = null as Awaited<ReturnType<typeof request>> | null;
@@ -1712,10 +1730,7 @@ test('requires auth for push subscription writes and deletes', async () => {
   });
 
   assert.equal(subscribeResponse.status, 401);
-  assert.equal(
-    subscribeResponse.json?.error,
-    'Authentication required for push subscriptions.',
-  );
+  assert.equal(subscribeResponse.json?.error, 'Authentication required for push subscriptions.');
   assert.equal(unsubscribeResponse.status, 401);
   assert.equal(
     unsubscribeResponse.json?.error,

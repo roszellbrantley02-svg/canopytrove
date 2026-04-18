@@ -2,6 +2,7 @@ export type { DeviceLocationResult, SearchLocationResult } from './locationServi
 export { calculateDistanceMiles, findAreaByQuery, findNearestArea } from './locationServiceShared';
 export {
   getBestAvailableDeviceLocation,
+  getPassiveDeviceLocation,
   getCachedDeviceLocation,
   primeStoredDeviceLocation,
   resolveDeviceLocationLabel,

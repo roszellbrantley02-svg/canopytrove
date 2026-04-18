@@ -170,8 +170,8 @@ export function RootNavigator() {
             .map((screen) => (
               <Stack.Screen
                 key={screen.name}
-                name={screen.name}
-                component={screen.component}
+                name={screen.name as keyof RootStackParamList}
+                component={screen.component as React.ComponentType<object>}
                 options={screen.options}
               />
             ))}

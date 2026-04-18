@@ -27,6 +27,7 @@ type SettingsRowProps = {
   onToggle?: (value: boolean) => void;
   isLoading?: boolean;
   isDanger?: boolean;
+  isLast?: boolean;
 };
 
 function SettingsRow({
@@ -38,13 +39,15 @@ function SettingsRow({
   onToggle,
   isLoading = false,
   isDanger = false,
+  isLast = false,
 }: SettingsRowProps) {
   const isToggle = typeof value === 'boolean';
+  const rowStyle = [styles.row, isLast && styles.rowLast];
 
   const content = (
     <>
-      <View style={styles.rowIconWrap}>
-        <AppUiIcon name={icon} size={20} color={isDanger ? colors.danger : colors.textSoft} />
+      <View style={[styles.rowIconWrap, isDanger && styles.rowIconWrapDanger]}>
+        <AppUiIcon name={icon} size={20} color={isDanger ? colors.danger : colors.accent} />
       </View>
 
       <View style={styles.rowContent}>
@@ -72,10 +75,10 @@ function SettingsRow({
           >
             {String(value)}
           </Text>
-          {onPress ? <AppUiIcon name="chevron-forward" size={14} color={colors.textSoft} /> : null}
+          {onPress ? <AppUiIcon name="chevron-forward" size={16} color={colors.textSoft} /> : null}
         </View>
       ) : onPress ? (
-        <AppUiIcon name="chevron-forward" size={14} color={colors.textSoft} />
+        <AppUiIcon name="chevron-forward" size={16} color={colors.textSoft} />
       ) : null}
     </>
   );
@@ -85,7 +88,7 @@ function SettingsRow({
       <Pressable
         onPress={onPress}
         disabled={isLoading}
-        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        style={({ pressed }) => [rowStyle, pressed && styles.rowPressed]}
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityHint={subtitle}
@@ -96,7 +99,7 @@ function SettingsRow({
   }
 
   return (
-    <View style={styles.row} accessible accessibilityLabel={title} accessibilityHint={subtitle}>
+    <View style={rowStyle} accessible accessibilityLabel={title} accessibilityHint={subtitle}>
       {content}
     </View>
   );
@@ -210,6 +213,7 @@ function SettingsScreenInner() {
                 isAuthenticated ? handleSignOut : () => navigation.navigate('CanopyTroveSignIn')
               }
               isDanger={isAuthenticated}
+              isLast
             />
           </View>
         </View>
@@ -233,6 +237,7 @@ function SettingsScreenInner() {
                 value={emailSubscribed}
                 onToggle={emailSubscribed ? handleUnsubscribeEmail : handleSubscribeEmail}
                 isLoading={isLoadingEmailSubscription}
+                isLast
               />
             </View>
           </View>
@@ -273,6 +278,7 @@ function SettingsScreenInner() {
               title="Contact support"
               value={supportEmail}
               onPress={handleContactSupport}
+              isLast
             />
           </View>
         </View>
@@ -301,7 +307,12 @@ function SettingsScreenInner() {
               isDanger
             />
 
-            <SettingsRow icon="information-circle-outline" title="App version" value={appVersion} />
+            <SettingsRow
+              icon="information-circle-outline"
+              title="App version"
+              value={appVersion}
+              isLast
+            />
           </View>
         </View>
       </MotionInView>
@@ -337,25 +348,32 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 56,
+    minHeight: 60,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderSoft,
     gap: spacing.md,
   },
+  rowLast: {
+    borderBottomWidth: 0,
+  },
   rowPressed: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(46, 204, 113, 0.06)',
   },
   rowIconWrap: {
     width: 40,
     height: 40,
     borderRadius: radii.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(46, 204, 113, 0.10)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.borderSoft,
+    borderColor: 'rgba(46, 204, 113, 0.18)',
+  },
+  rowIconWrapDanger: {
+    backgroundColor: 'rgba(231, 76, 60, 0.10)',
+    borderColor: 'rgba(231, 76, 60, 0.22)',
   },
   rowContent: {
     flex: 1,

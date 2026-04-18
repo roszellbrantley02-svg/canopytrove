@@ -16,6 +16,7 @@ export const linkingConfig: LinkingOptions<RootStackParamList> = {
           Nearby: 'nearby',
           Browse: 'browse',
           HotDeals: 'hot-deals',
+          Verify: 'verify',
           Profile: 'profile',
         },
       },
@@ -23,6 +24,16 @@ export const linkingConfig: LinkingOptions<RootStackParamList> = {
       Leaderboard: 'leaderboard',
       LegalCenter: 'legal',
       DeleteAccount: 'account-deletion',
+
+      // Auth — mode picker and entry points
+      WelcomeModePicker: 'welcome',
+      MemberSignIn: 'member-signin',
+      OwnerSignIn: 'owner-signin',
+
+      // Legacy member auth screens (deprecated, kept for backward compat)
+      CanopyTroveSignIn: 'signin',
+      CanopyTroveSignUp: 'signup',
+      CanopyTroveForgotPassword: 'forgot-password',
 
       // Owner Portal — auth screens
       OwnerPortalAccess: 'owner-portal',

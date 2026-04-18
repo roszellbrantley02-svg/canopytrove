@@ -4,6 +4,7 @@ import {
   OwnerStorefrontProfileToolsDocument,
   OwnerStorefrontPromotionDocument,
 } from '../../../src/types/ownerPortal';
+import type { OwnerStorefrontBrandsDocument } from '../../../src/types/brandTypes';
 import { getOptionalFirestoreCollection } from '../firestoreCollections';
 
 export type OwnerProfileRecord = {
@@ -63,6 +64,7 @@ const OWNER_PROFILES_COLLECTION = 'ownerProfiles';
 const DISPENSARY_CLAIMS_COLLECTION = 'dispensaryClaims';
 const OWNER_STOREFRONT_PROFILE_TOOLS_COLLECTION = 'owner_storefront_profile_tools';
 const OWNER_STOREFRONT_PROMOTIONS_COLLECTION = 'owner_storefront_promotions';
+const OWNER_STOREFRONT_BRANDS_COLLECTION = 'owner_storefront_brands';
 const OWNER_LICENSE_COMPLIANCE_COLLECTION = 'owner_license_compliance';
 const DAILY_STOREFRONT_METRICS_COLLECTION = 'analytics_daily_storefront_metrics';
 const DAILY_DEAL_METRICS_COLLECTION = 'analytics_daily_deal_metrics';
@@ -84,6 +86,12 @@ export function getOwnerStorefrontProfileToolsCollection(): CollectionReference<
 export function getOwnerStorefrontPromotionsCollection(): CollectionReference<OwnerStorefrontPromotionDocument> | null {
   return getOptionalFirestoreCollection<OwnerStorefrontPromotionDocument>(
     OWNER_STOREFRONT_PROMOTIONS_COLLECTION,
+  );
+}
+
+export function getOwnerStorefrontBrandsCollection(): CollectionReference<OwnerStorefrontBrandsDocument> | null {
+  return getOptionalFirestoreCollection<OwnerStorefrontBrandsDocument>(
+    OWNER_STOREFRONT_BRANDS_COLLECTION,
   );
 }
 

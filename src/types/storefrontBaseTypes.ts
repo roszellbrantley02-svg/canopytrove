@@ -49,6 +49,16 @@ export type StorefrontActivePromotion = {
 
 export type StorefrontStateCode = string;
 
+export type OcmVerification = {
+  licensed: boolean;
+  confidence: 'exact' | 'address' | 'name' | 'fuzzy' | 'none';
+  asOf: string;
+  source: 'ocm_public_records';
+  licenseNumber?: string | null;
+  licenseType?: string | null;
+  licenseeName?: string | null;
+};
+
 export type StorefrontSummary = {
   id: string;
   licenseId: string;
@@ -85,6 +95,11 @@ export type StorefrontSummary = {
   thumbnailUrl?: string | null;
   /** Route starts per hour — drives the heat glow visual on cards. */
   routeStartsPerHour?: number | null;
+  /**
+   * Public OCM licensing signal sourced from data.ny.gov (refreshed hourly).
+   * Drives the "Verified licensed" badge on cards and the detail screen.
+   */
+  ocmVerification?: OcmVerification | null;
 };
 
 export type StorefrontDetails = {
@@ -106,6 +121,7 @@ export type StorefrontDetails = {
   amenities: string[];
   editorialSummary: string | null;
   routeMode: 'preview' | 'verified';
+  ocmVerification?: OcmVerification | null;
 };
 
 export type BrowseSortKey = 'distance' | 'rating' | 'reviews';

@@ -8,7 +8,8 @@ export type GamificationBadgeCategory =
   | 'location'
   | 'special'
   | 'community'
-  | 'explorer';
+  | 'explorer'
+  | 'scan';
 
 export type GamificationBadgeTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 
@@ -32,7 +33,9 @@ export type GamificationActivityType =
   | 'helpful_vote_received'
   | 'report_submitted'
   | 'friend_invited'
-  | 'followers_updated';
+  | 'followers_updated'
+  | 'scan_completed'
+  | 'coa_opened';
 
 export type GamificationRouteStartedPayload = {
   storefrontId: string;
@@ -70,6 +73,33 @@ export type GamificationFollowersUpdatedPayload = {
   occurredAt?: string;
 };
 
+export type GamificationScanCompletedPayload = {
+  installId: string;
+  profileId?: string;
+  scanKind: 'license' | 'product' | 'unknown';
+  brandId?: string;
+  labName?: string;
+  thcPercent?: number;
+  contaminants?: {
+    pesticides?: boolean;
+    heavyMetals?: boolean;
+    microbial?: boolean;
+    solvents?: boolean;
+  };
+  isNewBrandForUser?: boolean;
+  terpenes?: string[];
+  occurredAt?: string;
+};
+
+export type GamificationCoaOpenedPayload = {
+  installId: string;
+  profileId?: string;
+  brandId: string;
+  labName: string;
+  batchId?: string;
+  occurredAt?: string;
+};
+
 export type GamificationEventRequest =
   | {
       activityType: 'route_started';
@@ -98,7 +128,24 @@ export type GamificationEventRequest =
   | {
       activityType: 'followers_updated';
       payload: GamificationFollowersUpdatedPayload;
+    }
+  | {
+      activityType: 'scan_completed';
+      payload: GamificationScanCompletedPayload;
+    }
+  | {
+      activityType: 'coa_opened';
+      payload: GamificationCoaOpenedPayload;
     };
+
+export type ScanStats = {
+  productScanCount: number;
+  uniqueBrandIds: string[];
+  uniqueTerpenes: string[];
+  coaOpenCount: number;
+  cleanPassCount: number;
+  highThcScans: number;
+};
 
 export type StorefrontGamificationState = {
   profileId: string;
@@ -125,6 +172,7 @@ export type StorefrontGamificationState = {
   friendsInvited: number;
   followersCount: number;
   totalRoutesStarted: number;
+  scanStats?: ScanStats;
 };
 
 export type GamificationRewardResult = {

@@ -6,6 +6,8 @@ import {
   applyReportSubmittedReward,
   applyReviewSubmittedReward,
   applyRouteStartedReward,
+  applyScanCompletedReward,
+  applyCoaOpenedReward,
   normalizeGamificationState,
 } from '../../../src/domain/canopyTroveGamification';
 import {
@@ -84,6 +86,26 @@ export async function applyGamificationEvent(
       break;
     case 'followers_updated':
       rewardResult = applyFollowersUpdatedReward(currentState, event.payload);
+      break;
+    case 'scan_completed':
+      rewardResult = applyScanCompletedReward(currentState, {
+        scanKind: event.payload.scanKind,
+        brandId: event.payload.brandId,
+        labName: event.payload.labName,
+        thcPercent: event.payload.thcPercent,
+        contaminants: event.payload.contaminants,
+        isNewBrandForUser: event.payload.isNewBrandForUser,
+        terpenes: event.payload.terpenes,
+        occurredAt: event.payload.occurredAt,
+      });
+      break;
+    case 'coa_opened':
+      rewardResult = applyCoaOpenedReward(currentState, {
+        brandId: event.payload.brandId,
+        labName: event.payload.labName,
+        batchId: event.payload.batchId,
+        occurredAt: event.payload.occurredAt,
+      });
       break;
   }
 

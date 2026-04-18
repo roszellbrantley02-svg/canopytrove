@@ -13,7 +13,7 @@ import {
 import { resolveOwnerLaunchTrialOffer } from './launchProgramService';
 
 type OwnerBillingCycle = 'monthly' | 'annual';
-type OwnerSubscriptionTier = 'verified' | 'growth' | 'pro';
+type OwnerSubscriptionTier = 'free' | 'verified' | 'growth' | 'pro';
 type OwnerSubscriptionStatus =
   | 'inactive'
   | 'trial'
@@ -124,6 +124,10 @@ function getStripeTierPriceId(
     OwnerSubscriptionTier,
     { monthly: string | null; annual: string | null }
   > = {
+    free: {
+      monthly: null,
+      annual: null,
+    },
     verified: {
       monthly: stripeVerifiedMonthlyPriceId ?? stripeOwnerMonthlyPriceId,
       annual: stripeVerifiedAnnualPriceId ?? stripeOwnerAnnualPriceId,
@@ -171,15 +175,15 @@ function resolveTierFromPriceId(priceId: string): OwnerSubscriptionTier {
   }
 
   // Default: legacy subscriptions without tier-specific price IDs
-  return 'verified';
+  return 'free';
 }
 
 function parseOwnerSubscriptionTier(value: unknown): OwnerSubscriptionTier {
-  if (value === 'verified' || value === 'growth' || value === 'pro') {
+  if (value === 'free' || value === 'verified' || value === 'growth' || value === 'pro') {
     return value;
   }
 
-  return 'verified';
+  return 'free';
 }
 
 export class OwnerBillingError extends Error {
@@ -693,6 +697,14 @@ export async function createOwnerBillingCheckoutSession(
 ) {
   const cycle = parseOwnerBillingCycle(cycleInput);
   const tier = parseOwnerSubscriptionTier(tierInput);
+
+  if (tier === 'free') {
+    throw new OwnerBillingError(
+      'The Free plan does not require billing. Claim your storefront to get started.',
+      400,
+    );
+  }
+
   const {
     stripeSecretKey,
     stripeOwnerAnnualPriceId,

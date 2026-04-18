@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Request, RequestHandler, Response } from 'express';
+import { serverConfig } from '../config';
 import { getBackendFirebaseDb } from '../firebase';
 import { logger } from '../observability/logger';
 import { recordAbuseSignal } from './abuseScoring';
@@ -27,10 +28,7 @@ function getClientIp(request: Request) {
 }
 
 function hashClientIp(ip: string) {
-  const pepper = process.env.RATE_LIMIT_PEPPER || 'canopytrove-dev-pepper';
-  if (!process.env.RATE_LIMIT_PEPPER && process.env.NODE_ENV === 'production') {
-    logger.warn('RATE_LIMIT_PEPPER not set in production — using insecure default');
-  }
+  const pepper = serverConfig.rateLimitPepper ?? 'canopytrove-dev-pepper';
   const hash = createHash('sha256')
     .update(ip + pepper, 'utf8')
     .digest('hex');

@@ -14,6 +14,7 @@ import { captureMonitoringException } from '../services/sentryMonitoringService'
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { AttentionCard } from '../components/AttentionCard';
 import { QuickActionsRow, type QuickAction } from '../components/QuickActionsRow';
+import { OwnerPortalBrandActivityCard } from './ownerPortal/OwnerPortalBrandActivityCard';
 import { OwnerPortalLicenseComplianceCard } from './ownerPortal/OwnerPortalLicenseComplianceCard';
 import {
   getJourneyItems,
@@ -197,6 +198,14 @@ function OwnerPortalHomeScreenInner() {
         scrollViewRef.current?.scrollTo({ y: roiSectionY.current, animated: true });
       },
     },
+    {
+      key: 'brands',
+      label: 'Brands',
+      iconName: 'pricetag-outline',
+      onPress: () => {
+        navigation.navigate('OwnerPortalBrandRoster', undefined);
+      },
+    },
   ];
 
   const ownerStatusChips = getOwnerStatusChips({
@@ -331,13 +340,13 @@ function OwnerPortalHomeScreenInner() {
                   </Text>
                 </View>
                 <View style={localStyles.metricTile}>
-                  <Text style={localStyles.metricLabel}>Actions 7D</Text>
+                  <Text style={localStyles.metricLabel}>Actions this week</Text>
                   <Text style={localStyles.metricValue}>{homeMetrics.totalActions7d}</Text>
                 </View>
                 <View style={localStyles.metricTile}>
-                  <Text style={localStyles.metricLabel}>Avg Rating</Text>
+                  <Text style={localStyles.metricLabel}>Avg rating</Text>
                   <Text style={localStyles.metricValue}>
-                    {workspace?.metrics?.averageRating?.toFixed(1) ?? 'N/A'}
+                    {workspace?.metrics?.averageRating?.toFixed(1) ?? '—'}
                   </Text>
                 </View>
               </View>
@@ -442,7 +451,7 @@ function OwnerPortalHomeScreenInner() {
                     disabled={isAiLoading}
                   >
                     <Text style={localStyles.secondaryButtonText}>
-                      {isAiLoading ? 'Loading...' : 'See All Suggestions'}
+                      {isAiLoading ? 'Loading\u2026' : 'See All Suggestions'}
                     </Text>
                   </Pressable>
                 </View>
@@ -501,6 +510,13 @@ function OwnerPortalHomeScreenInner() {
               </SectionCard>
             </MotionInView>
           </View>
+        ) : null}
+
+        {/* 8b. Brand Activity Nearby */}
+        {!preview && ownerProfile?.dispensaryId ? (
+          <MotionInView delay={295}>
+            <OwnerPortalBrandActivityCard locationId={activeLocationId} />
+          </MotionInView>
         ) : null}
 
         {/* 9. Onboarding Checklist - only if not complete */}

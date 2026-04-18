@@ -114,9 +114,14 @@ async function requestJson<T>(
       lastError = error;
 
       // Only retry on network/timeout errors, not on 4xx responses.
+      // Note: `DOMException` is not a global on Hermes, so we name-check
+      // AbortError on the Error base class instead of `instanceof DOMException`
+      // — that avoids a ReferenceError on iOS/Android while still catching
+      // fetch aborts on web.
+      const isAbortError = error instanceof Error && error.name === 'AbortError';
       const isRetryable =
         error instanceof TypeError ||
-        (error instanceof DOMException && error.name === 'AbortError') ||
+        isAbortError ||
         (error instanceof StorefrontApiHttpError &&
           [408, 429, 502, 503, 504].includes(error.statusCode));
 

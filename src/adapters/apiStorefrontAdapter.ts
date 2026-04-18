@@ -47,6 +47,7 @@ export function fromStorefrontSummaryApiDocument(
     promotionPlacementScope: document.promotionPlacementScope ?? null,
     placeId: document.placeId,
     thumbnailUrl: document.thumbnailUrl ?? null,
+    ocmVerification: document.ocmVerification ?? null,
   };
 }
 
@@ -94,5 +95,6 @@ export function fromStorefrontDetailApiDocument(
     amenities: [...document.amenities],
     editorialSummary: document.editorialSummary,
     routeMode: document.routeMode,
+    ocmVerification: document.ocmVerification ?? null,
   };
 }

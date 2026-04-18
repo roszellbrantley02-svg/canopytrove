@@ -1291,8 +1291,16 @@ export async function attachReviewPhotosToReview(options: {
     }),
   };
 
+  // Track IDs for every photo that made it through initial moderation
+  // (approved OR pending manual review). Photos still in manual review
+  // stay off the public-facing `photoUrls` list — `getApprovedReviewPhotoUrls`
+  // filters by `moderationStatus === 'approved'` at read time — but keeping
+  // their IDs on the review means they become visible automatically the
+  // moment a moderator approves them, instead of being permanently orphaned.
+  const trackedPhotoIds = attachedPhotos.map((entry) => entry.session.id);
+
   return {
-    photoIds: approvedPhotos.map((photo) => photo.session.id),
+    photoIds: trackedPhotoIds,
     photoUrls: approvedPhotos
       .map((photo) => photo.publicUrl)
       .filter((value): value is string => Boolean(value)),

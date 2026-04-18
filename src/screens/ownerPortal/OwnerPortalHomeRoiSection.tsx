@@ -112,7 +112,7 @@ export function OwnerPortalHomeRoiSection({
               { label: 'Store opens', value: formatCount(workspace.metrics.storefrontOpenCount7d) },
               { label: 'Open rate', value: formatRate(metrics.openRate) },
             ]}
-            title="Impressions 7D"
+            title="Views This Week"
             tone="warm"
             value={formatCount(workspace.metrics.storefrontImpressions7d)}
           />
@@ -129,7 +129,7 @@ export function OwnerPortalHomeRoiSection({
               },
               { label: 'Followers', value: formatCount(workspace.metrics.followerCount) },
             ]}
-            title="Store Opens 7D"
+            title="Opens This Week"
             tone="success"
             value={formatCount(workspace.metrics.storefrontOpenCount7d)}
           />
@@ -148,7 +148,10 @@ export function OwnerPortalHomeRoiSection({
                 label: Platform.OS === 'android' ? 'Active updates' : 'Active offers',
                 value: formatCount(metrics.activePromotionCount),
               },
-              { label: 'Reviews 30D', value: formatCount(workspace.metrics.reviewCount30d) },
+              {
+                label: 'Reviews this month',
+                value: formatCount(workspace.metrics.reviewCount30d),
+              },
             ]}
             title="Saved Followers"
             tone="cyan"
@@ -167,7 +170,7 @@ export function OwnerPortalHomeRoiSection({
               },
               { label: 'Reply rate', value: formatRate(workspace.metrics.replyRate * 100) },
             ]}
-            title="Reviews 30D"
+            title="Reviews This Month"
             tone="rose"
             value={formatCount(workspace.metrics.reviewCount30d)}
           />
@@ -193,10 +196,10 @@ export function OwnerPortalHomeRoiSection({
             progress={getRelativeProgress(workspace.metrics.routeStarts7d, metrics.actionMixMax)}
             progressLabel="Share of total customer actions"
             stats={[
-              { label: 'Open to route', value: formatRate(workspace.metrics.openToRouteRate) },
-              { label: '7D total', value: formatCount(metrics.totalActions7d) },
+              { label: 'Of opens', value: formatRate(workspace.metrics.openToRouteRate) },
+              { label: 'Total this week', value: formatCount(metrics.totalActions7d) },
             ]}
-            title="Route Starts 7D"
+            title="Directions This Week"
             tone="warm"
             value={formatCount(workspace.metrics.routeStarts7d)}
           />
@@ -210,10 +213,10 @@ export function OwnerPortalHomeRoiSection({
             )}
             progressLabel="Share of total customer actions"
             stats={[
-              { label: 'Open to site', value: formatRate(workspace.metrics.openToWebsiteRate) },
+              { label: 'Of opens', value: formatRate(workspace.metrics.openToWebsiteRate) },
               { label: 'Store opens', value: formatCount(workspace.metrics.storefrontOpenCount7d) },
             ]}
-            title="Website Taps 7D"
+            title="Website Taps This Week"
             tone="cyan"
             value={formatCount(workspace.metrics.websiteTapCount7d)}
           />
@@ -229,12 +232,12 @@ export function OwnerPortalHomeRoiSection({
             progressLabel="Share of total customer actions"
             stats={[
               {
-                label: Platform.OS === 'android' ? 'Open to site' : 'Open to menu',
+                label: 'Of opens',
                 value: formatRate(workspace.metrics.openToMenuRate),
               },
               { label: 'Followers', value: formatCount(workspace.metrics.followerCount) },
             ]}
-            title={Platform.OS === 'android' ? 'Website Taps 7D' : 'Menu Taps 7D'}
+            title={Platform.OS === 'android' ? 'Website Taps This Week' : 'Menu Taps This Week'}
             tone="success"
             value={formatCount(workspace.metrics.menuTapCount7d)}
           />
@@ -245,13 +248,13 @@ export function OwnerPortalHomeRoiSection({
             progress={getRelativeProgress(workspace.metrics.phoneTapCount7d, metrics.actionMixMax)}
             progressLabel="Share of total customer actions"
             stats={[
-              { label: 'Open to phone', value: formatRate(workspace.metrics.openToPhoneRate) },
+              { label: 'Of opens', value: formatRate(workspace.metrics.openToPhoneRate) },
               {
                 label: Platform.OS === 'android' ? 'Active updates' : 'Active offers',
                 value: formatCount(metrics.activePromotionCount),
               },
             ]}
-            title="Phone Taps 7D"
+            title="Phone Calls This Week"
             tone="rose"
             value={formatCount(workspace.metrics.phoneTapCount7d)}
           />
@@ -279,7 +282,10 @@ export function OwnerPortalHomeRoiSection({
             progressLabel="Based on a five-star scale"
             stats={[
               { label: 'Reply rate', value: formatRate(workspace.metrics.replyRate * 100) },
-              { label: 'Reviews 30D', value: formatCount(workspace.metrics.reviewCount30d) },
+              {
+                label: 'Reviews this month',
+                value: formatCount(workspace.metrics.reviewCount30d),
+              },
             ]}
             title="Average Rating"
             tone="warm"

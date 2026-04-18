@@ -5,18 +5,17 @@
     "scheme": "canopytrove",
     "version": "1.0.2",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon-v2.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash-icon-v2.png",
       "resizeMode": "contain",
       "backgroundColor": "#121614"
     },
     "ios": {
       "supportsTablet": true,
-      "icon": "./assets/ios-icon.png",
+      "icon": "./assets/ios-icon-v2.png",
       "bundleIdentifier": "com.rezell.canopytrove",
-      "minimumOSVersion": "14.0",
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
           {
@@ -35,8 +34,10 @@
       },
       "associatedDomains": ["applinks:canopytrove.com", "applinks:www.canopytrove.com"],
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Canopy Trove uses your camera to scan product QR codes and dispensary license numbers for on-the-spot verification."
+      },
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "icon": "./assets/android-icon.png",
@@ -84,6 +85,14 @@
       "backgroundColor": "#121614"
     },
     "plugins": [
+      "@react-native-firebase/app",
+      "@react-native-firebase/app-check",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Canopy Trove uses your camera to scan product QR codes and dispensary license numbers for on-the-spot verification."
+        }
+      ],
       [
         "expo-location",
         {

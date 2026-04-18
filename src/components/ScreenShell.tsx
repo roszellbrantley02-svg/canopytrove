@@ -33,7 +33,7 @@ type ScreenShellProps = PropsWithChildren<{
   resetScrollOnFocus?: boolean;
 }>;
 
-const TAB_ROUTE_NAMES = new Set(['Nearby', 'Browse', 'HotDeals', 'Profile']);
+const TAB_ROUTE_NAMES = new Set(['Nearby', 'Browse', 'HotDeals', 'Verify', 'Profile']);
 const MANUAL_BACK_ROUTES = new Set(['Leaderboard']);
 export function ScreenShell({
   eyebrow,
@@ -85,8 +85,11 @@ export function ScreenShell({
 
   const isWeb = Platform.OS === 'web';
   const routeName = typeof route.name === 'string' ? route.name : '';
+  // Back pill renders on every platform. iOS natively supports an edge-swipe
+  // back gesture, but it fails silently when the stack has been replaced
+  // (e.g. auth flows routed in via navigation.replace). A visible affordance
+  // keeps every non-tab screen reversible for App Store review.
   const shouldShowAutoBackButton =
-    isWeb &&
     showTopBar &&
     Boolean(routeName) &&
     !TAB_ROUTE_NAMES.has(routeName) &&

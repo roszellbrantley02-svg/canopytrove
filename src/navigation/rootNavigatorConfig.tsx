@@ -10,6 +10,9 @@ import { colors } from '../theme/tokens';
 import { NearbyScreen } from '../screens/NearbyScreen';
 import { BrowseScreen } from '../screens/BrowseScreen';
 import { HotDealsScreen } from '../screens/HotDealsScreen';
+import { VerifyScreen } from '../screens/VerifyScreen';
+import { VerifyManualEntryScreen } from '../screens/VerifyManualEntryScreen';
+import { ScanResultScreen } from '../screens/ScanResultScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 
 /* ── Lazy-loaded helper ──
@@ -73,8 +76,29 @@ const BadgeGalleryScreen = lazyScreen(
   () => import('../screens/BadgeGalleryScreen'),
   'BadgeGalleryScreen',
 );
+const MyBrandsScreen = lazyScreen(() => import('../screens/MyBrandsScreen'), 'MyBrandsScreen');
+const BrowseBrandsScreen = lazyScreen(
+  () => import('../screens/BrowseBrandsScreen'),
+  'BrowseBrandsScreen',
+);
+const BrandDetailScreen = lazyScreen(
+  () => import('../screens/BrandDetailScreen'),
+  'BrandDetailScreen',
+);
 
 /* ── Auth screens — lazy ── */
+const WelcomeModePickerScreen = lazyScreen(
+  () => import('../screens/WelcomeModePickerScreen'),
+  'WelcomeModePickerScreen',
+);
+const MemberSignInScreen = lazyScreen(
+  () => import('../screens/MemberSignInScreen'),
+  'MemberSignInScreen',
+);
+const OwnerSignInScreen = lazyScreen(
+  () => import('../screens/OwnerSignInScreen'),
+  'OwnerSignInScreen',
+);
 const CanopyTroveSignInScreen = lazyScreen(
   () => import('../screens/CanopyTroveSignInScreen'),
   'CanopyTroveSignInScreen',
@@ -149,6 +173,10 @@ const OwnerPortalHoursScreen = lazyScreen(
   () => import('../screens/OwnerPortalHoursScreen'),
   'OwnerPortalHoursScreen',
 );
+const OwnerPortalBrandRosterScreen = lazyScreen(
+  () => import('../screens/OwnerPortalBrandRosterScreen'),
+  'OwnerPortalBrandRosterScreen',
+);
 
 /* ── Admin screens — lazy ── */
 const AdminRuntimePanelScreen = lazyScreen(
@@ -165,6 +193,7 @@ export type RootTabParamList = {
   Nearby: undefined;
   Browse: undefined;
   HotDeals: undefined;
+  Verify: undefined;
   Profile: undefined;
 };
 
@@ -185,6 +214,10 @@ export type RootStackParamList = {
     initialDescription?: string;
     entryMode?: 'general_report' | 'suggest_edit' | 'report_closed';
   };
+  VerifyManualEntry: undefined;
+  ScanResult: {
+    rawCode: string;
+  };
   LegalCenter: undefined;
   DeleteAccount: undefined;
   Leaderboard:
@@ -192,6 +225,9 @@ export type RootStackParamList = {
         highlightProfileId?: string;
       }
     | undefined;
+  WelcomeModePicker: undefined;
+  MemberSignIn: undefined;
+  OwnerSignIn: undefined;
   CanopyTroveSignIn: undefined;
   CanopyTroveSignUp: undefined;
   CanopyTroveForgotPassword: undefined;
@@ -260,9 +296,19 @@ export type RootStackParamList = {
         preview?: boolean;
       }
     | undefined;
+  OwnerPortalBrandRoster:
+    | {
+        preview?: boolean;
+      }
+    | undefined;
   Settings: undefined;
   SavedStorefronts: undefined;
   BadgeGallery: undefined;
+  MyBrands: undefined;
+  BrowseBrands: undefined;
+  BrandDetail: {
+    brandId: string;
+  };
   AdminRuntimePanel: undefined;
 };
 
@@ -327,6 +373,27 @@ export const stackScreens = [
   { name: 'LegalCenter', component: LegalCenterScreen, options: bottomRiseScreenOptions },
   { name: 'DeleteAccount', component: DeleteAccountScreen, options: bottomRiseScreenOptions },
   { name: 'Leaderboard', component: LeaderboardScreen, options: detailFlowScreenOptions },
+  {
+    name: 'VerifyManualEntry',
+    component: VerifyManualEntryScreen,
+    options: bottomRiseScreenOptions,
+  },
+  { name: 'ScanResult', component: ScanResultScreen, options: bottomRiseScreenOptions },
+  {
+    name: 'WelcomeModePicker',
+    component: WelcomeModePickerScreen,
+    options: bottomRiseScreenOptions,
+  },
+  {
+    name: 'MemberSignIn',
+    component: MemberSignInScreen,
+    options: bottomRiseScreenOptions,
+  },
+  {
+    name: 'OwnerSignIn',
+    component: OwnerSignInScreen,
+    options: bottomRiseScreenOptions,
+  },
   {
     name: 'CanopyTroveSignIn',
     component: CanopyTroveSignInScreen,
@@ -418,6 +485,11 @@ export const stackScreens = [
     options: workspaceFlowScreenOptions,
   },
   {
+    name: 'OwnerPortalBrandRoster',
+    component: OwnerPortalBrandRosterScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
     name: 'Settings',
     component: SettingsScreen,
     options: bottomRiseScreenOptions,
@@ -433,6 +505,21 @@ export const stackScreens = [
     options: detailFlowScreenOptions,
   },
   {
+    name: 'MyBrands',
+    component: MyBrandsScreen,
+    options: detailFlowScreenOptions,
+  },
+  {
+    name: 'BrowseBrands',
+    component: BrowseBrandsScreen,
+    options: detailFlowScreenOptions,
+  },
+  {
+    name: 'BrandDetail',
+    component: BrandDetailScreen,
+    options: detailFlowScreenOptions,
+  },
+  {
     name: 'AdminRuntimePanel',
     component: AdminRuntimePanelScreen,
     options: workspaceFlowScreenOptions,
@@ -443,5 +530,6 @@ export const tabScreens = [
   { name: 'Nearby', component: NearbyScreen },
   { name: 'Browse', component: BrowseScreen },
   { name: 'HotDeals', component: HotDealsScreen },
+  { name: 'Verify', component: VerifyScreen },
   { name: 'Profile', component: ProfileScreen },
 ] as const;

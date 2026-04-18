@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { StorefrontRouteCard } from '../components/StorefrontRouteCard';
+import { StorefrontRouteCardSkeleton } from '../components/StorefrontRouteCardSkeleton';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { useStorefrontRouteController } from '../context/StorefrontController';
 import { useSavedSummaries } from '../hooks/useStorefrontSummaryData';
@@ -44,11 +45,15 @@ function SavedStorefrontsScreenInner() {
       showHero={false}
     >
       {isLoading ? (
-        <MotionInView delay={motion.quick}>
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading saved storefronts...</Text>
-          </View>
-        </MotionInView>
+        <View style={styles.list}>
+          {Array.from({ length: Math.max(1, Math.min(savedStorefrontIds.length || 4, 8)) }).map(
+            (_, index) => (
+              <MotionInView key={`saved-skeleton-${index}`} dense delay={Math.min(index, 8) * 60}>
+                <StorefrontRouteCardSkeleton variant="list" />
+              </MotionInView>
+            ),
+          )}
+        </View>
       ) : savedStorefronts.length === 0 ? (
         <MotionInView delay={motion.quick}>
           <View style={styles.emptyContainer}>
@@ -92,14 +97,6 @@ export const SavedStorefrontsScreen = withScreenErrorBoundary(
 const styles = StyleSheet.create({
   list: {
     gap: spacing.md,
-  },
-  loadingContainer: {
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...textStyles.body,
-    color: colors.textMuted,
   },
   emptyContainer: {
     paddingVertical: spacing.xxl,

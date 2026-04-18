@@ -65,18 +65,29 @@ export function getFirebaseDb(): Firestore | null {
  * but the SDK typings demand the full AsyncStorageStatic surface.
  * Casting through unknown is the accepted community workaround.
  *
+ * Key sanitization: Firebase Auth uses internal keys like
+ * `firebase:authUser:AIzaSy...:[DEFAULT]` which contain characters
+ * (`:`, `[`, `]`) that expo-secure-store rejects — keys must match
+ * `[A-Za-z0-9._-]`. We map disallowed chars to `_` so the token still
+ * lives in the iOS Keychain (more secure than AsyncStorage) while the
+ * key format is legal. The mapping is stable and injective enough for
+ * Firebase's fixed key set.
+ *
  * On web, Firebase Auth uses browser localStorage by default (via getAuth),
  * so this adapter is never needed and expo-secure-store is not loaded.
  */
+const sanitizeSecureStoreKey = (key: string): string => key.replace(/[^A-Za-z0-9._-]/g, '_');
+
 const secureStoreAdapter =
   Platform.OS !== 'web'
     ? (() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const SecureStore = require('expo-secure-store');
         return {
-          getItem: (key: string) => SecureStore.getItemAsync(key),
-          setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
-          removeItem: (key: string) => SecureStore.deleteItemAsync(key),
+          getItem: (key: string) => SecureStore.getItemAsync(sanitizeSecureStoreKey(key)),
+          setItem: (key: string, value: string) =>
+            SecureStore.setItemAsync(sanitizeSecureStoreKey(key), value),
+          removeItem: (key: string) => SecureStore.deleteItemAsync(sanitizeSecureStoreKey(key)),
         } as Parameters<typeof getReactNativePersistence>[0];
       })()
     : (null as unknown as Parameters<typeof getReactNativePersistence>[0]);

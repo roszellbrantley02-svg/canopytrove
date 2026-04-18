@@ -177,7 +177,7 @@ export function OwnerPortalLicenseComplianceCard({ workspace, isSaving = false, 
           <TextInput
             value={draft.issuedAt}
             onChangeText={(value) => setDraftField('issuedAt', normalizeDateInput(value))}
-            placeholder="YYYY-MM-DD or ISO string"
+            placeholder="e.g. 2026-12-31"
             placeholderTextColor={colors.textSoft}
             autoCapitalize="none"
             style={styles.inputPremium}
@@ -189,7 +189,7 @@ export function OwnerPortalLicenseComplianceCard({ workspace, isSaving = false, 
           <TextInput
             value={draft.expiresAt}
             onChangeText={(value) => setDraftField('expiresAt', normalizeDateInput(value))}
-            placeholder="YYYY-MM-DD or ISO string"
+            placeholder="e.g. 2026-12-31"
             placeholderTextColor={colors.textSoft}
             autoCapitalize="none"
             style={styles.inputPremium}

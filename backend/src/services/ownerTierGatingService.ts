@@ -5,6 +5,7 @@
  * feature access based on tier level.
  *
  * Tiers:
+ *   free     ($0)      — claim storefront, OCM badge, basic management
  *   verified ($49/mo)  — basic presence and analytics
  *   growth   ($149/mo) — full analytics, promotions, messaging
  *   pro      ($249/mo) — AI, multi-location, full suite
@@ -12,18 +13,31 @@
 
 import { getBackendFirebaseDb } from '../firebase';
 
-export type OwnerSubscriptionTier = 'verified' | 'growth' | 'pro';
+export type OwnerSubscriptionTier = 'free' | 'verified' | 'growth' | 'pro';
 
 const SUBSCRIPTIONS_COLLECTION = 'subscriptions';
 const OWNER_PROFILES_COLLECTION = 'ownerProfiles';
 
 const TIER_RANK: Record<OwnerSubscriptionTier, number> = {
-  verified: 0,
-  growth: 1,
-  pro: 2,
+  free: 0,
+  verified: 1,
+  growth: 2,
+  pro: 3,
 };
 
 const TIER_LIMITS: Record<OwnerSubscriptionTier, TierFeatureLimits> = {
+  free: {
+    maxPromotions: 0,
+    maxFeaturedPhotos: 0,
+    maxFollowerMessages: 0,
+    aiEnabled: false,
+    multiLocationEnabled: false,
+    fullAnalyticsEnabled: false,
+    weeklyEmailEnabled: false,
+    badgeCustomizationEnabled: false,
+    audienceTargetingEnabled: false,
+    promotionAnalyticsEnabled: false,
+  },
   verified: {
     maxPromotions: 0,
     maxFeaturedPhotos: 0,
@@ -87,10 +101,10 @@ export class TierAccessError extends Error {
 }
 
 function normalizeTier(value: unknown): OwnerSubscriptionTier {
-  if (value === 'verified' || value === 'growth' || value === 'pro') {
+  if (value === 'free' || value === 'verified' || value === 'growth' || value === 'pro') {
     return value;
   }
-  return 'verified';
+  return 'free';
 }
 
 /**
@@ -100,13 +114,13 @@ function normalizeTier(value: unknown): OwnerSubscriptionTier {
 export async function resolveOwnerTier(ownerUid: string): Promise<OwnerSubscriptionTier> {
   const db = getBackendFirebaseDb();
   if (!db) {
-    return 'verified';
+    return 'free';
   }
 
   const subscriptionDoc = await db.collection(SUBSCRIPTIONS_COLLECTION).doc(ownerUid).get();
 
   if (!subscriptionDoc.exists) {
-    return 'verified';
+    return 'free';
   }
 
   const data = subscriptionDoc.data();
@@ -114,7 +128,7 @@ export async function resolveOwnerTier(ownerUid: string): Promise<OwnerSubscript
 
   // Only active or trial subscriptions get their tier level
   if (status !== 'active' && status !== 'trial') {
-    return 'verified';
+    return 'free';
   }
 
   return normalizeTier(data?.tier);
@@ -124,7 +138,7 @@ export async function resolveOwnerTier(ownerUid: string): Promise<OwnerSubscript
  * Returns the feature limits for a given tier.
  */
 export function getTierLimits(tier: OwnerSubscriptionTier): TierFeatureLimits {
-  return TIER_LIMITS[tier] ?? TIER_LIMITS.verified;
+  return TIER_LIMITS[tier] ?? TIER_LIMITS.free;
 }
 
 /**
@@ -152,7 +166,9 @@ export function assertTierAccess(
         ? 'Pro ($249/mo)'
         : requiredTier === 'growth'
           ? 'Growth ($149/mo)'
-          : 'Verified Presence ($49/mo)';
+          : requiredTier === 'verified'
+            ? 'Verified Presence ($49/mo)'
+            : 'Free';
 
     throw new TierAccessError(
       `${featureLabel} requires the ${tierLabel} plan. Upgrade to unlock this feature.`,

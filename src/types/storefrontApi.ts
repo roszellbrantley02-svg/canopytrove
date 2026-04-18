@@ -1,3 +1,13 @@
+export type OcmVerificationApiDocument = {
+  licensed: boolean;
+  confidence: 'exact' | 'address' | 'name' | 'fuzzy' | 'none';
+  asOf: string;
+  source: 'ocm_public_records';
+  licenseNumber?: string | null;
+  licenseType?: string | null;
+  licenseeName?: string | null;
+};
+
 export type StorefrontSummaryApiDocument = {
   id: string;
   licenseId: string;
@@ -33,6 +43,7 @@ export type StorefrontSummaryApiDocument = {
   promotionPlacementScope?: 'storefront_area' | 'statewide' | null;
   placeId?: string;
   thumbnailUrl?: string | null;
+  ocmVerification?: OcmVerificationApiDocument | null;
 };
 
 export type StorefrontDetailApiDocument = {
@@ -80,6 +91,7 @@ export type StorefrontDetailApiDocument = {
   amenities: string[];
   editorialSummary: string | null;
   routeMode: 'preview' | 'verified';
+  ocmVerification?: OcmVerificationApiDocument | null;
 };
 
 export type StorefrontSummariesApiResponse = {

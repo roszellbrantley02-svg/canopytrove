@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CustomerStateCard } from '../components/CustomerStateCard';
+import { LicensedBadge } from '../components/LicensedBadge';
 import { MotionInView } from '../components/MotionInView';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { resolveStorefrontSlug } from '../sources/apiStorefrontSource';
@@ -104,6 +105,15 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
               ratingDisplay={model.ratingDisplay}
             />
           </MotionInView>
+
+          {(model.detailData.ocmVerification ?? storefront.ocmVerification)?.licensed ? (
+            <MotionInView delay={140}>
+              <LicensedBadge
+                verification={model.detailData.ocmVerification ?? storefront.ocmVerification}
+                variant="full"
+              />
+            </MotionInView>
+          ) : null}
 
           {model.detailData.activePromotions?.length ? (
             <MotionInView delay={120}>
@@ -275,16 +285,25 @@ function StorefrontDetailScreenInner() {
     let alive = true;
     currentStorefrontIdRef.current = rawStorefrontId;
     setResolvingSlugFor(rawStorefrontId);
-    void resolveStorefrontSlug(rawStorefrontId).then((id) => {
-      if (!alive || currentStorefrontIdRef.current !== rawStorefrontId) return;
-      if (id && id !== rawStorefrontId) {
-        setResolvedSlug({
-          rawId: rawStorefrontId,
-          resolvedId: id,
-        });
-      }
-      setResolvingSlugFor((current) => (current === rawStorefrontId ? null : current));
-    });
+    resolveStorefrontSlug(rawStorefrontId)
+      .then((id) => {
+        if (!alive || currentStorefrontIdRef.current !== rawStorefrontId) return;
+        if (id && id !== rawStorefrontId) {
+          setResolvedSlug({
+            rawId: rawStorefrontId,
+            resolvedId: id,
+          });
+        }
+      })
+      .catch(() => {
+        // Slug resolution is best-effort — if the network call fails, fall
+        // back to the "Storefront unavailable" empty state rather than
+        // stranding the screen in a perpetual resolving spinner.
+      })
+      .finally(() => {
+        if (!alive) return;
+        setResolvingSlugFor((current) => (current === rawStorefrontId ? null : current));
+      });
     return () => {
       alive = false;
     };

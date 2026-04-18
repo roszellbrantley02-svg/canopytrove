@@ -95,6 +95,7 @@ export const serverConfig = {
   port: Number(process.env.PORT || 4100),
   trustProxyHops: parsePositiveInteger(process.env.TRUST_PROXY_HOPS, 1),
   corsOrigin: parseCorsOrigin(process.env.CORS_ORIGIN),
+  rateLimitPepper: readConfiguredValue(process.env.RATE_LIMIT_PEPPER),
   expoAccessToken: readConfiguredValue(process.env.EXPO_ACCESS_TOKEN),
   adminApiKey: readConfiguredValue(process.env.ADMIN_API_KEY),
   openAiApiKey: readConfiguredValue(process.env.OPENAI_API_KEY),
@@ -200,6 +201,10 @@ export function isProductionLikeBackendRuntime() {
 export function assertSecureServerConfig() {
   if (!hasRestrictedCorsOrigin()) {
     throw new Error('CORS_ORIGIN must be an explicit origin list.');
+  }
+
+  if (isProductionLikeBackendRuntime() && !serverConfig.rateLimitPepper) {
+    throw new Error('RATE_LIMIT_PEPPER must be configured in production-like runtimes.');
   }
 }
 

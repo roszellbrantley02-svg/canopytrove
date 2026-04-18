@@ -246,6 +246,8 @@ export function BrowseStoreList({
   isLoading,
   total,
   onLoadMore,
+  loadMoreError,
+  onLoadMoreRetry,
 }: {
   items: StorefrontSummary[];
   isSavedStorefront: (storefrontId: string) => boolean;
@@ -257,6 +259,8 @@ export function BrowseStoreList({
   isLoading: boolean;
   total: number;
   onLoadMore: () => void;
+  loadMoreError?: string | null;
+  onLoadMoreRetry?: () => void;
 }) {
   const visitedSet = React.useMemo(() => new Set(visitedStorefrontIds), [visitedStorefrontIds]);
 
@@ -286,20 +290,33 @@ export function BrowseStoreList({
 
   const keyExtractor = useCallback((item: StorefrontSummary) => item.id, []);
 
+  const showLoadMoreError = Boolean(loadMoreError) && !isLoading && items.length > 0;
   const listFooter = hasMore ? (
     <MotionInView delay={220 + Math.min(items.length, 8) * 20}>
       <Pressable
         disabled={isLoading}
-        onPress={onLoadMore}
+        onPress={showLoadMoreError && onLoadMoreRetry ? onLoadMoreRetry : onLoadMore}
         style={[styles.loadMoreButton, isLoading && styles.loadMoreButtonDisabled]}
         accessibilityRole="button"
-        accessibilityLabel={isLoading ? 'Loading more storefronts' : 'Load more storefronts'}
-        accessibilityHint={`${items.length} of ${total} storefronts loaded`}
+        accessibilityLabel={
+          showLoadMoreError
+            ? 'Retry loading more storefronts'
+            : isLoading
+              ? 'Loading more storefronts'
+              : 'Load more storefronts'
+        }
+        accessibilityHint={
+          showLoadMoreError
+            ? (loadMoreError ?? 'More storefronts failed to load. Tap to retry.')
+            : `${items.length} of ${total} storefronts loaded`
+        }
       >
         <Text style={styles.loadMoreButtonText}>
-          {isLoading
-            ? `Loading More Storefronts (${items.length} of ${total})`
-            : `Load More Storefronts (${items.length} of ${total})`}
+          {showLoadMoreError
+            ? `Retry — couldn't load more (${items.length} of ${total})`
+            : isLoading
+              ? `Loading More Storefronts (${items.length} of ${total})`
+              : `Load More Storefronts (${items.length} of ${total})`}
         </Text>
       </Pressable>
     </MotionInView>

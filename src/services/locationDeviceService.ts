@@ -67,6 +67,47 @@ export async function getBestAvailableDeviceLocation(): Promise<DeviceLocationRe
   return task;
 }
 
+/**
+ * Silent probe — returns the device location ONLY if permission was already
+ * granted in a previous session. Never triggers the native permission prompt.
+ * Used by silent bootstrap paths so first-time users aren't cold-prompted for
+ * location before they understand what the app does. Use
+ * `getBestAvailableDeviceLocation` instead when the request is driven by an
+ * explicit user tap.
+ */
+export async function getPassiveDeviceLocation(): Promise<DeviceLocationResult> {
+  try {
+    if (Platform.OS === 'web') {
+      // Web: fall back to the cached reading; Browser Geolocation API doesn't
+      // expose a pre-check equivalent that's reliable across vendors.
+      const cached = getCachedDeviceLocation();
+      return cached
+        ? { coordinates: cached, source: 'lastKnown' }
+        : { coordinates: null, source: 'unavailable' };
+    }
+
+    const currentPermission = await Location!.getForegroundPermissionsAsync();
+    if (currentPermission.status !== 'granted') {
+      const cached = getCachedDeviceLocation();
+      return cached
+        ? { coordinates: cached, source: 'lastKnown' }
+        : { coordinates: null, source: 'unavailable' };
+    }
+
+    const current = await Location!.getCurrentPositionAsync({
+      accuracy: Location!.Accuracy.High,
+    });
+    const coordinates = {
+      latitude: current.coords.latitude,
+      longitude: current.coords.longitude,
+    };
+    void cacheDeviceLocation(coordinates);
+    return { coordinates, source: 'current' };
+  } catch {
+    return { coordinates: null, source: 'unavailable' };
+  }
+}
+
 export function getCachedDeviceLocation() {
   if (!memoryCachedDeviceLocation) {
     return null;

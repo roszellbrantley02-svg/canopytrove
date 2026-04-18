@@ -1,12 +1,13 @@
 /**
  * Owner subscription tiers for Canopy Trove.
  *
- * - verified:  $49/mo  — Verified Presence (one location, basics)
+ * - free:      $0      — Free (sign in, claim storefront, OCM badge, basic management)
+ * - verified:  $49/mo  — Verified Presence (hours, analytics, review replies, compliance)
  * - growth:    $149/mo — Growth (analytics, promotions, messaging)
  * - pro:       $249/mo — Pro (AI, multi-location, full suite)
  */
 
-export type OwnerSubscriptionTier = 'verified' | 'growth' | 'pro';
+export type OwnerSubscriptionTier = 'free' | 'verified' | 'growth' | 'pro';
 
 export type OwnerTierBillingCycle = 'monthly' | 'annual';
 
@@ -30,6 +31,28 @@ export type OwnerTierDefinition = {
 };
 
 export const OWNER_TIERS: Record<OwnerSubscriptionTier, OwnerTierDefinition> = {
+  free: {
+    tier: 'free',
+    label: 'Free',
+    tagline: 'Claim your spot. Get verified.',
+    monthlyPrice: 0,
+    annualPrice: 0,
+    features: [
+      'Sign in and create owner account',
+      'Claim your storefront',
+      'OCM verified badge on listing',
+    ],
+    maxPromotions: 0,
+    maxFeaturedPhotos: 0,
+    maxFollowerMessages: 0,
+    aiEnabled: false,
+    multiLocationEnabled: false,
+    fullAnalyticsEnabled: false,
+    weeklyEmailEnabled: false,
+    badgeCustomizationEnabled: false,
+    audienceTargetingEnabled: false,
+    promotionAnalyticsEnabled: false,
+  },
   verified: {
     tier: 'verified',
     label: 'Verified Presence',
@@ -37,8 +60,7 @@ export const OWNER_TIERS: Record<OwnerSubscriptionTier, OwnerTierDefinition> = {
     monthlyPrice: 49,
     annualPrice: 490,
     features: [
-      'OCM verified badge on listing',
-      'Claim and manage your storefront',
+      'Everything in Free',
       'Hours management',
       'Basic profile editing',
       'License compliance tracking with renewal alerts',
@@ -113,7 +135,7 @@ export const OWNER_TIERS: Record<OwnerSubscriptionTier, OwnerTierDefinition> = {
   },
 };
 
-export const OWNER_TIER_ORDER: OwnerSubscriptionTier[] = ['verified', 'growth', 'pro'];
+export const OWNER_TIER_ORDER: OwnerSubscriptionTier[] = ['free', 'verified', 'growth', 'pro'];
 
 export const ADDITIONAL_LOCATION_MONTHLY_PRICE = 99;
 
@@ -123,7 +145,7 @@ export const ADDITIONAL_LOCATION_MONTHLY_PRICE = 99;
 export function getOwnerTierDefinition(
   tier: OwnerSubscriptionTier | null | undefined,
 ): OwnerTierDefinition {
-  return OWNER_TIERS[tier ?? 'verified'] ?? OWNER_TIERS.verified;
+  return OWNER_TIERS[tier ?? 'free'] ?? OWNER_TIERS.free;
 }
 
 /**
@@ -134,12 +156,13 @@ export function hasTierAccess(
   requiredTier: OwnerSubscriptionTier,
 ): boolean {
   const tierRank: Record<OwnerSubscriptionTier, number> = {
-    verified: 0,
-    growth: 1,
-    pro: 2,
+    free: 0,
+    verified: 1,
+    growth: 2,
+    pro: 3,
   };
 
-  return tierRank[currentTier ?? 'verified'] >= tierRank[requiredTier];
+  return tierRank[currentTier ?? 'free'] >= tierRank[requiredTier];
 }
 
 /**

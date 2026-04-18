@@ -75,7 +75,9 @@ function HotDealsScreenInner() {
   }, [requestDeviceLocation]);
 
   const handleRetryError = React.useCallback(() => {
-    // Trigger a fresh data fetch by resetting offset
+    // Clear stale data before retrying so users don't see a new error card
+    // layered on top of data from a previous successful fetch.
+    setItems([]);
     setOffset(0);
   }, []);
 

@@ -167,6 +167,10 @@ function areStorefrontCardsEqual(
     previous.storefront.premiumCardVariant === next.storefront.premiumCardVariant &&
     previous.storefront.thumbnailUrl === next.storefront.thumbnailUrl &&
     previous.storefront.routeStartsPerHour === next.storefront.routeStartsPerHour &&
+    (previous.storefront.ocmVerification?.licensed ?? null) ===
+      (next.storefront.ocmVerification?.licensed ?? null) &&
+    (previous.storefront.ocmVerification?.asOf ?? null) ===
+      (next.storefront.ocmVerification?.asOf ?? null) &&
     previous.imagePriority === next.imagePriority &&
     previous.onPress === next.onPress &&
     previous.onPressIn === next.onPressIn &&

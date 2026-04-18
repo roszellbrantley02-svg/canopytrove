@@ -225,3 +225,13 @@ export function parseOwnerPortalAlertSyncBody(body: unknown) {
     }),
   };
 }
+
+export function parseOwnerPortalBrandsBody(body: unknown): { brandIds: string[] } {
+  const payload = asObject(body, 'body');
+  const brandIds =
+    parseOptionalStringArray(payload.brandIds, 'body.brandIds', {
+      maxItems: 60,
+      maxItemLength: 80,
+    }) ?? [];
+  return { brandIds };
+}

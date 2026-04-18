@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { MapGridPreview } from '../MapGridPreview';
 import type { PreviewStatusTone } from '../mapGridPreview/mapGridPreviewTones';
+import { LicensedBadge } from '../LicensedBadge';
 import { LocationPinIcon } from '../../icons/AppIcons';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import { colors } from '../../theme/tokens';
@@ -182,6 +183,10 @@ export function StorefrontRouteCardBody({
             </View>
           ) : null}
         </View>
+
+        {storefront.ocmVerification?.licensed ? (
+          <LicensedBadge verification={storefront.ocmVerification} variant="inline" />
+        ) : null}
 
         <View style={styles.metaRow}>
           <View style={styles.metaChip}>

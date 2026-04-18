@@ -273,6 +273,24 @@ const glyphRenderers = {
       />
     </>
   ),
+  verify: ({ color, strokeWidth }: GlyphDrawProps) => (
+    <>
+      <Path
+        d="M12 3.75 5.25 6.1v5.5c0 4.2 2.8 7.6 6.75 8.65 3.95-1.05 6.75-4.45 6.75-8.65V6.1L12 3.75Z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M9 12.25 11.1 14.3 15.2 10.2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </>
+  ),
   trophy: ({ color, strokeWidth }: GlyphDrawProps) => (
     <>
       <Path

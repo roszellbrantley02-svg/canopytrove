@@ -38,6 +38,7 @@ function BrowseScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [offset, setOffset] = React.useState(0);
   const [items, setItems] = React.useState<StorefrontSummary[]>([]);
+  const [loadMoreRefetchKey, setLoadMoreRefetchKey] = React.useState(0);
   const lastPrefetchedPageKeyRef = React.useRef('');
   const prefetchedDetailIdsRef = React.useRef(new Set<string>());
   const { authSession, profileId } = useStorefrontProfileController();
@@ -74,7 +75,16 @@ function BrowseScreenInner() {
     [effectiveBrowseHotDealsOnly, storefrontQuery],
   );
 
-  const { data, error, isLoading } = useBrowseSummaries(query, browseSortKey, PAGE_SIZE, offset);
+  const { data, error, isLoading } = useBrowseSummaries(query, browseSortKey, PAGE_SIZE, offset, {
+    refetchKey: loadMoreRefetchKey,
+  });
+
+  const handleLoadMoreRetry = React.useCallback(() => {
+    // Bump the refetch key so the hook re-runs the fetch at the same
+    // offset without advancing the page — the previous attempt already
+    // moved offset forward, so retry should repeat that same call.
+    setLoadMoreRefetchKey((current) => current + 1);
+  }, []);
 
   const handleApplyLocationQuery = React.useCallback(() => {
     void applyLocationQuery().then((didApply) => {
@@ -353,6 +363,8 @@ function BrowseScreenInner() {
           isLoading={isLoading}
           total={data.total}
           onLoadMore={() => setOffset((current) => current + PAGE_SIZE)}
+          loadMoreError={error}
+          onLoadMoreRetry={handleLoadMoreRetry}
         />
       )}
     </ScreenShell>

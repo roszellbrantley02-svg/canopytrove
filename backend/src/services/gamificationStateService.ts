@@ -59,6 +59,14 @@ export function createDefaultGamificationStateDocument(
     friendsInvited: 0,
     followersCount: 0,
     totalRoutesStarted: 0,
+    scanStats: {
+      productScanCount: 0,
+      uniqueBrandIds: [],
+      uniqueTerpenes: [],
+      coaOpenCount: 0,
+      cleanPassCount: 0,
+      highThcScans: 0,
+    },
   };
 }
 
@@ -70,6 +78,22 @@ export function normalizeGamificationStateDocument(
   const fallback = createDefaultGamificationStateDocument(profileId, joinedDate);
   const totalPoints = Number(state?.totalPoints ?? fallback.totalPoints);
   const level = getLevelFromPoints(totalPoints);
+
+  const scanStats = state?.scanStats ?? fallback.scanStats;
+  const normalizedScanStats = scanStats
+    ? {
+        productScanCount: Number(scanStats.productScanCount ?? 0),
+        uniqueBrandIds: Array.isArray(scanStats.uniqueBrandIds)
+          ? scanStats.uniqueBrandIds.slice(0, 500)
+          : [],
+        uniqueTerpenes: Array.isArray(scanStats.uniqueTerpenes)
+          ? scanStats.uniqueTerpenes.slice(0, 100)
+          : [],
+        coaOpenCount: Number(scanStats.coaOpenCount ?? 0),
+        cleanPassCount: Number(scanStats.cleanPassCount ?? 0),
+        highThcScans: Number(scanStats.highThcScans ?? 0),
+      }
+    : fallback.scanStats;
 
   return {
     profileId,
@@ -98,5 +122,6 @@ export function normalizeGamificationStateDocument(
     friendsInvited: Number(state?.friendsInvited ?? fallback.friendsInvited),
     followersCount: Number(state?.followersCount ?? fallback.followersCount),
     totalRoutesStarted: Number(state?.totalRoutesStarted ?? fallback.totalRoutesStarted),
+    scanStats: normalizedScanStats,
   };
 }

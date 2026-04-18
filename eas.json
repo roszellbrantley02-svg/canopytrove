@@ -9,7 +9,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "NODE_ENV": "development"
+        "NODE_ENV": "development",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "preview": {
@@ -32,6 +33,10 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "$EAS_ANDROID_SERVICE_ACCOUNT_KEY_PATH"
+      }
+    }
   }
 }

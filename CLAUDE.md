@@ -58,25 +58,52 @@ Rozell (rozell), solo founder building Canopy Trove — a licensed dispensary di
 
 ## Terms
 
-| Term          | Meaning                                                       |
-| ------------- | ------------------------------------------------------------- |
-| discovery run | Backend sweep that enriches storefronts via Google Places API |
-| storefront    | A dispensary listing (627 sources in DB)                      |
-| routeMode     | `preview` vs `verified` — affects navigation URL generation   |
-| zombie run    | A stuck discovery run record (status "running" forever)       |
-| OCM           | Office of Cannabis Management (NY regulator)                  |
-| placeId       | Google Place ID for precise navigation                        |
-| EAS           | Expo Application Services (build + submit + update)           |
-| OTA           | Over-the-air update via EAS Update                            |
+| Term            | Meaning                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| discovery run   | Backend sweep that enriches storefronts via Google Places API                               |
+| storefront      | A dispensary listing (627 sources in DB)                                                    |
+| routeMode       | `preview` vs `verified` — affects navigation URL generation                                 |
+| zombie run      | A stuck discovery run record (status "running" forever)                                     |
+| OCM             | Office of Cannabis Management (NY regulator)                                                |
+| placeId         | Google Place ID for precise navigation                                                      |
+| EAS             | Expo Application Services (build + submit + update)                                         |
+| OTA             | Over-the-air update via EAS Update                                                          |
+| COA             | Certificate of Analysis; lab report with cannabinoid potency, terpenes, contaminant results |
+| product scan    | User-initiated camera capture in Verify tab resolving to shop license or product COA        |
+| brand counter   | Aggregated Firestore document counting scans per brand across regions and time              |
+| scan resolution | Discriminated union result: `license`, `product`, or `unknown`                              |
 
 → Full glossary: memory/glossary.md
 
 ## App Store Status
 
-| Store       | Readiness | Notes                                                          |
-| ----------- | --------- | -------------------------------------------------------------- |
-| Apple       | 8/10      | Legal URLs wired, 17+ rating needed, OCM verification required |
-| Google Play | 4/10      | Blanket ban on marijuana-facilitating apps                     |
+| Store       | Readiness | Notes                                                                                                                            |
+| ----------- | --------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Apple       | 9.5/10    | Legal URLs wired, 17+ rating needed. Camera permission newly required. OCM verification + product scan **shipped** — Verify tab. |
+| Google Play | 4/10      | Blanket ban on marijuana-facilitating apps                                                                                       |
+
+## Licensed Shop Verifier (shipped)
+
+| Layer              | Piece                                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Data source        | NY OCM public dispensary registry via data.ny.gov SODA API (`jskf-tt3q`), refreshed hourly                                            |
+| Backend cache      | `ocmLicenseCacheService.ts` — TTL 1h, stale-serve 6h, Maps indexed by license / address+zip / normalized name                         |
+| Backend enrichment | `storefrontOcmEnrichment.ts` attaches `ocmVerification` to every summary & detail (fail-soft, 1500ms budget)                          |
+| Public endpoint    | `GET /licenses/verify?license=&name=&address=&city=&zip=` — no auth, Cache-Control 5m + SWR 10m                                       |
+| Frontend tab       | `Verify` tab sits between `HotDeals` and `Profile`; `src/screens/VerifyScreen.tsx` form + result + disclaimer                         |
+| Listing badge      | `LicensedBadge` inline pill on `StorefrontRouteCard`, full card on `StorefrontDetailScreen` — "Per OCM public records, updated today" |
+
+## Product Scan Pipeline (shipped)
+
+| Layer            | Piece                                                                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Data source      | 6 NY lab COA URL parsers (Kaycha Labs, NY Green Analytics, ProVerde, Keystone State Testing, ACT Laboratories, generic fallback)                        |
+| Backend services | `productCatalogService.ts` (lab metadata + parsing), `scanIngestionService.ts` (anonymous install-ID logging), `brandAnalyticsService.ts` (aggregation) |
+| Endpoints        | `POST /scans/ingest` (App Check gated, 30 req/min), `GET /products/resolve` (cached 60s SWR 300s)                                                       |
+| Firestore        | `productScans` collection (anonymous by install ID), `brandCounters` aggregation collection (regional brand trending)                                   |
+| Frontend tab     | `VerifyScreen.tsx` — camera-first with full-bleed CameraView, top-left "Can't scan? Enter info" pill for manual fallback                                |
+| Result screen    | `ScanResultScreen.tsx` — shared renderer handling license/product/unknown resolutions, displays lab results or shop verification                        |
+| Privacy          | Anonymous by default (install ID only, never PII), optional location (aggregate-only), no cross-app tracking, disableable in Profile → Privacy          |
 
 ## Architecture Patterns (Research-Backed)
 

@@ -247,6 +247,14 @@ void (async () => {
   );
 
   pushCheck(
+    'Rate limit pepper',
+    Boolean(serverConfig.rateLimitPepper),
+    serverConfig.rateLimitPepper
+      ? 'RATE_LIMIT_PEPPER is configured.'
+      : 'Set RATE_LIMIT_PEPPER via Secret Manager so IP-based rate limiting uses an unpredictable pepper.',
+  );
+
+  pushCheck(
     'Backend Firebase admin access',
     hasBackendFirebaseConfig,
     hasBackendFirebaseConfig

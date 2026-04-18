@@ -62,11 +62,6 @@ function LeaderboardScreenInner() {
   const resolvedRank = Math.max(rankData.rank, currentProfileId ? 1 : 0);
   const levelProgressWidth: DimensionValue = `${Math.max(6, levelProgress * 100)}%`;
 
-  // Note: useGamificationLeaderboard and useGamificationLeaderboardRank hooks don't currently
-  // expose error states. If API failures occur, we should add error handling to these hooks
-  // and then add ErrorRecoveryCard rendering here when those errors are exposed.
-  // TODO: Add error state handling once hooks expose error information.
-
   return (
     <ScreenShell
       eyebrow="Progress"

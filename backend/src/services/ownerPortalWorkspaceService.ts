@@ -76,6 +76,14 @@ import { getOwnerProfile } from './ownerPortalWorkspaceData';
 import { resolveOwnerTier, getTierLimits, TierAccessError } from './ownerTierGatingService';
 import type { OwnerSubscriptionTier, TierFeatureLimits } from './ownerTierGatingService';
 import { resolveOwnerActiveLocation } from './ownerMultiLocationService';
+import {
+  getOwnerStorefrontBrands,
+  saveOwnerStorefrontBrands,
+} from './ownerStorefrontBrandsService';
+import {
+  getBrandScansNearStorefront,
+  type BrandActivityNearStorefront,
+} from './brandAnalyticsService';
 
 const TARGETED_AUDIENCES = new Set(['all_followers', 'frequent_visitors', 'new_customers']);
 const DISPENSARIES_COLLECTION = 'dispensaries';
@@ -925,4 +933,119 @@ export async function replyToOwnerPortalReview(
     ownerDisplayName: ownerProfile?.companyName || ownerProfile?.legalName || null,
     text,
   });
+}
+
+export async function getOwnerPortalBrands(
+  ownerUid: string,
+  locationId?: string | null,
+): Promise<{ storefrontId: string; brandIds: string[]; updatedAt: string | null }> {
+  const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
+    missingStorefrontMessage: 'Claim the correct storefront before managing your brand roster.',
+  });
+
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
+
+  const roster = await getOwnerStorefrontBrands(targetStorefrontId);
+  return {
+    storefrontId: targetStorefrontId,
+    brandIds: roster?.brandIds ?? [],
+    updatedAt: roster?.updatedAt ?? null,
+  };
+}
+
+export async function saveOwnerPortalBrands(
+  ownerUid: string,
+  input: { brandIds: string[] },
+  locationId?: string | null,
+): Promise<{ storefrontId: string; brandIds: string[]; updatedAt: string }> {
+  const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
+    requireVerified: true,
+    missingStorefrontMessage: 'Verify your storefront before publishing a brand roster.',
+  });
+
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
+
+  const saved = await saveOwnerStorefrontBrands({
+    storefrontId: targetStorefrontId,
+    ownerUid,
+    brandIds: input.brandIds,
+  });
+
+  return {
+    storefrontId: saved.storefrontId,
+    brandIds: saved.brandIds,
+    updatedAt: saved.updatedAt,
+  };
+}
+
+export type OwnerPortalBrandActivityResponse = {
+  storefrontId: string;
+  sinceDays: number;
+  brands: BrandActivityNearStorefront[];
+  generatedAt: string;
+};
+
+export async function getOwnerPortalBrandActivity(
+  ownerUid: string,
+  locationId?: string | null,
+  options?: { sinceDays?: number; limit?: number },
+): Promise<OwnerPortalBrandActivityResponse> {
+  const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
+    missingStorefrontMessage: 'Claim the correct storefront before viewing brand activity.',
+  });
+
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
+
+  const db = getBackendFirebaseDb();
+  let storefrontLat: number | null = null;
+  let storefrontLng: number | null = null;
+  if (db) {
+    try {
+      const doc = await db.collection(DISPENSARIES_COLLECTION).doc(targetStorefrontId).get();
+      if (doc.exists) {
+        const data = doc.data() as {
+          latitude?: number | null;
+          longitude?: number | null;
+        };
+        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          storefrontLat = data.latitude;
+          storefrontLng = data.longitude;
+        }
+      }
+    } catch (error) {
+      logger.warn('[ownerPortalWorkspaceService] Failed to load storefront coordinates', {
+        storefrontId: targetStorefrontId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const sinceDays = Math.max(1, Math.min(30, options?.sinceDays ?? 7));
+  const limit = Math.max(1, Math.min(20, options?.limit ?? 5));
+
+  if (storefrontLat === null || storefrontLng === null) {
+    return {
+      storefrontId: targetStorefrontId,
+      sinceDays,
+      brands: [],
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  const activity = await getBrandScansNearStorefront({
+    storefrontId: targetStorefrontId,
+    storefrontLat,
+    storefrontLng,
+    sinceDays,
+  });
+
+  return {
+    storefrontId: targetStorefrontId,
+    sinceDays,
+    brands: activity.slice(0, limit),
+    generatedAt: new Date().toISOString(),
+  };
 }

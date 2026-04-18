@@ -122,7 +122,7 @@ function ProfileEntryWorkspace() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Member sign in"
-              onPress={() => navigation.navigate('CanopyTroveSignIn')}
+              onPress={() => navigation.navigate('MemberSignIn')}
               style={({ pressed }) => [
                 internalStyles.primaryButton,
                 pressed && internalStyles.buttonPressed,
@@ -171,7 +171,7 @@ function ProfileEntryWorkspace() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Owner sign in"
-                onPress={() => navigation.navigate('OwnerPortalSignIn')}
+                onPress={() => navigation.navigate('OwnerSignIn')}
                 style={({ pressed }) => [
                   internalStyles.primaryButtonGold,
                   pressed && internalStyles.buttonPressed,
@@ -416,6 +416,12 @@ function MemberProfileWorkspace() {
         onPress: () => navigation.navigate('SavedStorefronts'),
       },
       {
+        key: 'brands',
+        label: 'My Brands',
+        iconName: 'ribbon-outline',
+        onPress: () => navigation.navigate('MyBrands'),
+      },
+      {
         key: 'leaderboard',
         label: 'Leaderboard',
         iconName: 'trophy-outline',
@@ -535,6 +541,41 @@ function MemberProfileWorkspace() {
               iconName="bookmark-outline"
             />
           </View>
+        </MotionInView>
+
+        <MotionInView dense delay={revealDelay(3) + 30}>
+          <SectionCard
+            title="Your brand lineup"
+            body="Save brands from scans or browse the NY lineup. Sort by smell, taste, or potency to find your next favorite."
+            iconName="ribbon-outline"
+            badgeLabel="Brands"
+            tone="primary"
+          >
+            <View style={internalStyles.actionStack}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open My Brands"
+                onPress={() => navigation.navigate('MyBrands')}
+                style={({ pressed }) => [
+                  internalStyles.primaryButton,
+                  pressed && internalStyles.buttonPressed,
+                ]}
+              >
+                <Text style={internalStyles.primaryButtonText}>My Brands</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Browse all brands"
+                onPress={() => navigation.navigate('BrowseBrands')}
+                style={({ pressed }) => [
+                  internalStyles.secondaryButton,
+                  pressed && internalStyles.buttonPressed,
+                ]}
+              >
+                <Text style={internalStyles.secondaryButtonText}>Browse brands</Text>
+              </Pressable>
+            </View>
+          </SectionCard>
         </MotionInView>
 
         <MotionInView dense delay={revealDelay(4)}>

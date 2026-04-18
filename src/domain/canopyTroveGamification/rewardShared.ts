@@ -109,11 +109,26 @@ function getEarnedBadgeMetric(
     case 'verified_user':
     case 'early_adopter':
       return state.badges.includes(badge.id) ? 1 : 0;
+    case 'scan_first_product':
+      return state.scanStats?.productScanCount ?? 0;
+    case 'scan_lab_curious':
+      return state.scanStats?.coaOpenCount ?? 0;
+    case 'scan_brand_scout':
+      return state.scanStats?.uniqueBrandIds?.length ?? 0;
+    case 'scan_terpene_explorer':
+      return state.scanStats?.uniqueTerpenes?.length ?? 0;
+    case 'scan_deep_verifier':
+      return state.scanStats?.productScanCount ?? 0;
+    case 'scan_clean_choice':
+      return state.scanStats?.cleanPassCount ?? 0;
+    case 'scan_cream_of_the_crop':
+      return state.scanStats?.highThcScans ?? 0;
     default:
       if (badge.category === 'review') return state.totalReviews;
       if (badge.category === 'photo') return state.totalPhotos;
       if (badge.category === 'explorer') return state.dispensariesVisited;
       if (badge.category === 'social') return state.totalHelpfulVotes;
+      if (badge.category === 'scan') return 0;
       return 0;
   }
 }

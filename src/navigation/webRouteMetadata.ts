@@ -47,6 +47,13 @@ const INDEXABLE_ROUTE_METADATA: Record<
     robots: 'index, follow',
     canonicalPath: '/hot-deals',
   },
+  '/verify': {
+    title: 'Is This Dispensary Licensed? Verify with Canopy Trove',
+    description:
+      'Check whether a New York dispensary is licensed. Cross-check address, name, or license number against the OCM public registry — updated hourly.',
+    robots: 'index, follow',
+    canonicalPath: '/verify',
+  },
 };
 
 function normalizePath(path?: string | null): string {

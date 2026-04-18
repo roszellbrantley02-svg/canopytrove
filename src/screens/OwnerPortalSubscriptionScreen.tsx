@@ -352,7 +352,7 @@ function OwnerPortalSubscriptionScreenInner() {
             ) : null}
             <OwnerPortalTierCards
               billingCycle={billingCycle}
-              currentTier={subscription?.tier ?? null}
+              currentTier={subscription?.tier ?? (hasAccess ? null : 'free')}
               disableButtons={
                 isLoading ||
                 !billingEnabledInThisBuild ||

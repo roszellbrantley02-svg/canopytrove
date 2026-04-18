@@ -2,7 +2,8 @@ import { Platform } from 'react-native';
 import { storefrontApiBaseUrl } from '../config/storefrontSourceConfig';
 import type { Coordinates, MarketArea } from '../types/storefront';
 import { getCanopyTroveAuthCacheKey, getCanopyTroveAuthIdToken } from './canopyTroveAuthService';
-import { getCachedAppProfile } from './appProfileService';
+import { getCachedAppProfile } from './appProfileCache';
+import { getAppCheckToken } from './appCheckService';
 
 export type StorefrontBackendHealth = {
   ok: boolean;
@@ -161,6 +162,20 @@ async function buildRequestHeaders(headers?: HeadersInit) {
     nextHeaders.set('X-Canopy-Profile-Id', profileId);
   }
   nextHeaders.set('X-Client-Platform', getClientPlatformHeader());
+
+  // Attach Firebase App Check token when available. Returns null when
+  // App Check isn't initialized (web, simulator without debug token,
+  // or pre-rollout dev build) — the backend middleware runs in
+  // log-only mode until we flip the enforcement env var, so a missing
+  // token never breaks the request here.
+  try {
+    const appCheckToken = await getAppCheckToken();
+    if (appCheckToken) {
+      nextHeaders.set('X-Firebase-AppCheck', appCheckToken);
+    }
+  } catch {
+    // Never let App Check token retrieval break a backend call.
+  }
 
   return nextHeaders;
 }

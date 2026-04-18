@@ -188,7 +188,11 @@ test('allows manual-review photos to stay linked to the review without publishin
     photoUploadIds: [session.id],
   });
 
-  assert.deepEqual(attached.photoIds, []);
+  // Photos awaiting manual review stay tracked on the review so they
+  // appear automatically when a moderator approves them later — but
+  // they never leak to public `photoUrls` until approval.
+  assert.deepEqual(attached.photoIds, [session.id]);
+  assert.deepEqual(attached.photoUrls, []);
   assert.equal(attached.moderationSummary.approvedCount, 0);
   assert.equal(attached.moderationSummary.pendingCount, 1);
   assert.match(attached.moderationSummary.message ?? '', /manual review/i);

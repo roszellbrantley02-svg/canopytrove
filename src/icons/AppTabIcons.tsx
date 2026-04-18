@@ -7,7 +7,7 @@ type TabIconProps = {
   accentColor?: string;
 };
 
-type TabGlyphName = 'nearby' | 'browse' | 'hotDeals' | 'owner' | 'profile';
+type TabGlyphName = 'nearby' | 'browse' | 'hotDeals' | 'verify' | 'owner' | 'profile';
 
 export function AppTabIcon({
   name,
@@ -26,6 +26,8 @@ export function AppTabIcon({
       return <ProvidedGlyphIcon name="browse" size={iconSize} opacity={opacity} />;
     case 'hotDeals':
       return <ProvidedGlyphIcon name="deals" size={iconSize} opacity={opacity} color={color} />;
+    case 'verify':
+      return <ProvidedGlyphIcon name="verify" size={iconSize} opacity={opacity} color={color} />;
     case 'owner':
       return (
         <ProvidedGlyphIcon name="storefront" size={iconSize} opacity={opacity} color={color} />

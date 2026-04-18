@@ -28,6 +28,10 @@ module.exports = ({ config }) => {
     plugins.push('./plugins/withAndroidAdiRegistration');
   }
 
+  if (!hasPlugin(plugins, './plugins/withIosUseModularHeaders')) {
+    plugins.push('./plugins/withIosUseModularHeaders');
+  }
+
   if (sentryOrganization && sentryProject && !hasPlugin(plugins, '@sentry/react-native/expo')) {
     plugins.push([
       '@sentry/react-native/expo',

@@ -3,6 +3,7 @@ import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
 import {
   parseOwnerPortalAlertSyncBody,
+  parseOwnerPortalBrandsBody,
   parseOwnerPortalLicenseComplianceBody,
   parseOwnerPortalProfileToolsBody,
   parseOwnerPortalPromotionBody,
@@ -19,8 +20,11 @@ import { syncOwnerPortalAuthClaims } from '../services/ownerPortalAuthClaimsServ
 import {
   createOwnerPortalPromotion,
   deleteOwnerPortalPromotion,
+  getOwnerPortalBrandActivity,
+  getOwnerPortalBrands,
   getOwnerPortalWorkspace,
   replyToOwnerPortalReview,
+  saveOwnerPortalBrands,
   saveOwnerPortalLicenseCompliance,
   saveOwnerPortalProfileTools,
   updateOwnerPortalPromotion,
@@ -45,6 +49,12 @@ const ownerComplianceRateLimiter = createRateLimitMiddleware({
 });
 const ownerProfileToolsRateLimiter = createRateLimitMiddleware({
   name: 'owner-profile-tools',
+  windowMs: 60_000,
+  max: 10,
+  methods: ['PUT'],
+});
+const ownerBrandsRateLimiter = createRateLimitMiddleware({
+  name: 'owner-brands',
   windowMs: 60_000,
   max: 10,
   methods: ['PUT'],
@@ -238,5 +248,55 @@ ownerPortalWorkspaceRoutes.post(
       ownerUid,
       ...parseOwnerPortalAlertSyncBody(request.body),
     }),
+  ),
+);
+
+ownerPortalWorkspaceRoutes.get(
+  '/owner-portal/brands',
+  createOwnerPortalJsonRoute(
+    'Unknown owner brand roster failure',
+    async ({ ownerUid, request }) => {
+      const locationId =
+        typeof request.query.locationId === 'string'
+          ? request.query.locationId.trim() || null
+          : null;
+      return getOwnerPortalBrands(ownerUid, locationId);
+    },
+  ),
+);
+
+ownerPortalWorkspaceRoutes.put(
+  '/owner-portal/brands',
+  ownerBrandsRateLimiter,
+  createOwnerPortalJsonRoute(
+    'Unknown owner brand roster save failure',
+    async ({ ownerUid, request }) => {
+      await assertRuntimePolicyAllowsOwnerAction('profile_tools');
+      const locationId =
+        typeof request.body?.locationId === 'string'
+          ? request.body.locationId.trim() || null
+          : null;
+      return saveOwnerPortalBrands(ownerUid, parseOwnerPortalBrandsBody(request.body), locationId);
+    },
+  ),
+);
+
+ownerPortalWorkspaceRoutes.get(
+  '/owner-portal/brand-activity',
+  createOwnerPortalJsonRoute(
+    'Unknown owner brand activity failure',
+    async ({ ownerUid, request }) => {
+      const locationId =
+        typeof request.query.locationId === 'string'
+          ? request.query.locationId.trim() || null
+          : null;
+      const sinceDaysRaw =
+        typeof request.query.sinceDays === 'string' ? Number(request.query.sinceDays) : NaN;
+      const limitRaw = typeof request.query.limit === 'string' ? Number(request.query.limit) : NaN;
+      return getOwnerPortalBrandActivity(ownerUid, locationId, {
+        sinceDays: Number.isFinite(sinceDaysRaw) ? sinceDaysRaw : undefined,
+        limit: Number.isFinite(limitRaw) ? limitRaw : undefined,
+      });
+    },
   ),
 );

@@ -27,6 +27,18 @@ type StoredAppReviewRecord = {
   tags: string[];
   photoCount: number;
   photoIds: string[];
+  // Signed photo URLs cached at submission time so other viewers can see
+  // the photos even when the backend service account can't re-sign on read
+  // (for example, when Cloud Run is missing iam.serviceAccounts.signBlob).
+  // The backend still falls back to on-demand signing when this list is
+  // empty or no longer usable.
+  photoUrls?: string[];
+  // ISO timestamp of when the cached `photoUrls` were last generated. V4
+  // signed URLs from GCS expire after at most 7 days, so without this we
+  // can't tell whether a cached URL has gone stale and now 403s for every
+  // other viewer. When missing, we fall back to `createdAt` as the issue
+  // time so legacy records still get refreshed.
+  photoUrlsIssuedAt?: string | null;
   helpfulCount: number;
   helpfulVoterIds: string[];
   createdAt: string;
@@ -157,10 +169,114 @@ function normalizeOwnerReply(
   };
 }
 
+// V4 signed URLs expire after at most 7 days. Refresh any cached URLs
+// once they've been around for 5 days so other viewers never hit an
+// expired 403. The 2-day safety margin also covers clients that cache
+// responses.
+const PHOTO_URL_REFRESH_AFTER_MS = 5 * 24 * 60 * 60 * 1000;
+
+function photoUrlsAreFresh(review: StoredAppReviewRecord): boolean {
+  if (!Array.isArray(review.photoUrls) || review.photoUrls.length === 0) {
+    return false;
+  }
+  const issuedAtRaw = review.photoUrlsIssuedAt || review.createdAt;
+  const issuedAt = issuedAtRaw ? Date.parse(issuedAtRaw) : Number.NaN;
+  if (!Number.isFinite(issuedAt)) {
+    return false;
+  }
+  return Date.now() - issuedAt < PHOTO_URL_REFRESH_AFTER_MS;
+}
+
+async function persistRefreshedPhotoUrls(
+  review: StoredAppReviewRecord,
+  freshUrls: string[],
+  issuedAtIso: string,
+): Promise<void> {
+  if (!freshUrls.length) {
+    return;
+  }
+  const collectionRef = getAppReviewCollection();
+  if (collectionRef) {
+    try {
+      await collectionRef.doc(review.id).update({
+        photoUrls: freshUrls,
+        photoUrlsIssuedAt: issuedAtIso,
+      });
+    } catch (error) {
+      logger.warn(
+        `[storefrontCommunityService] failed to persist refreshed photo URLs for review ${review.id}`,
+        { error: error instanceof Error ? error.message : String(error) },
+      );
+    }
+    return;
+  }
+
+  // In-memory fallback path (tests, local dev without Firestore).
+  const reviews = appReviewStore.get(review.storefrontId);
+  if (!reviews) {
+    return;
+  }
+  const index = reviews.findIndex((entry) => entry.id === review.id);
+  if (index < 0) {
+    return;
+  }
+  const next = reviews.slice();
+  next[index] = {
+    ...reviews[index],
+    photoUrls: freshUrls,
+    photoUrlsIssuedAt: issuedAtIso,
+  };
+  appReviewStore.set(review.storefrontId, next);
+}
+
+async function resolveReviewPhotoUrls(review: StoredAppReviewRecord): Promise<string[]> {
+  const cachedPhotoUrls = Array.isArray(review.photoUrls)
+    ? review.photoUrls.filter(
+        (value): value is string => typeof value === 'string' && value.length > 0,
+      )
+    : [];
+
+  // If we have no photo IDs, there's nothing to regenerate.
+  if (!review.photoIds || review.photoIds.length === 0) {
+    return cachedPhotoUrls;
+  }
+
+  // Cached URLs are still safely within TTL — serve them as-is.
+  if (photoUrlsAreFresh(review)) {
+    return cachedPhotoUrls;
+  }
+
+  // Either no cached URLs, or they're past the refresh window. Try to
+  // generate fresh signed URLs. If that fails (common on Cloud Run when
+  // `iam.serviceAccounts.signBlob` isn't granted), fall back to whatever
+  // was cached so we never regress — better to maybe-broken than always-
+  // broken.
+  try {
+    const freshUrls = await getApprovedReviewPhotoUrls(review.photoIds);
+    if (freshUrls.length > 0) {
+      const issuedAt = new Date().toISOString();
+      // Mutate the in-memory review so any subsequent callers using this
+      // record in the same request see the fresh URLs.
+      review.photoUrls = freshUrls;
+      review.photoUrlsIssuedAt = issuedAt;
+      // Persist in the background — don't block the response on this.
+      void persistRefreshedPhotoUrls(review, freshUrls, issuedAt);
+      return freshUrls;
+    }
+  } catch (error) {
+    logger.warn(
+      `[storefrontCommunityService] failed to regenerate photo URLs for review ${review.id}`,
+      { error: error instanceof Error ? error.message : String(error) },
+    );
+  }
+  return cachedPhotoUrls;
+}
+
 async function mapStoredReviewToAppReview(
   review: StoredAppReviewRecord,
   viewerProfileId?: string | null,
 ): Promise<StorefrontAppReviewRecord> {
+  const photoUrls = await resolveReviewPhotoUrls(review);
   return {
     id: review.id,
     authorName: review.authorName,
@@ -173,7 +289,7 @@ async function mapStoredReviewToAppReview(
     helpfulCount: review.helpfulCount,
     isOwnReview: Boolean(viewerProfileId && viewerProfileId === review.profileId),
     ownerReply: normalizeOwnerReply(review.ownerReply),
-    photoUrls: await getApprovedReviewPhotoUrls(review.photoIds),
+    photoUrls,
     photoCount: review.photoIds.length,
   };
 }
@@ -229,6 +345,15 @@ function normalizeStoredReviewRecord(review: StoredAppReviewRecord): StoredAppRe
           : [],
       ),
     ).slice(0, 4),
+    photoUrls: Array.isArray(review.photoUrls)
+      ? review.photoUrls
+          .filter((url): url is string => typeof url === 'string' && url.length > 0)
+          .slice(0, 4)
+      : [],
+    photoUrlsIssuedAt:
+      typeof review.photoUrlsIssuedAt === 'string' && review.photoUrlsIssuedAt.length > 0
+        ? review.photoUrlsIssuedAt
+        : null,
     helpfulVoterIds: normalizeHelpfulVoterIds(review.helpfulVoterIds),
     ownerReply: normalizeOwnerReply(review.ownerReply),
   };
@@ -488,6 +613,8 @@ export async function submitStorefrontAppReview(
     tags: normalizeTags(input.tags),
     photoCount: Math.max(0, Math.floor(input.photoCount ?? 0)),
     photoIds: [],
+    photoUrls: [],
+    photoUrlsIssuedAt: null,
     helpfulCount: 0,
     helpfulVoterIds: [],
     createdAt: new Date().toISOString(),
@@ -504,6 +631,10 @@ export async function submitStorefrontAppReview(
     });
 
     reviewRecord.photoIds = attachedPhotos.photoIds;
+    reviewRecord.photoUrls = attachedPhotos.photoUrls;
+    reviewRecord.photoUrlsIssuedAt = attachedPhotos.photoUrls.length
+      ? new Date().toISOString()
+      : null;
     reviewRecord.photoCount = attachedPhotos.photoIds.length;
     photoModeration = attachedPhotos.moderationSummary;
   }
@@ -570,6 +701,10 @@ export async function updateStorefrontAppReview(
     });
 
     nextReview.photoIds = attachedPhotos.photoIds;
+    nextReview.photoUrls = attachedPhotos.photoUrls;
+    nextReview.photoUrlsIssuedAt = attachedPhotos.photoUrls.length
+      ? new Date().toISOString()
+      : null;
     nextReview.photoCount = attachedPhotos.photoIds.length;
     photoModeration = attachedPhotos.moderationSummary;
   }

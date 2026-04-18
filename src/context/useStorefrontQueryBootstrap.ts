@@ -2,7 +2,7 @@ import { useEffect, type Dispatch, type SetStateAction } from 'react';
 import { getAvailableMarketAreas, getCachedMarketAreas } from '../services/marketAreaService';
 import {
   findNearestArea,
-  getBestAvailableDeviceLocation,
+  getPassiveDeviceLocation,
   resolveDeviceLocationLabel,
 } from '../services/locationService';
 import type { Coordinates, MarketArea } from '../types/storefront';
@@ -69,7 +69,13 @@ export function useStorefrontQueryBootstrap({
     let alive = true;
 
     void (async () => {
-      const result = await getBestAvailableDeviceLocation();
+      // Silent bootstrap must NOT trigger the native iOS permission prompt
+      // on first launch — that's a cold prompt without in-app context and
+      // cuts the allow rate by ~40%. `getPassiveDeviceLocation` only reads
+      // location if permission was granted in a prior session. The explicit
+      // "Use my location" tap flow still uses `getBestAvailableDeviceLocation`
+      // and gets to drive the native prompt.
+      const result = await getPassiveDeviceLocation();
       if (!alive || !result.coordinates) {
         return;
       }

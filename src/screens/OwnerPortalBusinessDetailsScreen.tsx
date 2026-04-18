@@ -52,7 +52,9 @@ function OwnerPortalBusinessDetailsScreenInner() {
     }
 
     if (!ownerUid) {
-      setErrorText('Owner session is missing. Please sign in again from the Owner Portal.');
+      setErrorText(
+        'You are not signed in as an owner. Please sign in again from the Owner Portal.',
+      );
       return;
     }
 

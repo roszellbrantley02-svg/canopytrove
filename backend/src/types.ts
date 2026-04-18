@@ -26,7 +26,8 @@ export type GamificationBadgeCategoryApiDocument =
   | 'location'
   | 'special'
   | 'community'
-  | 'explorer';
+  | 'explorer'
+  | 'scan';
 
 export type GamificationBadgeTierApiDocument =
   | 'bronze'
@@ -46,6 +47,15 @@ export type GamificationBadgeDefinitionApiDocument = {
   requirement: number;
   hidden: boolean;
   tier?: GamificationBadgeTierApiDocument;
+};
+
+export type ScanStatsApiDocument = {
+  productScanCount: number;
+  uniqueBrandIds: string[];
+  uniqueTerpenes: string[];
+  coaOpenCount: number;
+  cleanPassCount: number;
+  highThcScans: number;
 };
 
 export type StorefrontGamificationStateApiDocument = {
@@ -73,6 +83,7 @@ export type StorefrontGamificationStateApiDocument = {
   friendsInvited: number;
   followersCount: number;
   totalRoutesStarted: number;
+  scanStats?: ScanStatsApiDocument;
 };
 
 export type StorefrontRouteStateApiDocument = {
@@ -164,6 +175,23 @@ export type StorefrontSummaryApiDocument = {
   promotionAndroidEligible?: boolean;
   /** Whether this storefront is visible in listings (false = hidden/delisted). */
   isVisible?: boolean;
+  /**
+   * OCM public-records licensing signal, derived from the cached Current OCM
+   * Licenses dataset (data.ny.gov, jskf-tt3q). Surfaced on cards + details as
+   * a "Verified licensed" badge. Absence of a match is not a claim that the
+   * shop is unlicensed — see frontend disclaimer copy.
+   */
+  ocmVerification?: OcmVerificationApiDocument | null;
+};
+
+export type OcmVerificationApiDocument = {
+  licensed: boolean;
+  confidence: 'exact' | 'address' | 'name' | 'fuzzy' | 'none';
+  asOf: string;
+  source: 'ocm_public_records';
+  licenseNumber?: string | null;
+  licenseType?: string | null;
+  licenseeName?: string | null;
 };
 
 export type StorefrontDetailApiDocument = {
@@ -213,6 +241,7 @@ export type StorefrontDetailApiDocument = {
   amenities: string[];
   editorialSummary: string | null;
   routeMode: 'preview' | 'verified';
+  ocmVerification?: OcmVerificationApiDocument | null;
 };
 
 export type StorefrontSummarySortKey = 'distance' | 'rating' | 'reviews';
@@ -235,4 +264,178 @@ export type MarketAreaApiDocument = {
   label: string;
   subtitle: string;
   center: Coordinates;
+};
+
+/**
+ * Lab name for COA (Certificate of Analysis) parsing.
+ * Supports six NY lab formats plus generic fallback.
+ */
+export type LabName =
+  | 'kaycha_labs'
+  | 'ny_green_analytics'
+  | 'proverde_laboratories'
+  | 'keystone_state_testing'
+  | 'act_laboratories'
+  | 'generic';
+
+/**
+ * Parsed Certificate of Analysis (COA) metadata extracted from a URL.
+ * For most labs, only URL-derived fields are available initially.
+ * Full HTML/PDF parsing is marked as TODO for each lab.
+ */
+export type ProductCOA = {
+  labName: LabName;
+  brandName?: string;
+  productName?: string;
+  batchId?: string;
+  thcPercent?: number;
+  cbdPercent?: number;
+  terpenes?: string[];
+  contaminants?: {
+    pesticides?: boolean;
+    heavyMetals?: boolean;
+    microbial?: boolean;
+    solvents?: boolean;
+  };
+  passFailOverall?: 'pass' | 'fail' | 'unknown';
+  coaUrl: string;
+  retrievedAt: string;
+};
+
+/**
+ * Result of scanning and resolving a raw scanned code.
+ * Supports license numbers, COA URLs, and unknown codes.
+ */
+export type ScanResolution =
+  | {
+      kind: 'license';
+      license: {
+        licenseNumber: string;
+        licenseType: string;
+        licenseeName: string;
+        status: string;
+      };
+    }
+  | {
+      kind: 'product';
+      coa: ProductCOA;
+    }
+  | {
+      kind: 'unknown';
+      rawCode: string;
+    };
+
+/**
+ * Persisted scan record in Firestore productScans collection.
+ * Captures what was scanned and how it resolved, without PII.
+ */
+export type ScanRecord = {
+  installId: string;
+  rawCode: string;
+  resolvedKind: 'license' | 'product' | 'unknown';
+  brandId?: string;
+  productId?: string;
+  batchId?: string;
+  labName?: string;
+  storefrontId?: string;
+  scannedAt: string;
+  geoHint?: {
+    lat: number;
+    lng: number;
+    accuracyMeters?: number;
+  };
+  schemaVersion: 1;
+};
+
+/**
+ * Aggregated brand scan counter in Firestore brandCounters collection.
+ * Maintained via transactions with atomic increments.
+ */
+export type BrandCounter = {
+  brandId: string;
+  brandName?: string;
+  totalScans: number;
+  lastScannedAt: string;
+  byRegion: Record<string, number>;
+};
+
+/**
+ * Brand smell tag (dominant terpene smell category).
+ */
+export type BrandSmellTag =
+  | 'citrus'
+  | 'earthy'
+  | 'pine'
+  | 'floral'
+  | 'peppery'
+  | 'fruity'
+  | 'hoppy'
+  | 'sweet'
+  | 'musky'
+  | 'woody';
+
+/**
+ * Brand taste tag (derived from terpenes).
+ */
+export type BrandTasteTag =
+  | 'citrus'
+  | 'musky'
+  | 'herbal'
+  | 'sweet'
+  | 'piney'
+  | 'sharp'
+  | 'floral'
+  | 'lavender'
+  | 'peppery'
+  | 'spicy'
+  | 'hoppy'
+  | 'woody'
+  | 'fruity'
+  | 'tropical'
+  | 'chamomile';
+
+/**
+ * Sorting key for brand profiles.
+ */
+export type BrandSortKey = 'smell' | 'taste' | 'potency';
+
+/**
+ * Full brand profile with merged seed + live scan data.
+ */
+export type BrandProfile = {
+  brandId: string;
+  displayName: string;
+  aggregateDominantTerpene?: string;
+  smellTags: BrandSmellTag[];
+  tasteTags: BrandTasteTag[];
+  avgThcPercent: number;
+  contaminantPassRate: number; // 0..1
+  totalScans: number;
+  lastScannedAt?: string;
+  description?: string;
+  website?: string;
+  source: 'seed' | 'scanned' | 'merged';
+};
+
+/**
+ * Shorter brand profile for list views.
+ */
+export type BrandProfileSummary = {
+  brandId: string;
+  displayName: string;
+  aggregateDominantTerpene?: string;
+  smellTags: BrandSmellTag[];
+  avgThcPercent: number;
+  contaminantPassRate: number;
+  totalScans: number;
+};
+
+/**
+ * Favorite brand entry in user's profile.
+ */
+export type FavoriteBrandEntry = {
+  brandId: string;
+  savedAt: string;
+  displayName: string;
+  note?: string;
 };

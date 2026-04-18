@@ -33,6 +33,10 @@ import {
 } from './services/ownerPortalWorkspaceService';
 import type { ViewerContext } from './services/ownerPortalWorkspaceData';
 import { listStorefrontAppReviews } from './services/storefrontCommunityService';
+import {
+  attachOcmVerificationToDetail,
+  attachOcmVerificationToSummaries,
+} from './services/storefrontOcmEnrichment';
 
 const SUMMARY_GOOGLE_ENRICHMENT_TIMEOUT_MS = 1_500;
 const SUMMARY_DETAIL_FALLBACK_TIMEOUT_MS = 400;
@@ -378,8 +382,11 @@ export async function getStorefrontSummaries(
   //   prewarmGooglePlacesEnrichmentForSummaries(payload.items, Math.min(limit, 3));
   // }
 
+  const itemsWithOcm = await attachOcmVerificationToSummaries(payload.items);
+
   return {
     ...payload,
+    items: itemsWithOcm,
   };
 }
 
@@ -400,7 +407,10 @@ export async function getStorefrontSummariesByIds(
   const enhancedResults = await Promise.allSettled(
     cached.map((item) => enhanceSummary(item, includeMemberDeals, viewerContext, clientPlatform)),
   );
-  return enhancedResults.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+  const items = enhancedResults.flatMap((result) =>
+    result.status === 'fulfilled' ? [result.value] : [],
+  );
+  return attachOcmVerificationToSummaries(items);
 }
 
 export async function resolveStorefrontBySlug(slug: string) {
@@ -549,11 +559,12 @@ export async function getStorefrontDetail(
       appReviews,
     };
 
-    return withTimeoutFallback(
+    const enhancedDetail = await withTimeoutFallback(
       enhanceDetail(detail, includeMemberDeals, viewerContext, clientPlatform),
       includeMemberDeals ? detail : stripMemberOnlyDetailPromotionFields(detail),
       DETAIL_ENHANCEMENT_TIMEOUT_MS,
     );
+    return attachOcmVerificationToDetail(enhancedDetail, summary);
   };
 
   if (summary && hasGooglePlacesConfig() && !shouldAwaitGoogleEnrichment) {

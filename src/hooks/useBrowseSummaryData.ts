@@ -21,9 +21,10 @@ export function useBrowseSummaries(
   sortKey: BrowseSortKey,
   limit: number,
   offset: number,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; refetchKey?: number },
 ) {
   const enabled = options?.enabled ?? true;
+  const refetchKey = options?.refetchKey ?? 0;
   const { authSession } = useStorefrontProfileController();
   const authFetchKey = deriveAuthFetchKey(authSession);
   const promotionRevision = useStorefrontPromotionRevision();
@@ -179,7 +180,17 @@ export function useBrowseSummaries(
     return () => {
       alive = false;
     };
-  }, [authFetchKey, emptyPage, enabled, limit, offset, promotionRevision, resolvedQuery, sortKey]);
+  }, [
+    authFetchKey,
+    emptyPage,
+    enabled,
+    limit,
+    offset,
+    promotionRevision,
+    refetchKey,
+    resolvedQuery,
+    sortKey,
+  ]);
 
   return { data, error, isLoading };
 }

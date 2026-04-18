@@ -128,6 +128,55 @@ export function replyToOwnerPortalReview(
   );
 }
 
+export type OwnerPortalBrandsResponse = {
+  storefrontId: string;
+  brandIds: string[];
+  updatedAt: string | null;
+};
+
+export function getOwnerPortalBrands(locationId?: string | null) {
+  const query = locationId ? `?locationId=${encodeURIComponent(locationId)}` : '';
+  return requestOwnerPortalJson<OwnerPortalBrandsResponse>(`/owner-portal/brands${query}`);
+}
+
+export function saveOwnerPortalBrands(brandIds: string[], locationId?: string | null) {
+  return requestOwnerPortalJson<OwnerPortalBrandsResponse & { updatedAt: string }>(
+    '/owner-portal/brands',
+    {
+      method: 'PUT',
+      body: { brandIds, ...(locationId ? { locationId } : {}) },
+    },
+  );
+}
+
+export type OwnerPortalBrandActivityBrand = {
+  brandId: string;
+  brandName: string;
+  scansNearby: number;
+};
+
+export type OwnerPortalBrandActivityResponse = {
+  storefrontId: string;
+  sinceDays: number;
+  brands: OwnerPortalBrandActivityBrand[];
+  generatedAt: string;
+};
+
+export function getOwnerPortalBrandActivity(options?: {
+  locationId?: string | null;
+  sinceDays?: number;
+  limit?: number;
+}) {
+  const params = new URLSearchParams();
+  if (options?.locationId) params.set('locationId', options.locationId);
+  if (options?.sinceDays !== undefined) params.set('sinceDays', String(options.sinceDays));
+  if (options?.limit !== undefined) params.set('limit', String(options.limit));
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return requestOwnerPortalJson<OwnerPortalBrandActivityResponse>(
+    `/owner-portal/brand-activity${query}`,
+  );
+}
+
 export function syncOwnerPortalAlerts(devicePushToken?: string | null) {
   return requestOwnerPortalJson<OwnerPortalWorkspaceDocument['ownerAlertStatus']>(
     '/owner-portal/alerts/sync',

@@ -44,6 +44,29 @@ type FollowersUpdatedPayload = {
   occurredAt?: string;
 };
 
+type ScanCompletedPayload = {
+  scanKind: 'license' | 'product' | 'unknown';
+  brandId?: string;
+  labName?: string;
+  thcPercent?: number;
+  contaminants?: {
+    pesticides?: boolean;
+    heavyMetals?: boolean;
+    microbial?: boolean;
+    solvents?: boolean;
+  };
+  isNewBrandForUser?: boolean;
+  terpenes?: string[];
+  occurredAt?: string;
+};
+
+type CoaOpenedPayload = {
+  brandId: string;
+  labName: string;
+  batchId?: string;
+  occurredAt?: string;
+};
+
 export function applyRouteStartedReward(
   state: StorefrontGamificationState,
   payload: RouteStartedPayload,
@@ -153,6 +176,96 @@ export function applyFollowersUpdatedReward(
       followersCount: count,
     },
   );
+}
+
+export function applyScanCompletedReward(
+  state: StorefrontGamificationState,
+  payload: ScanCompletedPayload,
+): GamificationRewardResult {
+  const occurredAt = payload.occurredAt ?? getCurrentIsoDate();
+
+  // Only award points for product scans
+  if (payload.scanKind !== 'product') {
+    return finalizeReward(state, 'scan_completed', occurredAt, 0, {});
+  }
+
+  const scanStats = state.scanStats ?? {
+    productScanCount: 0,
+    uniqueBrandIds: [],
+    uniqueTerpenes: [],
+    coaOpenCount: 0,
+    cleanPassCount: 0,
+    highThcScans: 0,
+  };
+
+  // Base points for scan
+  let pointsEarned = CANOPYTROVE_POINTS.scan_completed;
+
+  // Bonus for new brand
+  if (payload.isNewBrandForUser) {
+    pointsEarned += CANOPYTROVE_POINTS.scan_new_brand_bonus;
+  }
+
+  // Update scan stats
+  const updatedScanStats = { ...scanStats };
+  updatedScanStats.productScanCount += 1;
+
+  // Track unique brands
+  if (payload.brandId && !scanStats.uniqueBrandIds.includes(payload.brandId)) {
+    updatedScanStats.uniqueBrandIds = [...scanStats.uniqueBrandIds, payload.brandId].slice(-500);
+  }
+
+  // Track unique terpenes
+  if (payload.terpenes && Array.isArray(payload.terpenes) && payload.terpenes.length > 0) {
+    const dominantTerpene = payload.terpenes[0];
+    if (dominantTerpene && !scanStats.uniqueTerpenes.includes(dominantTerpene)) {
+      updatedScanStats.uniqueTerpenes = [...scanStats.uniqueTerpenes, dominantTerpene].slice(-100);
+    }
+  }
+
+  // Track clean passes
+  const isCleanPass =
+    payload.contaminants &&
+    payload.contaminants.pesticides !== true &&
+    payload.contaminants.heavyMetals !== true &&
+    payload.contaminants.microbial !== true &&
+    payload.contaminants.solvents !== true;
+  if (isCleanPass) {
+    updatedScanStats.cleanPassCount += 1;
+  }
+
+  // Track high THC scans
+  if (payload.thcPercent !== undefined && payload.thcPercent >= 25) {
+    updatedScanStats.highThcScans += 1;
+  }
+
+  return finalizeReward(state, 'scan_completed', occurredAt, pointsEarned, {
+    scanStats: updatedScanStats,
+  });
+}
+
+export function applyCoaOpenedReward(
+  state: StorefrontGamificationState,
+  payload: CoaOpenedPayload,
+): GamificationRewardResult {
+  const occurredAt = payload.occurredAt ?? getCurrentIsoDate();
+  const pointsEarned = CANOPYTROVE_POINTS.coa_opened;
+
+  const scanStats = state.scanStats ?? {
+    productScanCount: 0,
+    uniqueBrandIds: [],
+    uniqueTerpenes: [],
+    coaOpenCount: 0,
+    cleanPassCount: 0,
+    highThcScans: 0,
+  };
+
+  const updatedScanStats = { ...scanStats };
+  updatedScanStats.coaOpenCount += 1;
+
+  return finalizeReward(state, 'coa_opened', occurredAt, pointsEarned, {
+    scanStats: updatedScanStats,
+  });
 }
 
 export function getBadgeDefinitions() {

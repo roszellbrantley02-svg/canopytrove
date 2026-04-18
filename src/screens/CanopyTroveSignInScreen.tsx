@@ -13,6 +13,32 @@ import { trackAnalyticsEvent } from '../services/analyticsService';
 import { signInCanopyTroveEmailPassword } from '../services/canopyTroveAuthService';
 import { customerEntryStyles as styles } from './customerEntry/customerEntryStyles';
 
+// Firebase's signInWithEmailAndPassword has no built-in timeout. On a bad
+// network the call can stall indefinitely, leaving the button frozen in
+// "Signing In..." with no error shown. Cap the UX wait at 30 seconds and
+// return a friendlier error so the user can retry or check connectivity.
+const SIGN_IN_TIMEOUT_MS = 30_000;
+
+function withSignInTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(
+        new Error('Sign-in is taking longer than expected. Check your connection and try again.'),
+      );
+    }, timeoutMs);
+
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error: unknown) => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      });
+  });
+}
+
 function CanopyTroveSignInScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [email, setEmail] = React.useState('');
@@ -29,7 +55,10 @@ function CanopyTroveSignInScreenInner() {
     setIsSubmitting(true);
     setErrorText(null);
     try {
-      const authSession = await signInCanopyTroveEmailPassword(email, password);
+      const authSession = await withSignInTimeout(
+        signInCanopyTroveEmailPassword(email, password),
+        SIGN_IN_TIMEOUT_MS,
+      );
       if (!authSession?.uid) {
         throw new Error('Unable to sign in.');
       }

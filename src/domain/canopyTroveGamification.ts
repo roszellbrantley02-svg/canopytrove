@@ -14,6 +14,8 @@ import {
   applyReportSubmittedReward,
   applyReviewSubmittedReward,
   applyRouteStartedReward,
+  applyScanCompletedReward,
+  applyCoaOpenedReward,
   getBadgeDefinition,
   getBadgeDefinitions,
 } from './canopyTroveGamification/rewards';
@@ -34,6 +36,8 @@ export {
   applyReportSubmittedReward,
   applyReviewSubmittedReward,
   applyRouteStartedReward,
+  applyScanCompletedReward,
+  applyCoaOpenedReward,
   getBadgeDefinition,
   getBadgeDefinitions,
 } from './canopyTroveGamification/rewards';

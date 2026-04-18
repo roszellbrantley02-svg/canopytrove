@@ -18,6 +18,7 @@ export { parseAnalyticsEventBatchBody } from './validationAnalytics';
 export { parseGamificationEventBody } from './validationGamification';
 export {
   parseOwnerPortalAlertSyncBody,
+  parseOwnerPortalBrandsBody,
   parseOwnerPortalLicenseComplianceBody,
   parseOwnerPortalProfileToolsBody,
   parseOwnerPortalPromotionBody,
@@ -35,3 +36,4 @@ export {
   parseProfileUpdateBody,
   parseRouteStateBody,
 } from './validationProfileState';
+export { parseAddFavoriteBrandBody, parseBrandIdParam } from './validationFavoriteBrands';

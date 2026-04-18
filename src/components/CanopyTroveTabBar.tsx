@@ -12,23 +12,29 @@ const TAB_LABELS: Record<keyof RootTabParamList, string> = {
   Nearby: 'Nearby',
   Browse: 'Browse',
   HotDeals: Platform.OS === 'android' ? 'Updates' : 'Hot Deals',
+  Verify: 'Verify',
   Profile: 'Profile',
 };
 
-const TAB_ICONS: Record<keyof RootTabParamList, 'nearby' | 'browse' | 'hotDeals' | 'profile'> = {
+const TAB_ICONS: Record<
+  keyof RootTabParamList,
+  'nearby' | 'browse' | 'hotDeals' | 'verify' | 'profile'
+> = {
   Nearby: 'nearby',
   Browse: 'browse',
   HotDeals: 'hotDeals',
+  Verify: 'verify',
   Profile: 'profile',
 };
 
 const HOT_DEALS_TAB_COLOR = '#F5C86A';
+const VERIFY_TAB_COLOR = '#00F58C';
 
 type TabBarItemProps = {
   accessibilityLabel?: string;
   focused: boolean;
   label: string;
-  iconName: 'nearby' | 'browse' | 'hotDeals' | 'profile';
+  iconName: 'nearby' | 'browse' | 'hotDeals' | 'verify' | 'profile';
   accentColor?: string;
   onLongPress: () => void;
   onPress: () => void;
@@ -280,7 +286,13 @@ export function CanopyTroveTabBar({ state, descriptors, navigation }: BottomTabB
                       focused={focused}
                       iconName={TAB_ICONS[routeName]}
                       label={TAB_LABELS[routeName]}
-                      accentColor={routeName === 'HotDeals' ? HOT_DEALS_TAB_COLOR : undefined}
+                      accentColor={
+                        routeName === 'HotDeals'
+                          ? HOT_DEALS_TAB_COLOR
+                          : routeName === 'Verify'
+                            ? VERIFY_TAB_COLOR
+                            : undefined
+                      }
                       onLongPress={onLongPress}
                       onPress={onPress}
                       routeKey={route.key}

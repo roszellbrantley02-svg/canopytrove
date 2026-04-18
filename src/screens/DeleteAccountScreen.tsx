@@ -19,7 +19,7 @@ export function DeleteAccountScreen({
 }: {
   navigation: NativeStackNavigationProp<RootStackParamList>;
 }) {
-  const { appProfile, authSession, deleteAccount } = useStorefrontProfileController();
+  const { authSession, deleteAccount } = useStorefrontProfileController();
   const [confirmationText, setConfirmationText] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [statusState, setStatusState] = React.useState<{
@@ -55,6 +55,15 @@ export function DeleteAccountScreen({
           routes: [{ name: 'Tabs' }],
         });
       }
+    } catch {
+      // Defensive: deleteAccount() is expected to resolve with a result
+      // object even on partial failure, but an unexpected throw (e.g.,
+      // local storage write blocked) should still surface to the user
+      // rather than silently reset the submit button.
+      setStatusState({
+        text: 'Something went wrong while clearing your data. Please try again, or email support if this keeps happening.',
+        tone: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -81,12 +90,12 @@ export function DeleteAccountScreen({
           }
         >
           <View style={styles.list}>
-            <Text
-              style={styles.helperText}
-            >{`\u2022 Profile id: ${appProfile?.id ?? 'Unavailable'}`}</Text>
-            <Text
-              style={styles.helperText}
-            >{`\u2022 Account email: ${authSession.email ?? 'Guest session'}`}</Text>
+            <Text style={styles.helperText}>
+              {`\u2022 Account: ${authSession.email ?? 'Guest session on this device'}`}
+            </Text>
+            <Text style={styles.helperText}>
+              {`\u2022 Everything linked to this account on this device will be removed.`}
+            </Text>
             <Text style={styles.helperText}>
               {`\u2022 If a recent sign-in is needed, you'll be signed out first.`}
             </Text>

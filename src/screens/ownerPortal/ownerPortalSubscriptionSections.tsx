@@ -457,21 +457,30 @@ export function OwnerPortalTierCards({
         {OWNER_TIER_ORDER.map((tierKey) => {
           const tierDef = OWNER_TIERS[tierKey];
           const isCurrentTier = currentTier === tierKey;
+          const isFree = tierKey === 'free';
           const isFeatured = tierKey === 'pro';
-          const price =
-            billingCycle === 'annual'
+          const price = isFree
+            ? 'Free'
+            : billingCycle === 'annual'
               ? `$${Math.round(tierDef.annualPrice / 12)}/mo`
               : `$${tierDef.monthlyPrice}/mo`;
-          const billedNote =
-            billingCycle === 'annual' ? `Billed $${tierDef.annualPrice}/yr` : 'Billed monthly';
+          const billedNote = isFree
+            ? 'No credit card required'
+            : billingCycle === 'annual'
+              ? `Billed $${tierDef.annualPrice}/yr`
+              : 'Billed monthly';
 
-          const buttonLabel = billingTemporarilyPaused
-            ? 'Billing Paused'
-            : isSubmitting === tierKey
-              ? 'Opening...'
-              : isCurrentTier
-                ? 'Current Plan'
-                : `Start ${tierDef.label}`;
+          const buttonLabel = isFree
+            ? isCurrentTier
+              ? 'Current Plan'
+              : 'Get Started Free'
+            : billingTemporarilyPaused
+              ? 'Billing Paused'
+              : isSubmitting === tierKey
+                ? 'Opening...'
+                : isCurrentTier
+                  ? 'Current Plan'
+                  : `Start ${tierDef.label}`;
 
           return (
             <View
@@ -494,6 +503,16 @@ export function OwnerPortalTierCards({
                 </Text>
               ) : null}
               <TierFeatureList features={tierDef.features} />
+              {tierKey === 'free' ? (
+                <View style={styles.planFeatureList}>
+                  <TierLockedFeature label="Storefront editing (Verified+)" />
+                  <TierLockedFeature label="Hours management (Verified+)" />
+                  <TierLockedFeature label="Review replies (Verified+)" />
+                  <TierLockedFeature label="Analytics (Verified+)" />
+                  <TierLockedFeature label="Promotions (Growth+)" />
+                  <TierLockedFeature label="AI tools (Pro)" />
+                </View>
+              ) : null}
               {tierKey === 'verified' ? (
                 <View style={styles.planFeatureList}>
                   <TierLockedFeature label="Promotions (Growth+)" />
@@ -507,17 +526,31 @@ export function OwnerPortalTierCards({
                   <TierLockedFeature label="Multi-location (Pro)" />
                 </View>
               ) : null}
-              <Pressable
-                disabled={disableButtons || isCurrentTier}
-                onPress={() => onSelectTier(tierKey)}
-                style={[
-                  styles.primaryButton,
-                  (disableButtons || isCurrentTier) && styles.buttonDisabled,
-                  isCurrentTier && styles.buttonCurrentTier,
-                ]}
-              >
-                <Text style={styles.primaryButtonText}>{buttonLabel}</Text>
-              </Pressable>
+              {isFree ? (
+                <Pressable
+                  disabled={isCurrentTier}
+                  onPress={() => {}}
+                  style={[
+                    styles.secondaryButton,
+                    isCurrentTier && styles.buttonDisabled,
+                    isCurrentTier && styles.buttonCurrentTier,
+                  ]}
+                >
+                  <Text style={styles.secondaryButtonText}>{buttonLabel}</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  disabled={disableButtons || isCurrentTier}
+                  onPress={() => onSelectTier(tierKey)}
+                  style={[
+                    styles.primaryButton,
+                    (disableButtons || isCurrentTier) && styles.buttonDisabled,
+                    isCurrentTier && styles.buttonCurrentTier,
+                  ]}
+                >
+                  <Text style={styles.primaryButtonText}>{buttonLabel}</Text>
+                </Pressable>
+              )}
             </View>
           );
         })}

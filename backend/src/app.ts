@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express from 'express';
+import { createAppCheckGuardMiddleware } from './http/appCheckGuard';
 import { backendErrorHandler } from './http/errors';
 import { contentTypeEnforcementMiddleware } from './http/contentTypeEnforcement';
 import { createAuditLogMiddleware } from './http/auditLog';
@@ -20,9 +21,13 @@ import { clientRuntimeRoutes } from './routes/clientRuntimeRoutes';
 import { communityRoutes } from './routes/communityRoutes';
 import { communitySafetyStateRoutes } from './routes/communitySafetyStateRoutes';
 import { favoriteDealAlertRoutes } from './routes/favoriteDealAlertRoutes';
+import { favoriteBrandRoutes } from './routes/favoriteBrandRoutes';
 import { gamificationRoutes } from './routes/gamificationRoutes';
 import { leaderboardRoutes } from './routes/leaderboardRoutes';
+import { licenseVerifyRoutes } from './routes/licenseVerifyRoutes';
 import { locationRoutes } from './routes/locationRoutes';
+import { scanIngestRoutes } from './routes/scanIngestRoutes';
+import { productResolveRoutes } from './routes/productResolveRoutes';
 import { marketAreaRoutes } from './routes/marketAreaRoutes';
 import { memberEmailRoutes } from './routes/memberEmailRoutes';
 import { ownerBillingRoutes, ownerBillingWebhookHandler } from './routes/ownerBillingRoutes';
@@ -37,6 +42,7 @@ import { profileStateRoutes } from './routes/profileStateRoutes';
 import { resendWebhookHandler } from './routes/resendWebhookRoutes';
 import { routeStateRoutes } from './routes/routeStateRoutes';
 import { giphyGatewayRoutes } from './routes/giphyGatewayRoutes';
+import { sitemapRoutes } from './routes/sitemapRoutes';
 import { storefrontRoutes } from './routes/storefrontRoutes';
 import { accountSecurityRoutes } from './routes/accountSecurityRoutes';
 import { usernameRequestRoutes } from './routes/usernameRequestRoutes';
@@ -308,10 +314,19 @@ export function createApp() {
     response.json({ ok: true });
   });
 
+  // Sitemap + robots.txt — above abuse middleware so crawlers are never blocked
+  app.use('/', sitemapRoutes);
+
   app.use(express.json({ limit: '128kb' }));
   app.use(contentTypeEnforcementMiddleware);
   app.use(createAuditLogMiddleware());
   app.use(suspiciousActivityMiddleware);
+
+  // App Check verification. Runs in "log" mode by default — missing or
+  // invalid tokens are logged as warnings but requests still proceed.
+  // Flip APP_CHECK_ENFORCEMENT=enforce in Cloud Run once real iOS
+  // clients are sending tokens reliably (~1 week post-rollout).
+  app.use(createAppCheckGuardMiddleware());
 
   // Abuse-scored IP gate — flagged IPs get rejected before route handlers
   app.use((request, response, next) => {
@@ -332,9 +347,13 @@ export function createApp() {
   app.use('/', communityRoutes);
   app.use('/', communitySafetyStateRoutes);
   app.use('/', favoriteDealAlertRoutes);
+  app.use('/', favoriteBrandRoutes);
   app.use('/', gamificationRoutes);
   app.use('/', leaderboardRoutes);
+  app.use('/', licenseVerifyRoutes);
   app.use('/', locationRoutes);
+  app.use('/', scanIngestRoutes);
+  app.use('/', productResolveRoutes);
   app.use('/', marketAreaRoutes);
   app.use('/', memberEmailRoutes);
   app.use('/', ownerBillingRoutes);

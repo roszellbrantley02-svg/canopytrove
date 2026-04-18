@@ -11,6 +11,7 @@ import { AppBootScreen } from './src/components/AppBootScreen';
 import { StorefrontControllerProvider } from './src/context/StorefrontController';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { acceptAgeGate, hasAcceptedAgeGate } from './src/services/ageGateService';
+import { initializeAppCheck } from './src/services/appCheckService';
 import { primeAppBootstrap } from './src/services/appBootstrapService';
 import { initializeAnalytics } from './src/services/analyticsService';
 import { initializePostVisitPrompts } from './src/services/postVisitPromptService';
@@ -93,6 +94,11 @@ function App() {
 
     // Prime storefront data immediately — it feeds the first visible screen.
     void primeAppBootstrap();
+
+    // Kick off App Check attestation in the background. Token fetches
+    // later (in the HTTP client) await completion if still in flight.
+    // No-op on web and in dev clients without the native module.
+    void initializeAppCheck();
 
     // Defer non-critical services so they don't compete with first render.
     // Tier 1 (1.5s): error monitoring + analytics — needed for all traffic.

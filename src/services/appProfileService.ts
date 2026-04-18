@@ -5,11 +5,19 @@ import {
   getStorefrontBackendProfile,
   saveStorefrontBackendProfile,
 } from './storefrontBackendService';
+import {
+  getCachedAppProfile as readCachedAppProfile,
+  setCachedAppProfile,
+} from './appProfileCache';
 import type { AppProfile } from '../types/storefront';
 
 const APP_PROFILE_KEY = `${brand.storageNamespace}:app-profile`;
 
-let memoryCachedAppProfile: AppProfile | null = null;
+// Re-export so existing callers that import getCachedAppProfile from
+// './appProfileService' keep working. New imports in the backend HTTP
+// layer should go straight to './appProfileCache' to avoid re-introducing
+// the require cycle.
+export { getCachedAppProfile } from './appProfileCache';
 
 export function createAppProfileId() {
   return `canopytrove-profile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -33,12 +41,8 @@ export async function createFreshAppProfile() {
   return nextProfile;
 }
 
-export function getCachedAppProfile() {
-  return memoryCachedAppProfile;
-}
-
 export async function clearStoredAppProfile() {
-  memoryCachedAppProfile = null;
+  setCachedAppProfile(null);
 
   try {
     await AsyncStorage.removeItem(APP_PROFILE_KEY);
@@ -55,7 +59,7 @@ export async function loadAppProfile(): Promise<AppProfile | null> {
     }
 
     const profile = JSON.parse(rawValue) as AppProfile;
-    memoryCachedAppProfile = profile;
+    setCachedAppProfile(profile);
     return profile;
   } catch {
     return null;
@@ -63,7 +67,7 @@ export async function loadAppProfile(): Promise<AppProfile | null> {
 }
 
 export async function saveAppProfile(profile: AppProfile): Promise<void> {
-  memoryCachedAppProfile = profile;
+  setCachedAppProfile(profile);
 
   try {
     await AsyncStorage.setItem(APP_PROFILE_KEY, JSON.stringify(profile));
@@ -73,7 +77,7 @@ export async function saveAppProfile(profile: AppProfile): Promise<void> {
 }
 
 export async function ensureAppProfile(): Promise<AppProfile> {
-  const existingProfile = memoryCachedAppProfile ?? (await loadAppProfile());
+  const existingProfile = readCachedAppProfile() ?? (await loadAppProfile());
   if (existingProfile) {
     const nextProfile: AppProfile = {
       ...existingProfile,
@@ -90,7 +94,7 @@ export async function ensureAppProfile(): Promise<AppProfile> {
     if (needsNormalization) {
       await saveAppProfile(nextProfile);
     } else {
-      memoryCachedAppProfile = existingProfile;
+      setCachedAppProfile(existingProfile);
     }
 
     return nextProfile;

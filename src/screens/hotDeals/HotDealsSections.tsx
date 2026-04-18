@@ -291,6 +291,11 @@ export function HotDealsList({
   onLoadMore: () => void;
 }) {
   const isAndroid = Platform.OS === 'android';
+  // O(1) lookup per row instead of O(n) Array.includes on every render.
+  const visitedStorefrontIdSet = React.useMemo(
+    () => new Set(visitedStorefrontIds),
+    [visitedStorefrontIds],
+  );
 
   return (
     <View style={styles.list}>
@@ -302,7 +307,7 @@ export function HotDealsList({
             primaryActionLabel="Directions"
             secondaryActionLabel="Details"
             isSaved={isSavedStorefront(item.id)}
-            isVisited={visitedStorefrontIds.includes(item.id)}
+            isVisited={visitedStorefrontIdSet.has(item.id)}
             showPromotionText={true}
             onPress={() => onOpenDetail(item)}
             onPrimaryActionPress={() => onGoNow(item)}
