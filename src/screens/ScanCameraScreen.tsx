@@ -19,6 +19,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { CameraView } from 'expo-camera';
 import { useCameraPermissions } from 'expo-camera';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { InlineFeedbackPanel } from '../components/InlineFeedbackPanel';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
@@ -63,6 +64,16 @@ const MODE_COPY: Record<'product' | 'shop', { title: string; hint: string }> = {
 function ScanCameraScreenInner({ route, navigation }: ScanCameraScreenProps) {
   const mode = route.params?.mode ?? 'product';
   const copy = MODE_COPY[mode];
+
+  // Inject safe-area insets so the top pills clear the iOS notch / Dynamic
+  // Island and the Android status bar. The camera feed renders full-bleed
+  // underneath the pills, so a static `top: spacing.lg` was tucking the
+  // "Menu" back pill behind the status chrome on every modern iPhone and
+  // most Android devices. Reported as: "the button back is to gets in the
+  // way with the menu up top. And I can't click back."
+  const insets = useSafeAreaInsets();
+  const topOffset = Math.max(insets.top + spacing.xs, spacing.lg);
+  const bottomOffset = Math.max(insets.bottom + spacing.lg, spacing.xl);
 
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraState, setCameraState] = React.useState<CameraState>({
@@ -204,10 +215,17 @@ function ScanCameraScreenInner({ route, navigation }: ScanCameraScreenProps) {
         </View>
       )}
 
-      {/* ── Top-left: Close / back to menu ── */}
+      {/* ── Top-left: Close / back to menu ──
+         `top` is driven by safe-area inset so the pill never disappears
+         behind the notch / Dynamic Island / status bar. */}
       <Pressable
         onPress={handleClose}
-        style={({ pressed }) => [styles.topLeftPill, pressed && styles.topLeftPillPressed]}
+        hitSlop={12}
+        style={({ pressed }) => [
+          styles.topLeftPill,
+          { top: topOffset },
+          pressed && styles.topLeftPillPressed,
+        ]}
         accessibilityRole="button"
         accessibilityLabel="Close scanner and return to Verify menu"
       >
@@ -216,12 +234,14 @@ function ScanCameraScreenInner({ route, navigation }: ScanCameraScreenProps) {
       </Pressable>
 
       {/* ── Top-right: Mode pill so users know what kind of scan they picked ── */}
-      <View style={styles.topRightPill}>
+      <View style={[styles.topRightPill, { top: topOffset }]}>
         <Text style={styles.topRightPillText}>{copy.title}</Text>
       </View>
 
-      {/* ── Bottom: Mode-specific guidance + manual fallback ── */}
-      <View style={styles.bottomGuidance}>
+      {/* ── Bottom: Mode-specific guidance + manual fallback ──
+         Bottom inset keeps the pill above the home indicator on iPhone X+
+         and the gesture-nav strip on Android. */}
+      <View style={[styles.bottomGuidance, { bottom: bottomOffset }]}>
         <Text style={styles.bottomGuidanceText}>{copy.hint}</Text>
         <Pressable
           onPress={handleManualEntryTapped}
@@ -327,7 +347,7 @@ const styles = StyleSheet.create({
   },
   topLeftPill: {
     position: 'absolute',
-    top: spacing.lg,
+    // `top` is set inline via safe-area inset.
     left: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -350,7 +370,7 @@ const styles = StyleSheet.create({
   },
   topRightPill: {
     position: 'absolute',
-    top: spacing.lg,
+    // `top` is set inline via safe-area inset.
     right: spacing.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -367,7 +387,7 @@ const styles = StyleSheet.create({
   },
   bottomGuidance: {
     position: 'absolute',
-    bottom: spacing.xl,
+    // `bottom` is set inline via safe-area inset.
     left: 0,
     right: 0,
     alignItems: 'center',
