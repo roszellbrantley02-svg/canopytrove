@@ -20,15 +20,21 @@ import type { BrandProfile } from '../types/brandTypes';
 
 type BrandDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'BrandDetail'>;
 
-function BrandDetailScreenInner({ route }: BrandDetailScreenProps) {
+function BrandDetailScreenInner({ navigation, route }: BrandDetailScreenProps) {
   const { brandId } = route.params;
   const { authSession, profileId } = useStorefrontProfileController();
   const isAuthenticated = authSession.status === 'authenticated';
   const [brand, setBrand] = React.useState<BrandProfile | null>(null);
   const [isSaved, setIsSaved] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  // Distinguish "still loading" from "load finished, brand not found / errored".
+  // Without this flag we can't tell the three cases apart with a single
+  // (loading, brand) pair — a null brand looks identical to a loading one,
+  // so the screen would spin forever on a bad brandId or network error.
+  const [loadError, setLoadError] = React.useState<'not-found' | 'error' | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       try {
         const profilePromise = fetchBrandProfile(brandId);
@@ -39,19 +45,33 @@ function BrandDetailScreenInner({ route }: BrandDetailScreenProps) {
               )
             : Promise.resolve(false);
         const [profile, saved] = await Promise.all([profilePromise, savedPromise]);
+        if (cancelled) return;
         setBrand(profile);
         setIsSaved(saved);
         if (profile) {
+          setLoadError(null);
           trackAnalyticsEvent('brand_detail_opened', { brandId });
+        } else {
+          // fetchBrandProfile returns null when the document is missing.
+          // Surface that as an explicit "not-found" rather than letting the
+          // screen sit on a loading shell forever.
+          setLoadError('not-found');
+          trackAnalyticsEvent('brand_detail_missing', { brandId });
         }
       } catch (error) {
+        if (cancelled) return;
         console.warn('Failed to load brand detail', error);
+        setBrand(null);
+        setLoadError('error');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     void load();
+    return () => {
+      cancelled = true;
+    };
   }, [brandId, isAuthenticated, profileId]);
 
   const handleToggleSave = async () => {
@@ -83,10 +103,42 @@ function BrandDetailScreenInner({ route }: BrandDetailScreenProps) {
     }
   };
 
-  if (loading || !brand) {
+  if (loading) {
     return (
       <ScreenShell eyebrow="Brand" title="Loading..." subtitle="">
         <View style={{ padding: spacing.lg }} />
+      </ScreenShell>
+    );
+  }
+
+  if (!brand) {
+    const title = loadError === 'not-found' ? 'Brand not found' : "Couldn't load brand";
+    const message =
+      loadError === 'not-found'
+        ? "This brand isn't in our catalog yet. It may have been removed, or the link is out of date."
+        : 'Something went wrong loading this brand. Check your connection and try again.';
+    return (
+      <ScreenShell eyebrow="Brand" title={title} subtitle="">
+        <View style={styles.content}>
+          <SectionCard title={title} body={message}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              style={styles.backButton}
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  // Fallback: land users on the main tab stack if the detail
+                  // screen was opened without a back stack (e.g. deep link).
+                  navigation.navigate('Tabs');
+                }
+              }}
+            >
+              <Text style={styles.backButtonText}>Go back</Text>
+            </Pressable>
+          </SectionCard>
+        </View>
       </ScreenShell>
     );
   }
@@ -318,6 +370,19 @@ const styles = StyleSheet.create({
     ...textStyles.body,
     color: colors.primary,
     textDecorationLine: 'underline',
+  },
+  backButton: {
+    marginTop: spacing.md,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: colors.primary,
+  },
+  backButtonText: {
+    ...textStyles.body,
+    color: colors.background,
+    fontWeight: '600',
   },
 });
 

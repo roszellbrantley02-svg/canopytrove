@@ -71,6 +71,7 @@ export const ANALYTICS_EVENT_TYPES = [
   'browse_brands_sort_changed',
   'browse_brand_saved',
   'brand_detail_opened',
+  'brand_detail_missing',
   'brand_detail_saved',
   'brand_detail_unsaved',
   'brand_detail_website_tapped',
