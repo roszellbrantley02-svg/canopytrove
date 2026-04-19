@@ -37,6 +37,7 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Canopy Trove uses your camera to scan product QR codes and dispensary license numbers for on-the-spot verification.",
         "NSMicrophoneUsageDescription": "Canopy Trove does not record audio. This entry is required by iOS because the audio playback library we use links the microphone framework for completeness.",
+        "NSLocationWhenInUseUsageDescription": "Canopy Trove uses your location to find nearby dispensaries and let you share how your visit was when you arrive.",
         "UIBackgroundModes": ["audio"]
       },
       "googleServicesFile": "./GoogleService-Info.plist"

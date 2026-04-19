@@ -17,6 +17,109 @@ const DEVICE_LOCATION_CACHE_KEY = `${brand.storageNamespace}:device-location`;
 const DEVICE_LOCATION_TTL_MS = 15 * 60 * 1000;
 const DEVICE_LOCATION_LABEL_CACHE_LIMIT = 24;
 
+/**
+ * Hard ceiling for how long we'll wait for a fresh GPS fix before giving up
+ * and returning whatever `lastKnown` value we have (possibly null). Android
+ * was observed hanging on `getCurrentPositionAsync` for 20-30+ seconds with
+ * `Accuracy.High` on cold GPS — the user reported "took forever and didn't
+ * seem to work". 8s is long enough for a warm fix on all tested devices
+ * and short enough that the UI isn't visibly frozen.
+ */
+const LOCATION_FIX_TIMEOUT_MS = 8_000;
+
+/**
+ * Last-known positions older than this are treated as stale and we prefer
+ * to wait for a fresh fix. OS-reported lastKnown can be multi-hour on
+ * rarely-used devices. 5 minutes is enough overlap that foreground
+ * re-requests feel instant without silently handing back a wildly wrong
+ * stale coordinate.
+ */
+const LAST_KNOWN_MAX_AGE_MS = 5 * 60 * 1000;
+
+type ExpoLocationModule = NonNullable<typeof Location>;
+
+/**
+ * Race a lastKnown lookup against a fresh getCurrent call. Returns the
+ * first usable coordinate — if lastKnown returns instantly (the common
+ * case on Android once the OS has ever resolved location) the UI doesn't
+ * wait on the cold GPS fix. If neither resolves before
+ * LOCATION_FIX_TIMEOUT_MS, resolves null so callers can short-circuit to
+ * their own stored cache.
+ *
+ * Using `Accuracy.Balanced` instead of `High` because the dispensary-
+ * discovery use case only needs ~100m accuracy to pick "nearby" shops —
+ * Balanced is ~5-10x faster on Android (cell + wifi trilateration instead
+ * of a full GPS lock) and drops battery draw too.
+ */
+async function fetchLocationFast(
+  mod: ExpoLocationModule,
+): Promise<Coordinates | null> {
+  const deadline = new Promise<null>((resolve) =>
+    setTimeout(() => resolve(null), LOCATION_FIX_TIMEOUT_MS),
+  );
+
+  const lastKnown = (async () => {
+    try {
+      const result = await mod.getLastKnownPositionAsync({
+        maxAge: LAST_KNOWN_MAX_AGE_MS,
+        requiredAccuracy: 200,
+      });
+      if (!result) {
+        return null;
+      }
+      return {
+        latitude: result.coords.latitude,
+        longitude: result.coords.longitude,
+      };
+    } catch {
+      return null;
+    }
+  })();
+
+  const fresh = (async () => {
+    try {
+      const result = await mod.getCurrentPositionAsync({
+        accuracy: mod.Accuracy.Balanced,
+      });
+      return {
+        latitude: result.coords.latitude,
+        longitude: result.coords.longitude,
+      };
+    } catch {
+      return null;
+    }
+  })();
+
+  // First usable coordinate wins. `Promise.race` can't filter by truthiness
+  // on its own, so resolve each leg to either coords-or-never and race with
+  // the deadline — whichever fires first returns. If lastKnown is null the
+  // leg simply never resolves (not "resolves null"), leaving the race to
+  // either the fresh fix or the deadline.
+  return new Promise<Coordinates | null>((resolve) => {
+    let settled = false;
+    const finish = (value: Coordinates | null) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve(value);
+    };
+    lastKnown.then((value) => {
+      if (value) {
+        finish(value);
+      }
+    });
+    fresh.then((value) => {
+      if (value) {
+        finish(value);
+      }
+    });
+    // If neither leg produces a value, the deadline resolves null and we
+    // bubble it up so callers fall back to their stored cache.
+    deadline.then(() => finish(null));
+  });
+}
+
 const deviceLocationLabelCache = new Map<string, string>();
 let memoryCachedDeviceLocation: Coordinates | null = null;
 let deviceLocationCachedAt = 0;
@@ -43,13 +146,20 @@ export async function getBestAvailableDeviceLocation(): Promise<DeviceLocationRe
         return { coordinates: null, source: 'unavailable' };
       }
 
-      const current = await Location!.getCurrentPositionAsync({
-        accuracy: Location!.Accuracy.High,
-      });
-      const coordinates = {
-        latitude: current.coords.latitude,
-        longitude: current.coords.longitude,
-      };
+      // Race lastKnown vs fresh Balanced-accuracy fix; whichever wins the
+      // race gets returned first. On Android this drops the "find me"
+      // latency from 15-30s cold-GPS to near-instant when the OS already
+      // has a recent fix.
+      const coordinates = await fetchLocationFast(Location!);
+      if (!coordinates) {
+        // Neither lastKnown nor a fresh fix arrived in time. Hand back
+        // whatever we persisted from a prior session rather than showing
+        // "location unavailable" when we do have something on disk.
+        const cached = getCachedDeviceLocation();
+        return cached
+          ? { coordinates: cached, source: 'lastKnown' }
+          : { coordinates: null, source: 'unavailable' };
+      }
       void cacheDeviceLocation(coordinates);
 
       return {
@@ -94,13 +204,13 @@ export async function getPassiveDeviceLocation(): Promise<DeviceLocationResult> 
         : { coordinates: null, source: 'unavailable' };
     }
 
-    const current = await Location!.getCurrentPositionAsync({
-      accuracy: Location!.Accuracy.High,
-    });
-    const coordinates = {
-      latitude: current.coords.latitude,
-      longitude: current.coords.longitude,
-    };
+    const coordinates = await fetchLocationFast(Location!);
+    if (!coordinates) {
+      const cached = getCachedDeviceLocation();
+      return cached
+        ? { coordinates: cached, source: 'lastKnown' }
+        : { coordinates: null, source: 'unavailable' };
+    }
     void cacheDeviceLocation(coordinates);
     return { coordinates, source: 'current' };
   } catch {
