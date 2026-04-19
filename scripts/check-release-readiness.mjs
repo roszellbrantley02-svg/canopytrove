@@ -460,15 +460,21 @@ pushCheck(
     : `Splash icon file not found. Ensure ${appIdentity.splash?.image || 'assets/splash-icon.png'} exists.`,
 );
 
-const iosMinimumOsVersion = appIdentity.ios?.minimumOSVersion;
+// Expo SDK removed the `ios.minimumOSVersion` top-level field; pin via the
+// expo-build-properties plugin instead and read its config back.
+const buildPropsPlugin = (appIdentity.plugins ?? []).find(
+  (entry) =>
+    Array.isArray(entry) && entry[0] === 'expo-build-properties' && entry[1]?.ios?.deploymentTarget,
+);
+const iosMinimumOsVersion = buildPropsPlugin?.[1]?.ios?.deploymentTarget;
 const hasValidIosVersion = iosMinimumOsVersion && /^\d+\.\d+/.test(iosMinimumOsVersion);
 
 pushCheck(
   'iOS minimum OS version configured',
   hasValidIosVersion,
   hasValidIosVersion
-    ? `iOS minimum OS version set to ${iosMinimumOsVersion}.`
-    : 'Set expo.ios.minimumOSVersion to a valid version in app.json.',
+    ? `iOS minimum OS version set to ${iosMinimumOsVersion} via expo-build-properties.`
+    : 'Set ios.deploymentTarget via the expo-build-properties plugin in app.json.',
 );
 
 let passedRequired = 0;
