@@ -97,9 +97,11 @@ function OwnerSignInScreenInner() {
     }
   };
 
-  const handleBack = () => {
-    navigation.replace('WelcomeModePicker');
-  };
+  // Note: the top-of-screen back affordance is rendered by ScreenShell
+  // (see shouldShowAutoBackButton), which handles both goBack and the
+  // no-stack reset case. We used to render a duplicate "Back" Pressable
+  // below the form — two back buttons in the same view is confusing.
+  // Defer to the shell.
 
   return (
     <ScreenShell
@@ -206,15 +208,6 @@ function OwnerSignInScreenInner() {
                       <Text style={styles.secondaryButtonText}>Create Account</Text>
                     </Pressable>
                   </View>
-                  <Pressable
-                    onPress={handleBack}
-                    style={styles.secondaryButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Back to mode picker"
-                    accessibilityHint="Returns to the sign-in mode selection screen."
-                  >
-                    <Text style={styles.secondaryButtonText}>Back</Text>
-                  </Pressable>
                 </View>
               </View>
             </SectionCard>

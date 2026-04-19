@@ -94,13 +94,12 @@ function MemberSignInScreenInner({ navigation, route }: MemberSignInScreenProps)
     }
   };
 
-  const handleBack = () => {
-    if (redirectTo && navigation.canGoBack()) {
-      navigation.goBack();
-      return;
-    }
-    navigation.replace('WelcomeModePicker');
-  };
+  // Note: the top-of-screen back affordance is rendered by ScreenShell
+  // (see shouldShowAutoBackButton), which handles both goBack and the
+  // no-stack reset case. We used to render a duplicate "Back" Pressable
+  // below the form — two back buttons in the same view is confusing and
+  // had subtly different behavior (it replaced with WelcomeModePicker
+  // instead of resetting to Tabs). Defer to the shell.
 
   return (
     <ScreenShell
@@ -204,15 +203,6 @@ function MemberSignInScreenInner({ navigation, route }: MemberSignInScreenProps)
                       <Text style={styles.secondaryButtonText}>Create Account</Text>
                     </Pressable>
                   </View>
-                  <Pressable
-                    onPress={handleBack}
-                    style={styles.secondaryButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Back"
-                    accessibilityHint="Returns to the previous screen."
-                  >
-                    <Text style={styles.secondaryButtonText}>Back</Text>
-                  </Pressable>
                 </View>
               </View>
             </SectionCard>
