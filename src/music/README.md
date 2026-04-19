@@ -1,8 +1,9 @@
 # Background music
 
-Soft ambient background music for Canopy Trove. On by default for guests and
-members; automatically paused when an owner is signed in. A switch on the
-profile screen lets anyone (including pre-auth visitors) turn it off.
+Soft ambient background music for Canopy Trove. Off by default for all
+users — the toggle on the profile screen opts anyone (guest or member) in.
+Owners have music permanently suppressed while signed in, regardless of
+the preference.
 
 ## Install the dependency
 

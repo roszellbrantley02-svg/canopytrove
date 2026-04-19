@@ -7,8 +7,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  */
 const MUSIC_ENABLED_STORAGE_KEY = '@canopytrove/music/enabled-v1';
 
-/** Background music defaults ON for guests/members — feature is explicitly requested by product. */
-export const MUSIC_ENABLED_DEFAULT = true;
+/**
+ * Background music defaults OFF. The user explicitly asked for this — they
+ * found the autoplay startling on first launch ("I want the music to be off
+ * by default"). Users opt in via Profile → Background music toggle, which
+ * writes the preference via `writeMusicEnabledPreference` and persists the
+ * choice across restarts.
+ */
+export const MUSIC_ENABLED_DEFAULT = false;
 
 export async function readMusicEnabledPreference(): Promise<boolean> {
   try {

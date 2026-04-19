@@ -33,6 +33,14 @@ import { DEFAULT_MUSIC_VOLUME, MUSIC_FADE_MS, backgroundTracks } from './musicMa
 
 type AudioPlayerHandle = {
   volume: number;
+  // expo-audio exposes these as live getters on the player handle. They may
+  // be undefined until the source finishes loading — the watchdog below
+  // tolerates that and waits for a valid duration before deciding a track
+  // has ended. (We treat them as readonly-ish — never assign to them.)
+  readonly currentTime?: number;
+  readonly duration?: number;
+  readonly playing?: boolean;
+  readonly isLoaded?: boolean;
   play: () => void;
   pause: () => void;
   remove: () => void;
@@ -88,6 +96,18 @@ type PlayerState = {
   lastTrackId: string | null;
   listenerSub: { remove: () => void } | null;
   fadeTimer: ReturnType<typeof setInterval> | null;
+  /**
+   * End-of-track polling watchdog. `didJustFinish` on `playbackStatusUpdate`
+   * has been observed to sometimes never fire on newer expo-audio builds —
+   * when that happens the track plays to the end and then silence, and the
+   * user hears "one song then nothing" (the exact bug they flagged). The
+   * watchdog polls the player's currentTime/duration every 500ms and
+   * advances if we're inside a 0.4s tail window, giving us a reliable fall-
+   * back that coexists with the event-driven path (whichever fires first
+   * wins — the other becomes a no-op thanks to `state.currentTrackId`
+   * changing after advance).
+   */
+  endWatchdogTimer: ReturnType<typeof setInterval> | null;
   stopRequested: boolean;
   targetVolume: number;
   audioModeConfigured: boolean;
@@ -105,6 +125,7 @@ const state: PlayerState = {
   lastTrackId: null,
   listenerSub: null,
   fadeTimer: null,
+  endWatchdogTimer: null,
   stopRequested: false,
   targetVolume: DEFAULT_MUSIC_VOLUME,
   audioModeConfigured: false,
@@ -158,6 +179,55 @@ function clearFade() {
   }
 }
 
+function clearEndWatchdog() {
+  if (state.endWatchdogTimer !== null) {
+    clearInterval(state.endWatchdogTimer);
+    state.endWatchdogTimer = null;
+  }
+}
+
+/**
+ * Start a polling watchdog that advances to the next track when the current
+ * one nears its end. This is a redundancy layer sitting behind the
+ * `playbackStatusUpdate`/`didJustFinish` listener — whichever fires first
+ * triggers the advance, the other becomes a no-op because
+ * `state.currentTrackId` changes on advance.
+ *
+ * Polls every 500ms and treats "near end" as within 0.4s of duration
+ * (roughly the length of one poll cycle). If currentTime/duration aren't
+ * yet available the poll simply waits — the native source may still be
+ * loading.
+ */
+function startEndWatchdog(audio: ExpoAudioModule, gen: number) {
+  clearEndWatchdog();
+  const player = state.player;
+  if (!player) {
+    return;
+  }
+  state.endWatchdogTimer = setInterval(() => {
+    // Abort if another generation is now in charge, or our player got
+    // swapped out from under us.
+    if (!isCurrentGeneration(gen) || state.player !== player || state.stopRequested) {
+      clearEndWatchdog();
+      return;
+    }
+    const duration = typeof player.duration === 'number' ? player.duration : 0;
+    const currentTime = typeof player.currentTime === 'number' ? player.currentTime : 0;
+    if (duration <= 0) {
+      // Not loaded yet — keep polling.
+      return;
+    }
+    const remaining = duration - currentTime;
+    // 0.4s tail buffer: one poll cycle + a little slack. We also advance
+    // if currentTime has actually passed duration (some backends clamp,
+    // some don't). Guard the negative case too (clock drift).
+    if (remaining <= 0.4 || currentTime >= duration) {
+      clearEndWatchdog();
+      advanceToNext(audio, gen);
+    }
+  }, 500);
+}
+
 function fadeTo(target: number, durationMs: number, gen: number, onComplete?: () => void) {
   if (!state.player || !isCurrentGeneration(gen)) {
     onComplete?.();
@@ -206,6 +276,7 @@ function fadeTo(target: number, durationMs: number, gen: number, onComplete?: ()
 
 function disposeCurrentPlayer() {
   clearFade();
+  clearEndWatchdog();
   const sub = state.listenerSub;
   state.listenerSub = null;
   if (sub) {
@@ -305,6 +376,14 @@ function playTrack(audio: ExpoAudioModule, track: BackgroundTrack, gen: number) 
   state.lastTrackId = track.id;
 
   fadeTo(state.targetVolume, MUSIC_FADE_MS, gen);
+
+  // Belt-and-suspenders end detection. The playbackStatusUpdate listener
+  // above should fire didJustFinish at the end of the source, but on some
+  // expo-audio builds the event either arrives late or not at all and the
+  // playlist hangs on a single track — the exact symptom the user flagged
+  // ("doesn't run forever it shuts off after one song"). The watchdog
+  // polls currentTime/duration and advances defensively.
+  startEndWatchdog(audio, gen);
 }
 
 function advanceToNext(audio: ExpoAudioModule, gen: number) {
