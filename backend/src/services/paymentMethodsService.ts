@@ -303,6 +303,25 @@ export async function getPaymentMethodsForStorefront(
     const communityRecords = resolveCommunityMethods(community);
     const methods = mergeMethods({ google, community: communityRecords, owner });
 
+    // Baseline assumption for licensed NY dispensaries: cash is virtually
+    // always accepted. If no source has spoken to cash yet, seed an
+    // accepted-cash record so the detail page always shows at least the
+    // "Cash" chip on the Accepted Here section (the user-visible "takes
+    // cash or card" badge). Owner declarations and community reports still
+    // override this via mergeMethods' priority system because this runs
+    // after merge and only fills the cash gap — it never overrides a real
+    // source. Kept as source 'google' so it carries the lowest confidence
+    // and the detail subtitle remains "Based on public data and community
+    // reports." rather than claiming owner confirmation.
+    const hasCashRecord = methods.some((record) => record.methodId === 'cash');
+    if (!hasCashRecord) {
+      methods.unshift({
+        methodId: 'cash',
+        accepted: true,
+        source: 'google',
+      });
+    }
+
     if (!methods.length) return null;
 
     return {
