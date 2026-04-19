@@ -416,7 +416,7 @@ export async function recordCommunityPaymentReport(input: {
   installId: string;
 }): Promise<{
   ok: true;
-  outcome: 'recorded' | 'duplicate' | 'flipped';
+  outcome: 'created' | 'deduped' | 'updated';
 }> {
   const { storefrontId, methodId, accepted, installId } = input;
   const db = getBackendFirebaseDb();
@@ -424,39 +424,86 @@ export async function recordCommunityPaymentReport(input: {
     throw new Error('Firestore not available; cannot record community vote.');
   }
   const installHash = createHash('sha256').update(installId).digest('hex');
-  const voteRef = db
-    .collection(PAYMENT_METHOD_REPORTS_COLLECTION)
-    .doc(`${storefrontId}_${methodId}`)
+  // Aggregate lives at payment_method_reports/{storefrontId}; each install's
+  // per-method vote lives under that doc's `votes` subcollection keyed by
+  // installHash + methodId. The aggregate read path at loadCommunityCounts()
+  // loads the aggregate doc directly — keeping writes + reads on the same
+  // doc path is the whole point of this shape.
+  const aggregateRef = db.collection(PAYMENT_METHOD_REPORTS_COLLECTION).doc(storefrontId);
+  const voteRef = aggregateRef
     .collection(PAYMENT_METHOD_REPORT_VOTES_SUBCOLLECTION)
-    .doc(installHash);
+    .doc(`${installHash}_${methodId}`);
 
-  const outcome = await db.runTransaction<'recorded' | 'duplicate' | 'flipped'>(async (tx) => {
-    const existing = await tx.get(voteRef);
-    if (existing.exists) {
-      const prior = existing.data() as { accepted: boolean } | undefined;
-      if (prior?.accepted === accepted) {
-        return 'duplicate';
-      }
-      tx.set(
-        voteRef,
-        {
-          storefrontId,
-          methodId,
-          accepted,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true },
-      );
-      return 'flipped';
+  const nowIso = new Date().toISOString();
+
+  const outcome = await db.runTransaction<'created' | 'deduped' | 'updated'>(async (tx) => {
+    // All Firestore transaction reads must happen before writes.
+    const voteSnap = await tx.get(voteRef);
+    const aggregateSnap = await tx.get(aggregateRef);
+
+    const priorVote = voteSnap.exists
+      ? (voteSnap.data() as { accepted?: boolean } | undefined)
+      : undefined;
+
+    // Same install, same method, same decision → dedupe, touch nothing.
+    if (voteSnap.exists && priorVote?.accepted === accepted) {
+      return 'deduped';
     }
-    tx.set(voteRef, {
-      storefrontId,
-      methodId,
-      accepted,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-    return 'recorded';
+
+    // Pull current counts for this method off the aggregate, default 0s.
+    const aggregateData = aggregateSnap.exists ? (aggregateSnap.data() ?? {}) : {};
+    const prevCounts = (aggregateData as {
+      counts?: Record<string, { accepted?: number; rejected?: number } | undefined>;
+    }).counts?.[methodId] ?? { accepted: 0, rejected: 0 };
+
+    const nextCounts = {
+      accepted: typeof prevCounts.accepted === 'number' ? prevCounts.accepted : 0,
+      rejected: typeof prevCounts.rejected === 'number' ? prevCounts.rejected : 0,
+    };
+
+    // Flip: undo the prior vote on the aggregate, then apply the new one.
+    if (voteSnap.exists) {
+      if (priorVote?.accepted === true) {
+        nextCounts.accepted = Math.max(0, nextCounts.accepted - 1);
+      } else if (priorVote?.accepted === false) {
+        nextCounts.rejected = Math.max(0, nextCounts.rejected - 1);
+      }
+    }
+
+    if (accepted) {
+      nextCounts.accepted += 1;
+    } else {
+      nextCounts.rejected += 1;
+    }
+
+    const result: 'created' | 'updated' = voteSnap.exists ? 'updated' : 'created';
+
+    tx.set(
+      voteRef,
+      {
+        storefrontId,
+        methodId,
+        accepted,
+        installHash,
+        updatedAt: nowIso,
+        ...(voteSnap.exists ? {} : { createdAt: nowIso }),
+      },
+      { merge: true },
+    );
+
+    tx.set(
+      aggregateRef,
+      {
+        storefrontId,
+        updatedAt: nowIso,
+        counts: {
+          [methodId]: nextCounts,
+        },
+      },
+      { merge: true },
+    );
+
+    return result;
   });
 
   logger.info('[paymentMethods] Community vote', {

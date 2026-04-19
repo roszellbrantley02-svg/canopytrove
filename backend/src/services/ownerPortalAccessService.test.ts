@@ -142,7 +142,7 @@ test('ensureOwnerPortalClaimSyncAccess accepts authenticated members before owne
   const result = await ensureOwnerPortalClaimSyncAccess(buildRequest('member-sync-token'));
 
   assert.deepEqual(result, {
-    accountUid: 'member-sync-1',
-    accountEmail: 'member@example.com',
+    ownerUid: 'member-sync-1',
+    ownerEmail: 'member@example.com',
   });
 });
