@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "948351810374",
+    "project_id": "canopy-trove",
+    "storage_bucket": "canopy-trove.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:948351810374:android:687e4c1e8b2fc4ef204347",
+        "android_client_info": {
+          "package_name": "com.rezell.canopytrove"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "948351810374-comcoo0e9bpqjmcltp1bn0u2f5e76k5a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8AAyyHCydfGX52vwQK_0lGV_ovT-GSlY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "948351810374-comcoo0e9bpqjmcltp1bn0u2f5e76k5a.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "948351810374-5q56qii9c24ksj0ui1vm589t1hdm6uf9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.rezell.canopytrove"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
