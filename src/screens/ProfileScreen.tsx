@@ -12,7 +12,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { MotionInView } from '../components/MotionInView';
-import { QuickActionsRow, type QuickAction } from '../components/QuickActionsRow';
+import { QuickActionsGrid } from '../components/QuickActionsGrid';
+import { type QuickAction } from '../components/QuickActionsRow';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { SectionHeader } from '../components/SectionHeader';
@@ -403,12 +404,17 @@ function MemberProfileWorkspace() {
     [],
   );
 
+  // Semantic tone assignment: each action's color encodes its *category*,
+  // not its index. rose = community voice, primary green = library/saved,
+  // gold = featured content, blue = trust/verified, purple = social,
+  // textMuted = utility/settings (iOS gray-neutral convention).
   const quickActions: QuickAction[] = React.useMemo(
     () => [
       {
         key: 'write-review',
         label: 'Write Review',
         iconName: 'create-outline',
+        tone: colors.rose,
         onPress: () => {
           const target = model.recentStorefronts[0] ?? model.savedStorefronts[0];
           if (target) {
@@ -422,30 +428,35 @@ function MemberProfileWorkspace() {
         key: 'saved',
         label: 'Saved',
         iconName: 'bookmark-outline',
+        tone: colors.primary,
         onPress: () => navigation.navigate('SavedStorefronts'),
       },
       {
         key: 'brands',
         label: 'My Brands',
         iconName: 'ribbon-outline',
+        tone: colors.gold,
         onPress: () => navigation.navigate('MyBrands'),
       },
       {
         key: 'products',
         label: 'My Products',
         iconName: 'sparkles-outline',
+        tone: colors.blue,
         onPress: () => navigation.navigate('MyProducts'),
       },
       {
         key: 'leaderboard',
         label: 'Leaderboard',
         iconName: 'trophy-outline',
+        tone: colors.purple,
         onPress: model.openLeaderboard,
       },
       {
         key: 'settings',
         label: 'Settings',
         iconName: 'options-outline',
+        tone: colors.textMuted,
         onPress: () => navigation.navigate('Settings'),
       },
     ],
@@ -528,7 +539,7 @@ function MemberProfileWorkspace() {
         </MotionInView>
 
         <MotionInView dense delay={revealDelay(1)}>
-          <QuickActionsRow actions={quickActions} />
+          <QuickActionsGrid actions={quickActions} />
         </MotionInView>
 
         <MotionInView dense delay={revealDelay(2)}>

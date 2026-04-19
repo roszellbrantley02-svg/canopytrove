@@ -36,6 +36,10 @@ vi.mock('../components/QuickActionsRow', () => ({
   QuickActionsRow: () => null,
 }));
 
+vi.mock('../components/QuickActionsGrid', () => ({
+  QuickActionsGrid: () => null,
+}));
+
 vi.mock('../components/ScreenShell', () => ({
   ScreenShell: ({ children }: { children: React.ReactNode }) => children,
 }));
