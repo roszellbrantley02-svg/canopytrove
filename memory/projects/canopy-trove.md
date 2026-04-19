@@ -85,6 +85,10 @@ Canopy Trove helps users find licensed dispensaries nearby, navigate to them, re
 - EAS Build with 3 profiles: development, preview, production
 - `eas.json` contains legal URLs and feature flags
 - `app.config.js` dynamically adds Sentry plugin when org/project env vars set
+- iOS deployment target pinned via `expo-build-properties` plugin (SDK 55 removed the top-level `ios.minimumOSVersion` field)
+- `google-services.json` lives at repo root for Android Firebase wiring
+- `npm install` must run locally — FUSE sandbox cannot mutate `node_modules`
+- Full recipes + unblock triage → memory/context/build-and-release.md
 
 ## Critical Config
 

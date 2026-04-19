@@ -208,5 +208,19 @@ Rozell (rozell), solo founder building Canopy Trove — a licensed dispensary di
 | Firebase App Check              | Both     | memory/context/hooks-and-secrets.md   |
 | Hermes V1 bytecode              | Frontend | memory/context/frontend-production.md |
 | expo-image with caching         | Frontend | memory/context/frontend-production.md |
+| EAS build profiles + SDK 55     | Build    | memory/context/build-and-release.md   |
+| FUSE sandbox git/npm workarounds| Build    | memory/context/build-and-release.md   |
+| expo-build-properties for iOS   | Build    | memory/context/build-and-release.md   |
 
-| EAS
+## Recent Shipped Work (Apr 2026)
+
+| Commit    | What                                                                                      |
+| --------- | ----------------------------------------------------------------------------------------- |
+| `b13f127` | Profile redesign — colored pill rows (green/gold/blue/cream) replacing dark monochrome    |
+| `abaebc2` | Loading screen responsive sizing + splash icon UnsharpMask sharpening                     |
+| `13c3a14` | Full icon repaint from crisp pin+compass SVG sources (iOS/Android/adaptive/monochrome)    |
+| `0fab252` | EAS build unblock: SDK 55 schema migration to expo-build-properties plugin                |
+| `d46eb0a` | EAS build unblock: add expo-asset peer + pin skia/reanimated/worklets                     |
+| `9e8e4fe` | EAS build unblock: wire google-services.json for Android Firebase                         |
+| `5a62dd5` | Web icon refresh — favicon.ico/png, apple-touch-icon, OG image from repainted sources     |
+

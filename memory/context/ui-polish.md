@@ -107,3 +107,37 @@ const APP_TOKENS = {
 - Image load: <1s with progressive JPEG
 - Animation: consistent 60fps (Reanimated, not Animated API)
 - Touch response: <100ms with haptics
+
+## Recently Shipped Polish (Apr 2026)
+
+### Profile Redesign (commit b13f127)
+
+- Replaced dark monochrome rows with colored pill rows (filled tinted background, 14% opacity of accent + 1px solid border at 38% opacity)
+- One pill color per category: green for discovery actions, gold for rewards/badges, blue for community/reviews, soft-cream for account/legal
+- Each row: 56dp tall, leading icon (24x24), title (DM Sans 16/Medium), trailing chevron, full hitSlop
+- Section headers SpaceGrotesk 13/700, uppercase, letter-spacing 1.2, color `#C4B8B0`
+- Pill background prevents the previous "wall of dark" feel without bumping motion or animation cost
+- ProfileScreen.tsx (400+ lines) split into `ProfileSectionGroup` + `ProfileRow` for testability
+
+### Loading Screen Sharpening (commit abaebc2)
+
+- Splash icon was scaling up from 192px to 4K screens — visibly soft on tablets and OLED phones
+- Recipe: ship splash-icon-v2.png at native 1024² source, render via `expo-splash-screen` with `resizeMode: 'contain'`
+- App-side LoadingScreen.tsx uses `useWindowDimensions()` to pick icon size: `Math.min(width, height) * 0.35` (clamped to 96-320 range)
+- Apply `UnsharpMask(radius=1.2, percent=80, threshold=2)` to the source PNG before bundling — recovers crispness lost to Lanczos resize
+- Background `#121614` matches splash backgroundColor in app.json so there is no flash
+
+### Pin + Compass Icon Repaint (commit 13c3a14)
+
+- Source: hand-traced two SVG paths (pin teardrop + 8-point compass rose), composed at 1024² with the head-circle aligned by canvas center (not content bbox center — the asymmetric pin tail throws off bbox centering)
+- Pin fill `#2ECC71` at 82% canvas fill; compass fill `#E8A000` at 28% canvas fill, paste-centered inside the head circle
+- Hard-binarize alpha at threshold 180 + 0.6px Gaussian for AA — kills the soft halo from prior AI-traced versions
+- UnsharpMask(1.2, 80%, 2) after every resize step
+- Output set: ios-icon-v2.png (1024 RGB white bg), android-icon.png (512 transparent), android-icon-foreground.png (foreground at 67% canvas fill for adaptive icon safe zone), android-icon-monochrome.png (alpha-only black silhouette), favicon.ico (multi-res 16/32/48/64), favicon.png (512 transparent), apple-touch-icon.png (180 RGB white bg)
+
+### Web Icon + OG Image Regen (commit 5a62dd5)
+
+- Reuse the same crisp pin+compass for every web icon to keep brand parity across platforms
+- OG image (1200x630): RGB dark `#121614` bg, radial green glow (5-stop alpha gradient blurred 40px) behind pin, transparent icon at 440px long edge centered at (300, 315), title "Canopy Trove" in SpaceGrotesk_700Bold 88pt at (600, 170), tagline "Find licensed dispensaries." white + "Verify products. Real reviews." soft-cream in DMSans_500Medium 34pt, OCM-verified pill in green outline + 40-alpha green fill (rendered on RGBA overlay then alpha_composited onto the RGB canvas, otherwise PIL ignores fill alpha), URL "canopytrove.com" 28pt soft-cream
+- Gotcha: pillow `Draw.rounded_rectangle(fill=(r,g,b,a))` on an RGB image silently drops alpha and renders solid color — always render translucent pill on a separate RGBA layer and `Image.alpha_composite` it in
+- Gotcha: title font sizing — at 96pt "Canopy Trove" overflows the 1200px frame past x=1180 when the text column starts at x=600; drop to 88pt for headroom
