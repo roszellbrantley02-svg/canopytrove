@@ -678,7 +678,11 @@ function ScanResultScreenInner({ route, navigation }: ScanResultScreenProps) {
               </Pressable>
               <Pressable
                 onPress={() => {
-                  navigation.navigate('VerifyManualEntry');
+                  // Replace (not navigate) so "Back" from manual entry returns
+                  // to the Verify tab, matching how ScanCameraScreen hands off
+                  // to the same screen. Pushing would leave the failed scan
+                  // result underneath the manual entry form.
+                  navigation.replace('VerifyManualEntry');
                 }}
                 style={({ pressed }) => [
                   styles.secondaryButton,
