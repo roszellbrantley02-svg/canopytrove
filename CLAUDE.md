@@ -187,9 +187,10 @@ Rozell (rozell), solo founder building Canopy Trove — a licensed dispensary di
 | Backend services | `productCatalogService.ts` (lab metadata + parsing), `scanIngestionService.ts` (anonymous install-ID logging), `brandAnalyticsService.ts` (aggregation) |
 | Endpoints        | `POST /scans/ingest` (App Check gated, 30 req/min), `GET /products/resolve` (cached 60s SWR 300s)                                                       |
 | Firestore        | `productScans` collection (anonymous by install ID), `brandCounters` aggregation collection (regional brand trending)                                   |
-| Frontend tab     | `VerifyScreen.tsx` — camera-first with full-bleed CameraView, top-left "Can't scan? Enter info" pill for manual fallback                                |
+| Frontend tab     | `VerifyScreen.tsx` — menu-first hub (Scan product / Scan shop / Rate / Verify OCM); `ScanCameraScreen.tsx` hosts the camera with safe-area-inset top/bottom pills so back/menu clears the notch/status bar |
 | Result screen    | `ScanResultScreen.tsx` — shared renderer handling license/product/unknown resolutions, displays lab results or shop verification                        |
-| Privacy          | Anonymous by default (install ID only, never PII), optional location (aggregate-only), no cross-app tracking, disableable in Profile → Privacy          |
+| URL enrichment   | **None today.** External URLs (brand microsites, retailer pages) go to the system browser via `Linking.openURL`. COA URLs hit `parseCoa()` which only extracts `labName` + `batchId` from the URL path via regex — no page fetch, no brand/product/pic scraping. Every per-lab parser has a `TODO: Fetch page and extract brand, product, THC%, CBD%` comment. `FETCH_TIMEOUT_MS = 2_500` is defined but never used. Deferred intentionally to avoid copyright + NY-advertising risk on brand photos — keep crowdsource flow as the brand/product name source |
+| Privacy          | Anonymous by default (install ID only, never PII), optional location (aggregate-only), no cross-app tracking. Profile → Privacy opt-out toggle is **not shipped yet** — privacy policy calls it out as planned; users can email support to request scan-history deletion until the toggle ships |
 
 ## Architecture Patterns (Research-Backed)
 
@@ -223,4 +224,32 @@ Rozell (rozell), solo founder building Canopy Trove — a licensed dispensary di
 | `d46eb0a` | EAS build unblock: add expo-asset peer + pin skia/reanimated/worklets                     |
 | `9e8e4fe` | EAS build unblock: wire google-services.json for Android Firebase                         |
 | `5a62dd5` | Web icon refresh — favicon.ico/png, apple-touch-icon, OG image from repainted sources     |
+| `e45d43c` | Storefront detail — prefer resolved open/closed status over "See Details" fallback        |
+| `5bbd2a5` | Profile hero — anchor glow beneath primary button, raise kicker copy                      |
+| `5ae4956` | Music — default off + 500ms polling watchdog for reliable playlist loop                   |
+| `a6ee24e` | Location — iOS NSLocationWhenInUseUsageDescription + Android lastKnown/Balanced race      |
+| `6bb5002` | Lockfile sync — align package-lock.json with pinned deps from EAS-unblock commits         |
+| `538ba60` | Payment badges on listing cards — drop broken outer batch timeout (Promise.allSettled)    |
+| `4cb8384` | Route-card hours — trust resolved openNow boolean even when hours array is empty (Android)|
+| `87c6ee1` | Scan camera — safe-area insets so Menu/back pill clears notch + status bar                |
+
+## Launch Readiness (Apr 19 2026)
+
+| Item                                                       | Status   |
+| ---------------------------------------------------------- | -------- |
+| Legal pages live (privacy, terms, support, deletion, CG)   | ✅       |
+| Screenshots exported (1290×2796)                           | ✅ (pending upload to ASC after next build) |
+| Apple review notes written (`docs/APPLE_APP_REVIEW_NOTES.md`) | ✅       |
+| Mailbox active + monitored                                 | ✅       |
+| Reviewer credentials ready                                 | ✅       |
+| Real-phone QA in rotation                                  | ✅       |
+| Account deletion in-app matches help page                  | ✅       |
+| Seller-name path / D-U-N-S                                 | ✅       |
+| OCM verifier smoke                                         | ✅       |
+| Cloud Run `/livez` + `/readyz` green                       | ✅       |
+| Privacy nutrition label entered in ASC                     | ⬜       |
+| 17+ age rating questionnaire completed in ASC              | ⬜       |
+| Final screenshots uploaded to ASC                          | ⬜       |
+| **Production EAS iOS build on top of a6ee24e or later**    | ⬜ (blocker — NSLocationWhenInUseUsageDescription native change) |
+| Support email alignment (app `askmehere@` vs site `support@`) | ⬜ (pick one canonical address) |
 
