@@ -12,8 +12,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { useStorefrontProfileController } from '../context/StorefrontController';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import { listBrands, addFavoriteBrand } from '../services/brandService';
+import { getCanopyTroveAuthIdToken } from '../services/canopyTroveAuthService';
 import { colors, radii, spacing, textStyles } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/rootNavigatorConfig';
 import type { BrandProfileSummary, BrandSortKey } from '../types/brandTypes';
@@ -26,6 +28,8 @@ type SortState = {
 };
 
 function BrowseBrandsScreenInner({ navigation }: BrowseBrandsScreenProps) {
+  const { authSession, profileId } = useStorefrontProfileController();
+  const isAuthenticated = authSession.status === 'authenticated';
   const [brands, setBrands] = useState<BrandProfileSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -90,8 +94,13 @@ function BrowseBrandsScreenInner({ navigation }: BrowseBrandsScreenProps) {
   };
 
   const handleSaveBrand = async (brandId: string) => {
+    if (!isAuthenticated || !profileId) {
+      navigation.navigate('MemberSignIn', { redirectTo: { kind: 'goBack' } });
+      return;
+    }
     try {
-      await addFavoriteBrand(brandId);
+      const token = await getCanopyTroveAuthIdToken();
+      await addFavoriteBrand(brandId, { profileId, token: token ?? undefined });
       setSavedBrandIds(new Set([...savedBrandIds, brandId]));
       trackAnalyticsEvent('browse_brand_saved', { brandId });
     } catch (error) {

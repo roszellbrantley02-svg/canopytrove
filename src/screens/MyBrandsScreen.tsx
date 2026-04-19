@@ -12,8 +12,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { useStorefrontProfileController } from '../context/StorefrontController';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import { listFavoriteBrands, removeFavoriteBrand } from '../services/brandService';
+import { getCanopyTroveAuthIdToken } from '../services/canopyTroveAuthService';
 import { colors, radii, spacing, textStyles } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/rootNavigatorConfig';
 import type { BrandProfile, BrandSortKey } from '../types/brandTypes';
@@ -26,33 +28,44 @@ type SortState = {
 };
 
 function MyBrandsScreenInner({ navigation }: MyBrandsScreenProps) {
+  const { authSession, profileId } = useStorefrontProfileController();
+  const isAuthenticated = authSession.status === 'authenticated';
   const [brands, setBrands] = useState<BrandProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sortState, setSortState] = useState<SortState>({ dimension: 'potency' });
 
-  const loadBrands = async (showSpinner = true) => {
-    try {
-      if (showSpinner) setLoading(true);
-      else setRefreshing(true);
+  const loadBrands = React.useCallback(
+    async (showSpinner = true) => {
+      try {
+        if (showSpinner) setLoading(true);
+        else setRefreshing(true);
 
-      const data = await listFavoriteBrands();
-      setBrands(data);
+        if (!isAuthenticated || !profileId) {
+          setBrands([]);
+          return;
+        }
 
-      if (showSpinner) {
-        trackAnalyticsEvent('my_brands_opened');
+        const token = await getCanopyTroveAuthIdToken();
+        const data = await listFavoriteBrands({ profileId, token: token ?? undefined });
+        setBrands(data);
+
+        if (showSpinner) {
+          trackAnalyticsEvent('my_brands_opened');
+        }
+      } catch (error) {
+        console.warn('Failed to load brands', error);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-    } catch (error) {
-      console.warn('Failed to load brands', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+    },
+    [isAuthenticated, profileId],
+  );
 
   useEffect(() => {
     void loadBrands();
-  }, []);
+  }, [loadBrands]);
 
   const handleSortChange = (dimension: BrandSortKey) => {
     setSortState({ dimension, filter: undefined });
@@ -70,8 +83,12 @@ function MyBrandsScreenInner({ navigation }: MyBrandsScreenProps) {
   };
 
   const handleRemoveBrand = async (brandId: string) => {
+    if (!isAuthenticated || !profileId) {
+      return;
+    }
     try {
-      await removeFavoriteBrand(brandId);
+      const token = await getCanopyTroveAuthIdToken();
+      await removeFavoriteBrand(brandId, { profileId, token: token ?? undefined });
       setBrands((prev) => prev.filter((b) => b.brandId !== brandId));
       trackAnalyticsEvent('my_brand_removed', { brandId });
     } catch (error) {

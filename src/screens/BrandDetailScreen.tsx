@@ -5,6 +5,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { useStorefrontProfileController } from '../context/StorefrontController';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import {
   addFavoriteBrand,
@@ -12,6 +13,7 @@ import {
   isFavoriteBrand,
   removeFavoriteBrand,
 } from '../services/brandService';
+import { getCanopyTroveAuthIdToken } from '../services/canopyTroveAuthService';
 import { colors, radii, spacing, textStyles } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/rootNavigatorConfig';
 import type { BrandProfile } from '../types/brandTypes';
@@ -20,6 +22,8 @@ type BrandDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'BrandD
 
 function BrandDetailScreenInner({ route }: BrandDetailScreenProps) {
   const { brandId } = route.params;
+  const { authSession, profileId } = useStorefrontProfileController();
+  const isAuthenticated = authSession.status === 'authenticated';
   const [brand, setBrand] = React.useState<BrandProfile | null>(null);
   const [isSaved, setIsSaved] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -27,10 +31,14 @@ function BrandDetailScreenInner({ route }: BrandDetailScreenProps) {
   useEffect(() => {
     async function load() {
       try {
-        const [profile, saved] = await Promise.all([
-          fetchBrandProfile(brandId),
-          isFavoriteBrand(brandId),
-        ]);
+        const profilePromise = fetchBrandProfile(brandId);
+        const savedPromise =
+          isAuthenticated && profileId
+            ? getCanopyTroveAuthIdToken().then((token) =>
+                isFavoriteBrand(brandId, { profileId, token: token ?? undefined }),
+              )
+            : Promise.resolve(false);
+        const [profile, saved] = await Promise.all([profilePromise, savedPromise]);
         setBrand(profile);
         setIsSaved(saved);
         if (profile) {
@@ -44,16 +52,22 @@ function BrandDetailScreenInner({ route }: BrandDetailScreenProps) {
     }
 
     void load();
-  }, [brandId]);
+  }, [brandId, isAuthenticated, profileId]);
 
   const handleToggleSave = async () => {
+    if (!isAuthenticated || !profileId) {
+      console.warn('Cannot toggle favorite without authenticated profile');
+      return;
+    }
     try {
+      const token = await getCanopyTroveAuthIdToken();
+      const authOptions = { profileId, token: token ?? undefined };
       if (isSaved) {
-        await removeFavoriteBrand(brandId);
+        await removeFavoriteBrand(brandId, authOptions);
         setIsSaved(false);
         trackAnalyticsEvent('brand_detail_unsaved', { brandId });
       } else {
-        await addFavoriteBrand(brandId);
+        await addFavoriteBrand(brandId, authOptions);
         setIsSaved(true);
         trackAnalyticsEvent('brand_detail_saved', { brandId });
       }
