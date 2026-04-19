@@ -763,8 +763,15 @@ export async function saveOwnerPortalProfileTools(
     );
   }
 
-  // Featured photos: enforce count limit per tier
-  const photoCount = input.featuredPhotoUrls?.length ?? 0;
+  // Featured photos: enforce count limit per tier. Photos arrive as EITHER
+  // external http URLs (manual entry) or storage paths (portal uploads),
+  // and owners can submit both arrays in the same request. Counting only
+  // `featuredPhotoUrls` previously let a Free-tier owner bypass the tier
+  // gate by uploading via `featuredPhotoPaths` — the paths were ignored
+  // by the check but still persisted and rendered. Sum both arrays so the
+  // cap covers the full displayed photo set.
+  const photoCount =
+    (input.featuredPhotoUrls?.length ?? 0) + (input.featuredPhotoPaths?.length ?? 0);
   if (photoCount > 0 && tierLimits.maxFeaturedPhotos === 0) {
     throw new TierAccessError(
       'Featured photos require the Growth ($149/mo) plan. Upgrade to unlock this feature.',
