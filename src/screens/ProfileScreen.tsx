@@ -643,7 +643,10 @@ function MemberProfileWorkspace() {
                   : undefined
               }
             />
-            <BadgeShowcase badges={model.featuredBadges.slice(0, 3)} />
+            <BadgeShowcase
+              badges={model.featuredBadges.slice(0, 3)}
+              previewBadges={model.nextBadges.slice(0, 3)}
+            />
           </View>
         </MotionInView>
 
@@ -694,14 +697,64 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 export function BadgeShowcase({
   badges,
+  previewBadges = [],
 }: {
   badges: Array<{ icon?: string; name?: string; color?: string }>;
+  /**
+   * Locked badges to preview when the user hasn't earned any yet. Shown in a
+   * muted/grayscale style with a lock overlay so the section never appears
+   * empty. Sourced from `nextBadges` (closest measurable milestones) so the
+   * preview doubles as a "what's next" teaser.
+   */
+  previewBadges?: Array<{
+    badge: { id: string; icon?: string; name?: string; color?: string };
+    label?: string;
+  }>;
 }) {
   if (badges.length === 0) {
+    const visiblePreviews = previewBadges.slice(0, 3);
+    if (visiblePreviews.length === 0) {
+      return (
+        <View style={internalStyles.emptyBadges}>
+          <Text style={internalStyles.emptyBadgesText}>
+            Earn badges by completing challenges and activities.
+          </Text>
+        </View>
+      );
+    }
+
     return (
-      <View style={internalStyles.emptyBadges}>
-        <Text style={internalStyles.emptyBadgesText}>
-          Earn badges by completing challenges and activities.
+      <View>
+        <View style={internalStyles.badgeGrid}>
+          {visiblePreviews.map((item, idx) => (
+            <View key={item.badge.id ?? idx} style={internalStyles.badgeItem}>
+              <View style={internalStyles.badgePreviewPlaceholder}>
+                <AppUiIcon
+                  name={(item.badge?.icon as AppUiIconName | undefined) ?? 'star-outline'}
+                  size={26}
+                  color={colors.textMuted}
+                />
+                <View style={internalStyles.badgeLockPip}>
+                  <AppUiIcon name="lock-closed-outline" size={11} color={colors.background} />
+                </View>
+              </View>
+              <Text
+                style={internalStyles.badgePreviewLabel}
+                numberOfLines={2}
+                maxFontSizeMultiplier={1}
+              >
+                {item.badge?.name ?? 'Upcoming'}
+              </Text>
+              {item.label ? (
+                <Text style={internalStyles.badgePreviewProgress} maxFontSizeMultiplier={1}>
+                  {item.label}
+                </Text>
+              ) : null}
+            </View>
+          ))}
+        </View>
+        <Text style={internalStyles.badgePreviewHint}>
+          Locked previews — visit storefronts and write reviews to start unlocking.
         </Text>
       </View>
     );
@@ -928,6 +981,52 @@ const internalStyles = StyleSheet.create({
     borderColor: colors.borderSoft,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badgePreviewPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.borderSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.72,
+  },
+  badgeLockPip: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.goldSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  badgePreviewLabel: {
+    ...textStyles.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
+    fontSize: 11,
+  },
+  badgePreviewProgress: {
+    ...textStyles.caption,
+    color: colors.textSoft,
+    textAlign: 'center',
+    fontSize: 10,
+    letterSpacing: 0.4,
+  },
+  badgePreviewHint: {
+    ...textStyles.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    fontSize: 11,
+    opacity: 0.8,
   },
   badgeItemLabel: {
     ...textStyles.caption,
