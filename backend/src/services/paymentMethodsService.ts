@@ -341,23 +341,42 @@ export async function getPaymentMethodsForStorefront(
 
 /**
  * Batched variant for listing endpoints. Runs per-storefront resolution
- * in parallel with an overall timeout so the response is never blocked.
+ * in parallel and never lets a single slow item block the batch.
+ *
+ * IMPORTANT: we do NOT wrap Promise.all in an outer withTimeout any more.
+ * Each `getPaymentMethodsForStorefront` call already bounds its own work
+ * with per-subquery timeouts (owner/community/google — each ENRICHMENT_
+ * TIMEOUT_MS). An outer Promise.all-wide race at the same deadline made
+ * the batch an all-or-nothing gamble: with 20 storefronts in flight,
+ * event-loop queuing alone could push the aggregate past 1.5s and
+ * produce `items.map(() => null)` for the whole list, even though every
+ * individual call would have resolved a few ms later. That's why the
+ * inline payment pill rendered on the detail screen (single call,
+ * comfortably under budget) but never on listing cards (outer race lost).
+ *
+ * With `Promise.allSettled` each item independently fulfills or falls
+ * back to null — fast items always get their pill rendered even if a
+ * slower one had to lean on its internal timeout.
  */
 export async function attachPaymentMethodsToSummaries<T extends StorefrontSummaryApiDocument>(
   items: T[],
 ): Promise<T[]> {
   if (!items.length) return items;
   try {
-    const results = await withTimeout(
-      Promise.all(items.map((item) => getPaymentMethodsForStorefront(item))),
-      items.map(() => null) as Array<PaymentMethodsApiDocument | null>,
+    const settled = await Promise.allSettled(
+      items.map((item) => getPaymentMethodsForStorefront(item)),
     );
     return items.map((item, index) => {
-      const methods = results[index];
-      if (!methods) return item;
-      return { ...item, paymentMethods: methods };
+      const result = settled[index];
+      if (!result || result.status !== 'fulfilled' || !result.value) {
+        return item;
+      }
+      return { ...item, paymentMethods: result.value };
     });
   } catch (err) {
+    // `Promise.allSettled` itself cannot reject — this catch only fires
+    // on a truly exceptional synchronous throw (e.g., OOM). Keep it so
+    // we degrade cleanly and still return the summaries.
     logger.warn('attachPaymentMethodsToSummaries failed', {
       err: err instanceof Error ? err.message : String(err),
     });
