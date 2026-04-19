@@ -29,9 +29,14 @@ export function getStorefrontDetailPreviewStatus({
   resolvedOpenNow: boolean | null;
   isOperationalDataPending: boolean;
 }) {
-  const hasResolvedHoursStatus = hasHours && typeof resolvedOpenNow === 'boolean';
-
-  if (hasResolvedHoursStatus) {
+  // Prefer the resolved open/closed status whenever we have it. `resolvedOpenNow`
+  // already falls back from computed-from-hours → live → detail → summary, so on
+  // Android (where the website URL may be stripped as a marketplace link and hours
+  // may not be published yet) we can still show "Open Now" / "Closed" as long as the
+  // backend supplied an openNow signal. This prevents the preview status from
+  // collapsing to "See Details" just because the platform-safe link layer blanked
+  // out the outbound URL.
+  if (typeof resolvedOpenNow === 'boolean') {
     return {
       previewStatusLabel: resolvedOpenNow ? 'Open Now' : 'Closed',
       previewStatusTone: (resolvedOpenNow ? 'open' : 'closed') as PreviewStatusTone,
