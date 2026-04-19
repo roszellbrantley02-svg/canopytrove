@@ -1,8 +1,13 @@
 /**
  * Holographic shine overlay painted on top of every StorefrontRouteCard.
  *
- * A soft diagonal specular band sweeps across the card every 2.4s. Drawn
- * in an absolutely-positioned <Canvas> with a Skia RuntimeEffect shader
+ * A soft diagonal specular band sweeps across the card, then rests idle for a
+ * randomized 3–5 minute window before repeating. The staggered cadence means
+ * only one or two cards in a scrolling list will be shining at any given moment
+ * — the premium-signal we liked from the original constant loop without the
+ * visual noise of every card sparkling at once.
+ *
+ * Drawn in an absolutely-positioned <Canvas> with a Skia RuntimeEffect shader
  * so it composites above the card image without re-rendering the card.
  *
  * Driven by `react-native-reanimated`'s shared values — Skia 2.x reuses
@@ -22,7 +27,9 @@ import {
   Easing,
   useDerivedValue,
   useSharedValue,
+  withDelay,
   withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -54,9 +61,26 @@ half4 main(float2 fragCoord) {
 
 const shineEffect = Skia.RuntimeEffect.Make(SHINE_SRC);
 
+// One visible sweep lasts 2.4s. Between sweeps the band sits parked off-screen
+// (progress = 1.3) so the card looks completely static. The idle window is a
+// random value between these bounds chosen once per mount, which staggers the
+// cadence across cards in a scrolling list so they never all shine together.
+const SWEEP_DURATION_MS = 2400;
+const MIN_IDLE_MS = 3 * 60 * 1000; // 3 minutes
+const MAX_IDLE_MS = 5 * 60 * 1000; // 5 minutes
+
+function pickIdleDelayMs() {
+  const jitter = Math.random() * (MAX_IDLE_MS - MIN_IDLE_MS);
+  return Math.round(MIN_IDLE_MS + jitter);
+}
+
 function StorefrontRouteCardSkiaOverlayComponent({ enabled = true }: Props) {
   const [size, setSize] = React.useState({ width: 0, height: 0 });
   const progress = useSharedValue(0);
+  // Also randomize the initial delay so the first sweep on each card fires at
+  // a slightly different time after mount. Without this every card on screen
+  // would shine in unison on the first pass before diverging.
+  const initialDelayMsRef = React.useRef<number>(Math.round(Math.random() * MAX_IDLE_MS));
 
   const onLayout = React.useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -69,10 +93,21 @@ function StorefrontRouteCardSkiaOverlayComponent({ enabled = true }: Props) {
       return;
     }
     progress.value = 0;
-    progress.value = withRepeat(
-      withTiming(1.3, { duration: 2400, easing: Easing.linear }),
-      -1,
-      false,
+    progress.value = withDelay(
+      initialDelayMsRef.current,
+      withRepeat(
+        withSequence(
+          // Visible sweep left → right.
+          withTiming(1.3, { duration: SWEEP_DURATION_MS, easing: Easing.linear }),
+          // Snap back to the hidden starting position, then idle 3–5 minutes
+          // before the next sweep. Re-picking the idle window every iteration
+          // keeps neighbouring cards from re-locking into sync.
+          withTiming(0, { duration: 0 }),
+          withDelay(pickIdleDelayMs(), withTiming(0, { duration: 0 })),
+        ),
+        -1,
+        false,
+      ),
     );
   }, [enabled, progress]);
 
