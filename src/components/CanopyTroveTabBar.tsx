@@ -155,7 +155,7 @@ function TabBarItem({
           />
           <AppTabIcon
             name={iconName}
-            size={focused ? 27 : 23}
+            size={focused ? 32 : 28}
             focused={focused}
             accentColor={accentColor}
           />
@@ -476,9 +476,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 245, 140, 0.04)',
   },
   iconPlate: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 18,
     borderWidth: 1.5,
     borderColor: 'rgba(143, 255, 209, 0.10)',
     backgroundColor: 'rgba(11, 19, 25, 0.92)',
