@@ -1,6 +1,6 @@
 # App Store Privacy Nutrition Label
 
-Updated: April 17, 2026
+Updated: April 19, 2026
 
 This document tracks the App Store Privacy Nutrition Label updates required for the product scan feature launch.
 
@@ -29,7 +29,7 @@ This document tracks the App Store Privacy Nutrition Label updates required for 
 **Section:** "Data Used to Track You"
 
 - Status: **Set to "Not Tracked"** (users opt-in at scan time; location never persisted with scan records)
-- Rationale: Coarse location (approximate region) is only collected when the user grants permission during a product scan. It is never linked to the user's identity and is only used to aggregate brand popularity by geographic area. Users can disable location sharing in Profile → Privacy settings.
+- Rationale: Coarse location (approximate region) is only collected when the user grants permission during a product scan. It is never linked to the user's identity and is only used to aggregate brand popularity by geographic area. Users can decline location permission at scan time (the OS permission prompt is the current opt-out surface); a Profile → Privacy toggle to block scan-time location requests entirely is planned per the privacy policy.
 
 **Linked to purposes:**
 
@@ -51,7 +51,7 @@ Canopy Trove's new product scan feature logs data at the install-ID level, not t
 
 3. **Optional Location:** When users scan a product, they can optionally grant location permission. If granted, approximate location is recorded but never linked to the user's identity—it's only used to aggregate brand popularity by region. This is purely for showing which brands are trending in your area.
 
-4. **Disableable:** Users can turn off scan logging entirely in the app's Profile → Privacy settings.
+4. **Disableable:** Users can email askmehere@canopytrove.com to request scan-history deletion today. A Profile → Privacy toggle to disable scan logging entirely is called out as planned in the privacy policy and will ship in a near-term release.
 
 Because all of this data is collected and processed at the install-anonymous level (never at the user-identity level), it does not enable tracking as defined by App Tracking Transparency. There is no cross-app profiling, and the data is not used to create a user profile that links their identity across different apps or websites.
 
@@ -85,7 +85,7 @@ We have labeled "Product Interaction" and "Coarse Location" as **"Not Tracked"**
 - **No new sensitive data types:** THC %, terpenes, and contaminant results are all public data hosted by NY-licensed labs. Canopy Trove is just surfacing what the labs have already published.
 - **Install-anonymous only:** No user accounts, emails, or PII tied to any scan.
 - **No third-party sharing:** Scan data stays within Canopy Trove; not shared with analytics vendors, ad networks, or data brokers.
-- **User control:** Scanning is opt-in (users must allow camera), location is opt-in (users grant permission per scan), and logging is disableable in settings.
+- **User control:** Scanning is opt-in (users must allow camera), location is opt-in (users grant permission per scan), and scan-history deletion is available today by emailing askmehere@canopytrove.com. An in-app Profile → Privacy toggle to disable scan logging entirely is planned per the privacy policy.
 
 ---
 
