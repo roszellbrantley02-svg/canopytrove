@@ -10,6 +10,7 @@ const ageGateMocks = vi.hoisted(() => ({
 
 const appLifecycleMocks = vi.hoisted(() => ({
   useCanopyTroveFonts: vi.fn(),
+  initializeAppCheck: vi.fn(() => Promise.resolve(false)),
   initializeAnalytics: vi.fn(() => Promise.resolve()),
   initializePostVisitPrompts: vi.fn(() => Promise.resolve()),
   primeAppBootstrap: vi.fn(() => Promise.resolve()),
@@ -32,14 +33,27 @@ vi.mock('react-native', () => ({
       setValue(nextValue: number) {
         this.value = nextValue;
       }
+
+      stopAnimation(callback?: (value: number) => void) {
+        callback?.(this.value);
+      }
+
+      interpolate() {
+        return this;
+      }
     },
     timing: () => ({
       start: (callback?: () => void) => callback?.(),
+      stop: () => undefined,
     }),
   },
   StyleSheet: {
     create: <T,>(styles: T) => styles,
     absoluteFillObject: {},
+  },
+  Platform: {
+    OS: 'web' as const,
+    select: <T,>(options: { default?: T; web?: T }) => options.web ?? options.default,
   },
 }));
 
@@ -73,6 +87,19 @@ vi.mock('./src/context/StorefrontController', () => ({
     React.createElement('StorefrontControllerProvider', null, children),
 }));
 
+vi.mock('./src/music/MusicPlayerContext', () => ({
+  MusicPlayerProvider: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('MusicPlayerProvider', null, children),
+  useMusicPlayer: () => ({
+    isMusicEnabled: true,
+    isReady: true,
+    isSuppressed: false,
+    suppressionReason: null,
+    setMusicEnabled: () => undefined,
+    toggleMusic: () => undefined,
+  }),
+}));
+
 vi.mock('./src/components/AppErrorBoundary', () => ({
   AppErrorBoundary: ({ children }: { children: React.ReactNode }) =>
     React.createElement('AppErrorBoundary', null, children),
@@ -97,6 +124,10 @@ vi.mock('./src/services/ageGateService', () => ({
 
 vi.mock('./src/services/appBootstrapService', () => ({
   primeAppBootstrap: appLifecycleMocks.primeAppBootstrap,
+}));
+
+vi.mock('./src/services/appCheckService', () => ({
+  initializeAppCheck: appLifecycleMocks.initializeAppCheck,
 }));
 
 vi.mock('./src/services/analyticsService', () => ({
@@ -260,12 +291,4 @@ describe('App entry flow', () => {
     });
 
     expect(renderer.root.findAllByType('RootNavigator')).toHaveLength(1);
-    expect(renderer.root.findAllByType('AgeGateScreen')).toHaveLength(0);
-    expect(ageGateMocks.acceptAgeGate).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      resolveAcceptGate?.();
-      await Promise.resolve();
-    });
-  });
-});
+    expect(renderer.root.findAllByType('AgeGateScreen')).toHaveLen

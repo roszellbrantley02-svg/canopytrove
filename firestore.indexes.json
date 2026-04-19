@@ -75,6 +75,38 @@
       "collectionGroup": "favoriteBrands",
       "queryScope": "COLLECTION",
       "fields": [{ "fieldPath": "savedAt", "order": "DESCENDING" }]
+    },
+    {
+      "collectionGroup": "product_app_reviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "productSlug", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "product_app_reviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "profileId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "usernameChangeRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "productScans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "brandId", "order": "ASCENDING" },
+        { "fieldPath": "scannedAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

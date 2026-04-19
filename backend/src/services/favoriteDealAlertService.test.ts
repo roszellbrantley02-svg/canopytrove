@@ -77,7 +77,8 @@ test('syncFavoriteDealAlerts removes hidden storefront promotions from saved ale
   clearStorefrontBackendCache();
   delete require.cache[favoriteDealAlertServicePath];
 
-  const { syncFavoriteDealAlerts } = require('./favoriteDealAlertService') as typeof import('./favoriteDealAlertService');
+  const { syncFavoriteDealAlerts } =
+    require('./favoriteDealAlertService') as typeof import('./favoriteDealAlertService');
 
   const firstSync = await syncFavoriteDealAlerts({
     profileId: 'profile-hidden-filter',

@@ -10,6 +10,12 @@ const ownerPortalMocks = vi.hoisted(() => ({
   })),
 }));
 
+const backendServiceMocks = vi.hoisted(() => ({
+  seedStorefrontBackendFirestore: vi.fn(),
+  submitUsernameChangeRequest: vi.fn(),
+  getPendingUsernameRequest: vi.fn(() => Promise.resolve({ request: null })),
+}));
+
 vi.mock('../../repositories/storefrontRepository', () => ({
   clearStorefrontRepositoryCache: vi.fn(),
 }));
@@ -25,7 +31,9 @@ vi.mock('../../config/firebase', () => ({
 }));
 
 vi.mock('../../services/storefrontBackendService', () => ({
-  seedStorefrontBackendFirestore: vi.fn(),
+  seedStorefrontBackendFirestore: backendServiceMocks.seedStorefrontBackendFirestore,
+  submitUsernameChangeRequest: backendServiceMocks.submitUsernameChangeRequest,
+  getPendingUsernameRequest: backendServiceMocks.getPendingUsernameRequest,
 }));
 
 vi.mock('../../config/storefrontSourceConfig', () => ({
@@ -96,6 +104,7 @@ describe('useProfileActions owner routing', () => {
 
   beforeEach(() => {
     latestResult = null;
+    backendServiceMocks.getPendingUsernameRequest.mockResolvedValue({ request: null });
   });
 
   afterEach(() => {

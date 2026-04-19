@@ -41,11 +41,9 @@ async function loadOwnerAccountIds(): Promise<Set<string>> {
   }
 
   const ownerAccountIds = new Set<string>();
-  let lastDocument:
-    | {
-        id: string;
-      }
-    | null = null;
+  let lastDocument: {
+    id: string;
+  } | null = null;
 
   while (true) {
     let query = collectionRef.where('role', 'in', ['owner', 'admin']).select('uid').limit(1000);

@@ -1,0 +1,734 @@
+{
+  "name": "Canopy Trove icon pack",
+  "version": "v4c",
+  "date_generated": "2026-04-19",
+  "total_assets": 66,
+  "render_spec": {
+    "engine": "Cycles GPU",
+    "samples": 48,
+    "resolution": "512x512",
+    "format": "PNG (RGBA, transparent)",
+    "view_transform": "AgX - Base Contrast",
+    "camera": "orthographic, location (0,-8,0), rotation (pi/2,0,0), ortho_scale 2.6",
+    "lighting": "3-point: Key 500W warm, Fill 200W cool, Rim 400W"
+  },
+  "material_spec": {
+    "shader": "Principled BSDF v2",
+    "emission_strength": 0.35,
+    "palette": {
+      "Gold": {
+        "hex": "#FFC726",
+        "metallic": 0.92,
+        "roughness": 0.22
+      },
+      "Silver": {
+        "hex": "#E6EBF5",
+        "metallic": 0.95,
+        "roughness": 0.18
+      },
+      "Bronze": {
+        "hex": "#CC7333",
+        "metallic": 0.85,
+        "roughness": 0.35
+      },
+      "Diamond": {
+        "hex": "#DEF2FF",
+        "metallic": 0.1,
+        "roughness": 0.45,
+        "coat": 0.85
+      },
+      "Ruby": {
+        "hex": "#EB1A33",
+        "metallic": 0.15,
+        "roughness": 0.45,
+        "coat": 0.7
+      },
+      "Sapphire": {
+        "hex": "#1A4DEB",
+        "metallic": 0.15,
+        "roughness": 0.45,
+        "coat": 0.7
+      },
+      "Emerald": {
+        "hex": "#1FC761",
+        "metallic": 0.1,
+        "roughness": 0.45,
+        "coat": 0.7
+      },
+      "Amethyst": {
+        "hex": "#9940D9",
+        "metallic": 0.1,
+        "roughness": 0.45,
+        "coat": 0.65
+      },
+      "Amber": {
+        "hex": "#FF9E14",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.6
+      },
+      "Teal": {
+        "hex": "#1AB8B8",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.55
+      },
+      "Cream": {
+        "hex": "#FFF2CC",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.55
+      },
+      "Rose": {
+        "hex": "#FF5C7A",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.6
+      },
+      "Lime": {
+        "hex": "#A8E034",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.55
+      },
+      "Cyan": {
+        "hex": "#1FC7E0",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.55
+      },
+      "Magenta": {
+        "hex": "#E033B8",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.6
+      },
+      "Coral": {
+        "hex": "#FF704D",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.55
+      },
+      "Indigo": {
+        "hex": "#4033B8",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.6
+      },
+      "Pink": {
+        "hex": "#FF80BF",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.55
+      },
+      "Mint": {
+        "hex": "#8CE0B3",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.55
+      },
+      "Orange": {
+        "hex": "#FF6619",
+        "metallic": 0.08,
+        "roughness": 0.45,
+        "coat": 0.6
+      }
+    }
+  },
+  "assets": [
+    {
+      "index": 0,
+      "filename": "00_CT_Trophy_Anvil.png",
+      "asset_name": "CT_Trophy_Anvil",
+      "category": "Trophy",
+      "role": "Craftsmanship achievement",
+      "color_key": "Bronze",
+      "notes": "Forge / maker milestone"
+    },
+    {
+      "index": 1,
+      "filename": "01_CT_Trophy_Compass.png",
+      "asset_name": "CT_Trophy_Compass",
+      "category": "Trophy",
+      "role": "Explorer award",
+      "color_key": "Gold",
+      "notes": "Top-tier discovery trophy"
+    },
+    {
+      "index": 2,
+      "filename": "02_CT_Trophy_Crown.png",
+      "asset_name": "CT_Trophy_Crown",
+      "category": "Trophy",
+      "role": "Top-seller / royalty tier",
+      "color_key": "Gold",
+      "notes": "1st-place trophy"
+    },
+    {
+      "index": 3,
+      "filename": "03_CT_Trophy_Cup.png",
+      "asset_name": "CT_Trophy_Cup",
+      "category": "Trophy",
+      "role": "Gold cup award",
+      "color_key": "Gold",
+      "notes": "Classic 1st-place cup"
+    },
+    {
+      "index": 4,
+      "filename": "04_CT_Trophy_CupBronze.png",
+      "asset_name": "CT_Trophy_CupBronze",
+      "category": "Trophy",
+      "role": "3rd-place cup",
+      "color_key": "Bronze",
+      "notes": "Podium tier 3"
+    },
+    {
+      "index": 5,
+      "filename": "05_CT_Trophy_CupSilver.png",
+      "asset_name": "CT_Trophy_CupSilver",
+      "category": "Trophy",
+      "role": "2nd-place cup",
+      "color_key": "Silver",
+      "notes": "Podium tier 2"
+    },
+    {
+      "index": 6,
+      "filename": "06_CT_Trophy_Diamond.png",
+      "asset_name": "CT_Trophy_Diamond",
+      "category": "Trophy",
+      "role": "Elite status gem",
+      "color_key": "Diamond",
+      "notes": "Highest-tier collector"
+    },
+    {
+      "index": 7,
+      "filename": "07_CT_Trophy_Goblet.png",
+      "asset_name": "CT_Trophy_Goblet",
+      "category": "Trophy",
+      "role": "Quarter winner",
+      "color_key": "Silver",
+      "notes": "Goblet award"
+    },
+    {
+      "index": 8,
+      "filename": "08_CT_Trophy_Hammer.png",
+      "asset_name": "CT_Trophy_Hammer",
+      "category": "Trophy",
+      "role": "Builder / power tool",
+      "color_key": "Bronze",
+      "notes": "DIY / hardware category"
+    },
+    {
+      "index": 9,
+      "filename": "09_CT_Trophy_Laurel.png",
+      "asset_name": "CT_Trophy_Laurel",
+      "category": "Trophy",
+      "role": "Victory wreath",
+      "color_key": "Emerald",
+      "notes": "Tournament winner"
+    },
+    {
+      "index": 10,
+      "filename": "10_CT_Trophy_Medal.png",
+      "asset_name": "CT_Trophy_Medal",
+      "category": "Trophy",
+      "role": "Completion medal",
+      "color_key": "Gold",
+      "notes": "Standard achievement"
+    },
+    {
+      "index": 11,
+      "filename": "11_CT_Trophy_Plaque.png",
+      "asset_name": "CT_Trophy_Plaque",
+      "category": "Trophy",
+      "role": "Commemorative plaque",
+      "color_key": "Bronze",
+      "notes": "Anniversary / tenure"
+    },
+    {
+      "index": 12,
+      "filename": "12_CT_Trophy_Ribbon1.png",
+      "asset_name": "CT_Trophy_Ribbon1",
+      "category": "Trophy",
+      "role": "1st place ribbon",
+      "color_key": "Gold",
+      "notes": "Competition tier 1"
+    },
+    {
+      "index": 13,
+      "filename": "13_CT_Trophy_Ribbon2.png",
+      "asset_name": "CT_Trophy_Ribbon2",
+      "category": "Trophy",
+      "role": "2nd place ribbon",
+      "color_key": "Silver",
+      "notes": "Competition tier 2"
+    },
+    {
+      "index": 14,
+      "filename": "14_CT_Trophy_Ribbon3.png",
+      "asset_name": "CT_Trophy_Ribbon3",
+      "category": "Trophy",
+      "role": "3rd place ribbon",
+      "color_key": "Bronze",
+      "notes": "Competition tier 3"
+    },
+    {
+      "index": 15,
+      "filename": "15_CT_Trophy_Shield.png",
+      "asset_name": "CT_Trophy_Shield",
+      "category": "Trophy",
+      "role": "Defender / protector",
+      "color_key": "Sapphire",
+      "notes": "Moderator / trust role"
+    },
+    {
+      "index": 16,
+      "filename": "16_CT_Trophy_Star.png",
+      "asset_name": "CT_Trophy_Star",
+      "category": "Trophy",
+      "role": "Featured / rising star",
+      "color_key": "Amber",
+      "notes": "Rising creator"
+    },
+    {
+      "index": 17,
+      "filename": "17_CT_Trophy_StarRuby.png",
+      "asset_name": "CT_Trophy_StarRuby",
+      "category": "Trophy",
+      "role": "Ruby star - elite",
+      "color_key": "Ruby",
+      "notes": "Premium creator tier"
+    },
+    {
+      "index": 18,
+      "filename": "18_CT_Trophy_StarSapphire.png",
+      "asset_name": "CT_Trophy_StarSapphire",
+      "category": "Trophy",
+      "role": "Sapphire star - elite",
+      "color_key": "Sapphire",
+      "notes": "Premium creator tier"
+    },
+    {
+      "index": 19,
+      "filename": "19_CT_Trophy_Sword.png",
+      "asset_name": "CT_Trophy_Sword",
+      "category": "Trophy",
+      "role": "Champion of the month",
+      "color_key": "Ruby",
+      "notes": "Top performer"
+    },
+    {
+      "index": 20,
+      "filename": "20_CT_Badge_Anchor.png",
+      "asset_name": "CT_Badge_Anchor",
+      "category": "Badge",
+      "role": "Long-time member",
+      "color_key": "Sapphire",
+      "notes": "Veteran / loyal buyer"
+    },
+    {
+      "index": 21,
+      "filename": "21_CT_Badge_Arrow.png",
+      "asset_name": "CT_Badge_Arrow",
+      "category": "Badge",
+      "role": "Fast shipper",
+      "color_key": "Coral",
+      "notes": "Speed merit"
+    },
+    {
+      "index": 22,
+      "filename": "22_CT_Badge_Chest.png",
+      "asset_name": "CT_Badge_Chest",
+      "category": "Badge",
+      "role": "Treasure finder",
+      "color_key": "Amber",
+      "notes": "Deal hunter"
+    },
+    {
+      "index": 23,
+      "filename": "23_CT_Badge_Crown.png",
+      "asset_name": "CT_Badge_Crown",
+      "category": "Badge",
+      "role": "Royal status",
+      "color_key": "Amethyst",
+      "notes": "Premium tier member"
+    },
+    {
+      "index": 24,
+      "filename": "24_CT_Badge_Diamond.png",
+      "asset_name": "CT_Badge_Diamond",
+      "category": "Badge",
+      "role": "Premium collector",
+      "color_key": "Diamond",
+      "notes": "Luxury category"
+    },
+    {
+      "index": 25,
+      "filename": "25_CT_Badge_Eye.png",
+      "asset_name": "CT_Badge_Eye",
+      "category": "Badge",
+      "role": "Watcher / observer",
+      "color_key": "Cyan",
+      "notes": "Curator / trend spotter"
+    },
+    {
+      "index": 26,
+      "filename": "26_CT_Badge_Feather.png",
+      "asset_name": "CT_Badge_Feather",
+      "category": "Badge",
+      "role": "Lightweight contributor",
+      "color_key": "Mint",
+      "notes": "New / light engagement"
+    },
+    {
+      "index": 27,
+      "filename": "27_CT_Badge_Fire.png",
+      "asset_name": "CT_Badge_Fire",
+      "category": "Badge",
+      "role": "Hot listing",
+      "color_key": "Orange",
+      "notes": "Trending item owner"
+    },
+    {
+      "index": 28,
+      "filename": "28_CT_Badge_Heart.png",
+      "asset_name": "CT_Badge_Heart",
+      "category": "Badge",
+      "role": "Favorite / loved",
+      "color_key": "Rose",
+      "notes": "Community favorite"
+    },
+    {
+      "index": 29,
+      "filename": "29_CT_Badge_Hourglass.png",
+      "asset_name": "CT_Badge_Hourglass",
+      "category": "Badge",
+      "role": "Time-limited offer",
+      "color_key": "Coral",
+      "notes": "Flash deals badge"
+    },
+    {
+      "index": 30,
+      "filename": "30_CT_Badge_Lantern.png",
+      "asset_name": "CT_Badge_Lantern",
+      "category": "Badge",
+      "role": "Guide / helpful",
+      "color_key": "Amber",
+      "notes": "Forum mentor"
+    },
+    {
+      "index": 31,
+      "filename": "31_CT_Badge_Lightning.png",
+      "asset_name": "CT_Badge_Lightning",
+      "category": "Badge",
+      "role": "Power seller",
+      "color_key": "Indigo",
+      "notes": "Fast-response seller"
+    },
+    {
+      "index": 32,
+      "filename": "32_CT_Badge_Moon.png",
+      "asset_name": "CT_Badge_Moon",
+      "category": "Badge",
+      "role": "Night owl / late-night",
+      "color_key": "Silver",
+      "notes": "Dark-hours activity"
+    },
+    {
+      "index": 33,
+      "filename": "33_CT_Badge_Rose.png",
+      "asset_name": "CT_Badge_Rose",
+      "category": "Badge",
+      "role": "Handmade / artisan",
+      "color_key": "Rose",
+      "notes": "Handmade category"
+    },
+    {
+      "index": 34,
+      "filename": "34_CT_Badge_Shield.png",
+      "asset_name": "CT_Badge_Shield",
+      "category": "Badge",
+      "role": "Verified seller",
+      "color_key": "Emerald",
+      "notes": "Trust / verification"
+    },
+    {
+      "index": 35,
+      "filename": "35_CT_Badge_Snowflake.png",
+      "asset_name": "CT_Badge_Snowflake",
+      "category": "Badge",
+      "role": "Winter seasonal",
+      "color_key": "Diamond",
+      "notes": "Seasonal badge"
+    },
+    {
+      "index": 36,
+      "filename": "36_CT_Badge_StarOrange.png",
+      "asset_name": "CT_Badge_StarOrange",
+      "category": "Badge",
+      "role": "Featured / highlighted",
+      "color_key": "Amber",
+      "notes": "Editor's pick"
+    },
+    {
+      "index": 37,
+      "filename": "37_CT_Badge_Sun.png",
+      "asset_name": "CT_Badge_Sun",
+      "category": "Badge",
+      "role": "Daily deal",
+      "color_key": "Amber",
+      "notes": "Daily promo"
+    },
+    {
+      "index": 38,
+      "filename": "38_CT_Badge_Target.png",
+      "asset_name": "CT_Badge_Target",
+      "category": "Badge",
+      "role": "Goal achieved",
+      "color_key": "Ruby",
+      "notes": "Milestone hit"
+    },
+    {
+      "index": 39,
+      "filename": "39_CT_Badge_Wings.png",
+      "asset_name": "CT_Badge_Wings",
+      "category": "Badge",
+      "role": "Free shipping / flight",
+      "color_key": "Cream",
+      "notes": "Shipping perk"
+    },
+    {
+      "index": 40,
+      "filename": "40_CT_Flag_Banner.png",
+      "asset_name": "CT_Flag_Banner",
+      "category": "Flag",
+      "role": "Event / announcement",
+      "color_key": "Pink",
+      "notes": "Promo banner header"
+    },
+    {
+      "index": 41,
+      "filename": "41_CT_Flag_Pennant.png",
+      "asset_name": "CT_Flag_Pennant",
+      "category": "Flag",
+      "role": "Team / club",
+      "color_key": "Sapphire",
+      "notes": "Community group flag"
+    },
+    {
+      "index": 42,
+      "filename": "42_AppNav_Browse.png",
+      "asset_name": "AppNav_Browse",
+      "category": "AppNav",
+      "role": "Browse all categories",
+      "color_key": "Amber",
+      "notes": "General catalog"
+    },
+    {
+      "index": 43,
+      "filename": "43_AppNav_Cart.png",
+      "asset_name": "AppNav_Cart",
+      "category": "AppNav",
+      "role": "Shopping cart",
+      "color_key": "Teal",
+      "notes": "Checkout entry"
+    },
+    {
+      "index": 44,
+      "filename": "44_AppNav_Categories.png",
+      "asset_name": "AppNav_Categories",
+      "category": "AppNav",
+      "role": "Category grid",
+      "color_key": "Indigo",
+      "notes": "Catalog taxonomy"
+    },
+    {
+      "index": 45,
+      "filename": "45_AppNav_Chat.png",
+      "asset_name": "AppNav_Chat",
+      "category": "AppNav",
+      "role": "Messages / chat",
+      "color_key": "Mint",
+      "notes": "Inbox / DM"
+    },
+    {
+      "index": 46,
+      "filename": "46_AppNav_Compass.png",
+      "asset_name": "AppNav_Compass",
+      "category": "AppNav",
+      "role": "Discover / recommendations",
+      "color_key": "Gold",
+      "notes": "Personalized feed"
+    },
+    {
+      "index": 47,
+      "filename": "47_AppNav_Favorites.png",
+      "asset_name": "AppNav_Favorites",
+      "category": "AppNav",
+      "role": "Saved favorites",
+      "color_key": "Rose",
+      "notes": "Wishlist"
+    },
+    {
+      "index": 48,
+      "filename": "48_AppNav_Filter.png",
+      "asset_name": "AppNav_Filter",
+      "category": "AppNav",
+      "role": "Filter options",
+      "color_key": "Coral",
+      "notes": "Refine results"
+    },
+    {
+      "index": 49,
+      "filename": "49_AppNav_Gift.png",
+      "asset_name": "AppNav_Gift",
+      "category": "AppNav",
+      "role": "Gifts / gifting",
+      "color_key": "Magenta",
+      "notes": "Gift promo"
+    },
+    {
+      "index": 50,
+      "filename": "50_AppNav_Help.png",
+      "asset_name": "AppNav_Help",
+      "category": "AppNav",
+      "role": "Help / support",
+      "color_key": "Sapphire",
+      "notes": "Support center"
+    },
+    {
+      "index": 51,
+      "filename": "51_AppNav_Home.png",
+      "asset_name": "AppNav_Home",
+      "category": "AppNav",
+      "role": "Home tab",
+      "color_key": "Sapphire",
+      "notes": "Bottom-nav / dashboard"
+    },
+    {
+      "index": 52,
+      "filename": "52_AppNav_HotDeals.png",
+      "asset_name": "AppNav_HotDeals",
+      "category": "AppNav",
+      "role": "Hot deals / trending",
+      "color_key": "Orange",
+      "notes": "Flash discounts feed"
+    },
+    {
+      "index": 53,
+      "filename": "53_AppNav_MapApp.png",
+      "asset_name": "AppNav_MapApp",
+      "category": "AppNav",
+      "role": "Map view",
+      "color_key": "Lime",
+      "notes": "Geo map mode"
+    },
+    {
+      "index": 54,
+      "filename": "54_AppNav_Nearby.png",
+      "asset_name": "AppNav_Nearby",
+      "category": "AppNav",
+      "role": "Local listings near me",
+      "color_key": "Ruby",
+      "notes": "Geo-filtered browse"
+    },
+    {
+      "index": 55,
+      "filename": "55_AppNav_Notifications.png",
+      "asset_name": "AppNav_Notifications",
+      "category": "AppNav",
+      "role": "Notifications / alerts",
+      "color_key": "Amber",
+      "notes": "Bell / updates"
+    },
+    {
+      "index": 56,
+      "filename": "56_AppNav_Percent.png",
+      "asset_name": "AppNav_Percent",
+      "category": "AppNav",
+      "role": "Discount / percent off",
+      "color_key": "Amber",
+      "notes": "Promo indicator"
+    },
+    {
+      "index": 57,
+      "filename": "57_AppNav_Profile.png",
+      "asset_name": "AppNav_Profile",
+      "category": "AppNav",
+      "role": "User profile",
+      "color_key": "Amethyst",
+      "notes": "Account tab"
+    },
+    {
+      "index": 58,
+      "filename": "58_AppNav_Refer.png",
+      "asset_name": "AppNav_Refer",
+      "category": "AppNav",
+      "role": "Refer a friend",
+      "color_key": "Pink",
+      "notes": "Invite/refer flow"
+    },
+    {
+      "index": 59,
+      "filename": "59_AppNav_Rocket.png",
+      "asset_name": "AppNav_Rocket",
+      "category": "AppNav",
+      "role": "Boost / promote listing",
+      "color_key": "Indigo",
+      "notes": "Seller boost"
+    },
+    {
+      "index": 60,
+      "filename": "60_AppNav_Search.png",
+      "asset_name": "AppNav_Search",
+      "category": "AppNav",
+      "role": "Search",
+      "color_key": "Cyan",
+      "notes": "Search bar icon"
+    },
+    {
+      "index": 61,
+      "filename": "61_AppNav_Settings.png",
+      "asset_name": "AppNav_Settings",
+      "category": "AppNav",
+      "role": "Settings",
+      "color_key": "Silver",
+      "notes": "Configuration"
+    },
+    {
+      "index": 62,
+      "filename": "62_AppNav_Share.png",
+      "asset_name": "AppNav_Share",
+      "category": "AppNav",
+      "role": "Share listing",
+      "color_key": "Cyan",
+      "notes": "Social share"
+    },
+    {
+      "index": 63,
+      "filename": "63_AppNav_Tag.png",
+      "asset_name": "AppNav_Tag",
+      "category": "AppNav",
+      "role": "Tags / labels",
+      "color_key": "Ruby",
+      "notes": "Price / tag UI"
+    },
+    {
+      "index": 64,
+      "filename": "64_AppNav_Verify.png",
+      "asset_name": "AppNav_Verify",
+      "category": "AppNav",
+      "role": "Verification flow",
+      "color_key": "Emerald",
+      "notes": "ID / listing verification"
+    },
+    {
+      "index": 65,
+      "filename": "65_AppNav_Wallet.png",
+      "asset_name": "AppNav_Wallet",
+      "category": "AppNav",
+      "role": "Wallet / balance",
+      "color_key": "Emerald",
+      "notes": "Payments tab"
+    }
+  ]
+}

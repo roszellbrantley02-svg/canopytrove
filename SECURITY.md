@@ -159,8 +159,53 @@ If you encounter issues during key rotation:
 3. Ensure the new key has the correct format and permissions
 4. Contact infrastructure/DevOps team if issues persist
 
+## iOS + Android Signing Credentials
+
+The repo stores local signing credentials for EAS Build in two places:
+
+- `credentials.json` (iOS distribution cert reference + keystore mappings)
+- `credentials/android/` (Android keystore + key alias)
+
+Both paths are already listed in `.gitignore` and have never been committed to
+the repo history (verified 2026-04-19 via `git log --all --full-history`).
+However, the local files still represent signing authority for the app. Treat
+them like any other private key.
+
+### Rotation / Migration to EAS-Managed Credentials
+
+Recommended: move to EAS-managed credentials so the keys live in Expo's secure
+storage instead of on the developer workstation.
+
+```bash
+# From the project root
+npx eas credentials
+
+# Select "iOS" -> production -> "Distribution Certificate" -> Generate new
+# Select "Android" -> production -> "Keystore" -> Generate new (or upload existing)
+# When prompted, choose "Use EAS to manage credentials"
+```
+
+After moving to EAS-managed:
+
+1. Delete the local `credentials.json` and `credentials/` folder.
+2. Verify the next `eas build --profile production` still succeeds without them.
+3. If the previous local keys were ever exposed (e.g. backup sync, screen-share,
+   leaked to a support thread), revoke the distribution certificate in the Apple
+   Developer portal and rotate the Android keystore. Note: Android keystore
+   rotation is **one-time** — once the store app is signed with a key, the same
+   key must sign every subsequent update unless you use Play App Signing (which
+   you should enable if not already).
+
+### Current state (verified 2026-04-19)
+
+- [x] `credentials.json` is in `.gitignore`
+- [x] `credentials/` is in `.gitignore`
+- [x] Neither path has ever been committed (`git log --all --full-history --` clean)
+- [ ] Migrate to EAS-managed credentials (pending)
+- [ ] Enable Play App Signing if not already on (pending)
+
 ---
 
-**Last Updated**: 2026-04-05
+**Last Updated**: 2026-04-19
 **Policy Owner**: Security Team
 **Review Schedule**: Quarterly or after any security incident

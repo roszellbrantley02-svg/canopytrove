@@ -4,6 +4,9 @@ import { act, create } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-native', () => ({
+  Keyboard: {
+    dismiss: vi.fn(),
+  },
   Pressable: 'Pressable',
   TextInput: 'TextInput',
   View: 'View',

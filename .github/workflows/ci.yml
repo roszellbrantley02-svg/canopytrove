@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel in-progress runs when a new commit is pushed to the same ref. Keeps
+# CI snappy on PRs where authors are force-pushing fixes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Static checks: secret scan, typecheck, lint (zero-warnings), prettier check.
+  # Cheapest job — runs first and fails the build fast on style / type issues.
+  # Mirrors `npm run precheck:strict` + the pre-commit secret scan.
+  # ---------------------------------------------------------------------------
+  static-checks:
+    name: Static checks (typecheck + lint + format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install root deps
+        run: npm ci
+
+      - name: Scan staged files for secrets
+        run: node ./scripts/check-staged-secrets.mjs
+
+      - name: Typecheck (frontend)
+        run: npm run typecheck
+
+      - name: Lint (zero warnings)
+        run: npm run lint:strict
+
+      - name: Prettier check
+        run: npm run format:check
+
+  # ---------------------------------------------------------------------------
+  # Frontend unit + integration tests via vitest.
+  # `check:all` splits these into `test:frontend-core` + `test:frontend-integration`
+  # to keep noisy jest-style globals scoped. Mirror that split here.
+  # ---------------------------------------------------------------------------
+  frontend-tests:
+    name: Frontend tests (vitest)
+    runs-on: ubuntu-latest
+    needs: static-checks
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Frontend core tests
+        run: npm run test:frontend-core
+
+      - name: Frontend integration tests
+        run: npm run test:frontend-integration
+
+  # ---------------------------------------------------------------------------
+  # Backend tests + typecheck.
+  # `cd backend && npm test` runs `tsx --test src/**/*.test.ts`.
+  # `npm run check` runs `tsc --noEmit` against backend/tsconfig.json.
+  # ---------------------------------------------------------------------------
+  backend-tests:
+    name: Backend tests + typecheck
+    runs-on: ubuntu-latest
+    needs: static-checks
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+
+      - name: Backend typecheck
+        run: npm run check
+
+      - name: Backend tests
+        run: npm test
+
+  # ---------------------------------------------------------------------------
+  # Firebase security-rules tests. The local runner is PowerShell-only
+  # (scripts/run-firebase-rules-tests.ps1), so we inline the Linux-equivalent
+  # here: boot the Firestore + Storage emulators and run vitest against
+  # vitest.rules.config.ts. Requires Java 21 for the emulator.
+  # ---------------------------------------------------------------------------
+  rules-tests:
+    name: Firebase rules tests
+    runs-on: ubuntu-latest
+    needs: static-checks
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - run: npm ci
+
+      - name: Install firebase-tools (pinned to repo's devDependency)
+        run: npx firebase-tools --version
+
+      - name: Run rules tests against emulator
+        run: >-
+          npx firebase-tools emulators:exec
+          --project demo-canopytrove
+          --only firestore,storage
+          "npx vitest run --config vitest.rules.config.ts"

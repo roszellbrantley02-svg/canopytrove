@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
 
 const firestoreCollectionsModulePath = require.resolve('../firestoreCollections');
-const gamificationPersistenceServiceModulePath = require.resolve('./gamificationPersistenceService');
+const gamificationPersistenceServiceModulePath =
+  require.resolve('./gamificationPersistenceService');
 const profileServiceModulePath = require.resolve('./profileService');
 const leaderboardServiceModulePath = require.resolve('./leaderboardService');
 

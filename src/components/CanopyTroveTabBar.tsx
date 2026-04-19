@@ -3,7 +3,7 @@ import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppTabIcon } from '../icons/AppTabIcons';
+import { AppTabIconV4c as AppTabIcon } from '../icons/AppTabIconsV4c';
 import { HapticPressable } from './HapticPressable';
 import { colors, fontFamilies, motion, radii, spacing, textStyles } from '../theme/tokens';
 import type { RootTabParamList } from '../navigation/RootNavigator';

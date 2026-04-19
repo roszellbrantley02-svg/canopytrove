@@ -45,6 +45,9 @@ vi.mock('react-native', () => {
     StyleSheet: {
       create: <T,>(styles: T) => styles,
     },
+    Platform: {
+      OS: 'ios' as const,
+    },
     View: 'View',
   };
 });

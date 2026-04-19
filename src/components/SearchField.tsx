@@ -1,7 +1,7 @@
 import React from 'react';
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { AppUiIcon } from '../icons/AppUiIcon';
-import { SearchGlyphIcon } from '../icons/ProvidedGlyphIcons';
+import { SearchGlyphIconV4c as SearchGlyphIcon } from '../icons/ProvidedGlyphIconsV4c';
 import { colors, spacing, typography } from '../theme/tokens';
 
 type SearchFieldProps = {

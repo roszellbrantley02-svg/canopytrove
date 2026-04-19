@@ -1658,6 +1658,48 @@ test('accepts client runtime error reports', async () => {
   assert.equal(response.json?.ok, true);
 });
 
+test('treats fatal client runtime reports as warning-only for protected mode', async () => {
+  const { baseUrl } = await startTestServer();
+
+  for (let index = 0; index < 3; index += 1) {
+    const response = await request(baseUrl, '/client-errors', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-authenticated:account-1',
+      },
+      body: JSON.stringify({
+        message: `Fatal client crash ${index + 1}`,
+        source: 'storefront-detail-fetch',
+        screen: 'StorefrontDetail',
+        isFatal: true,
+        platform: 'ios',
+        reportedAt: new Date().toISOString(),
+      }),
+    });
+
+    assert.equal(response.status, 202);
+  }
+
+  const runtimeStatusResponse = await request(baseUrl, '/runtime/status');
+  assert.equal(runtimeStatusResponse.status, 200);
+  assert.equal(
+    (runtimeStatusResponse.json?.incidentCounts as { criticalLast15Minutes?: number } | undefined)
+      ?.criticalLast15Minutes,
+    0,
+  );
+  assert.equal(
+    (runtimeStatusResponse.json?.incidentCounts as { clientLast24Hours?: number } | undefined)
+      ?.clientLast24Hours,
+    3,
+  );
+  assert.equal(
+    (runtimeStatusResponse.json?.policy as { safeModeEnabled?: boolean } | undefined)
+      ?.safeModeEnabled,
+    false,
+  );
+});
+
 test('rejects unauthenticated client runtime error reports', async () => {
   const { baseUrl } = await startTestServer();
   const response = await request(baseUrl, '/client-errors', {
@@ -1767,66 +1809,20 @@ test('accepts analytics event batches', async () => {
   assert.equal(response.json?.accepted, 1);
 });
 
-test('runs a discovery sweep through the admin discovery route', async () => {
-  process.env.ADMIN_API_KEY = 'admin-secret';
+test('rejects analytics batches with stale occurredAt timestamps', async () => {
   const { baseUrl } = await startTestServer();
-  const response = await request(baseUrl, '/admin/discovery/sweep?limit=3&mode=sync', {
-    method: 'POST',
-    headers: {
-      'x-admin-api-key': 'admin-secret',
-    },
-  });
+  const staleOccurredAt = new Date(Date.now() - 35 * 24 * 60 * 60_000).toISOString();
 
-  assert.equal(response.status, 200);
-  assert.equal(response.json?.ok, true);
-  assert.equal(response.json?.sourceCount, 3);
-  assert.equal(response.json?.candidateCount, 3);
-  assert.equal(
-    (response.json?.hiddenCount as number) +
-      (response.json?.readyForPublishCount as number) +
-      (response.json?.publishedCount as number) +
-      (response.json?.suppressedCount as number),
-    3,
-  );
-});
-
-test('deduplicates analytics event retries by eventId', async () => {
-  const { baseUrl } = await startTestServer();
-  const event = {
-    eventId: 'event-retry-1',
-    eventType: 'app_open',
-    installId: 'install-1',
-    sessionId: 'session-1',
-    occurredAt: new Date().toISOString(),
-    screen: 'Nearby',
-  };
-
-  const firstResponse = await request(baseUrl, '/analytics/events', {
+  const response = await request(baseUrl, '/analytics/events', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       platform: 'android',
-      events: [event],
-    }),
-  });
-
-  const secondResponse = await request(baseUrl, '/analytics/events', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      platform: 'android',
-      events: [event],
-    }),
-  });
-
-  assert.equal(firstResponse.status, 202);
-  assert.equal(firstResponse.json?.accepted, 1);
-  assert.equal(firstResponse.json?.duplicates, 0);
-  assert.equal(secondResponse.status, 202);
-  assert.equal(secondResponse.json?.accepted, 0);
-  assert.equal(secondResponse.json?.duplicates, 1);
-});
+      events: [
+        {
+          eventType: 'app_open',
+          installId: 'install-1',
+          sessionId: 'session-1',
+          occ

@@ -177,6 +177,32 @@ export function getOwnerPortalBrandActivity(options?: {
   );
 }
 
+export type OwnerPortalPaymentMethodsResponse = {
+  storefrontId: string;
+  methods: Record<string, boolean>;
+  updatedAt: string | null;
+};
+
+export function getOwnerPortalPaymentMethods(locationId?: string | null) {
+  const query = locationId ? `?locationId=${encodeURIComponent(locationId)}` : '';
+  return requestOwnerPortalJson<OwnerPortalPaymentMethodsResponse>(
+    `/owner-portal/payment-methods${query}`,
+  );
+}
+
+export function saveOwnerPortalPaymentMethods(
+  methods: Record<string, boolean>,
+  locationId?: string | null,
+) {
+  return requestOwnerPortalJson<OwnerPortalPaymentMethodsResponse>(
+    '/owner-portal/payment-methods',
+    {
+      method: 'PUT',
+      body: { methods, ...(locationId ? { locationId } : {}) },
+    },
+  );
+}
+
 export function syncOwnerPortalAlerts(devicePushToken?: string | null) {
   return requestOwnerPortalJson<OwnerPortalWorkspaceDocument['ownerAlertStatus']>(
     '/owner-portal/alerts/sync',

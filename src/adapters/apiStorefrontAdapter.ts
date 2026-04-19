@@ -48,6 +48,7 @@ export function fromStorefrontSummaryApiDocument(
     placeId: document.placeId,
     thumbnailUrl: document.thumbnailUrl ?? null,
     ocmVerification: document.ocmVerification ?? null,
+    paymentMethods: document.paymentMethods ?? null,
   };
 }
 
@@ -96,5 +97,6 @@ export function fromStorefrontDetailApiDocument(
     editorialSummary: document.editorialSummary,
     routeMode: document.routeMode,
     ocmVerification: document.ocmVerification ?? null,
+    paymentMethods: document.paymentMethods ?? null,
   };
 }

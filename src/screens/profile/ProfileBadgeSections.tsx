@@ -85,18 +85,28 @@ export function ProfileRewardsSection({
           {visibleFeaturedBadges.length ? (
             <View style={styles.badgeGrid}>
               {visibleFeaturedBadges.map((badge) => (
-                <View key={badge.id} style={styles.featuredBadgeCard}>
+                <View
+                  key={badge.id}
+                  style={[
+                    styles.featuredBadgeCard,
+                    { borderColor: `${badge.color}55`, backgroundColor: `${badge.color}12` },
+                  ]}
+                >
                   <View style={[styles.badgeIcon, { backgroundColor: badge.color }]}>
                     <AppUiIcon
                       name={badge.icon as AppUiIconName}
-                      size={18}
+                      size={24}
                       color={colors.background}
                     />
                   </View>
-                  <Text style={styles.badgeName}>{badge.name}</Text>
-                  <Text
-                    style={styles.badgeMeta}
-                  >{`${badge.tier ?? 'badge'} - ${badge.category}`}</Text>
+                  <Text style={styles.badgeName} numberOfLines={2}>
+                    {badge.name}
+                  </Text>
+                  <View style={styles.badgeTierPill}>
+                    <Text style={styles.badgeTierPillText}>
+                      {badge.tier ? badge.tier : badge.category}
+                    </Text>
+                  </View>
                 </View>
               ))}
             </View>
@@ -193,12 +203,24 @@ export function TrophyCaseSection({
       {featuredBadges.length ? (
         <View style={styles.badgeGrid}>
           {featuredBadges.map((badge) => (
-            <View key={badge.id} style={styles.featuredBadgeCard}>
+            <View
+              key={badge.id}
+              style={[
+                styles.featuredBadgeCard,
+                { borderColor: `${badge.color}55`, backgroundColor: `${badge.color}12` },
+              ]}
+            >
               <View style={[styles.badgeIcon, { backgroundColor: badge.color }]}>
-                <AppUiIcon name={badge.icon as AppUiIconName} size={18} color={colors.background} />
+                <AppUiIcon name={badge.icon as AppUiIconName} size={24} color={colors.background} />
               </View>
-              <Text style={styles.badgeName}>{badge.name}</Text>
-              <Text style={styles.badgeMeta}>{`${badge.tier ?? 'badge'} - ${badge.category}`}</Text>
+              <Text style={styles.badgeName} numberOfLines={2}>
+                {badge.name}
+              </Text>
+              <View style={styles.badgeTierPill}>
+                <Text style={styles.badgeTierPillText}>
+                  {badge.tier ? badge.tier : badge.category}
+                </Text>
+              </View>
             </View>
           ))}
         </View>
@@ -226,12 +248,27 @@ export function BadgeGallerySection({
       {earnedBadges.length ? (
         <View style={styles.badgeGrid}>
           {earnedBadges.map((badge) => (
-            <View key={badge.id} style={styles.badgeCard}>
+            <View
+              key={badge.id}
+              style={[
+                styles.badgeCard,
+                { borderColor: `${badge.color}55`, backgroundColor: `${badge.color}12` },
+              ]}
+            >
               <View style={[styles.badgeIcon, { backgroundColor: badge.color }]}>
-                <AppUiIcon name={badge.icon as AppUiIconName} size={18} color={colors.background} />
+                <AppUiIcon name={badge.icon as AppUiIconName} size={24} color={colors.background} />
               </View>
-              <Text style={styles.badgeName}>{badge.name}</Text>
-              <Text style={styles.badgeDescription}>{badge.description}</Text>
+              <Text style={styles.badgeName} numberOfLines={2}>
+                {badge.name}
+              </Text>
+              <Text style={styles.badgeDescription} numberOfLines={3}>
+                {badge.description}
+              </Text>
+              <View style={styles.badgeTierPill}>
+                <Text style={styles.badgeTierPillText}>
+                  {badge.tier ? badge.tier : badge.category}
+                </Text>
+              </View>
             </View>
           ))}
         </View>

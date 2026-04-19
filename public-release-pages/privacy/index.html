@@ -95,6 +95,7 @@
                     <li>saved storefronts, recent storefront activity, favorites, and badge progress</li>
                     <li>storefront reviews, helpful votes, storefront reports, and review GIFs</li>
                     <li>member-submitted media when photo uploads are enabled in the app experience</li>
+                    <li>scanned product codes (anonymous), including batch and brand identifiers parsed from Certificate of Analysis links</li>
                     <li>owner-portal business details, claim submissions, verification records, subscription records, and billing customer identifiers</li>
                     <li>foreground location used to show nearby storefronts and arrival-based prompts</li>
                     <li>notification tokens used to deliver storefront alerts or visit follow-ups</li>
@@ -155,6 +156,34 @@
                 </section>
 
                 <section class="section-card">
+                  <h2>Product Scans</h2>
+                  <p>
+                    When users scan a product's QR code or barcode using the camera in the Verify tab,
+                    Canopy Trove records an anonymous scan event identified only by an app-install identifier,
+                    never by personal information.
+                  </p>
+                  <p>
+                    Each scan record includes the code that was scanned, whether it resolved to a licensed shop or a product,
+                    an optional approximate location (only when the user grants location permission during a scan), and the
+                    brand or batch identifier if the scan resolved to a Certificate of Analysis from a state-licensed testing lab.
+                  </p>
+                  <p>
+                    The purpose of scan logging is to aggregate brand and product signal across the platform to power
+                    features like "trending near you," operator dashboards showing brand performance, and user-facing
+                    product quality context from lab testing results. Scan data is never linked to user identity.
+                  </p>
+                  <p>
+                    Scanning is anonymous by default and never requires sign-in. Users can disable scan logging in the
+                    Profile area under Privacy controls (this setting is being added in the current release).
+                  </p>
+                  <p>
+                    Product information pulled from QR codes (such as THC percentage, terpene profiles, and contaminant
+                    test results) comes from public data hosted by New York-licensed testing laboratories. Canopy Trove
+                    surfaces this lab-issued information to users but does not certify, issue, or modify any lab record.
+                  </p>
+                </section>
+
+                <section class="section-card">
                   <h2>Notifications</h2>
                   <p>If the user opts in, Canopy Trove may send:</p>
                   <ul>
@@ -201,6 +230,22 @@
                     including hosting, authentication, storage, mapping, notifications, analytics, and
                     billing vendors such as Stripe.
                     Canopy Trove does not present itself as a direct cannabis sales or ordering platform.
+                  </p>
+                  <p>
+                    Canopy Trove reads the New York Office of Cannabis Management&#8217;s public
+                    dispensary license dataset (published on data.ny.gov) to power the
+                    &ldquo;Verified licensed&rdquo; badge on storefront listings and the Verify tab.
+                    This dataset is already public. Canopy Trove caches it for performance and
+                    surfaces match results to users. Canopy Trove does not issue, modify, or revoke
+                    any license, and is not affiliated with or endorsed by the Office of Cannabis
+                    Management or New York State.
+                  </p>
+                  <p>
+                    Canopy Trove may also resolve publicly accessible Certificate of Analysis URLs from
+                    NY-licensed testing laboratories to surface lab results (including potency, terpenes,
+                    and contaminant testing) to users when they scan a product code. This data is public
+                    and hosted by the labs themselves. Canopy Trove does not issue, certify, or modify
+                    any lab record.
                   </p>
                 </section>
               </div>

@@ -7,8 +7,10 @@ const loggerModulePath = require.resolve('./observability/logger');
 const storefrontCacheServiceModulePath = require.resolve('./services/storefrontCacheService');
 const googlePlacesServiceModulePath = require.resolve('./services/googlePlacesService');
 const ownerClaimPresenceServiceModulePath = require.resolve('./services/ownerClaimPresenceService');
-const ownerPortalWorkspaceServiceModulePath = require.resolve('./services/ownerPortalWorkspaceService');
-const storefrontCommunityServiceModulePath = require.resolve('./services/storefrontCommunityService');
+const ownerPortalWorkspaceServiceModulePath =
+  require.resolve('./services/ownerPortalWorkspaceService');
+const storefrontCommunityServiceModulePath =
+  require.resolve('./services/storefrontCommunityService');
 const storefrontServiceModulePath = require.resolve('./storefrontService');
 
 const originalModuleEntries = new Map(
@@ -78,7 +80,9 @@ function createSummary(
   };
 }
 
-function createDetail(overrides: Partial<StorefrontDetailApiDocument> = {}): StorefrontDetailApiDocument {
+function createDetail(
+  overrides: Partial<StorefrontDetailApiDocument> = {},
+): StorefrontDetailApiDocument {
   return {
     storefrontId: 'storefront-hidden',
     phone: '555-0100',
@@ -158,10 +162,8 @@ test('getStorefrontDetail suppresses detail payloads for hidden storefront summa
       _ids: string[],
       loader: () => Promise<StorefrontSummaryApiDocument[]>,
     ) => loader(),
-    getCachedStorefrontSummaryPage: async (
-      _query: unknown,
-      loader: () => Promise<unknown>,
-    ) => loader(),
+    getCachedStorefrontSummaryPage: async (_query: unknown, loader: () => Promise<unknown>) =>
+      loader(),
     invalidateCachedStorefrontDetail() {},
   });
 
@@ -188,7 +190,8 @@ test('getStorefrontDetail suppresses detail payloads for hidden storefront summa
   });
 
   delete require.cache[storefrontServiceModulePath];
-  const { getStorefrontDetail } = require('./storefrontService') as typeof import('./storefrontService');
+  const { getStorefrontDetail } =
+    require('./storefrontService') as typeof import('./storefrontService');
 
   const visibleDetail = await getStorefrontDetail('storefront-hidden');
   assert.equal(visibleDetail?.storefrontId, 'storefront-hidden');

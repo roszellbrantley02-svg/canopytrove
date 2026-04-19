@@ -4,12 +4,20 @@ import { act, create } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // vi.hoisted runs BEFORE vi.mock so these fns are available inside the factory.
+vi.hoisted(() => {
+  (globalThis as typeof globalThis & { __DEV__?: boolean }).__DEV__ = true;
+});
+
 const backHandlerMocks = vi.hoisted(() => ({
   exitApp: vi.fn(),
   addEventListener: vi.fn((_e: string, _h: () => boolean) => ({ remove: vi.fn() })),
 }));
 
 vi.mock('react-native', () => ({
+  AppState: {
+    currentState: 'active',
+    addEventListener: vi.fn(() => ({ remove: vi.fn() })),
+  },
   View: 'View',
   Text: 'Text',
   Pressable: 'Pressable',

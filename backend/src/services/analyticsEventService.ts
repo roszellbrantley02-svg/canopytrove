@@ -54,14 +54,16 @@ function createEventDocument(
   batch: AnalyticsEventBatchRequest,
   requestContext: {
     ipAddress: string | null;
+    receivedAt?: string | null;
     userAgent: string | null;
   },
 ): AnalyticsEventDocument {
+  const receivedAt = requestContext.receivedAt?.trim() || new Date().toISOString();
   return stripUndefinedProperties({
     ...event,
     metadata: normalizeMetadata(event.metadata),
     eventId: event.eventId?.trim() || crypto.randomUUID(),
-    receivedAt: new Date().toISOString(),
+    receivedAt,
     platform: batch.platform,
     appVersion: batch.appVersion ?? null,
     ipAddress: requestContext.ipAddress,
@@ -89,7 +91,7 @@ function incrementIfNeeded(
 }
 
 function applyDailyAppMetrics(writeBatch: WriteBatch, event: AnalyticsEventDocument) {
-  const dateKey = createDateKey(event.occurredAt);
+  const dateKey = createDateKey(event.receivedAt);
   const documentRef = getBackendFirebaseDb()!.collection(DAILY_APP_METRICS_COLLECTION).doc(dateKey);
   const payload: Record<string, unknown> = {
     date: dateKey,
@@ -126,7 +128,7 @@ function applyDailyAppMetrics(writeBatch: WriteBatch, event: AnalyticsEventDocum
 }
 
 function applyDailySearchMetrics(writeBatch: WriteBatch, event: AnalyticsEventDocument) {
-  const dateKey = createDateKey(event.occurredAt);
+  const dateKey = createDateKey(event.receivedAt);
   const documentRef = getBackendFirebaseDb()!
     .collection(DAILY_SEARCH_METRICS_COLLECTION)
     .doc(dateKey);
@@ -176,7 +178,7 @@ function applyDailyStorefrontMetrics(writeBatch: WriteBatch, event: AnalyticsEve
     return;
   }
 
-  const dateKey = createDateKey(event.occurredAt);
+  const dateKey = createDateKey(event.receivedAt);
   const documentRef = getBackendFirebaseDb()!
     .collection(DAILY_STOREFRONT_METRICS_COLLECTION)
     .doc(createScopedDailyId(dateKey, event.storefrontId));
@@ -209,7 +211,7 @@ function applyDailyDealMetrics(writeBatch: WriteBatch, event: AnalyticsEventDocu
     return;
   }
 
-  const dateKey = createDateKey(event.occurredAt);
+  const dateKey = createDateKey(event.receivedAt);
   const documentRef = getBackendFirebaseDb()!
     .collection(DAILY_DEAL_METRICS_COLLECTION)
     .doc(createScopedDailyId(dateKey, event.dealId));
@@ -236,7 +238,7 @@ function applyDailySignupMetrics(writeBatch: WriteBatch, event: AnalyticsEventDo
     return;
   }
 
-  const dateKey = createDateKey(event.occurredAt);
+  const dateKey = createDateKey(event.receivedAt);
   const documentRef = getBackendFirebaseDb()!
     .collection(DAILY_SIGNUP_METRICS_COLLECTION)
     .doc(dateKey);
@@ -284,6 +286,7 @@ export async function recordAnalyticsEvents(
   batch: AnalyticsEventBatchRequest,
   requestContext: {
     ipAddress: string | null;
+    receivedAt?: string | null;
     userAgent: string | null;
   },
 ) {
@@ -346,7 +349,4 @@ export async function recordAnalyticsEvents(
 
   return {
     ok: true,
-    accepted: acceptedDocuments.length,
-    duplicates: inBatchDuplicateCount + (dedupedDocuments.length - acceptedDocuments.length),
-  };
-}
+    accepted: accep

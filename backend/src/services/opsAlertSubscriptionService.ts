@@ -100,11 +100,9 @@ async function listRuntimeAlertSubscriptionRecords() {
   const collectionRef = getRuntimeAlertSubscriptionCollection();
   if (collectionRef) {
     const records: RuntimeAlertSubscriptionRecord[] = [];
-    let lastDocument:
-      | {
-          id: string;
-        }
-      | null = null;
+    let lastDocument: {
+      id: string;
+    } | null = null;
 
     while (true) {
       let query = collectionRef.limit(500);

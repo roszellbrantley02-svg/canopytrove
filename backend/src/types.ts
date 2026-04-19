@@ -182,6 +182,11 @@ export type StorefrontSummaryApiDocument = {
    * shop is unlicensed — see frontend disclaimer copy.
    */
   ocmVerification?: OcmVerificationApiDocument | null;
+  /**
+   * Merged payment methods view: Google Places signal + verified owner
+   * declaration + community reports. Rendered as a blue badge on cards.
+   */
+  paymentMethods?: PaymentMethodsApiDocument | null;
 };
 
 export type OcmVerificationApiDocument = {
@@ -192,6 +197,42 @@ export type OcmVerificationApiDocument = {
   licenseNumber?: string | null;
   licenseType?: string | null;
   licenseeName?: string | null;
+};
+
+/**
+ * Payment method IDs accepted by a storefront. Keep in sync with
+ * `PaymentMethodId` in `src/types/storefrontBaseTypes.ts`.
+ *
+ * `tap_pay` groups Apple Pay / Google Pay / contactless — dispensary
+ * processors don't meaningfully distinguish between them.
+ */
+export type PaymentMethodApiId =
+  | 'cash'
+  | 'debit'
+  | 'credit'
+  | 'tap_pay'
+  | 'ach_app'
+  | 'atm_on_site'
+  | 'crypto';
+
+export type PaymentMethodApiSource = 'google' | 'owner' | 'community';
+
+export type PaymentMethodRecordApiDocument = {
+  methodId: PaymentMethodApiId;
+  accepted: boolean;
+  source: PaymentMethodApiSource;
+  /** Community only: fraction of positive votes (0..1). */
+  confidence?: number | null;
+  /** Community only: total votes weighing in on this method. */
+  sampleCount?: number | null;
+};
+
+export type PaymentMethodsApiDocument = {
+  storefrontId: string;
+  asOf: string;
+  methods: PaymentMethodRecordApiDocument[];
+  /** True when the verified owner has declared any payment methods. */
+  hasOwnerDeclaration: boolean;
 };
 
 export type StorefrontDetailApiDocument = {
@@ -242,6 +283,11 @@ export type StorefrontDetailApiDocument = {
   editorialSummary: string | null;
   routeMode: 'preview' | 'verified';
   ocmVerification?: OcmVerificationApiDocument | null;
+  /**
+   * Merged payment methods view (Google + owner + community). Detail
+   * screen renders the full section; cards render a compact badge.
+   */
+  paymentMethods?: PaymentMethodsApiDocument | null;
 };
 
 export type StorefrontSummarySortKey = 'distance' | 'rating' | 'reviews';
@@ -276,7 +322,8 @@ export type LabName =
   | 'proverde_laboratories'
   | 'keystone_state_testing'
   | 'act_laboratories'
-  | 'generic';
+  | 'generic'
+  | 'unknown_lab';
 
 /**
  * Parsed Certificate of Analysis (COA) metadata extracted from a URL.
@@ -288,6 +335,7 @@ export type ProductCOA = {
   brandName?: string;
   productName?: string;
   batchId?: string;
+  upc?: string;
   thcPercent?: number;
   cbdPercent?: number;
   terpenes?: string[];
@@ -298,7 +346,13 @@ export type ProductCOA = {
     solvents?: boolean;
   };
   passFailOverall?: 'pass' | 'fail' | 'unknown';
-  coaUrl: string;
+  coaUrl?: string;
+  /**
+   * The brand's marketing URL. Set when the shopper scanned a brand-site QR
+   * code (so we can offer a "Visit brand site" CTA alongside lab results),
+   * or when chain-through resolution kept track of the original brand URL.
+   */
+  brandWebsiteUrl?: string;
   retrievedAt: string;
 };
 
@@ -306,6 +360,24 @@ export type ProductCOA = {
  * Result of scanning and resolving a raw scanned code.
  * Supports license numbers, COA URLs, and unknown codes.
  */
+/**
+ * How confidently a license scan was matched to the OCM registry.
+ *  - 'verified': OCM registry returned a live record for this license.
+ *  - 'unverified': the code looked like an OCM license number but the
+ *    registry didn't return a match (stale registry, typo, or fake).
+ */
+export type LicenseVerificationState = 'verified' | 'unverified';
+
+/**
+ * Where a scanned product sits in our catalog.
+ *  - 'verified': we parsed a COA from a known NY lab (either directly or via
+ *    a brand-site iframe/link chain-through to the lab).
+ *  - 'unrecognized_lab': URL was a brand site (or unknown lab) we couldn't
+ *    chain through. We still offer "Visit brand site" and a contribute prompt.
+ *  - 'uncatalogued': UPC/EAN scanned, not in our catalog, needs crowdsource fill-in.
+ */
+export type ProductCatalogState = 'verified' | 'unrecognized_lab' | 'uncatalogued';
+
 export type ScanResolution =
   | {
       kind: 'license';
@@ -315,14 +387,17 @@ export type ScanResolution =
         licenseeName: string;
         status: string;
       };
+      verificationState?: LicenseVerificationState;
     }
   | {
       kind: 'product';
       coa: ProductCOA;
+      catalogState?: ProductCatalogState;
     }
   | {
       kind: 'unknown';
       rawCode: string;
+      reason?: string;
     };
 
 /**

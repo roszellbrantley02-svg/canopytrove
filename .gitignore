@@ -67,3 +67,7 @@ webappsheet.txt
 .claude/
 # Generated artifacts
 competitive-brief-*.md
+
+# FUSE virtiofs couldn't rm this during sync-corruption recovery
+package-lock.json.corrupt
+

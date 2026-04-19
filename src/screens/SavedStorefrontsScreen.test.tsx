@@ -29,6 +29,10 @@ vi.mock('@react-navigation/native', () => ({
   }),
 }));
 
+vi.mock('expo-linear-gradient', () => ({
+  LinearGradient: 'LinearGradient',
+}));
+
 vi.mock('../components/MotionInView', () => ({
   MotionInView: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -39,6 +43,10 @@ vi.mock('../components/ScreenShell', () => ({
 
 vi.mock('../components/StorefrontRouteCard', () => ({
   StorefrontRouteCard: 'StorefrontRouteCard',
+}));
+
+vi.mock('../components/StorefrontRouteCardSkeleton', () => ({
+  StorefrontRouteCardSkeleton: 'StorefrontRouteCardSkeleton',
 }));
 
 vi.mock('../components/withScreenErrorBoundary', () => ({
@@ -57,13 +65,12 @@ import { Text } from 'react-native';
 import { SavedStorefrontsScreen } from './SavedStorefrontsScreen';
 
 describe('SavedStorefrontsScreen', () => {
-  it('limits web rendering to 50 storefronts and shows a count note when more exist', () => {
-    const savedIds = Array.from({ length: 60 }, (_, index) => `storefront-${index + 1}`);
+  function renderScreen(total: number) {
+    const savedIds = Array.from({ length: total }, (_, index) => `storefront-${index + 1}`);
     const savedStorefronts = savedIds.map((id, index) => ({
       id,
       displayName: `Storefront ${index + 1}`,
     }));
-
     controllerMocks.useStorefrontRouteController.mockReturnValue({
       savedStorefrontIds: savedIds,
     });
@@ -76,6 +83,21 @@ describe('SavedStorefrontsScreen', () => {
     act(() => {
       renderer = create(<SavedStorefrontsScreen />);
     });
+
+    return renderer;
+  }
+
+  function collectTextContent(renderer: ReactTestRenderer) {
+    return renderer.root
+      .findAllByType(Text as any)
+      .flatMap((node) => node.props.children)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  it('renders the full saved list when it stays below the render cap', () => {
+    const renderer = renderScreen(60);
 
     const cards = renderer.root.findAll((node) => (node.type as unknown) === 'StorefrontRouteCard');
     const textContent = renderer.root

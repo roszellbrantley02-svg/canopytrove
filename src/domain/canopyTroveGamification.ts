@@ -59,6 +59,8 @@ export const canopyTroveGamificationService = {
   applyReportSubmittedReward,
   applyFriendInvitedReward,
   applyFollowersUpdatedReward,
+  applyScanCompletedReward,
+  applyCoaOpenedReward,
 };
 
 export default canopyTroveGamificationService;

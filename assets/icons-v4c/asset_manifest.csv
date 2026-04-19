@@ -1,0 +1,67 @@
+index,filename,asset_name,category,role,color_key,notes
+0,00_CT_Trophy_Anvil.png,CT_Trophy_Anvil,Trophy,Craftsmanship achievement,Bronze,Forge / maker milestone
+1,01_CT_Trophy_Compass.png,CT_Trophy_Compass,Trophy,Explorer award,Gold,Top-tier discovery trophy
+2,02_CT_Trophy_Crown.png,CT_Trophy_Crown,Trophy,Top-seller / royalty tier,Gold,1st-place trophy
+3,03_CT_Trophy_Cup.png,CT_Trophy_Cup,Trophy,Gold cup award,Gold,Classic 1st-place cup
+4,04_CT_Trophy_CupBronze.png,CT_Trophy_CupBronze,Trophy,3rd-place cup,Bronze,Podium tier 3
+5,05_CT_Trophy_CupSilver.png,CT_Trophy_CupSilver,Trophy,2nd-place cup,Silver,Podium tier 2
+6,06_CT_Trophy_Diamond.png,CT_Trophy_Diamond,Trophy,Elite status gem,Diamond,Highest-tier collector
+7,07_CT_Trophy_Goblet.png,CT_Trophy_Goblet,Trophy,Quarter winner,Silver,Goblet award
+8,08_CT_Trophy_Hammer.png,CT_Trophy_Hammer,Trophy,Builder / power tool,Bronze,DIY / hardware category
+9,09_CT_Trophy_Laurel.png,CT_Trophy_Laurel,Trophy,Victory wreath,Emerald,Tournament winner
+10,10_CT_Trophy_Medal.png,CT_Trophy_Medal,Trophy,Completion medal,Gold,Standard achievement
+11,11_CT_Trophy_Plaque.png,CT_Trophy_Plaque,Trophy,Commemorative plaque,Bronze,Anniversary / tenure
+12,12_CT_Trophy_Ribbon1.png,CT_Trophy_Ribbon1,Trophy,1st place ribbon,Gold,Competition tier 1
+13,13_CT_Trophy_Ribbon2.png,CT_Trophy_Ribbon2,Trophy,2nd place ribbon,Silver,Competition tier 2
+14,14_CT_Trophy_Ribbon3.png,CT_Trophy_Ribbon3,Trophy,3rd place ribbon,Bronze,Competition tier 3
+15,15_CT_Trophy_Shield.png,CT_Trophy_Shield,Trophy,Defender / protector,Sapphire,Moderator / trust role
+16,16_CT_Trophy_Star.png,CT_Trophy_Star,Trophy,Featured / rising star,Amber,Rising creator
+17,17_CT_Trophy_StarRuby.png,CT_Trophy_StarRuby,Trophy,Ruby star - elite,Ruby,Premium creator tier
+18,18_CT_Trophy_StarSapphire.png,CT_Trophy_StarSapphire,Trophy,Sapphire star - elite,Sapphire,Premium creator tier
+19,19_CT_Trophy_Sword.png,CT_Trophy_Sword,Trophy,Champion of the month,Ruby,Top performer
+20,20_CT_Badge_Anchor.png,CT_Badge_Anchor,Badge,Long-time member,Sapphire,Veteran / loyal buyer
+21,21_CT_Badge_Arrow.png,CT_Badge_Arrow,Badge,Fast shipper,Coral,Speed merit
+22,22_CT_Badge_Chest.png,CT_Badge_Chest,Badge,Treasure finder,Amber,Deal hunter
+23,23_CT_Badge_Crown.png,CT_Badge_Crown,Badge,Royal status,Amethyst,Premium tier member
+24,24_CT_Badge_Diamond.png,CT_Badge_Diamond,Badge,Premium collector,Diamond,Luxury category
+25,25_CT_Badge_Eye.png,CT_Badge_Eye,Badge,Watcher / observer,Cyan,Curator / trend spotter
+26,26_CT_Badge_Feather.png,CT_Badge_Feather,Badge,Lightweight contributor,Mint,New / light engagement
+27,27_CT_Badge_Fire.png,CT_Badge_Fire,Badge,Hot listing,Orange,Trending item owner
+28,28_CT_Badge_Heart.png,CT_Badge_Heart,Badge,Favorite / loved,Rose,Community favorite
+29,29_CT_Badge_Hourglass.png,CT_Badge_Hourglass,Badge,Time-limited offer,Coral,Flash deals badge
+30,30_CT_Badge_Lantern.png,CT_Badge_Lantern,Badge,Guide / helpful,Amber,Forum mentor
+31,31_CT_Badge_Lightning.png,CT_Badge_Lightning,Badge,Power seller,Indigo,Fast-response seller
+32,32_CT_Badge_Moon.png,CT_Badge_Moon,Badge,Night owl / late-night,Silver,Dark-hours activity
+33,33_CT_Badge_Rose.png,CT_Badge_Rose,Badge,Handmade / artisan,Rose,Handmade category
+34,34_CT_Badge_Shield.png,CT_Badge_Shield,Badge,Verified seller,Emerald,Trust / verification
+35,35_CT_Badge_Snowflake.png,CT_Badge_Snowflake,Badge,Winter seasonal,Diamond,Seasonal badge
+36,36_CT_Badge_StarOrange.png,CT_Badge_StarOrange,Badge,Featured / highlighted,Amber,Editor's pick
+37,37_CT_Badge_Sun.png,CT_Badge_Sun,Badge,Daily deal,Amber,Daily promo
+38,38_CT_Badge_Target.png,CT_Badge_Target,Badge,Goal achieved,Ruby,Milestone hit
+39,39_CT_Badge_Wings.png,CT_Badge_Wings,Badge,Free shipping / flight,Cream,Shipping perk
+40,40_CT_Flag_Banner.png,CT_Flag_Banner,Flag,Event / announcement,Pink,Promo banner header
+41,41_CT_Flag_Pennant.png,CT_Flag_Pennant,Flag,Team / club,Sapphire,Community group flag
+42,42_AppNav_Browse.png,AppNav_Browse,AppNav,Browse all categories,Amber,General catalog
+43,43_AppNav_Cart.png,AppNav_Cart,AppNav,Shopping cart,Teal,Checkout entry
+44,44_AppNav_Categories.png,AppNav_Categories,AppNav,Category grid,Indigo,Catalog taxonomy
+45,45_AppNav_Chat.png,AppNav_Chat,AppNav,Messages / chat,Mint,Inbox / DM
+46,46_AppNav_Compass.png,AppNav_Compass,AppNav,Discover / recommendations,Gold,Personalized feed
+47,47_AppNav_Favorites.png,AppNav_Favorites,AppNav,Saved favorites,Rose,Wishlist
+48,48_AppNav_Filter.png,AppNav_Filter,AppNav,Filter options,Coral,Refine results
+49,49_AppNav_Gift.png,AppNav_Gift,AppNav,Gifts / gifting,Magenta,Gift promo
+50,50_AppNav_Help.png,AppNav_Help,AppNav,Help / support,Sapphire,Support center
+51,51_AppNav_Home.png,AppNav_Home,AppNav,Home tab,Sapphire,Bottom-nav / dashboard
+52,52_AppNav_HotDeals.png,AppNav_HotDeals,AppNav,Hot deals / trending,Orange,Flash discounts feed
+53,53_AppNav_MapApp.png,AppNav_MapApp,AppNav,Map view,Lime,Geo map mode
+54,54_AppNav_Nearby.png,AppNav_Nearby,AppNav,Local listings near me,Ruby,Geo-filtered browse
+55,55_AppNav_Notifications.png,AppNav_Notifications,AppNav,Notifications / alerts,Amber,Bell / updates
+56,56_AppNav_Percent.png,AppNav_Percent,AppNav,Discount / percent off,Amber,Promo indicator
+57,57_AppNav_Profile.png,AppNav_Profile,AppNav,User profile,Amethyst,Account tab
+58,58_AppNav_Refer.png,AppNav_Refer,AppNav,Refer a friend,Pink,Invite/refer flow
+59,59_AppNav_Rocket.png,AppNav_Rocket,AppNav,Boost / promote listing,Indigo,Seller boost
+60,60_AppNav_Search.png,AppNav_Search,AppNav,Search,Cyan,Search bar icon
+61,61_AppNav_Settings.png,AppNav_Settings,AppNav,Settings,Silver,Configuration
+62,62_AppNav_Share.png,AppNav_Share,AppNav,Share listing,Cyan,Social share
+63,63_AppNav_Tag.png,AppNav_Tag,AppNav,Tags / labels,Ruby,Price / tag UI
+64,64_AppNav_Verify.png,AppNav_Verify,AppNav,Verification flow,Emerald,ID / listing verification
+65,65_AppNav_Wallet.png,AppNav_Wallet,AppNav,Wallet / balance,Emerald,Payments tab

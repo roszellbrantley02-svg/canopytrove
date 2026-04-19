@@ -29,6 +29,9 @@ NC='\033[0m'
 log()  { echo -e "${GREEN}[deploy]${NC} $1"; }
 warn() { echo -e "${YELLOW}[deploy]${NC} $1"; }
 fail() { echo -e "${RED}[deploy]${NC} $1"; exit 1; }
+has_secret() {
+  gcloud secrets describe "$1" --project "$PROJECT" >/dev/null 2>&1
+}
 
 # ---------------------------------------------------------------------------
 # Step 0: preflight
@@ -90,6 +93,31 @@ deploy_backend() {
     --quiet
 
   log "Deploying to Cloud Run (${SERVICE} in ${REGION})..."
+
+  SECRETS="\
+GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,\
+ADMIN_API_KEY=ADMIN_API_KEY:latest,\
+RATE_LIMIT_PEPPER=RATE_LIMIT_PEPPER:latest,\
+STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,\
+STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,\
+EXPO_ACCESS_TOKEN=EXPO_ACCESS_TOKEN:latest,\
+SENTRY_DSN=SENTRY_DSN:latest,\
+OPENAI_API_KEY=OPENAI_API_KEY:latest,\
+RESEND_API_KEY=RESEND_API_KEY:latest,\
+RESEND_WEBHOOK_SECRET=RESEND_WEBHOOK_SECRET:latest"
+
+  if has_secret "STRIPE_IDENTITY_WEBHOOK_SECRET"; then
+    SECRETS="${SECRETS},STRIPE_IDENTITY_WEBHOOK_SECRET=STRIPE_IDENTITY_WEBHOOK_SECRET:latest"
+  else
+    warn "Secret STRIPE_IDENTITY_WEBHOOK_SECRET not found — skipping optional Stripe Identity webhook secret."
+  fi
+
+  if has_secret "OPS_ALERT_WEBHOOK_URL"; then
+    SECRETS="${SECRETS},OPS_ALERT_WEBHOOK_URL=OPS_ALERT_WEBHOOK_URL:latest"
+  else
+    warn "Secret OPS_ALERT_WEBHOOK_URL not found — skipping optional ops alert webhook."
+  fi
+
   gcloud run deploy "$SERVICE" \
     --image "$IMAGE" \
     --region "$REGION" \
@@ -150,18 +178,7 @@ LAUNCH_EARLY_ADOPTER_LIMIT=500::\
 GOOGLE_PLACES_DAILY_BUDGET=20::\
 OPS_HEALTHCHECK_API_URL=https://api.canopytrove.com/health::\
 OPS_HEALTHCHECK_API_RAW_URL=https://canopytrove-api-948351810374.us-east4.run.app/readyz" \
-    --set-secrets "\
-GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,\
-ADMIN_API_KEY=ADMIN_API_KEY:latest,\
-STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,\
-STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,\
-EXPO_ACCESS_TOKEN=EXPO_ACCESS_TOKEN:latest,\
-SENTRY_DSN=SENTRY_DSN:latest,\
-OPENAI_API_KEY=OPENAI_API_KEY:latest,\
-RESEND_API_KEY=RESEND_API_KEY:latest,\
-RESEND_WEBHOOK_SECRET=RESEND_WEBHOOK_SECRET:latest,\
-STRIPE_IDENTITY_WEBHOOK_SECRET=STRIPE_IDENTITY_WEBHOOK_SECRET:latest,\
-OPS_ALERT_WEBHOOK_URL=OPS_ALERT_WEBHOOK_URL:latest" \
+    --set-secrets "$SECRETS" \
     --project "$PROJECT"
 
   SERVICE_URL=$(gcloud run services describe "$SERVICE" \

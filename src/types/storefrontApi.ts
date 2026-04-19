@@ -8,6 +8,32 @@ export type OcmVerificationApiDocument = {
   licenseeName?: string | null;
 };
 
+export type PaymentMethodApiId =
+  | 'cash'
+  | 'debit'
+  | 'credit'
+  | 'tap_pay'
+  | 'ach_app'
+  | 'atm_on_site'
+  | 'crypto';
+
+export type PaymentMethodApiSource = 'google' | 'owner' | 'community';
+
+export type PaymentMethodRecordApiDocument = {
+  methodId: PaymentMethodApiId;
+  accepted: boolean;
+  source: PaymentMethodApiSource;
+  confidence?: number | null;
+  sampleCount?: number | null;
+};
+
+export type PaymentMethodsApiDocument = {
+  storefrontId: string;
+  asOf: string;
+  methods: PaymentMethodRecordApiDocument[];
+  hasOwnerDeclaration: boolean;
+};
+
 export type StorefrontSummaryApiDocument = {
   id: string;
   licenseId: string;
@@ -44,6 +70,7 @@ export type StorefrontSummaryApiDocument = {
   placeId?: string;
   thumbnailUrl?: string | null;
   ocmVerification?: OcmVerificationApiDocument | null;
+  paymentMethods?: PaymentMethodsApiDocument | null;
 };
 
 export type StorefrontDetailApiDocument = {
@@ -92,6 +119,7 @@ export type StorefrontDetailApiDocument = {
   editorialSummary: string | null;
   routeMode: 'preview' | 'verified';
   ocmVerification?: OcmVerificationApiDocument | null;
+  paymentMethods?: PaymentMethodsApiDocument | null;
 };
 
 export type StorefrontSummariesApiResponse = {

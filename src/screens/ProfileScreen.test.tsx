@@ -77,6 +77,10 @@ vi.mock('../icons/AppUiIcon', () => ({
   AppUiIcon: 'AppUiIcon',
 }));
 
+vi.mock('../music/MusicToggleRow', () => ({
+  MusicToggleRow: () => null,
+}));
+
 vi.mock('../theme/tokens', async (importOriginal) => {
   const actual = await importOriginal<typeof ThemeTokensModule>();
   return actual;

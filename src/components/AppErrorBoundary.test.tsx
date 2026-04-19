@@ -117,7 +117,10 @@ describe('AppErrorBoundary', () => {
     const allText = rendered.root.findAllByType(Text);
     const textContent = allText.map((t) => t.props.children).join(' ');
 
-    expect(textContent).toContain('runtime error');
+    expect(textContent).toContain('This part of the app ran into a problem.');
+    expect(textContent).toContain(
+      'The rest of the app is still okay. Try opening this section again.',
+    );
     expect(textContent).toContain('Try Again');
   });
 
@@ -188,7 +191,7 @@ describe('AppErrorBoundary', () => {
     const allText = rendered.root.findAllByType(Text);
     const textContent = allText.map((t) => t.props.children).join(' ');
 
-    expect(textContent).toContain('runtime error');
+    expect(textContent).toContain('This part of the app ran into a problem.');
   });
 
   it('renders error fallback with proper structure', () => {

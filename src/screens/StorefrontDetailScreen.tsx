@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CustomerStateCard } from '../components/CustomerStateCard';
 import { LicensedBadge } from '../components/LicensedBadge';
+import { PaymentMethodsBadge } from '../components/PaymentMethodsBadge';
 import { MotionInView } from '../components/MotionInView';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { resolveStorefrontSlug } from '../sources/apiStorefrontSource';
@@ -14,6 +15,7 @@ import { MapGridPreview } from '../components/MapGridPreview';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { useStorefrontSummariesByIds } from '../hooks/useStorefrontSummaryData';
 import { colors } from '../theme/tokens';
+import { trackAnalyticsEvent } from '../services/analyticsService';
 import type { StorefrontSummary } from '../types/storefront';
 import { styles } from './storefrontDetail/storefrontDetailStyles';
 import {
@@ -64,6 +66,25 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
   const model = useStorefrontDetailScreenModel(storefront, navigation);
   const canViewMemberLockedContent = model.authSession.status === 'authenticated';
   const visibleLiveDealCount = storefront.activePromotionCount ?? 0;
+  const paymentMethods = model.detailData.paymentMethods ?? storefront.paymentMethods ?? null;
+  const paymentMethodsKey = paymentMethods
+    ? `${paymentMethods.storefrontId}:${paymentMethods.asOf}`
+    : null;
+  const lastTrackedPaymentsKeyRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!paymentMethods || !paymentMethodsKey) return;
+    if (lastTrackedPaymentsKeyRef.current === paymentMethodsKey) return;
+    lastTrackedPaymentsKeyRef.current = paymentMethodsKey;
+    const acceptedCount = paymentMethods.methods.filter((record) => record.accepted).length;
+    trackAnalyticsEvent(
+      'payment_methods_section_viewed',
+      {
+        hasOwnerDeclaration: paymentMethods.hasOwnerDeclaration,
+        acceptedCount,
+      },
+      { storefrontId: paymentMethods.storefrontId },
+    );
+  }, [paymentMethods, paymentMethodsKey]);
 
   return (
     <LinearGradient
@@ -111,6 +132,17 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
               <LicensedBadge
                 verification={model.detailData.ocmVerification ?? storefront.ocmVerification}
                 variant="full"
+              />
+            </MotionInView>
+          ) : null}
+
+          {(model.detailData.paymentMethods ?? storefront.paymentMethods) ? (
+            <MotionInView delay={150}>
+              <PaymentMethodsBadge
+                paymentMethods={
+                  model.detailData.paymentMethods ?? storefront.paymentMethods ?? null
+                }
+                variant="detail"
               />
             </MotionInView>
           ) : null}

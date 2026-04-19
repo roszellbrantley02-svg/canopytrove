@@ -2,6 +2,13 @@ import { getBackendFirebaseDb } from '../firebase';
 import { clearFirestoreStorefrontSourceCache } from '../sources/firestoreStorefrontSource';
 import { clearStorefrontBackendCache } from './storefrontCacheService';
 
+export type GooglePlacesPaymentOptions = {
+  acceptsCreditCards?: boolean | null;
+  acceptsDebitCards?: boolean | null;
+  acceptsCashOnly?: boolean | null;
+  acceptsNfcPayments?: boolean | null;
+};
+
 export type GooglePlacesEnrichment = {
   phone: string | null;
   website: string | null;
@@ -13,6 +20,14 @@ export type GooglePlacesEnrichment = {
     latitude: number;
     longitude: number;
   } | null;
+  /**
+   * Raw Places paymentOptions flags. Probe (2026-04): 100% populated
+   * for NY dispensaries. Note: `acceptsCreditCards=true` is often
+   * suggestive rather than authoritative because Visa/Mastercard
+   * don't permit cannabis MCCs. Treat `acceptsNfcPayments` as
+   * absent unless owner-declared.
+   */
+  paymentOptions?: GooglePlacesPaymentOptions | null;
 };
 
 export type GoogleSearchPlace = {
@@ -39,6 +54,7 @@ export type GooglePlaceDetailResponse = {
     latitude?: number;
     longitude?: number;
   };
+  paymentOptions?: GooglePlacesPaymentOptions;
 };
 
 export type CacheEntry<T> = {

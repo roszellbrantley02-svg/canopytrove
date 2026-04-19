@@ -53,6 +53,7 @@ export const linkingConfig: LinkingOptions<RootStackParamList> = {
       OwnerPortalSubscription: 'owner-portal/subscription',
       OwnerPortalBadges: 'owner-portal/badges',
       OwnerPortalHours: 'owner-portal/hours',
+      OwnerPortalPaymentMethods: 'owner-portal/payment-methods',
     },
   },
 };

@@ -33,6 +33,7 @@ clientRuntimeRoutes.post('/client-errors', clientErrorRateLimiter, async (reques
   }
 
   const payload = parseClientRuntimeErrorBody(request.body);
-  await recordClientRuntimeError(payload, request.ip);
-  response.status(202).json({ ok: true });
-});
+  await recordClientRuntimeError(payload, request.ip, {
+    accountId: identity.accountId,
+  });
+  res

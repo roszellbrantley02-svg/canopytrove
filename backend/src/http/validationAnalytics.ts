@@ -14,6 +14,9 @@ import {
 } from './validationCore';
 import { RequestValidationError } from './errors';
 
+const MAX_ANALYTICS_EVENT_AGE_MS = 30 * 24 * 60 * 60_000;
+const MAX_ANALYTICS_EVENT_FUTURE_SKEW_MS = 10 * 60_000;
+
 function parseAnalyticsScalarValue(value: unknown, field: string) {
   const normalizedValue = assertSingleValue(value, field);
   if (
@@ -61,6 +64,26 @@ function parseAnalyticsEventType(value: unknown, field: string) {
   return parseEnumValue(value, field, ANALYTICS_EVENT_TYPES);
 }
 
+function parseAnalyticsOccurredAt(value: unknown, field: string) {
+  const occurredAt = parseIsoDateString(value, field);
+  const occurredAtMs = Date.parse(occurredAt);
+
+  if (!Number.isFinite(occurredAtMs)) {
+    throw new RequestValidationError(`${field} must be a valid ISO-8601 date string.`);
+  }
+
+  const now = Date.now();
+  if (occurredAtMs < now - MAX_ANALYTICS_EVENT_AGE_MS) {
+    throw new RequestValidationError(`${field} must be within the last 30 days.`);
+  }
+
+  if (occurredAtMs > now + MAX_ANALYTICS_EVENT_FUTURE_SKEW_MS) {
+    throw new RequestValidationError(`${field} cannot be more than 10 minutes in the future.`);
+  }
+
+  return occurredAt;
+}
+
 function parseAnalyticsEvent(value: unknown, field: string) {
   const body = asObject(value, field);
 
@@ -75,7 +98,7 @@ function parseAnalyticsEvent(value: unknown, field: string) {
     sessionId: parseTrimmedString(body.sessionId, `${field}.sessionId`, {
       maxLength: MAX_ID_LENGTH,
     }),
-    occurredAt: parseIsoDateString(body.occurredAt, `${field}.occurredAt`),
+    occurredAt: parseAnalyticsOccurredAt(body.occurredAt, `${field}.occurredAt`),
     profileId: parseNullableTrimmedString(body.profileId, `${field}.profileId`, {
       maxLength: MAX_ID_LENGTH,
     }),
@@ -99,28 +122,4 @@ function parseAnalyticsEvent(value: unknown, field: string) {
       maxLength: MAX_ID_LENGTH,
     }),
     metadata: parseAnalyticsMetadata(body.metadata, `${field}.metadata`),
-  };
-}
-
-export function parseAnalyticsEventBatchBody(value: unknown): AnalyticsEventBatchRequest {
-  const body = asObject(value, 'body');
-  if (!Array.isArray(body.events) || body.events.length === 0) {
-    throw new RequestValidationError('body.events must be a non-empty array.');
-  }
-
-  if (body.events.length > MAX_ANALYTICS_EVENTS) {
-    throw new RequestValidationError(
-      `body.events must contain at most ${MAX_ANALYTICS_EVENTS} items.`,
-    );
-  }
-
-  return {
-    platform: parseTrimmedString(body.platform, 'body.platform', {
-      maxLength: 40,
-    }),
-    appVersion: parseOptionalTrimmedString(body.appVersion, 'body.appVersion', {
-      maxLength: 40,
-    }),
-    events: body.events.map((event, index) => parseAnalyticsEvent(event, `body.events[${index}]`)),
-  };
-}
+  

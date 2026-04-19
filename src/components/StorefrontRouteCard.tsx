@@ -11,9 +11,11 @@ import {
   StorefrontHeatGlow,
   routeStartsToHeatLevel,
 } from './storefrontRouteCard/StorefrontHeatGlow';
+import { StorefrontRouteCardSkiaOverlay } from './storefrontRouteCard/StorefrontRouteCardSkiaOverlay';
 import { styles } from './storefrontRouteCard/storefrontRouteCardStyles';
 import type { StorefrontCardVisualLane } from './storefrontRouteCard/storefrontRouteCardVisualState';
 import { hasStorefrontPromotion } from '../utils/storefrontPromotions';
+import { featureFlags } from '../config/featureFlags';
 
 const cardToneStyleMap: Record<StorefrontCardVisualLane, typeof styles.cardHotDeal | null> = {
   hotDeal: styles.cardHotDeal,
@@ -126,6 +128,7 @@ function StorefrontRouteCardComponent({
         previewStatusTone={previewStatusTone}
         imagePriority={imagePriority}
       />
+      {featureFlags.cardSkiaEnabled ? <StorefrontRouteCardSkiaOverlay /> : null}
     </Pressable>
   );
 }
@@ -171,6 +174,10 @@ function areStorefrontCardsEqual(
       (next.storefront.ocmVerification?.licensed ?? null) &&
     (previous.storefront.ocmVerification?.asOf ?? null) ===
       (next.storefront.ocmVerification?.asOf ?? null) &&
+    (previous.storefront.paymentMethods?.asOf ?? null) ===
+      (next.storefront.paymentMethods?.asOf ?? null) &&
+    (previous.storefront.paymentMethods?.methods.length ?? 0) ===
+      (next.storefront.paymentMethods?.methods.length ?? 0) &&
     previous.imagePriority === next.imagePriority &&
     previous.onPress === next.onPress &&
     previous.onPressIn === next.onPressIn &&

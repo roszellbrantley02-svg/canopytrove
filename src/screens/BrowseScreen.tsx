@@ -20,6 +20,7 @@ import { storefrontRepository } from '../repositories/storefrontRepository';
 import {
   classifyLocationInput,
   trackAnalyticsEvent,
+  trackPaymentMethodsBadgeImpressions,
   trackStorefrontPromotionImpressions,
   trackStorefrontImpressions,
 } from '../services/analyticsService';
@@ -34,6 +35,30 @@ import {
 
 const PAGE_SIZE = 8;
 
+/**
+ * Build a stable identity string for a query. Used to detect stale `data`
+ * that belongs to a previous query still being held by the data hook while
+ * the new fetch is in flight — without this, a mid-flight query change plus
+ * a prior load-more could mix two queries' rows into the visible list.
+ */
+function buildBrowseQueryIdentity(
+  areaId: string | null | undefined,
+  searchQuery: string,
+  latitude: number,
+  longitude: number,
+  sortKey: string,
+  hotDealsOnly: boolean,
+): string {
+  return [
+    areaId ?? 'all',
+    searchQuery,
+    latitude.toFixed(3),
+    longitude.toFixed(3),
+    sortKey,
+    hotDealsOnly ? '1' : '0',
+  ].join(':');
+}
+
 function BrowseScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [offset, setOffset] = React.useState(0);
@@ -41,6 +66,9 @@ function BrowseScreenInner() {
   const [loadMoreRefetchKey, setLoadMoreRefetchKey] = React.useState(0);
   const lastPrefetchedPageKeyRef = React.useRef('');
   const prefetchedDetailIdsRef = React.useRef(new Set<string>());
+  // Which query identity does the current `items` list reflect? Used to drop
+  // mid-flight data that belongs to a query the user has already moved on from.
+  const itemsQueryIdentityRef = React.useRef<string>('');
   const { authSession, profileId } = useStorefrontProfileController();
   const {
     activeLocationLabel,
@@ -78,6 +106,28 @@ function BrowseScreenInner() {
   const { data, error, isLoading } = useBrowseSummaries(query, browseSortKey, PAGE_SIZE, offset, {
     refetchKey: loadMoreRefetchKey,
   });
+
+  // Identity string for the query + sort combination currently being shown.
+  // Recomputed each render; cheap (string concat of 6 scalars).
+  const currentQueryIdentity = React.useMemo(
+    () =>
+      buildBrowseQueryIdentity(
+        query.areaId,
+        query.searchQuery,
+        query.origin.latitude,
+        query.origin.longitude,
+        browseSortKey,
+        effectiveBrowseHotDealsOnly,
+      ),
+    [
+      browseSortKey,
+      effectiveBrowseHotDealsOnly,
+      query.areaId,
+      query.origin.latitude,
+      query.origin.longitude,
+      query.searchQuery,
+    ],
+  );
 
   const handleLoadMoreRetry = React.useCallback(() => {
     // Bump the refetch key so the hook re-runs the fetch at the same
@@ -149,27 +199,50 @@ function BrowseScreenInner() {
       setItems([]);
     });
     setOffset(0);
+    // Reset the "which query does items belong to" tag — we're starting over.
+    itemsQueryIdentityRef.current = '';
     lastPrefetchedPageKeyRef.current = '';
     prefetchedDetailIdsRef.current = new Set();
-  }, [activeLocationLabel, browseSortKey, effectiveBrowseHotDealsOnly, searchQuery]);
+  }, [currentQueryIdentity]);
 
   React.useEffect(() => {
     if (isLoading) {
       return;
     }
 
+    // Snapshot the identity the current `data` payload was fetched for.
+    // The data hook can still be holding the previous query's result during
+    // the brief window between a query change and the new fetch resolving.
+    // Appending that stale data to a just-cleared items array would leak
+    // rows from the old query into the new query's list — visible as
+    // ghost-results that don't match the filter the user just applied.
+    const incomingIdentity = currentQueryIdentity;
+
     React.startTransition(() => {
       setItems((current) => {
+        // If the incoming page is offset 0, it's a fresh query — always
+        // replace + tag items with this query's identity.
         if (data.offset === 0) {
+          itemsQueryIdentityRef.current = incomingIdentity;
           return data.items;
+        }
+
+        // For subsequent pages, only append when the incoming data is for
+        // the same query as the current items. Otherwise drop it on the
+        // floor; the hook will refetch for the new query momentarily.
+        if (itemsQueryIdentityRef.current !== incomingIdentity) {
+          return current;
         }
 
         const seen = new Set(current.map((item) => item.id));
         const nextItems = data.items.filter((item) => !seen.has(item.id));
+        if (!nextItems.length) {
+          return current;
+        }
         return current.concat(nextItems);
       });
     });
-  }, [data.items, data.offset, isLoading]);
+  }, [currentQueryIdentity, data.items, data.offset, isLoading]);
 
   React.useEffect(() => {
     if (!items.length) {
@@ -181,6 +254,7 @@ function BrowseScreenInner() {
       'Browse',
     );
     trackStorefrontPromotionImpressions(items, 'Browse');
+    trackPaymentMethodsBadgeImpressions(items, 'Browse');
   }, [items]);
 
   React.useEffect(() => {
@@ -237,7 +311,10 @@ function BrowseScreenInner() {
       return;
     }
 
-    const nextPageKey = `${query.areaId ?? 'all'}:${query.searchQuery}:${query.origin.latitude.toFixed(3)}:${query.origin.longitude.toFixed(3)}:${browseSortKey}:${offset + PAGE_SIZE}`;
+    // Page key = current query identity + the next offset. Matches the logic
+    // used by the merge effect so we stay consistent about what counts as
+    // "the same query I already prefetched for".
+    const nextPageKey = `${currentQueryIdentity}:${offset + PAGE_SIZE}`;
     if (nextPageKey === lastPrefetchedPageKeyRef.current) {
       return;
     }
@@ -249,7 +326,7 @@ function BrowseScreenInner() {
       PAGE_SIZE,
       offset + PAGE_SIZE,
     );
-  }, [browseSortKey, data.hasMore, isLoading, offset, query]);
+  }, [browseSortKey, currentQueryIdentity, data.hasMore, isLoading, offset, query]);
 
   return (
     <ScreenShell

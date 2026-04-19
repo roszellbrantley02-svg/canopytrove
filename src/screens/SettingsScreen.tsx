@@ -28,6 +28,7 @@ type SettingsRowProps = {
   isLoading?: boolean;
   isDanger?: boolean;
   isLast?: boolean;
+  tone?: string;
 };
 
 function SettingsRow({
@@ -40,14 +41,24 @@ function SettingsRow({
   isLoading = false,
   isDanger = false,
   isLast = false,
+  tone,
 }: SettingsRowProps) {
   const isToggle = typeof value === 'boolean';
   const rowStyle = [styles.row, isLast && styles.rowLast];
+  const effectiveTone = isDanger ? colors.danger : (tone ?? colors.accent);
+  const iconTint = `${effectiveTone}1F`;
+  const iconBorder = `${effectiveTone}40`;
 
   const content = (
     <>
-      <View style={[styles.rowIconWrap, isDanger && styles.rowIconWrapDanger]}>
-        <AppUiIcon name={icon} size={20} color={isDanger ? colors.danger : colors.accent} />
+      <View
+        style={[
+          styles.rowIconWrap,
+          { backgroundColor: iconTint, borderColor: iconBorder },
+          isDanger && styles.rowIconWrapDanger,
+        ]}
+      >
+        <AppUiIcon name={icon} size={22} color={effectiveTone} />
       </View>
 
       <View style={styles.rowContent}>
@@ -101,6 +112,32 @@ function SettingsRow({
   return (
     <View style={rowStyle} accessible accessibilityLabel={title} accessibilityHint={subtitle}>
       {content}
+    </View>
+  );
+}
+
+type SectionGroupProps = {
+  title: string;
+  tone: string;
+  emoji: string;
+  children: React.ReactNode;
+};
+
+function SectionGroup({ title, tone, emoji, children }: SectionGroupProps) {
+  return (
+    <View style={styles.sectionGroup}>
+      <View style={styles.sectionHeaderRow}>
+        <View
+          style={[
+            styles.sectionEmojiPuck,
+            { backgroundColor: `${tone}1F`, borderColor: `${tone}40` },
+          ]}
+        >
+          <Text style={styles.sectionEmoji}>{emoji}</Text>
+        </View>
+        <Text style={[styles.sectionHeader, { color: tone }]}>{title}</Text>
+      </View>
+      <View style={[styles.rowsContainer, { borderColor: `${tone}2A` }]}>{children}</View>
     </View>
   );
 }
@@ -195,28 +232,25 @@ function SettingsScreenInner() {
         distance={motion.revealDistance}
         duration={motion.standard}
       >
-        {/* Account Group */}
-        <View style={styles.sectionGroup}>
-          <Text style={styles.sectionHeader}>Account</Text>
+        <SectionGroup title="Account" tone={colors.accent} emoji="👋">
+          <SettingsRow
+            icon="mail-open-outline"
+            title="Email"
+            value={memberEmail || 'Not signed in'}
+            tone={colors.accent}
+          />
 
-          <View style={styles.rowsContainer}>
-            <SettingsRow
-              icon="mail-open-outline"
-              title="Email"
-              value={memberEmail || 'Not signed in'}
-            />
-
-            <SettingsRow
-              icon={isAuthenticated ? 'log-out-outline' : 'log-in-outline'}
-              title={isAuthenticated ? 'Sign out' : 'Sign in'}
-              onPress={
-                isAuthenticated ? handleSignOut : () => navigation.navigate('CanopyTroveSignIn')
-              }
-              isDanger={isAuthenticated}
-              isLast
-            />
-          </View>
-        </View>
+          <SettingsRow
+            icon={isAuthenticated ? 'log-out-outline' : 'log-in-outline'}
+            title={isAuthenticated ? 'Sign out' : 'Sign in'}
+            onPress={
+              isAuthenticated ? handleSignOut : () => navigation.navigate('CanopyTroveSignIn')
+            }
+            isDanger={isAuthenticated}
+            tone={colors.accent}
+            isLast
+          />
+        </SectionGroup>
       </MotionInView>
 
       {isAuthenticated && (
@@ -225,22 +259,18 @@ function SettingsScreenInner() {
           distance={motion.revealDistance}
           duration={motion.standard}
         >
-          {/* Notifications Group */}
-          <View style={styles.sectionGroup}>
-            <Text style={styles.sectionHeader}>Notifications</Text>
-
-            <View style={styles.rowsContainer}>
-              <SettingsRow
-                icon="notifications-outline"
-                title="Email updates"
-                subtitle="Welcome notes and product news"
-                value={emailSubscribed}
-                onToggle={emailSubscribed ? handleUnsubscribeEmail : handleSubscribeEmail}
-                isLoading={isLoadingEmailSubscription}
-                isLast
-              />
-            </View>
-          </View>
+          <SectionGroup title="Notifications" tone={colors.gold} emoji="🔔">
+            <SettingsRow
+              icon="notifications-outline"
+              title="Email updates"
+              subtitle="Welcome notes and product news"
+              value={emailSubscribed}
+              onToggle={emailSubscribed ? handleUnsubscribeEmail : handleSubscribeEmail}
+              isLoading={isLoadingEmailSubscription}
+              tone={colors.gold}
+              isLast
+            />
+          </SectionGroup>
         </MotionInView>
       )}
 
@@ -249,39 +279,38 @@ function SettingsScreenInner() {
         distance={motion.revealDistance}
         duration={motion.standard}
       >
-        {/* Safety & Privacy Group */}
-        <View style={styles.sectionGroup}>
-          <Text style={styles.sectionHeader}>Safety & Privacy</Text>
+        <SectionGroup title="Safety & Privacy" tone="#4D9CFF" emoji="🛡️">
+          <SettingsRow
+            icon="shield-checkmark-outline"
+            title="Community guidelines"
+            value={hasAcceptedGuidelines ? 'Accepted' : 'Review required'}
+            tone="#4D9CFF"
+          />
 
-          <View style={styles.rowsContainer}>
-            <SettingsRow
-              icon="shield-checkmark-outline"
-              title="Community guidelines"
-              value={hasAcceptedGuidelines ? 'Accepted' : 'Review required'}
-            />
+          <SettingsRow
+            icon="close-circle-outline"
+            title="Blocked authors"
+            value={String(blockedAuthorCount)}
+            tone="#4D9CFF"
+          />
 
-            <SettingsRow
-              icon="close-circle-outline"
-              title="Blocked authors"
-              value={String(blockedAuthorCount)}
-            />
+          <SettingsRow
+            icon="flag-outline"
+            title="Report a bug"
+            subtitle="Describe what went wrong and we'll look into it"
+            onPress={handleReportBug}
+            tone="#4D9CFF"
+          />
 
-            <SettingsRow
-              icon="flag-outline"
-              title="Report a bug"
-              subtitle="Describe what went wrong and we'll look into it"
-              onPress={handleReportBug}
-            />
-
-            <SettingsRow
-              icon="help-buoy-outline"
-              title="Contact support"
-              value={supportEmail}
-              onPress={handleContactSupport}
-              isLast
-            />
-          </View>
-        </View>
+          <SettingsRow
+            icon="help-buoy-outline"
+            title="Contact support"
+            value={supportEmail}
+            onPress={handleContactSupport}
+            tone="#4D9CFF"
+            isLast
+          />
+        </SectionGroup>
       </MotionInView>
 
       <MotionInView
@@ -289,32 +318,29 @@ function SettingsScreenInner() {
         distance={motion.revealDistance}
         duration={motion.standard}
       >
-        {/* About Group */}
-        <View style={styles.sectionGroup}>
-          <Text style={styles.sectionHeader}>About</Text>
+        <SectionGroup title="About" tone={colors.goldSoft} emoji="📖">
+          <SettingsRow
+            icon="document-text-outline"
+            title="Legal Center"
+            onPress={() => navigation.navigate('LegalCenter')}
+            tone={colors.goldSoft}
+          />
 
-          <View style={styles.rowsContainer}>
-            <SettingsRow
-              icon="document-text-outline"
-              title="Legal Center"
-              onPress={() => navigation.navigate('LegalCenter')}
-            />
+          <SettingsRow
+            icon="close-circle-outline"
+            title="Delete account"
+            onPress={() => navigation.navigate('DeleteAccount')}
+            isDanger
+          />
 
-            <SettingsRow
-              icon="close-circle-outline"
-              title="Delete account"
-              onPress={() => navigation.navigate('DeleteAccount')}
-              isDanger
-            />
-
-            <SettingsRow
-              icon="information-circle-outline"
-              title="App version"
-              value={appVersion}
-              isLast
-            />
-          </View>
-        </View>
+          <SettingsRow
+            icon="information-circle-outline"
+            title="App version"
+            value={appVersion}
+            tone={colors.goldSoft}
+            isLast
+          />
+        </SectionGroup>
       </MotionInView>
     </ScreenShell>
   );
@@ -324,33 +350,49 @@ export const SettingsScreen = withScreenErrorBoundary(SettingsScreenInner, 'sett
 
 const styles = StyleSheet.create({
   sectionGroup: {
-    gap: spacing.xs,
-    marginBottom: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  sectionEmojiPuck: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  sectionEmoji: {
+    fontSize: 14,
   },
   sectionHeader: {
     ...textStyles.labelCaps,
-    color: colors.goldSoft,
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.xs,
+    letterSpacing: 1.2,
+    fontWeight: '800',
   },
   rowsContainer: {
     backgroundColor: colors.surfaceElevated,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
     overflow: 'hidden',
     shadowColor: colors.shadow,
-    shadowOpacity: 0.14,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 60,
+    minHeight: 68,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderSoft,
     gap: spacing.md,
@@ -359,30 +401,33 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   rowPressed: {
-    backgroundColor: 'rgba(46, 204, 113, 0.06)',
+    backgroundColor: 'rgba(255, 251, 247, 0.04)',
   },
   rowIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.md,
-    backgroundColor: 'rgba(46, 204, 113, 0.10)',
+    width: 46,
+    height: 46,
+    borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(46, 204, 113, 0.18)',
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.16,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
   rowIconWrapDanger: {
-    backgroundColor: 'rgba(231, 76, 60, 0.10)',
-    borderColor: 'rgba(231, 76, 60, 0.22)',
+    backgroundColor: 'rgba(231, 76, 60, 0.12)',
+    borderColor: 'rgba(231, 76, 60, 0.30)',
   },
   rowContent: {
     flex: 1,
-    gap: spacing.xs,
+    gap: 2,
   },
   rowTitle: {
     ...textStyles.bodyStrong,
     color: colors.text,
     fontSize: 16,
+    fontWeight: '700',
   },
   rowTitleDanger: {
     color: colors.danger,
@@ -390,8 +435,8 @@ const styles = StyleSheet.create({
   rowSubtitle: {
     ...textStyles.caption,
     color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
   },
   rowAccessory: {
     flexDirection: 'row',

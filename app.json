@@ -35,7 +35,9 @@
       "associatedDomains": ["applinks:canopytrove.com", "applinks:www.canopytrove.com"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Canopy Trove uses your camera to scan product QR codes and dispensary license numbers for on-the-spot verification."
+        "NSCameraUsageDescription": "Canopy Trove uses your camera to scan product QR codes and dispensary license numbers for on-the-spot verification.",
+        "NSMicrophoneUsageDescription": "Canopy Trove does not record audio. This entry is required by iOS because the audio playback library we use links the microphone framework for completeness.",
+        "UIBackgroundModes": ["audio"]
       },
       "googleServicesFile": "./GoogleService-Info.plist"
     },
@@ -71,8 +73,7 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.READ_MEDIA_IMAGES"
       ]
     },
     "web": {
@@ -113,7 +114,8 @@
         }
       ],
       "expo-font",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-audio"
     ],
     "owner": "rezell",
     "extra": {

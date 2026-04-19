@@ -21,6 +21,7 @@ import { brand } from '../config/brand';
 import { ownerPortalAccessAvailable } from '../config/ownerPortalConfig';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { useOwnerPortalAccessState } from '../hooks/useOwnerPortalAccessState';
+import { MusicToggleRow } from '../music/MusicToggleRow';
 import { AppUiIcon, type AppUiIconName } from '../icons/AppUiIcon';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, radii, motion, spacing, textStyles } from '../theme/tokens';
@@ -143,6 +144,10 @@ function ProfileEntryWorkspace() {
             </Pressable>
           </View>
         </SectionCard>
+      </MotionInView>
+
+      <MotionInView delay={100}>
+        <MusicToggleRow />
       </MotionInView>
 
       {ownerPortalUiAvailable ? (
@@ -323,6 +328,10 @@ function OwnerProfileWorkspace() {
       ))}
 
       <MotionInView delay={120 + ownerWorkspaceCards.length * 50}>
+        <MusicToggleRow />
+      </MotionInView>
+
+      <MotionInView delay={120 + (ownerWorkspaceCards.length + 1) * 50}>
         <SectionCard
           title="Switch account"
           body="Sign out to return to the profile chooser and switch back to a member account."
@@ -422,6 +431,12 @@ function MemberProfileWorkspace() {
         onPress: () => navigation.navigate('MyBrands'),
       },
       {
+        key: 'products',
+        label: 'My Products',
+        iconName: 'sparkles-outline',
+        onPress: () => navigation.navigate('MyProducts'),
+      },
+      {
         key: 'leaderboard',
         label: 'Leaderboard',
         iconName: 'trophy-outline',
@@ -494,6 +509,10 @@ function MemberProfileWorkspace() {
               </Pressable>
             </View>
           </SectionCard>
+        </MotionInView>
+
+        <MotionInView dense delay={revealDelay(0) + 45}>
+          <MusicToggleRow />
         </MotionInView>
 
         <MotionInView dense delay={revealDelay(0) + 60}>

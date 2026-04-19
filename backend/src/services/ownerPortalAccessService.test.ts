@@ -11,8 +11,15 @@ type TestGlobals = typeof globalThis & {
   __CANOPY_TEST_BACKEND_FIREBASE_AUTH__?: FirebaseAuthOverride;
 };
 
+const originalOwnerPortalAllowlist = process.env.OWNER_PORTAL_ALLOWLIST;
+
 function clearTestModules() {
-  for (const modulePath of ['../firebase', './ownerPortalAccessService']) {
+  for (const modulePath of [
+    '../config',
+    '../firebase',
+    './ownerPortalAccessService',
+    './ownerPortalAuthClaimsService',
+  ]) {
     try {
       delete require.cache[require.resolve(modulePath)];
     } catch {
@@ -50,6 +57,11 @@ async function loadOwnerPortalAccessModule(tag: string) {
 
 afterEach(() => {
   setTestAuthOverride(null);
+  if (originalOwnerPortalAllowlist === undefined) {
+    delete process.env.OWNER_PORTAL_ALLOWLIST;
+  } else {
+    process.env.OWNER_PORTAL_ALLOWLIST = originalOwnerPortalAllowlist;
+  }
   clearTestModules();
 });
 
@@ -90,6 +102,7 @@ test('ensureOwnerPortalAccess rejects authenticated members without owner claims
 
 test('ensureOwnerPortalAccess accepts owner claims', async () => {
   process.env.NODE_ENV = 'test';
+  process.env.OWNER_PORTAL_ALLOWLIST = 'owner@example.com';
   setTestAuthOverride({
     verifyIdToken: async (token: string) => {
       assert.equal(token, 'owner-token');
@@ -119,17 +132,4 @@ test('ensureOwnerPortalClaimSyncAccess accepts authenticated members before owne
       return {
         uid: 'member-sync-1',
         email: 'member@example.com',
-        role: 'member',
-      };
-    },
-    getUser: async (uid: string) => ({ uid }),
-  });
-
-  const { ensureOwnerPortalClaimSyncAccess } = await loadOwnerPortalAccessModule('claim-sync');
-  const result = await ensureOwnerPortalClaimSyncAccess(buildRequest('member-sync-token'));
-
-  assert.deepEqual(result, {
-    ownerUid: 'member-sync-1',
-    ownerEmail: 'member@example.com',
-  });
-});
+    

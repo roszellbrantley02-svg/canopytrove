@@ -15,6 +15,10 @@ const summaryMocks = vi.hoisted(() => ({
   useStorefrontSummariesByIds: vi.fn(),
 }));
 
+const analyticsMocks = vi.hoisted(() => ({
+  trackAnalyticsEvent: vi.fn(),
+}));
+
 vi.mock('react-native', () => ({
   ScrollView: 'ScrollView',
   StyleSheet: {
@@ -44,8 +48,16 @@ vi.mock('../components/CustomerStateCard', () => ({
   CustomerStateCard: 'CustomerStateCard',
 }));
 
+vi.mock('../components/LicensedBadge', () => ({
+  LicensedBadge: 'LicensedBadge',
+}));
+
 vi.mock('../components/MapGridPreview', () => ({
   MapGridPreview: 'MapGridPreview',
+}));
+
+vi.mock('../components/PaymentMethodsBadge', () => ({
+  PaymentMethodsBadge: 'PaymentMethodsBadge',
 }));
 
 vi.mock('../components/MotionInView', () => ({
@@ -58,6 +70,10 @@ vi.mock('../components/withScreenErrorBoundary', () => ({
 
 vi.mock('../hooks/useStorefrontSummaryData', () => ({
   useStorefrontSummariesByIds: summaryMocks.useStorefrontSummariesByIds,
+}));
+
+vi.mock('../services/analyticsService', () => ({
+  trackAnalyticsEvent: analyticsMocks.trackAnalyticsEvent,
 }));
 
 vi.mock('../sources/apiStorefrontSource', () => ({
@@ -86,6 +102,14 @@ vi.mock('./storefrontDetail/StorefrontDetailSections', () => ({
 
 vi.mock('./storefrontDetail/useStorefrontDetailScreenModel', () => ({
   useStorefrontDetailScreenModel: vi.fn(() => ({})),
+}));
+
+vi.mock('./storefrontDetail/storefrontDetailStyles', () => ({
+  styles: {
+    gradient: {},
+    safeArea: {},
+    content: {},
+  },
 }));
 
 import { StorefrontDetailScreen } from './StorefrontDetailScreen';

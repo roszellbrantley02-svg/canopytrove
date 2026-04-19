@@ -20,11 +20,9 @@ analyticsRoutes.post('/analytics/events', async (request, response, next) => {
     const body = parseAnalyticsEventBatchBody(request.body);
     const result = await recordAnalyticsEvents(body, {
       ipAddress: request.ip ?? null,
+      receivedAt: new Date().toISOString(),
       userAgent: request.headers['user-agent'] ?? null,
     });
 
     response.status(202).json(result);
-  } catch (error) {
-    next(error);
-  }
-});
+ 

@@ -206,6 +206,19 @@ function OwnerPortalHomeScreenInner() {
         navigation.navigate('OwnerPortalBrandRoster', undefined);
       },
     },
+    {
+      key: 'payments',
+      label: 'Payments',
+      iconName: 'layers-outline',
+      locked: !isGrowthOrAbove,
+      onPress: () => {
+        if (isGrowthOrAbove) {
+          navigation.navigate('OwnerPortalPaymentMethods', undefined);
+        } else {
+          navigation.navigate('OwnerPortalSubscription', undefined);
+        }
+      },
+    },
   ];
 
   const ownerStatusChips = getOwnerStatusChips({

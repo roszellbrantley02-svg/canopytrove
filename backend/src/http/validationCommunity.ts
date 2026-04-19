@@ -177,7 +177,7 @@ export function parseClientRuntimeErrorBody(value: unknown) {
     stack: parseOptionalTrimmedString(body.stack, 'body.stack', {
       maxLength: MAX_STACK_LENGTH,
     }),
-    isFatal: typeof body.isFatal === 'boolean' ? body.isFatal : false,
+    clientReportedFatal: typeof body.isFatal === 'boolean' ? body.isFatal : false,
     source: parseOptionalTrimmedString(body.source, 'body.source', {
       maxLength: 120,
     }),
@@ -187,6 +187,4 @@ export function parseClientRuntimeErrorBody(value: unknown) {
     platform: parseOptionalTrimmedString(body.platform, 'body.platform', {
       maxLength: 40,
     }),
-    reportedAt: parseOptionalIsoDateString(body.reportedAt, 'body.reportedAt'),
-  };
-}
+    reportedAt: parseOptionalIsoDateString(body.reportedAt, 'body.reportedA

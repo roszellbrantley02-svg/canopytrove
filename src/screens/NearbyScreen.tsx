@@ -19,6 +19,7 @@ import { spacing } from '../theme/tokens';
 import {
   classifyLocationInput,
   trackAnalyticsEvent,
+  trackPaymentMethodsBadgeImpressions,
   trackStorefrontPromotionImpressions,
   trackStorefrontImpressions,
 } from '../services/analyticsService';
@@ -97,6 +98,7 @@ function NearbyScreenInner() {
       'Nearby',
     );
     trackStorefrontPromotionImpressions(visibleData, 'Nearby');
+    trackPaymentMethodsBadgeImpressions(visibleData, 'Nearby');
   }, [visibleData]);
 
   React.useEffect(() => {

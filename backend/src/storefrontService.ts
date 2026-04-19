@@ -37,6 +37,10 @@ import {
   attachOcmVerificationToDetail,
   attachOcmVerificationToSummaries,
 } from './services/storefrontOcmEnrichment';
+import {
+  attachPaymentMethodsToDetail,
+  attachPaymentMethodsToSummaries,
+} from './services/paymentMethodsService';
 
 const SUMMARY_GOOGLE_ENRICHMENT_TIMEOUT_MS = 1_500;
 const SUMMARY_DETAIL_FALLBACK_TIMEOUT_MS = 400;
@@ -383,10 +387,11 @@ export async function getStorefrontSummaries(
   // }
 
   const itemsWithOcm = await attachOcmVerificationToSummaries(payload.items);
+  const itemsWithPayments = await attachPaymentMethodsToSummaries(itemsWithOcm);
 
   return {
     ...payload,
-    items: itemsWithOcm,
+    items: itemsWithPayments,
   };
 }
 
@@ -410,7 +415,8 @@ export async function getStorefrontSummariesByIds(
   const items = enhancedResults.flatMap((result) =>
     result.status === 'fulfilled' ? [result.value] : [],
   );
-  return attachOcmVerificationToSummaries(items);
+  const withOcm = await attachOcmVerificationToSummaries(items);
+  return attachPaymentMethodsToSummaries(withOcm);
 }
 
 export async function resolveStorefrontBySlug(slug: string) {
@@ -564,7 +570,8 @@ export async function getStorefrontDetail(
       includeMemberDeals ? detail : stripMemberOnlyDetailPromotionFields(detail),
       DETAIL_ENHANCEMENT_TIMEOUT_MS,
     );
-    return attachOcmVerificationToDetail(enhancedDetail, summary);
+    const withOcm = await attachOcmVerificationToDetail(enhancedDetail, summary);
+    return attachPaymentMethodsToDetail(withOcm, summary);
   };
 
   if (summary && hasGooglePlacesConfig() && !shouldAwaitGoogleEnrichment) {

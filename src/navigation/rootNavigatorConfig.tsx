@@ -85,6 +85,26 @@ const BrandDetailScreen = lazyScreen(
   () => import('../screens/BrandDetailScreen'),
   'BrandDetailScreen',
 );
+const MyProductsScreen = lazyScreen(
+  () => import('../screens/MyProductsScreen'),
+  'MyProductsScreen',
+);
+const ProductReviewsDetailScreen = lazyScreen(
+  () => import('../screens/ProductReviewsDetailScreen'),
+  'ProductReviewsDetailScreen',
+);
+const ProductReviewComposerScreen = lazyScreen(
+  () => import('../screens/ProductReviewComposerScreen'),
+  'ProductReviewComposerScreen',
+);
+const ScanCameraScreen = lazyScreen(
+  () => import('../screens/ScanCameraScreen'),
+  'ScanCameraScreen',
+);
+const RateProductPickerScreen = lazyScreen(
+  () => import('../screens/RateProductPickerScreen'),
+  'RateProductPickerScreen',
+);
 
 /* ── Auth screens — lazy ── */
 const WelcomeModePickerScreen = lazyScreen(
@@ -177,6 +197,10 @@ const OwnerPortalBrandRosterScreen = lazyScreen(
   () => import('../screens/OwnerPortalBrandRosterScreen'),
   'OwnerPortalBrandRosterScreen',
 );
+const OwnerPortalPaymentMethodsScreen = lazyScreen(
+  () => import('../screens/OwnerPortalPaymentMethodsScreen'),
+  'OwnerPortalPaymentMethodsScreen',
+);
 
 /* ── Admin screens — lazy ── */
 const AdminRuntimePanelScreen = lazyScreen(
@@ -197,6 +221,32 @@ export type RootTabParamList = {
   Profile: undefined;
 };
 
+export type ScanResultRouteParams = {
+  rawCode: string;
+  mode: 'product' | 'shop';
+};
+
+export type ProductReviewsDetailRouteParams = {
+  productSlug: string;
+  brandName: string;
+  productName: string;
+};
+
+export type ProductReviewComposerRouteParams = {
+  productSlug: string;
+  brandName: string;
+  productName: string;
+};
+
+export type MemberSignInRedirect =
+  | { kind: 'goBack' }
+  | { kind: 'navigate'; screen: 'RateProductPicker' }
+  | {
+      kind: 'navigate';
+      screen: 'ProductReviewComposer';
+      params: ProductReviewComposerRouteParams;
+    };
+
 export type RootStackParamList = {
   Tabs: NavigatorScreenParams<RootTabParamList> | undefined;
   StorefrontDetail: {
@@ -215,9 +265,11 @@ export type RootStackParamList = {
     entryMode?: 'general_report' | 'suggest_edit' | 'report_closed';
   };
   VerifyManualEntry: undefined;
-  ScanResult: {
-    rawCode: string;
+  ScanResult: ScanResultRouteParams;
+  ScanCamera: {
+    mode: 'product' | 'shop';
   };
+  RateProductPicker: undefined;
   LegalCenter: undefined;
   DeleteAccount: undefined;
   Leaderboard:
@@ -226,7 +278,11 @@ export type RootStackParamList = {
       }
     | undefined;
   WelcomeModePicker: undefined;
-  MemberSignIn: undefined;
+  MemberSignIn:
+    | {
+        redirectTo?: MemberSignInRedirect;
+      }
+    | undefined;
   OwnerSignIn: undefined;
   CanopyTroveSignIn: undefined;
   CanopyTroveSignUp: undefined;
@@ -301,6 +357,11 @@ export type RootStackParamList = {
         preview?: boolean;
       }
     | undefined;
+  OwnerPortalPaymentMethods:
+    | {
+        preview?: boolean;
+      }
+    | undefined;
   Settings: undefined;
   SavedStorefronts: undefined;
   BadgeGallery: undefined;
@@ -309,6 +370,9 @@ export type RootStackParamList = {
   BrandDetail: {
     brandId: string;
   };
+  MyProducts: undefined;
+  ProductReviewsDetail: ProductReviewsDetailRouteParams;
+  ProductReviewComposer: ProductReviewComposerRouteParams;
   AdminRuntimePanel: undefined;
 };
 
@@ -379,6 +443,12 @@ export const stackScreens = [
     options: bottomRiseScreenOptions,
   },
   { name: 'ScanResult', component: ScanResultScreen, options: bottomRiseScreenOptions },
+  { name: 'ScanCamera', component: ScanCameraScreen, options: bottomRiseScreenOptions },
+  {
+    name: 'RateProductPicker',
+    component: RateProductPickerScreen,
+    options: bottomRiseScreenOptions,
+  },
   {
     name: 'WelcomeModePicker',
     component: WelcomeModePickerScreen,
@@ -490,6 +560,11 @@ export const stackScreens = [
     options: workspaceFlowScreenOptions,
   },
   {
+    name: 'OwnerPortalPaymentMethods',
+    component: OwnerPortalPaymentMethodsScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
     name: 'Settings',
     component: SettingsScreen,
     options: bottomRiseScreenOptions,
@@ -518,6 +593,21 @@ export const stackScreens = [
     name: 'BrandDetail',
     component: BrandDetailScreen,
     options: detailFlowScreenOptions,
+  },
+  {
+    name: 'MyProducts',
+    component: MyProductsScreen,
+    options: detailFlowScreenOptions,
+  },
+  {
+    name: 'ProductReviewsDetail',
+    component: ProductReviewsDetailScreen,
+    options: detailFlowScreenOptions,
+  },
+  {
+    name: 'ProductReviewComposer',
+    component: ProductReviewComposerScreen,
+    options: bottomRiseScreenOptions,
   },
   {
     name: 'AdminRuntimePanel',

@@ -32,6 +32,10 @@ function Assert-LastExitCode($context) {
         Fail "$context failed with exit code $LASTEXITCODE."
     }
 }
+function Test-GcloudSecretExists($name) {
+    gcloud secrets describe $name --project $PROJECT 1>$null 2>$null
+    return $LASTEXITCODE -eq 0
+}
 
 # ---------------------------------------------------------------------------
 # Step 0: preflight
@@ -166,15 +170,26 @@ function Deploy-Backend {
     $secrets = @(
         "GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest",
         "ADMIN_API_KEY=ADMIN_API_KEY:latest",
+        "RATE_LIMIT_PEPPER=RATE_LIMIT_PEPPER:latest",
         "STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest",
         "STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest",
         "EXPO_ACCESS_TOKEN=EXPO_ACCESS_TOKEN:latest",
         "SENTRY_DSN=SENTRY_DSN:latest",
         "OPENAI_API_KEY=OPENAI_API_KEY:latest",
         "RESEND_API_KEY=RESEND_API_KEY:latest",
-        "RESEND_WEBHOOK_SECRET=RESEND_WEBHOOK_SECRET:latest",
-        "OPS_ALERT_WEBHOOK_URL=OPS_ALERT_WEBHOOK_URL:latest"
-    ) -join ","
+        "RESEND_WEBHOOK_SECRET=RESEND_WEBHOOK_SECRET:latest"
+    )
+    if (Test-GcloudSecretExists "STRIPE_IDENTITY_WEBHOOK_SECRET") {
+        $secrets += "STRIPE_IDENTITY_WEBHOOK_SECRET=STRIPE_IDENTITY_WEBHOOK_SECRET:latest"
+    } else {
+        Warn "Secret STRIPE_IDENTITY_WEBHOOK_SECRET not found - skipping optional Stripe Identity webhook secret."
+    }
+    if (Test-GcloudSecretExists "OPS_ALERT_WEBHOOK_URL") {
+        $secrets += "OPS_ALERT_WEBHOOK_URL=OPS_ALERT_WEBHOOK_URL:latest"
+    } else {
+        Warn "Secret OPS_ALERT_WEBHOOK_URL not found - skipping optional ops alert webhook."
+    }
+    $secrets = $secrets -join ","
 
     gcloud run deploy $SERVICE `
         --image $IMAGE `

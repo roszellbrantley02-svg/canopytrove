@@ -85,6 +85,10 @@ vi.mock('./ownerPortal/OwnerPortalLicenseComplianceCard', () => ({
   OwnerPortalLicenseComplianceCard: () => null,
 }));
 
+vi.mock('./ownerPortal/OwnerPortalBrandActivityCard', () => ({
+  OwnerPortalBrandActivityCard: () => null,
+}));
+
 vi.mock('./ownerPortal/ownerPortalHomeData', () => ({
   getJourneyItems: () => [],
   getOwnerHomeDerivedMetrics: () => ({

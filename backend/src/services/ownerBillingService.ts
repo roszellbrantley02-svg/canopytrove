@@ -791,7 +791,7 @@ export async function createOwnerBillingCheckoutSession(
     stripeSecretKey,
     '/checkout/sessions',
     params,
-    `owner-billing:${ownerUid}:${cycle}`,
+    `owner-billing:${ownerUid}:${tier}:${cycle}:${priceId}`,
   );
 
   if (!session.url) {
@@ -906,7 +906,4 @@ export async function handleOwnerBillingWebhook(
       return {
         ok: true,
         ignored: true,
-        type: event.type,
-      };
-  }
-}
+        type: event.ty

@@ -1,5 +1,6 @@
 import type { GamificationRewardResult, StorefrontGamificationState } from '../../types/storefront';
 import { CANOPYTROVE_BADGES, CANOPYTROVE_POINTS } from './definitions';
+import { normalizeGamificationState } from './state';
 import {
   finalizeReward,
   getCurrentIsoDate,
@@ -184,9 +185,20 @@ export function applyScanCompletedReward(
 ): GamificationRewardResult {
   const occurredAt = payload.occurredAt ?? getCurrentIsoDate();
 
-  // Only award points for product scans
+  // Only product scans participate in consumer scan gamification.
+  // License/unknown scans are informational and should not trigger
+  // unrelated badge evaluation such as membership-duration milestones.
   if (payload.scanKind !== 'product') {
-    return finalizeReward(state, 'scan_completed', occurredAt, 0, {});
+    const updatedState = normalizeGamificationState(state.profileId, state, state.joinedDate);
+
+    return {
+      activityType: 'scan_completed',
+      pointsEarned: 0,
+      badgesEarned: [],
+      levelBefore: state.level,
+      levelAfter: updatedState.level,
+      updatedState,
+    };
   }
 
   const scanStats = state.scanStats ?? {

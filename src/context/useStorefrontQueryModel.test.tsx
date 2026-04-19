@@ -14,6 +14,7 @@ const locationMocks = vi.hoisted(() => ({
   findNearestArea: vi.fn(),
   getBestAvailableDeviceLocation: vi.fn(),
   getCachedDeviceLocation: vi.fn(),
+  getPassiveDeviceLocation: vi.fn(),
   resolveDeviceLocationLabel: vi.fn(),
   resolveSearchLocation: vi.fn(),
 }));
@@ -32,6 +33,7 @@ vi.mock('../services/locationService', () => ({
   findNearestArea: locationMocks.findNearestArea,
   getBestAvailableDeviceLocation: locationMocks.getBestAvailableDeviceLocation,
   getCachedDeviceLocation: locationMocks.getCachedDeviceLocation,
+  getPassiveDeviceLocation: locationMocks.getPassiveDeviceLocation,
   resolveDeviceLocationLabel: locationMocks.resolveDeviceLocationLabel,
   resolveSearchLocation: locationMocks.resolveSearchLocation,
 }));
@@ -115,6 +117,7 @@ describe('useStorefrontQueryModel', () => {
     locationMocks.findNearestArea.mockReset();
     locationMocks.getBestAvailableDeviceLocation.mockReset();
     locationMocks.getCachedDeviceLocation.mockReset();
+    locationMocks.getPassiveDeviceLocation.mockReset();
     locationMocks.resolveDeviceLocationLabel.mockReset();
     locationMocks.resolveSearchLocation.mockReset();
     preferenceMocks.loadStorefrontPreferences.mockReset();
@@ -123,6 +126,7 @@ describe('useStorefrontQueryModel', () => {
     marketAreaMocks.getCachedMarketAreas.mockReturnValue(marketAreas);
     marketAreaMocks.getAvailableMarketAreas.mockResolvedValue(marketAreas);
     locationMocks.getCachedDeviceLocation.mockReturnValue(null);
+    locationMocks.getPassiveDeviceLocation.mockResolvedValue({ coordinates: null });
     locationMocks.getBestAvailableDeviceLocation.mockResolvedValue({ coordinates: null });
     locationMocks.findNearestArea.mockImplementation((_areas, coordinates) =>
       coordinates.latitude > 42 ? marketAreas[1] : marketAreas[0],

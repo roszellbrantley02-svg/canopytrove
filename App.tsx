@@ -9,6 +9,7 @@ import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 import { GamificationRewardToastHost } from './src/components/GamificationRewardToastHost';
 import { AppBootScreen } from './src/components/AppBootScreen';
 import { StorefrontControllerProvider } from './src/context/StorefrontController';
+import { MusicPlayerProvider } from './src/music/MusicPlayerContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { acceptAgeGate, hasAcceptedAgeGate } from './src/services/ageGateService';
 import { initializeAppCheck } from './src/services/appCheckService';
@@ -45,14 +46,35 @@ function useAppPhase(
 }
 
 function useCrossfade(visible: boolean) {
-  const opacity = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
+  // Lazy init: React re-evaluates the useRef argument every render, which
+  // would allocate a throwaway Animated.Value each time. Using a ref with a
+  // null sentinel + lazy populate avoids both the allocation AND the edge
+  // case where the hook is passed a different initial visibility on remount.
+  const opacityRef = React.useRef<Animated.Value | null>(null);
+  if (opacityRef.current === null) {
+    opacityRef.current = new Animated.Value(visible ? 1 : 0);
+  }
+  const opacity = opacityRef.current;
+
+  // Track the latest visible value in a ref so the running animation can
+  // re-decide its target mid-flight without closing over a stale value.
+  const visibleRef = React.useRef(visible);
+  visibleRef.current = visible;
 
   React.useEffect(() => {
-    Animated.timing(opacity, {
+    // Cancel any prior animation so we don't stack tweens — otherwise a
+    // quick visible/invisible flip fires two .start() calls whose callbacks
+    // race and the final opacity can settle on the wrong value.
+    opacity.stopAnimation();
+    const animation = Animated.timing(opacity, {
       toValue: visible ? 1 : 0,
       duration: CROSSFADE_DURATION_MS,
       useNativeDriver: true,
-    }).start();
+    });
+    animation.start();
+    return () => {
+      animation.stop();
+    };
   }, [visible, opacity]);
 
   return opacity;
@@ -153,11 +175,13 @@ function App() {
             pointerEvents={phase === 'main' ? 'auto' : 'none'}
           >
             <StorefrontControllerProvider>
-              <AppErrorBoundary area="main-navigation">
-                <AnalyticsBridge />
-                <RootNavigator />
-                <GamificationRewardToastHost />
-              </AppErrorBoundary>
+              <MusicPlayerProvider>
+                <AppErrorBoundary area="main-navigation">
+                  <AnalyticsBridge />
+                  <RootNavigator />
+                  <GamificationRewardToastHost />
+                </AppErrorBoundary>
+              </MusicPlayerProvider>
             </StorefrontControllerProvider>
           </Animated.View>
         ) : null}

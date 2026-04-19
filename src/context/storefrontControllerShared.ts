@@ -95,9 +95,64 @@ export function areStringArraysEqual(left: string[], right: string[]) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
+function areScanStatsEqual(
+  left: StorefrontGamificationState['scanStats'],
+  right: StorefrontGamificationState['scanStats'],
+) {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return (
+    left.productScanCount === right.productScanCount &&
+    left.coaOpenCount === right.coaOpenCount &&
+    left.cleanPassCount === right.cleanPassCount &&
+    left.highThcScans === right.highThcScans &&
+    areStringArraysEqual(left.uniqueBrandIds, right.uniqueBrandIds) &&
+    areStringArraysEqual(left.uniqueTerpenes, right.uniqueTerpenes)
+  );
+}
+
+/**
+ * Structural equality for gamification state. Previous implementation used
+ * JSON.stringify which is (a) slow when invoked on every render and
+ * (b) non-deterministic for objects where key order can differ (old vs new
+ * state paths sometimes build objects in different orders, causing spurious
+ * diffs that re-broadcast no-op updates).
+ *
+ * This compares every known field explicitly. Arrays are compared by length
+ * and element order — that matches the state machine's contract (ordered
+ * history of visits + badges).
+ */
 export function areGamificationStatesEqual(
   current: StorefrontGamificationState,
   next: StorefrontGamificationState,
 ) {
-  return JSON.stringify(current) === JSON.stringify(next);
+  if (current === next) return true;
+
+  return (
+    current.profileId === next.profileId &&
+    current.totalPoints === next.totalPoints &&
+    current.totalReviews === next.totalReviews &&
+    current.totalPhotos === next.totalPhotos &&
+    current.totalHelpfulVotes === next.totalHelpfulVotes &&
+    current.currentStreak === next.currentStreak &&
+    current.longestStreak === next.longestStreak &&
+    current.lastReviewDate === next.lastReviewDate &&
+    current.lastActiveDate === next.lastActiveDate &&
+    current.dispensariesVisited === next.dispensariesVisited &&
+    current.joinedDate === next.joinedDate &&
+    current.level === next.level &&
+    current.nextLevelPoints === next.nextLevelPoints &&
+    current.reviewsWithPhotos === next.reviewsWithPhotos &&
+    current.detailedReviews === next.detailedReviews &&
+    current.fiveStarReviews === next.fiveStarReviews &&
+    current.oneStarReviews === next.oneStarReviews &&
+    current.commentsWritten === next.commentsWritten &&
+    current.reportsSubmitted === next.reportsSubmitted &&
+    current.friendsInvited === next.friendsInvited &&
+    current.followersCount === next.followersCount &&
+    current.totalRoutesStarted === next.totalRoutesStarted &&
+    areStringArraysEqual(current.visitedStorefrontIds, next.visitedStorefrontIds) &&
+    areStringArraysEqual(current.badges, next.badges) &&
+    areScanStatsEqual(current.scanStats, next.scanStats)
+  );
 }

@@ -22,10 +22,12 @@ import {
   deleteOwnerPortalPromotion,
   getOwnerPortalBrandActivity,
   getOwnerPortalBrands,
+  getOwnerPortalPaymentMethods,
   getOwnerPortalWorkspace,
   replyToOwnerPortalReview,
   saveOwnerPortalBrands,
   saveOwnerPortalLicenseCompliance,
+  saveOwnerPortalPaymentMethods,
   saveOwnerPortalProfileTools,
   updateOwnerPortalPromotion,
 } from '../services/ownerPortalWorkspaceService';
@@ -55,6 +57,12 @@ const ownerProfileToolsRateLimiter = createRateLimitMiddleware({
 });
 const ownerBrandsRateLimiter = createRateLimitMiddleware({
   name: 'owner-brands',
+  windowMs: 60_000,
+  max: 10,
+  methods: ['PUT'],
+});
+const ownerPaymentMethodsRateLimiter = createRateLimitMiddleware({
+  name: 'owner-payment-methods',
   windowMs: 60_000,
   max: 10,
   methods: ['PUT'],
@@ -297,6 +305,43 @@ ownerPortalWorkspaceRoutes.get(
         sinceDays: Number.isFinite(sinceDaysRaw) ? sinceDaysRaw : undefined,
         limit: Number.isFinite(limitRaw) ? limitRaw : undefined,
       });
+    },
+  ),
+);
+
+ownerPortalWorkspaceRoutes.get(
+  '/owner-portal/payment-methods',
+  createOwnerPortalJsonRoute(
+    'Unknown owner payment methods failure',
+    async ({ ownerUid, request }) => {
+      const locationId =
+        typeof request.query.locationId === 'string'
+          ? request.query.locationId.trim() || null
+          : null;
+      return getOwnerPortalPaymentMethods(ownerUid, locationId);
+    },
+  ),
+);
+
+ownerPortalWorkspaceRoutes.put(
+  '/owner-portal/payment-methods',
+  ownerPaymentMethodsRateLimiter,
+  createOwnerPortalJsonRoute(
+    'Unknown owner payment methods save failure',
+    async ({ ownerUid, request }) => {
+      const locationId =
+        typeof request.body?.locationId === 'string'
+          ? request.body.locationId.trim() || null
+          : null;
+      const rawMethods =
+        request.body?.methods && typeof request.body.methods === 'object'
+          ? (request.body.methods as Record<string, unknown>)
+          : {};
+      const methods: Record<string, boolean> = {};
+      for (const [key, value] of Object.entries(rawMethods)) {
+        if (typeof value === 'boolean') methods[key] = value;
+      }
+      return saveOwnerPortalPaymentMethods(ownerUid, { methods }, locationId);
     },
   ),
 );

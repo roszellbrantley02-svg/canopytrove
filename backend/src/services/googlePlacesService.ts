@@ -32,7 +32,7 @@ async function loadPlaceDetail(placeId: string) {
         {
           method: 'GET',
         },
-        'id,websiteUri,nationalPhoneNumber,businessStatus,location,regularOpeningHours.weekdayDescriptions,currentOpeningHours.openNow,currentOpeningHours.weekdayDescriptions',
+        'id,websiteUri,nationalPhoneNumber,businessStatus,location,regularOpeningHours.weekdayDescriptions,currentOpeningHours.openNow,currentOpeningHours.weekdayDescriptions,paymentOptions',
       );
 
       if (!payload?.id) {
@@ -43,6 +43,28 @@ async function loadPlaceDetail(placeId: string) {
       // over regularOpeningHours (fixed weekly schedule).
       const currentHours = normalizeHours(payload.currentOpeningHours?.weekdayDescriptions);
       const regularHours = normalizeHours(payload.regularOpeningHours?.weekdayDescriptions);
+
+      const paymentOptions =
+        payload.paymentOptions && typeof payload.paymentOptions === 'object'
+          ? {
+              acceptsCreditCards:
+                typeof payload.paymentOptions.acceptsCreditCards === 'boolean'
+                  ? payload.paymentOptions.acceptsCreditCards
+                  : null,
+              acceptsDebitCards:
+                typeof payload.paymentOptions.acceptsDebitCards === 'boolean'
+                  ? payload.paymentOptions.acceptsDebitCards
+                  : null,
+              acceptsCashOnly:
+                typeof payload.paymentOptions.acceptsCashOnly === 'boolean'
+                  ? payload.paymentOptions.acceptsCashOnly
+                  : null,
+              acceptsNfcPayments:
+                typeof payload.paymentOptions.acceptsNfcPayments === 'boolean'
+                  ? payload.paymentOptions.acceptsNfcPayments
+                  : null,
+            }
+          : null;
 
       return {
         phone: typeof payload.nationalPhoneNumber === 'string' ? payload.nationalPhoneNumber : null,
@@ -62,6 +84,7 @@ async function loadPlaceDetail(placeId: string) {
                 longitude: payload.location.longitude,
               }
             : null,
+        paymentOptions,
       };
     },
   );

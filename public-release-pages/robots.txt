@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
 
+Disallow: /account-deletion/
+
 Sitemap: https://canopytrove.com/sitemap.xml
+Sitemap: https://app.canopytrove.com/sitemap.xml

@@ -10,6 +10,15 @@ export type VerifiedRequestRole = 'member' | 'owner' | 'admin' | null;
 export type VerifiedRequestIdentity = {
   accountId: string | null;
   role: VerifiedRequestRole;
+  /**
+   * True when the bearer token was minted via Firebase Anonymous Auth
+   * (sign_in_provider === 'anonymous'). Anonymous accounts have no email,
+   * no password, no identity proof — they're functionally equivalent to a
+   * session cookie. Use `ensureRealMemberWriteAccess` on any endpoint that
+   * should not accept anonymous auth writes (reviews, helpful votes,
+   * reports, favorites, content submissions).
+   */
+  isAnonymousAuth: boolean;
 };
 
 export class ProfileAccessError extends Error {
@@ -74,6 +83,16 @@ function getTestBearerIdentity(request: Request): VerifiedRequestIdentity | unde
     return {
       accountId: accountId || null,
       role: accountId ? 'member' : null,
+      isAnonymousAuth: false,
+    };
+  }
+
+  if (token.startsWith('test-anonymous:')) {
+    const accountId = token.slice('test-anonymous:'.length).trim();
+    return {
+      accountId: accountId || null,
+      role: accountId ? 'member' : null,
+      isAnonymousAuth: true,
     };
   }
 
@@ -82,6 +101,7 @@ function getTestBearerIdentity(request: Request): VerifiedRequestIdentity | unde
     return {
       accountId: accountId || null,
       role: accountId ? 'owner' : null,
+      isAnonymousAuth: false,
     };
   }
 
@@ -90,6 +110,7 @@ function getTestBearerIdentity(request: Request): VerifiedRequestIdentity | unde
     return {
       accountId: accountId || null,
       role: accountId ? 'admin' : null,
+      isAnonymousAuth: false,
     };
   }
 
@@ -97,6 +118,7 @@ function getTestBearerIdentity(request: Request): VerifiedRequestIdentity | unde
     return {
       accountId: null,
       role: null,
+      isAnonymousAuth: false,
     };
   }
 
@@ -115,6 +137,13 @@ function resolveVerifiedRequestRole(decodedToken: Record<string, unknown>): Veri
   return 'member';
 }
 
+function isAnonymousSignInProvider(decodedToken: Record<string, unknown>): boolean {
+  const firebase = decodedToken.firebase;
+  if (!firebase || typeof firebase !== 'object') return false;
+  const provider = (firebase as { sign_in_provider?: unknown }).sign_in_provider;
+  return provider === 'anonymous';
+}
+
 export async function resolveVerifiedRequestIdentity(
   request: Request,
   options?: {
@@ -127,6 +156,7 @@ export async function resolveVerifiedRequestIdentity(
     return {
       accountId: testAccountId,
       role: 'member',
+      isAnonymousAuth: false,
     };
   }
 
@@ -140,6 +170,7 @@ export async function resolveVerifiedRequestIdentity(
     return {
       accountId: null,
       role: null,
+      isAnonymousAuth: false,
     };
   }
 
@@ -148,20 +179,24 @@ export async function resolveVerifiedRequestIdentity(
     return {
       accountId: null,
       role: null,
+      isAnonymousAuth: false,
     };
   }
 
   try {
     const decodedToken = await auth.verifyIdToken(token);
+    const claims = decodedToken as Record<string, unknown>;
     return {
       accountId: decodedToken.uid,
-      role: resolveVerifiedRequestRole(decodedToken as Record<string, unknown>),
+      role: resolveVerifiedRequestRole(claims),
+      isAnonymousAuth: isAnonymousSignInProvider(claims),
     };
   } catch {
     if (options?.invalidTokenBehavior === 'ignore') {
       return {
         accountId: null,
         role: null,
+        isAnonymousAuth: false,
       };
     }
 
@@ -295,6 +330,44 @@ export async function ensureAuthenticatedProfileWriteAccess(
 ) {
   const accountId = await resolveVerifiedRequestAccountId(request);
   if (!accountId) {
+    throw new ProfileAccessError(message, 403);
+  }
+
+  return ensureProfileWriteAccess(request, profileId) as Promise<{
+    accountId: string;
+    profile: AppProfileApiDocument;
+  }>;
+}
+
+/**
+ * Like ensureAuthenticatedProfileWriteAccess, but additionally rejects
+ * Firebase anonymous-auth tokens. Use on routes where the authenticated
+ * identity matters — content submissions (reviews, reports, comments),
+ * favorites, follows, claim-backed features, etc.
+ *
+ * Reason: Firebase anonymous auth mints a bearer token for any device with
+ * zero identity proof. Without this gate, an attacker can create unlimited
+ * anonymous accounts from a single device, bypass any per-account limit,
+ * and flood content — undetectable as the same human.
+ */
+export async function ensureRealMemberWriteAccess(
+  request: Request,
+  profileId: string,
+  message = 'This action requires a signed-in account. Please sign in with email or a social provider.',
+) {
+  const identity = await resolveVerifiedRequestIdentity(request);
+  if (!identity.accountId) {
+    throw new ProfileAccessError(message, 403);
+  }
+  if (identity.isAnonymousAuth) {
+    logSecurityEvent({
+      event: 'auth_failure',
+      ip: request.ip || 'unknown',
+      path: request.originalUrl,
+      method: request.method,
+      userId: identity.accountId,
+      detail: 'Anonymous-auth account blocked from non-anonymous write endpoint.',
+    });
     throw new ProfileAccessError(message, 403);
   }
 

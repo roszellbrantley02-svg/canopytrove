@@ -81,6 +81,11 @@ import {
   saveOwnerStorefrontBrands,
 } from './ownerStorefrontBrandsService';
 import {
+  ALL_PAYMENT_METHOD_IDS,
+  getOwnerPaymentDeclaration,
+  saveOwnerPaymentDeclaration,
+} from './paymentMethodsService';
+import {
   getBrandScansNearStorefront,
   type BrandActivityNearStorefront,
 } from './brandAnalyticsService';
@@ -1047,5 +1052,66 @@ export async function getOwnerPortalBrandActivity(
     sinceDays,
     brands: activity.slice(0, limit),
     generatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Owner-portal wrappers around paymentMethodsService. Read is free for
+ * any verified owner who controls the storefront; write is gated to
+ * Growth tier ($149/mo).
+ */
+export async function getOwnerPortalPaymentMethods(ownerUid: string, locationId?: string | null) {
+  const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
+    missingStorefrontMessage: 'Claim a storefront before managing payment methods.',
+  });
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
+
+  const declaration = await getOwnerPaymentDeclaration(targetStorefrontId);
+  return {
+    storefrontId: targetStorefrontId,
+    methods: declaration?.methods ?? {},
+    updatedAt: declaration?.updatedAt ?? null,
+  };
+}
+
+export async function saveOwnerPortalPaymentMethods(
+  ownerUid: string,
+  input: { methods: Record<string, boolean> },
+  locationId?: string | null,
+) {
+  await assertRuntimePolicyAllowsOwnerAction('profile_tools');
+  const ownerState = await assertAuthorizedOwnerStorefront(ownerUid, {
+    requireVerified: true,
+    requireActiveSubscription: true,
+  });
+
+  // Payment method self-declaration is a Growth-tier ($149/mo) feature.
+  const ownerTier = await resolveOwnerTier(ownerUid);
+  if (!['growth', 'pro'].includes(ownerTier)) {
+    throw new TierAccessError(
+      'Self-declaring accepted payment methods requires the Growth ($149/mo) plan. Upgrade to unlock this feature.',
+      'growth',
+      ownerTier,
+    );
+  }
+
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
+
+  const sanitized: Record<string, boolean> = {};
+  for (const id of ALL_PAYMENT_METHOD_IDS) {
+    const value = input.methods?.[id];
+    if (typeof value === 'boolean') sanitized[id] = value;
+  }
+  const record = await saveOwnerPaymentDeclaration({
+    storefrontId: targetStorefrontId,
+    ownerUid,
+    methods: sanitized,
+  });
+  return {
+    storefrontId: record.storefrontId,
+    methods: record.methods,
+    updatedAt: record.updatedAt,
   };
 }

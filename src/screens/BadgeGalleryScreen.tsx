@@ -32,9 +32,14 @@ function BadgeGalleryScreenInner() {
     index: number;
   }) => (
     <MotionInView key={item.id} dense delay={Math.min(index, 8) * 40}>
-      <View style={styles.badgeCard}>
+      <View
+        style={[
+          styles.badgeCard,
+          { borderColor: `${item.color}55`, backgroundColor: `${item.color}12` },
+        ]}
+      >
         <View style={[styles.badgeIcon, { backgroundColor: item.color }]}>
-          <AppUiIcon name={item.icon as AppUiIconName} size={24} color={colors.background} />
+          <AppUiIcon name={item.icon as AppUiIconName} size={26} color={colors.background} />
         </View>
         <Text style={styles.badgeName} numberOfLines={2}>
           {item.name}
@@ -42,11 +47,8 @@ function BadgeGalleryScreenInner() {
         <Text style={styles.badgeDescription} numberOfLines={3}>
           {item.description}
         </Text>
-        <View style={styles.badgeMeta}>
-          <Text style={styles.badgeMetaText}>
-            {item.tier ? `${item.tier} • ` : ''}
-            {item.category}
-          </Text>
+        <View style={styles.badgeTierPill}>
+          <Text style={styles.badgeTierPillText}>{item.tier ? item.tier : item.category}</Text>
         </View>
       </View>
     </MotionInView>
@@ -198,26 +200,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     padding: spacing.lg,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     backgroundColor: 'rgba(8, 14, 19, 0.72)',
     borderWidth: 1,
     borderColor: colors.borderSoft,
     shadowColor: colors.shadow,
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
+    overflow: 'hidden',
   },
   badgeIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 251, 247, 0.14)',
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   badgeName: {
     ...textStyles.body,
     color: colors.text,
-    fontWeight: '600',
+    fontWeight: '700',
     textAlign: 'center',
   },
   badgeDescription: {
@@ -226,15 +236,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
-  badgeMeta: {
+  badgeTierPill: {
     marginTop: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(232, 160, 0, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 160, 0, 0.38)',
   },
-  badgeMetaText: {
+  badgeTierPillText: {
     ...textStyles.caption,
-    color: colors.textSoft,
-    fontSize: 11,
+    color: colors.gold,
+    fontSize: 10,
+    fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.8,
   },
   progressList: {
     gap: spacing.md,

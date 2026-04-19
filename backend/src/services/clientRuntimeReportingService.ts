@@ -2,7 +2,7 @@ type ClientRuntimeErrorReport = {
   name?: string;
   message: string;
   stack?: string;
-  isFatal?: boolean;
+  clientReportedFatal?: boolean;
   source?: string;
   screen?: string;
   platform?: string;
@@ -15,12 +15,17 @@ import { recordRuntimeIncident } from './runtimeOpsService';
 export async function recordClientRuntimeError(
   report: ClientRuntimeErrorReport,
   ip: string | undefined,
+  options?: {
+    accountId?: string | null;
+  },
 ) {
+  const clientReportedFatal = report.clientReportedFatal ?? false;
   logger.error(
     JSON.stringify({
       type: 'client_runtime_error',
       ip: ip ?? null,
-      isFatal: report.isFatal ?? false,
+      accountId: options?.accountId ?? null,
+      clientReportedFatal,
       platform: report.platform ?? null,
       screen: report.screen ?? null,
       source: report.source ?? null,
@@ -33,15 +38,10 @@ export async function recordClientRuntimeError(
 
   await recordRuntimeIncident({
     kind: 'client',
-    severity: report.isFatal ? 'critical' : 'warning',
+    severity: 'warning',
     source: report.source ?? 'client-runtime',
     message: report.message,
     screen: report.screen ?? null,
     platform: report.platform ?? null,
     metadata: {
-      ip: ip ?? null,
-      name: report.name ?? 'Error',
-      reportedAt: report.reportedAt ?? new Date().toISOString(),
-    },
-  });
-}
+      i

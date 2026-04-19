@@ -140,7 +140,7 @@ function collectNewBadges(state: StorefrontGamificationState, occurredAt: string
     }
 
     if (!badge.requirement || badge.requirement <= 0) {
-      return badge.id === 'early_adopter';
+      return false;
     }
 
     return getEarnedBadgeMetric(state, badge, occurredAt) >= badge.requirement;

@@ -230,10 +230,12 @@ service cloud.firestore {
     match /storefront_review_photos/{mediaId} {
       allow create: if isSignedIn() &&
         request.resource.data.profileId == request.auth.uid &&
-        request.resource.data.moderationStatus == 'pending';
-      allow read: if isAdmin() || (
-        isSignedIn() && resource.data.profileId == request.auth.uid
-      );
+        request.resource.data.moderationStatus == 'pending' &&
+        request.resource.data.reviewedAt == null &&
+        request.resource.data.reviewNotes == null;
+      allow read: if (resource.data.moderationStatus == 'approved' && isSignedIn()) ||
+        isAdmin() ||
+        (isSignedIn() && resource.data.profileId == request.auth.uid);
       allow update, delete: if isAdmin();
     }
 
@@ -291,18 +293,63 @@ service cloud.firestore {
     match /storefront_app_reviews/{reviewId} {
       allow create: if isSignedIn() &&
         request.resource.data.profileId == request.auth.uid &&
+        request.resource.data.text is string &&
         request.resource.data.text.size() <= 2000 &&
-        request.resource.data.authorName.size() <= 100;
+        request.resource.data.authorName is string &&
+        request.resource.data.authorName.size() <= 100 &&
+        (
+          !request.resource.data.keys().hasAny(['rating']) ||
+          (
+            request.resource.data.rating is number &&
+            request.resource.data.rating >= 1 &&
+            request.resource.data.rating <= 5
+          )
+        ) &&
+        (
+          !request.resource.data.keys().hasAny(['storefrontId']) ||
+          (
+            request.resource.data.storefrontId is string &&
+            request.resource.data.storefrontId.size() <= 128
+          )
+        );
       allow read: if isSignedIn();
-      allow update: if isSignedIn() &&
-        resource.data.profileId == request.auth.uid;
-      allow delete: if isSignedIn() &&
-        resource.data.profileId == request.auth.uid;
+      allow update: if isAdmin() || (
+        isSignedIn() &&
+        resource.data.profileId == request.auth.uid &&
+        request.resource.data.profileId == resource.data.profileId &&
+        request.resource.data.storefrontId == resource.data.storefrontId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() <= 2000 &&
+        request.resource.data.rating is number &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5
+      );
+      allow delete: if isAdmin() || (
+        isSignedIn() && resource.data.profileId == request.auth.uid
+      );
+    }
+
+    match /storefront_reports/{reportId} {
+      allow create: if isSignedIn() &&
+        request.resource.data.profileId == request.auth.uid &&
+        request.resource.data.moderationStatus == 'open' &&
+        request.resource.data.reviewedAt == null &&
+        request.resource.data.reviewNotes == null &&
+        request.resource.data.reason is string &&
+        request.resource.data.reason.size() <= 200 &&
+        request.resource.data.description is string &&
+        request.resource.data.description.size() <= 2000;
+      allow read: if isAdmin() || (
+        isSignedIn() && resource.data.profileId == request.auth.uid
+      );
+      allow update, delete: if isAdmin();
     }
 
     match /gamification_state/{docId} {
       allow read: if isSelf(docId) || isAdmin();
       allow write: if isAdmin();
     }
-  }
-}
+
+    // Owner-managed brand roster ("brands we carry"). Writes only via backend
+    // (

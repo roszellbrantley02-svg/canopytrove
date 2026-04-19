@@ -250,6 +250,44 @@ export function trackStorefrontPromotionImpressions(
   });
 }
 
+export function trackPaymentMethodsBadgeImpressions(
+  storefronts: Pick<StorefrontSummary, 'id' | 'paymentMethods'>[],
+  screen: string,
+) {
+  if (!state.currentSessionId) {
+    return;
+  }
+
+  storefronts.forEach((storefront) => {
+    const paymentMethods = storefront.paymentMethods;
+    if (!paymentMethods) {
+      return;
+    }
+    const acceptedCount = paymentMethods.methods.filter((record) => record.accepted).length;
+    if (acceptedCount === 0) {
+      return;
+    }
+    const key = `${state.currentSessionId}:${screen}:${storefront.id}:paymentMethods`;
+    if (state.storefrontImpressionKeys.has(key)) {
+      return;
+    }
+
+    state.storefrontImpressionKeys.add(key);
+    trackAnalyticsEvent(
+      'payment_methods_badge_shown',
+      {
+        sourceScreen: screen,
+        acceptedCount,
+        hasOwnerDeclaration: paymentMethods.hasOwnerDeclaration,
+      },
+      {
+        screen,
+        storefrontId: storefront.id,
+      },
+    );
+  });
+}
+
 export function classifyLocationInput(query: string) {
   return classifyAnalyticsLocationInput(query);
 }
