@@ -352,4 +352,10 @@ service cloud.firestore {
     }
 
     // Owner-managed brand roster ("brands we carry"). Writes only via backend
-    // (
+    // (admin SDK). Reads are admin-only at the rules layer; the public
+    // /brands/:brandId/carriers endpoint serves consumer queries.
+    match /owner_storefront_brands/{storefrontId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

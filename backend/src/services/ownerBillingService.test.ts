@@ -177,3 +177,136 @@ test('createOwnerBillingCheckoutSession blocks duplicate trial and active subscr
     assert.equal(fetchCalled, false);
   }
 });
+
+test('createOwnerBillingCheckoutSession namespaces Stripe idempotency keys by tier', async () => {
+  const observedIdempotencyKeys: string[] = [];
+  const storedSubscriptions = new Map<string, Record<string, unknown>>();
+
+  setCachedModule(firebaseModulePath, {
+    hasBackendFirebaseConfig: true,
+    getBackendFirebaseAuth: () => ({
+      verifyIdToken: async () => ({
+        uid: 'owner-1',
+        email: 'owner@example.com',
+        auth_time: Math.floor(Date.now() / 1000),
+      }),
+      getUser: async () => ({
+        uid: 'owner-1',
+        email: 'owner@example.com',
+      }),
+    }),
+    getBackendFirebaseDb: () => ({
+      collection: (_collectionName: string) => ({
+        doc: (id: string) => ({
+          get: async () => {
+            const record = storedSubscriptions.get(id);
+            return {
+              exists: Boolean(record),
+              data: () => record,
+            };
+          },
+          set: async (value: Record<string, unknown>) => {
+            storedSubscriptions.set(id, value);
+          },
+        }),
+      }),
+    }),
+  });
+
+  setCachedModule(configModulePath, {
+    serverConfig: {
+      stripeSecretKey: 'sk_test_123',
+      stripeWebhookSecret: 'whsec_test',
+      stripeOwnerMonthlyPriceId: 'price_owner_monthly',
+      stripeOwnerAnnualPriceId: 'price_owner_annual',
+      stripeVerifiedMonthlyPriceId: 'price_verified_monthly',
+      stripeVerifiedAnnualPriceId: 'price_verified_annual',
+      stripeGrowthMonthlyPriceId: 'price_growth_monthly',
+      stripeGrowthAnnualPriceId: 'price_growth_annual',
+      stripeProMonthlyPriceId: 'price_pro_monthly',
+      stripeProAnnualPriceId: 'price_pro_annual',
+      stripeOwnerSuccessUrl: 'https://example.com/success',
+      stripeOwnerCancelUrl: 'https://example.com/cancel',
+      stripeOwnerPortalReturnUrl: 'https://example.com/portal',
+      launchProgramStartAt: null,
+      launchProgramDurationDays: 183,
+      launchEarlyAdopterLimit: 500,
+      ownerLaunchTrialDays: 0,
+    },
+    getMissingOwnerBillingBackendEnvVars: () => [],
+  });
+
+  setCachedModule(ownerPortalAuthorizationServicePath, {
+    getOwnerAuthorizationState: async () => ({
+      ownerUid: 'owner-1',
+      ownerProfile: {
+        uid: 'owner-1',
+        dispensaryId: 'storefront-1',
+        subscriptionStatus: 'inactive',
+      },
+      storefrontId: 'storefront-1',
+      ownerClaim: null,
+      businessVerificationStatus: 'verified',
+      identityVerificationStatus: 'verified',
+      subscription: null,
+      hasVerifiedBusiness: true,
+      hasVerifiedIdentity: true,
+      hasActiveSubscription: false,
+    }),
+    isVerifiedOwnerStatus: (value: unknown) => value === 'verified' || value === 'approved',
+  });
+
+  setCachedModule(launchProgramServicePath, {
+    resolveOwnerLaunchTrialOffer: async () => ({
+      trialDays: 0,
+      claim: null,
+    }),
+  });
+
+  global.fetch = (async (_input, init) => {
+    const headers = new Headers(init?.headers);
+    const idempotencyKey = headers.get('Idempotency-Key');
+    if (idempotencyKey) {
+      observedIdempotencyKeys.push(idempotencyKey);
+    }
+
+    return new Response(
+      JSON.stringify({
+        id: `cs_test_${observedIdempotencyKeys.length}`,
+        url: `https://example.com/checkout/${observedIdempotencyKeys.length}`,
+        customer: 'cus_123',
+        subscription: null,
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+  }) as typeof fetch;
+
+  delete require.cache[ownerBillingServicePath];
+  const { createOwnerBillingCheckoutSession } =
+    require('./ownerBillingService') as typeof import('./ownerBillingService');
+
+  const request = {
+    header(name: string) {
+      if (name.toLowerCase() === 'authorization') {
+        return 'Bearer owner-token';
+      }
+
+      return undefined;
+    },
+  } as Request;
+
+  const verifiedResponse = await createOwnerBillingCheckoutSession(request, 'monthly', 'verified');
+  const growthResponse = await createOwnerBillingCheckoutSession(request, 'monthly', 'growth');
+
+  assert.equal(verifiedResponse.ok, true);
+  assert.equal(growthResponse.ok, true);
+  assert.deepEqual(observedIdempotencyKeys, [
+    'owner-billing:owner-1:verified:monthly:price_verified_monthly',
+    'owner-billing:owner-1:growth:monthly:price_growth_monthly',
+  ]);
+});

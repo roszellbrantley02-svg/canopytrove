@@ -1655,7 +1655,7 @@ test('accepts client runtime error reports', async () => {
   });
 
   assert.equal(response.status, 202);
-  assert.equal(response.json?.ok, true);
+  assert.equal(response.json?.accepted, true);
 });
 
 test('treats fatal client runtime reports as warning-only for protected mode', async () => {
@@ -1700,7 +1700,7 @@ test('treats fatal client runtime reports as warning-only for protected mode', a
   );
 });
 
-test('rejects unauthenticated client runtime error reports', async () => {
+test('accepts unauthenticated client runtime error reports', async () => {
   const { baseUrl } = await startTestServer();
   const response = await request(baseUrl, '/client-errors', {
     method: 'POST',
@@ -1717,7 +1717,8 @@ test('rejects unauthenticated client runtime error reports', async () => {
     }),
   });
 
-  assert.equal(response.status, 401);
+  assert.equal(response.status, 202);
+  assert.equal(response.json?.accepted, true);
 });
 
 test('rejects authenticated client runtime error reports from disallowed origins', async () => {
