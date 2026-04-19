@@ -7,8 +7,14 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.07)',
     borderRadius: radii.xl,
-    padding: spacing.xxl,
-    gap: spacing.xl,
+    // Tighter top padding + looser bottom padding raises the name/level kicker
+    // up on the card and gives the heroActions button a little more room to
+    // sit against the warm glow below it. Horizontal padding keeps the
+    // original xxl rhythm so inner cards still feel inset.
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl,
+    paddingHorizontal: spacing.xxl,
+    gap: spacing.lg,
     shadowColor: colors.shadow,
     shadowOpacity: 0.26,
     shadowRadius: 20,
@@ -16,19 +22,24 @@ export const styles = StyleSheet.create({
     elevation: 10,
     overflow: 'hidden',
   },
+  // The warm ambient glow used to live in the top-right corner, where it
+  // competed visually with the kicker copy ("Member profile" / level chip)
+  // and the user's name. Moving it to the bottom-right anchors the glow
+  // behind the primary action button (heroActions) so the CTA reads as
+  // spotlit while the words at the top have a cleaner, darker backdrop.
   heroGlow: {
     position: 'absolute',
-    top: -64,
-    right: -42,
-    width: 236,
-    height: 236,
-    borderRadius: 118,
+    bottom: -78,
+    right: -54,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
     backgroundColor: Platform.select({
-      android: 'rgba(245, 200, 106, 0.10)',
-      default: 'rgba(245, 200, 106, 0.06)',
+      android: 'rgba(245, 200, 106, 0.12)',
+      default: 'rgba(245, 200, 106, 0.08)',
     }),
     borderWidth: Platform.OS === 'android' ? 1 : 0,
-    borderColor: 'rgba(245, 200, 106, 0.12)',
+    borderColor: 'rgba(245, 200, 106, 0.14)',
   },
   heroTopRow: {
     flexDirection: 'row',
