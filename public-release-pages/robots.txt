@@ -1,6 +1,10 @@
 User-agent: *
 Allow: /
 
+# /account-deletion/ is an App Store legal-compliance landing page linked from
+# in-app settings. It is not content we want indexed (duplicate deletion-flow
+# references, privacy-sensitive, low SEO value), but it must remain reachable
+# so Apple and Google review teams can verify the deletion path.
 Disallow: /account-deletion/
 
 Sitemap: https://canopytrove.com/sitemap.xml

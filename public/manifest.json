@@ -1,7 +1,7 @@
 {
   "short_name": "Canopy Trove",
-  "name": "Canopy Trove — Licensed Dispensary Discovery",
-  "description": "Discover licensed dispensaries, hot deals, and real reviews near you.",
+  "name": "Canopy Trove — Licensed Dispensary Discovery & Verify",
+  "description": "Discover licensed dispensaries, verify shop licenses and product COAs, and read real reviews near you.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -11,18 +11,26 @@
   "icons": [
     {
       "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
+      "sizes": "64x64 48x48 32x32 16x16",
       "type": "image/x-icon"
+    },
+    {
+      "src": "/favicon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
     },
     {
       "src": "/icon-192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
     },
     {
       "src": "/icon-192.png",

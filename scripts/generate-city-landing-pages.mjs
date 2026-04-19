@@ -352,6 +352,10 @@ function renderCityPage(cityPage, cityPages, statewideTotal) {
       title: 'Built from actual storefront coverage',
       copy: 'The city pages are generated from the same verified storefront dataset that powers the app, so the public story and the real product surface stay aligned.',
     },
+    {
+      title: 'Verify the shop or product on the spot',
+      copy: 'Once you walk in, the Verify tab in the live app cross-checks the shop license against the public OCM registry and resolves product QR codes to lab Certificate of Analysis details. Anonymous by default, no sign-in.',
+    },
   ]
     .map(
       (card) => `              <article class="feature-card">
