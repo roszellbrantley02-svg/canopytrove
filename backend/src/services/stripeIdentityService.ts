@@ -124,7 +124,12 @@ export async function createStripeIdentitySession(ownerUid: string): Promise<{
     throw new Error('Business verification must be completed before identity verification.');
   }
 
-  // Check if there's already a pending/processing session
+  // Check if there's already a pending/processing/verified session. We
+  // block 'pending' too: the previous check let owners start a new Stripe
+  // Identity session while one was still outstanding, which burned Stripe
+  // API quota, left orphaned VerificationSessions on Stripe's side, and
+  // created a race where the webhook could land on a stale session id and
+  // overwrite the current record with an out-of-date status.
   const existingVerification = await db
     .collection(IDENTITY_VERIFICATIONS_COLLECTION)
     .doc(ownerUid)
@@ -132,10 +137,8 @@ export async function createStripeIdentitySession(ownerUid: string): Promise<{
 
   if (existingVerification.exists) {
     const existing = existingVerification.data() as Record<string, unknown>;
-    if (
-      existing?.verificationStatus === 'verified' ||
-      existing?.verificationStatus === 'processing'
-    ) {
+    const blockingStatuses = new Set(['verified', 'processing', 'pending']);
+    if (typeof existing?.verificationStatus === 'string' && blockingStatuses.has(existing.verificationStatus)) {
       throw new Error(`Identity verification is already ${existing.verificationStatus}.`);
     }
   }
