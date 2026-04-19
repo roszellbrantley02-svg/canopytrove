@@ -87,7 +87,7 @@ describe('SavedStorefrontsScreen', () => {
     return renderer;
   }
 
-  function _collectTextContent(renderer: ReactTestRenderer) {
+  function collectTextContent(renderer: ReactTestRenderer) {
     return renderer.root
       .findAllByType(Text as any)
       .flatMap((node) => node.props.children)
@@ -100,14 +100,19 @@ describe('SavedStorefrontsScreen', () => {
     const renderer = renderScreen(60);
 
     const cards = renderer.root.findAll((node) => (node.type as unknown) === 'StorefrontRouteCard');
-    const textContent = renderer.root
-      .findAllByType(Text as any)
-      .flatMap((node) => node.props.children)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const textContent = collectTextContent(renderer);
 
-    expect(cards).toHaveLength(50);
-    expect(textContent).toContain('Showing 50 of 60 saved storefronts');
+    expect(cards).toHaveLength(60);
+    expect(textContent).not.toContain('Showing');
+  });
+
+  it('caps rendered cards and shows the overflow note when above the render cap', () => {
+    const renderer = renderScreen(150);
+
+    const cards = renderer.root.findAll((node) => (node.type as unknown) === 'StorefrontRouteCard');
+    const textContent = collectTextContent(renderer);
+
+    expect(cards).toHaveLength(100);
+    expect(textContent).toContain('Showing 100 of 150 saved storefronts');
   });
 });

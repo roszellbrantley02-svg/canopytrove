@@ -18,8 +18,8 @@ vi.mock('react-native', () => ({
 import { Pressable, TextInput } from 'react-native';
 import { SearchField } from './SearchField';
 
-vi.mock('../icons/ProvidedGlyphIcons', () => ({
-  SearchGlyphIcon: () => <></>,
+vi.mock('../icons/ProvidedGlyphIconsV4c', () => ({
+  SearchGlyphIconV4c: () => <></>,
 }));
 
 vi.mock('../icons/AppUiIcon', () => ({
