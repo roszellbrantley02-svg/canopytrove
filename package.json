@@ -27,7 +27,7 @@
     "audit:deps:strict": "node ./scripts/audit-deps.mjs --strict",
     "check:staged-secrets": "node ./scripts/check-staged-secrets.mjs",
     "check:all": "npm run precheck:strict && npm test && npm run test:rules && npm --prefix backend test && npm --prefix backend run check",
-    "release:check": "node ./scripts/check-release-readiness.mjs --production && npm test && npm --prefix backend run release:check -- --production && npm run audit:deps",
+    "release:check": "node ./scripts/check-release-readiness.mjs --production && npm run lint && npm test && npm run test:rules && npm --prefix backend run check && npm --prefix backend test && npm --prefix backend run release:check -- --production && npm run audit:deps",
     "hosting:firebase:serve": "npx firebase-tools emulators:start --only hosting",
     "hosting:firebase:deploy": "npx firebase-tools deploy --only hosting",
     "lint": "eslint .",
