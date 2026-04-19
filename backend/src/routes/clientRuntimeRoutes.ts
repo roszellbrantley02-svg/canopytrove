@@ -24,13 +24,14 @@ clientRuntimeRoutes.get('/runtime/status', async (_request, response) => {
 });
 
 clientRuntimeRoutes.post('/client-errors', clientErrorRateLimiter, async (request, response) => {
+  // Client crash reports are valuable even before a user signs in (crashes on
+  // the launch/sign-in screens would otherwise never reach the server).
+  // Resolve identity opportunistically so authenticated reports carry an
+  // accountId for attribution, but accept anonymous reports too. The IP rate
+  // limiter above caps abuse at 10/min/IP.
   const identity = await resolveVerifiedRequestIdentity(request, {
     invalidTokenBehavior: 'ignore',
   });
-  if (identity.role === null) {
-    response.status(401).json({ error: 'Authentication required.' });
-    return;
-  }
 
   const payload = parseClientRuntimeErrorBody(request.body);
   await recordClientRuntimeError(payload, request.ip, {
