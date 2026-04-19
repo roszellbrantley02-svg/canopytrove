@@ -31,25 +31,33 @@ export function getStorefrontRouteCardState({
     hasPromotion,
     premiumCardVariant,
   });
-  const hasResolvedHoursStatus = hasPublishedHours && typeof openNow === 'boolean';
+  // Trust a resolved openNow boolean even when hours haven't been published.
+  // Android builds routinely land on the `hours=[]` path (no placeId yet,
+  // Google Places enrichment hasn't backfilled, or the published hours
+  // shipped as the "Hours not published yet" placeholder that the normalizer
+  // strips). In those cases the backend still supplies a summary-level
+  // `openNow` value derived from Google's `currentOpeningHours.openNow`, and
+  // `useStorefrontOperationalStatus` falls through `computeOpenNow` to that
+  // static boolean. We should render "Open Now" / "Closed" whenever that
+  // resolved value is known — the old `hasPublishedHours &&` guard was
+  // collapsing those cases to "See Details" and making listing cards feel
+  // broken on Android. The detail screen already did this — commit
+  // e45d43c — this is the same fix for the card layer.
+  const hasResolvedHoursStatus = typeof openNow === 'boolean';
   const previewStatusTone: PreviewStatusTone = hasResolvedHoursStatus
     ? openNow
       ? 'open'
       : 'closed'
     : isOperationalStatusPending
       ? 'checking'
-      : !hasPublishedHours
-        ? 'checking'
-        : 'default';
+      : 'checking';
   const baseStatusLabel = hasResolvedHoursStatus
     ? openNow
       ? 'Open Now'
       : 'Closed'
     : isOperationalStatusPending
       ? 'Checking'
-      : !hasPublishedHours
-        ? 'See Details'
-        : 'Check Hours';
+      : 'See Details';
 
   const holiday = getUSHolidayInfo();
   const previewStatusLabel = holiday
