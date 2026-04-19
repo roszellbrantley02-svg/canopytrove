@@ -128,6 +128,37 @@ async function fetchJson<T>(
 }
 
 /**
+ * Lower-case kebab slug with NFKD diacritic strip. Shared between the
+ * product slug builder and the brand-id canonicalizer so that "Housing
+ * Works Cannabis" and "housing-works-cannabis" always resolve to the
+ * same backend key.
+ */
+function slugifyForCanonicalKey(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Build a stable brand id from a free-text brand name. Mirrors the seed
+ * `brandId` format (`housing-works-cannabis`, `matte`, `silly-nice`),
+ * which is what `/brands/:brandId` and `/profile/favorite-brands/:brandId`
+ * expect. Use this any time you have a brand NAME from a COA/user input
+ * and need to talk to the brand backend.
+ */
+export function buildClientBrandSlug(
+  brandName: string | null | undefined,
+): string | null {
+  if (typeof brandName !== 'string') return null;
+  const slug = slugifyForCanonicalKey(brandName);
+  if (!slug) return null;
+  return slug.slice(0, 120);
+}
+
+/**
  * Build a stable slug from brand + product name. Mirrors the backend
  * implementation so submits and fetches always land on the same key.
  */
@@ -135,15 +166,8 @@ export function buildClientProductSlug(
   brandName: string | null | undefined,
   productName: string | null | undefined,
 ): string | null {
-  const normalize = (s: string) =>
-    s
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-  const brand = typeof brandName === 'string' ? normalize(brandName) : '';
-  const product = typeof productName === 'string' ? normalize(productName) : '';
+  const brand = typeof brandName === 'string' ? slugifyForCanonicalKey(brandName) : '';
+  const product = typeof productName === 'string' ? slugifyForCanonicalKey(productName) : '';
   if (!brand && !product) return null;
   const combined = [brand, product].filter(Boolean).join('--');
   return combined ? combined.slice(0, 120) : null;

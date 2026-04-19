@@ -23,7 +23,7 @@ import { trackAnalyticsEvent } from '../services/analyticsService';
 import { ensureAnalyticsInstallId } from '../services/analyticsStorage';
 import { getCanopyTroveAuthIdToken } from '../services/canopyTroveAuthService';
 import { addFavoriteBrand, isFavoriteBrand, removeFavoriteBrand } from '../services/brandService';
-import { buildClientProductSlug } from '../services/productReviewService';
+import { buildClientBrandSlug, buildClientProductSlug } from '../services/productReviewService';
 import {
   ingestScan,
   reportCoaOpened,
@@ -71,12 +71,18 @@ function ScanResultScreenInner({ route, navigation }: ScanResultScreenProps) {
     };
   }, []);
 
-  const productBrandId = state.kind === 'product' ? state.result.coa?.brandName : undefined;
   // Pull product identity from the parsed COA (if any) so review prompts,
   // sign-in resume, and the composer hand-off all read from one source.
   const productBrandName = state.kind === 'product' ? state.result.coa?.brandName : undefined;
   const productProductName = state.kind === 'product' ? state.result.coa?.productName : undefined;
   const productLabName = state.kind === 'product' ? state.result.coa?.labName : undefined;
+  // The backend keys brands by kebab-case slug (`housing-works-cannabis`,
+  // `matte`, `silly-nice`), not by the free-text COA brand name. Slugifying
+  // here means favorite-brand toggles, `/brands/:id` fetches, and the
+  // COA-opened telemetry all land on the same canonical id the seed data
+  // uses. Without this, saving "Housing Works Cannabis" from a scan would
+  // never match the entry on Browse Brands.
+  const productBrandId = buildClientBrandSlug(productBrandName) ?? undefined;
   const hasReviewableProduct = Boolean(productBrandName && productProductName);
   const productReviewComposerParams = React.useMemo<
     RootStackParamList['ProductReviewComposer'] | null
@@ -168,10 +174,14 @@ function ScanResultScreenInner({ route, navigation }: ScanResultScreenProps) {
   const handleOpenCoaUrl = React.useCallback(
     (coaUrl: string) => {
       if (installId) {
+        // Backend aggregates COA-open telemetry by brand. Use the canonical
+        // slug so counters match the one used by scans/favorites, rather
+        // than double-counting "Housing Works Cannabis" vs
+        // "housing-works-cannabis" as separate brands.
         void reportCoaOpened({
           installId,
           profileId,
-          brandId: productBrandName || 'Unknown',
+          brandId: productBrandId || 'unknown',
           labName: productLabName || 'Unknown',
           batchId: state.kind === 'product' ? state.result.coa?.batchId : undefined,
         });
@@ -185,7 +195,7 @@ function ScanResultScreenInner({ route, navigation }: ScanResultScreenProps) {
     [
       hasReviewableProduct,
       installId,
-      productBrandName,
+      productBrandId,
       productLabName,
       profileId,
       returnPromptDismissed,
