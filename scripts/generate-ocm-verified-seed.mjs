@@ -7,7 +7,7 @@ const targetPath = path.join(
   workspaceRoot,
   'src',
   'data',
-  'ocmVerifiedStorefrontRecords.generated.ts'
+  'ocmVerifiedStorefrontRecords.generated.ts',
 );
 
 const OCM_VERIFICATION_URL = 'https://cannabis.ny.gov/dispensary-location-verification';
@@ -76,13 +76,13 @@ function normalizeWhitespace(value) {
 function decodeHtmlEntities(value) {
   const namedDecoded = Array.from(htmlEntityMap.entries()).reduce(
     (current, [entity, replacement]) => current.replaceAll(entity, replacement),
-    value
+    value,
   );
 
   return namedDecoded
     .replace(/&#(\d+);/g, (_, codePoint) => String.fromCodePoint(Number(codePoint)))
     .replace(/&#x([0-9a-f]+);/gi, (_, codePoint) =>
-      String.fromCodePoint(Number.parseInt(codePoint, 16))
+      String.fromCodePoint(Number.parseInt(codePoint, 16)),
     );
 }
 
@@ -92,8 +92,8 @@ function stripTags(value) {
       value
         .replace(/<br\s*\/?>/gi, ' ')
         .replace(/<\/p>/gi, ' ')
-        .replace(/<[^>]+>/g, ' ')
-    )
+        .replace(/<[^>]+>/g, ' '),
+    ),
   );
 }
 
@@ -128,14 +128,10 @@ async function fetchVerificationHtmlWithFetch() {
 }
 
 function fetchVerificationHtmlWithCurl() {
-  const text = execFileSync(
-    'curl.exe',
-    ['-sS', '-L', '-A', USER_AGENT, OCM_VERIFICATION_URL],
-    {
-      encoding: 'utf8',
-      maxBuffer: 20 * 1024 * 1024,
-    }
-  );
+  const text = execFileSync('curl.exe', ['-sS', '-L', '-A', USER_AGENT, OCM_VERIFICATION_URL], {
+    encoding: 'utf8',
+    maxBuffer: 20 * 1024 * 1024,
+  });
 
   if (!text.includes('<table class="table">')) {
     throw new Error('curl did not return the OCM verification table.');
@@ -177,7 +173,7 @@ function parseVerificationRows(tableBodyHtml) {
 
   for (const rowMatch of rowMatches) {
     const cells = Array.from(rowMatch[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)).map(
-      (cellMatch) => cellMatch[1]
+      (cellMatch) => cellMatch[1],
     );
 
     if (cells.length !== 5) {
@@ -209,7 +205,7 @@ function parseVerificationRows(tableBodyHtml) {
       zip,
       website:
         websiteText && !/^website coming soon$/i.test(websiteText)
-          ? websiteHref ?? `https://${websiteText.replace(/^https?:\/\//i, '')}`
+          ? (websiteHref ?? `https://${websiteText.replace(/^https?:\/\//i, '')}`)
           : null,
       isMicrobusiness: /\*{2}/.test(rawName),
     });
@@ -382,7 +378,7 @@ async function mapWithConcurrency(items, worker) {
   }
 
   await Promise.all(
-    Array.from({ length: Math.min(GEOCODER_CONCURRENCY, items.length) }, () => runWorker())
+    Array.from({ length: Math.min(GEOCODER_CONCURRENCY, items.length) }, () => runWorker()),
   );
 
   return results;
@@ -442,7 +438,9 @@ function toStorefrontRecord(row, coordinates) {
     appReviewCount: 0,
     appReviews: [],
     photoUrls: [],
-    amenities: row.isMicrobusiness ? ['State licensed', 'Microbusiness retail'] : ['State licensed'],
+    amenities: row.isMicrobusiness
+      ? ['State licensed', 'Microbusiness retail']
+      : ['State licensed'],
     editorialSummary:
       'Verified adult-use storefront from the New York OCM public dispensary verification list.',
     routeMode: 'verified',
@@ -453,15 +451,13 @@ const html = await fetchVerificationHtml();
 const tableBodyHtml = extractTableBody(html);
 const parsedRows = parseVerificationRows(tableBodyHtml);
 
-const uniqueRows = Array.from(
-  new Map(parsedRows.map((row) => [createSeedKey(row), row])).values()
-);
+const uniqueRows = Array.from(new Map(parsedRows.map((row) => [createSeedKey(row), row])).values());
 
 const geocodedRows = await mapWithConcurrency(uniqueRows, async (row, index) => {
   const coordinates = await geocodeRow(row);
   if (!coordinates) {
     console.warn(
-      `[ocm-seed] unresolved ${index + 1}/${uniqueRows.length}: ${row.displayName} | ${row.addressLine1}, ${row.city}, NY ${row.zip}`
+      `[ocm-seed] unresolved ${index + 1}/${uniqueRows.length}: ${row.displayName} | ${row.addressLine1}, ${row.city}, NY ${row.zip}`,
     );
     return null;
   }
@@ -483,5 +479,5 @@ export const ocmVerifiedStorefrontRecords: StorefrontRecord[] = ${JSON.stringify
 fs.writeFileSync(targetPath, output);
 
 console.log(
-  `Generated ${storefrontRecords.length} OCM verified storefront records from ${uniqueRows.length} routable verification rows.`
+  `Generated ${storefrontRecords.length} OCM verified storefront records from ${uniqueRows.length} routable verification rows.`,
 );

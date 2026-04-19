@@ -88,7 +88,11 @@ function normalizeScanFingerprint(rawCode: string): string {
   return trimmed.toUpperCase();
 }
 
-function buildScanRecordId(input: ScanIngestionInput, resolution: ScanResolution, date: Date): string {
+function buildScanRecordId(
+  input: ScanIngestionInput,
+  resolution: ScanResolution,
+  date: Date,
+): string {
   return buildStableHash([
     input.installId,
     resolution.kind,
@@ -389,7 +393,8 @@ async function emitScanGamificationEvent(
     }
 
     // Import here to avoid circular dependency at module load time
-    const { applyScanCompletedReward } = await import('../../../src/domain/canopyTroveGamification');
+    const { applyScanCompletedReward } =
+      await import('../../../src/domain/canopyTroveGamification');
 
     // Only proceed if we have a profile to update
     if (!profileId) {
@@ -451,9 +456,7 @@ export async function recordCoaOpened(input: {
     let created = true;
 
     if (db) {
-      const eventRef = db
-        .collection('coaOpenEvents')
-        .doc(buildCoaOpenedRecordId(input, now));
+      const eventRef = db.collection('coaOpenEvents').doc(buildCoaOpenedRecordId(input, now));
 
       created = await db.runTransaction(async (transaction) => {
         const existingEvent = await transaction.get(eventRef);
@@ -474,7 +477,9 @@ export async function recordCoaOpened(input: {
         return true;
       });
     } else {
-      logger.warn('[scanIngestion] Firestore not available, skipping COA-open telemetry persistence');
+      logger.warn(
+        '[scanIngestion] Firestore not available, skipping COA-open telemetry persistence',
+      );
     }
 
     if (!created) {
@@ -547,3 +552,4 @@ export async function ingestScan(input: ScanIngestionInput): Promise<ScanIngesti
     resolution,
     persisted,
   };
+}

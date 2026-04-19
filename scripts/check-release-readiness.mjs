@@ -39,13 +39,10 @@ const includeLocalOverrides =
   cliArgs.has('--include-local-overrides') ||
   isTruthy(process.env.APP_RELEASE_CHECK_INCLUDE_LOCAL_OVERRIDES || '');
 const useProductionEnv =
-  cliArgs.has('--production') ||
-  isTruthy(process.env.APP_RELEASE_CHECK_PRODUCTION || '');
+  cliArgs.has('--production') || isTruthy(process.env.APP_RELEASE_CHECK_PRODUCTION || '');
 
 const env = {
-  ...(useProductionEnv
-    ? loadEnvFile('.env.production.example')
-    : loadEnvFile('.env')),
+  ...(useProductionEnv ? loadEnvFile('.env.production.example') : loadEnvFile('.env')),
   ...(includeLocalOverrides ? loadEnvFile('.env.local') : {}),
   ...process.env,
 };
@@ -163,7 +160,7 @@ async function probeHostedStorefrontApi(baseUrl) {
   try {
     const health = await fetchJsonWithTimeout(`${normalizedBaseUrl}/health`);
     const summaries = await fetchJsonWithTimeout(
-      `${normalizedBaseUrl}/storefront-summaries?limit=3&offset=0`
+      `${normalizedBaseUrl}/storefront-summaries?limit=3&offset=0`,
     );
 
     const items = Array.isArray(summaries.json?.items) ? summaries.json.items : [];
@@ -196,7 +193,7 @@ pushCheck(
   storefrontSource === 'api',
   storefrontSource === 'api'
     ? 'App is configured to use the hosted API source.'
-    : 'Set EXPO_PUBLIC_STOREFRONT_SOURCE=api before a public release.'
+    : 'Set EXPO_PUBLIC_STOREFRONT_SOURCE=api before a public release.',
 );
 
 const storefrontApiBaseUrl = readValue('EXPO_PUBLIC_STOREFRONT_API_BASE_URL');
@@ -205,7 +202,7 @@ pushCheck(
   isPublicHttpUrl(storefrontApiBaseUrl),
   isPublicHttpUrl(storefrontApiBaseUrl)
     ? `Using ${storefrontApiBaseUrl}.`
-    : 'Set EXPO_PUBLIC_STOREFRONT_API_BASE_URL to a public non-local http(s) URL.'
+    : 'Set EXPO_PUBLIC_STOREFRONT_API_BASE_URL to a public non-local http(s) URL.',
 );
 
 const hostedStorefrontProbe =
@@ -216,13 +213,15 @@ const hostedStorefrontProbe =
 if (hostedStorefrontProbe) {
   pushCheck(
     'Hosted storefront API health probe',
-    hostedStorefrontProbe.ok && hostedStorefrontProbe.health.ok && hostedStorefrontProbe.health.json?.ok === true,
+    hostedStorefrontProbe.ok &&
+      hostedStorefrontProbe.health.ok &&
+      hostedStorefrontProbe.health.json?.ok === true,
     hostedStorefrontProbe.ok
       ? hostedStorefrontProbe.health.ok && hostedStorefrontProbe.health.json?.ok === true
         ? `Public health endpoint responded with HTTP ${hostedStorefrontProbe.health.status}.`
         : `Public health endpoint returned HTTP ${hostedStorefrontProbe.health.status}.`
       : `Unable to reach the hosted storefront API: ${hostedStorefrontProbe.error}.`,
-    'recommended'
+    'recommended',
   );
 
   pushCheck(
@@ -235,7 +234,7 @@ if (hostedStorefrontProbe) {
         ? `Hosted storefront summaries returned ${hostedStorefrontProbe.itemCount} sampled item${hostedStorefrontProbe.itemCount === 1 ? '' : 's'}.`
         : `Hosted storefront summaries returned HTTP ${hostedStorefrontProbe.summaries.status} or no sampled items.`
       : `Unable to probe hosted storefront summaries: ${hostedStorefrontProbe.error}.`,
-    'recommended'
+    'recommended',
   );
 
   pushCheck(
@@ -249,7 +248,7 @@ if (hostedStorefrontProbe) {
       : !hostedStorefrontProbe.allClosed || hostedStorefrontProbe.placeIdCoverage > 0
         ? `Hosted summary sample is not uniformly closed, and ${(hostedStorefrontProbe.placeIdCoverage * 100).toFixed(0)}% of sampled items expose place IDs.`
         : 'Hosted summary sample is uniformly closed and has no place IDs. Open/closed state may be stale.',
-    'recommended'
+    'recommended',
   );
 }
 
@@ -259,7 +258,7 @@ pushCheck(
   !publicAdminApiKey,
   !publicAdminApiKey
     ? 'No EXPO_PUBLIC_ADMIN_API_KEY is present in app env.'
-    : 'Remove EXPO_PUBLIC_ADMIN_API_KEY from app env. Admin runtime access must use authenticated admin accounts, not a bundled shared secret.'
+    : 'Remove EXPO_PUBLIC_ADMIN_API_KEY from app env. Admin runtime access must use authenticated admin accounts, not a bundled shared secret.',
 );
 
 const firebaseRequiredEnvVars = [
@@ -276,7 +275,7 @@ pushCheck(
   missingFirebaseEnvVars.length === 0,
   missingFirebaseEnvVars.length === 0
     ? 'All required Firebase client env vars are configured.'
-    : `Missing Firebase client env: ${missingFirebaseEnvVars.join(', ')}.`
+    : `Missing Firebase client env: ${missingFirebaseEnvVars.join(', ')}.`,
 );
 
 const easBuildProfiles = ['preview', 'production'];
@@ -291,7 +290,7 @@ pushCheck(
   hardcodedEasEnvEntries.length === 0,
   hardcodedEasEnvEntries.length === 0
     ? 'Preview and production EAS profiles rely on hosted env instead of tracked EXPO_PUBLIC values.'
-    : `Move these values out of eas.json and into hosted EAS environments: ${hardcodedEasEnvEntries.join(', ')}.`
+    : `Move these values out of eas.json and into hosted EAS environments: ${hardcodedEasEnvEntries.join(', ')}.`,
 );
 
 const sentryClientDsn = readValue('EXPO_PUBLIC_SENTRY_DSN');
@@ -301,7 +300,7 @@ pushCheck(
   sentryClientDsn
     ? 'EXPO_PUBLIC_SENTRY_DSN is configured.'
     : 'Set EXPO_PUBLIC_SENTRY_DSN to enable hosted mobile crash monitoring.',
-  'recommended'
+  'recommended',
 );
 
 const sentryBuildOrg = readValue('SENTRY_ORG');
@@ -318,7 +317,7 @@ pushCheck(
     : hasSentryBuildMetadata && sentryBuildAuthToken
       ? 'Sentry build metadata is configured for native source map upload.'
       : 'If you want release crash stacks to resolve back to source lines, set SENTRY_ORG, SENTRY_PROJECT, and SENTRY_AUTH_TOKEN in hosted build env.',
-  'recommended'
+  'recommended',
 );
 
 const supportEmail = readValue('EXPO_PUBLIC_SUPPORT_EMAIL');
@@ -327,7 +326,7 @@ pushCheck(
   isEmail(supportEmail),
   isEmail(supportEmail)
     ? `Using ${supportEmail}.`
-    : 'Set EXPO_PUBLIC_SUPPORT_EMAIL to a monitored support inbox.'
+    : 'Set EXPO_PUBLIC_SUPPORT_EMAIL to a monitored support inbox.',
 );
 
 for (const [envVar, label] of [
@@ -339,9 +338,7 @@ for (const [envVar, label] of [
   pushCheck(
     label,
     isPublicHttpUrl(value),
-    isPublicHttpUrl(value)
-      ? `Using ${value}.`
-      : `Set ${envVar} to a public non-local http(s) URL.`
+    isPublicHttpUrl(value) ? `Using ${value}.` : `Set ${envVar} to a public non-local http(s) URL.`,
   );
 }
 
@@ -353,10 +350,8 @@ for (const [envVar, label] of [
   pushCheck(
     label,
     isPublicHttpUrl(value),
-    isPublicHttpUrl(value)
-      ? `Using ${value}.`
-      : `Set ${envVar} to a public non-local http(s) URL.`,
-    'recommended'
+    isPublicHttpUrl(value) ? `Using ${value}.` : `Set ${envVar} to a public non-local http(s) URL.`,
+    'recommended',
   );
 }
 
@@ -367,7 +362,7 @@ pushCheck(
   !ownerPrelaunchEnabled
     ? 'Owner portal prelaunch mode is off for public release checks.'
     : 'Set EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=false for a neutral production app bundle. Use the backend OWNER_PORTAL_ALLOWLIST privately if you still want a controlled rollout.',
-  'recommended'
+  'recommended',
 );
 
 const publicMonthlyCheckoutUrl = readValue('EXPO_PUBLIC_OWNER_PORTAL_MONTHLY_CHECKOUT_URL');
@@ -386,7 +381,7 @@ pushCheck(
   !hasAnyPublicBillingFallback || hasCompletePublicCheckoutPair
     ? 'Public owner checkout fallback is either unused or complete.'
     : 'If using public owner billing fallback, configure both EXPO_PUBLIC_OWNER_PORTAL_MONTHLY_CHECKOUT_URL and EXPO_PUBLIC_OWNER_PORTAL_ANNUAL_CHECKOUT_URL.',
-  'recommended'
+  'recommended',
 );
 
 for (const [value, label] of [
@@ -405,7 +400,7 @@ for (const [value, label] of [
     isPublicHttpUrl(value) && !looksLikeTestStripeUrl
       ? `Using ${value}.`
       : `${label} must be a public non-local live URL, not a local or Stripe test URL.`,
-    'recommended'
+    'recommended',
   );
 }
 
@@ -417,7 +412,7 @@ pushCheck(
   monthlyPriceLabel && annualPriceLabel
     ? 'Owner plan labels are configured.'
     : 'Set EXPO_PUBLIC_OWNER_PORTAL_MONTHLY_PRICE_LABEL and EXPO_PUBLIC_OWNER_PORTAL_ANNUAL_PRICE_LABEL for polished owner plan presentation.',
-  'recommended'
+  'recommended',
 );
 
 pushCheck(
@@ -425,7 +420,7 @@ pushCheck(
   appIdentity.slug === 'canopytrove',
   appIdentity.slug === 'canopytrove'
     ? 'Expo slug is canopytrove.'
-    : 'Set expo.slug to canopytrove in app.json.'
+    : 'Set expo.slug to canopytrove in app.json.',
 );
 
 pushCheck(
@@ -433,7 +428,7 @@ pushCheck(
   appIdentity.ios?.bundleIdentifier === 'com.rezell.canopytrove',
   appIdentity.ios?.bundleIdentifier === 'com.rezell.canopytrove'
     ? 'iOS bundle identifier is com.rezell.canopytrove.'
-    : 'Set expo.ios.bundleIdentifier to com.rezell.canopytrove in app.json.'
+    : 'Set expo.ios.bundleIdentifier to com.rezell.canopytrove in app.json.',
 );
 
 pushCheck(
@@ -441,7 +436,7 @@ pushCheck(
   appIdentity.android?.package === 'com.rezell.canopytrove',
   appIdentity.android?.package === 'com.rezell.canopytrove'
     ? 'Android package identifier is com.rezell.canopytrove.'
-    : 'Set expo.android.package to com.rezell.canopytrove in app.json.'
+    : 'Set expo.android.package to com.rezell.canopytrove in app.json.',
 );
 
 const iconPath = path.join(projectRoot, appIdentity.icon || './assets/icon.png');
@@ -454,7 +449,7 @@ pushCheck(
   hasIconFile,
   hasIconFile
     ? `App icon found at ${appIdentity.icon || 'assets/icon.png'}.`
-    : `App icon file not found. Ensure ${appIdentity.icon || 'assets/icon.png'} exists.`
+    : `App icon file not found. Ensure ${appIdentity.icon || 'assets/icon.png'} exists.`,
 );
 
 pushCheck(
@@ -462,7 +457,7 @@ pushCheck(
   hasSplashFile,
   hasSplashFile
     ? `Splash icon found at ${appIdentity.splash?.image || 'assets/splash-icon.png'}.`
-    : `Splash icon file not found. Ensure ${appIdentity.splash?.image || 'assets/splash-icon.png'} exists.`
+    : `Splash icon file not found. Ensure ${appIdentity.splash?.image || 'assets/splash-icon.png'} exists.`,
 );
 
 const iosMinimumOsVersion = appIdentity.ios?.minimumOSVersion;
@@ -473,7 +468,7 @@ pushCheck(
   hasValidIosVersion,
   hasValidIosVersion
     ? `iOS minimum OS version set to ${iosMinimumOsVersion}.`
-    : 'Set expo.ios.minimumOSVersion to a valid version in app.json.'
+    : 'Set expo.ios.minimumOSVersion to a valid version in app.json.',
 );
 
 let passedRequired = 0;
@@ -503,10 +498,10 @@ for (const check of checks) {
 
 console.log('');
 console.log(
-  `Required checks: ${passedRequired}/${checks.filter((check) => check.severity === 'required').length} passed`
+  `Required checks: ${passedRequired}/${checks.filter((check) => check.severity === 'required').length} passed`,
 );
 console.log(
-  `Recommended checks: ${passedRecommended}/${checks.filter((check) => check.severity === 'recommended').length} passed`
+  `Recommended checks: ${passedRecommended}/${checks.filter((check) => check.severity === 'recommended').length} passed`,
 );
 
 if (failedRequired.length) {

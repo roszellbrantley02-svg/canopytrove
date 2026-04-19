@@ -158,13 +158,10 @@ test('recordCommunityPaymentReport dedupes repeated install votes and updates fl
 
   const aggregate = fakeDb.documents.get('payment_method_reports/storefront-1');
   assert.ok(aggregate);
-  assert.deepEqual(
-    (aggregate as { counts?: Record<string, unknown> }).counts?.cash,
-    {
-      accepted: 0,
-      rejected: 1,
-    },
-  );
+  assert.deepEqual((aggregate as { counts?: Record<string, unknown> }).counts?.cash, {
+    accepted: 0,
+    rejected: 1,
+  });
 
   const votePaths = Array.from(fakeDb.documents.keys()).filter((path) => path.includes('/votes/'));
   assert.equal(votePaths.length, 1);

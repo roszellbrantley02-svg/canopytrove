@@ -349,4 +349,8 @@ export async function recordAnalyticsEvents(
 
   return {
     ok: true,
-    accepted: accep
+    accepted: acceptedDocuments.length,
+    duplicates: dedupedDocuments.length - acceptedDocuments.length,
+    rejected: batch.events.length - dedupedDocuments.length,
+  };
+}

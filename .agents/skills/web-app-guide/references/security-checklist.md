@@ -103,6 +103,7 @@ Source: OWASP HTTP Headers Cheat Sheet
 ## Canopy Trove Status
 
 Already implemented:
+
 - Helmet.js security headers
 - Backend gateway for API keys (Google Maps, GIPHY)
 - Firebase Auth
@@ -113,6 +114,7 @@ Already implemented:
 - Firebase App Check
 
 To review/strengthen:
+
 - CSP policy specificity (is it locked down beyond Helmet defaults?)
 - Rate limiting coverage on all auth endpoints
 - Session/cookie hardening for web sessions

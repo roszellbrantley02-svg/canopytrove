@@ -50,8 +50,10 @@ try {
   console.log('  Using Application Default Credentials (gcloud).');
 } catch (err) {
   console.error(
-    '\n❌  Firebase init failed: ' + err.message + '\n' +
-      '   Run: gcloud auth application-default login\n'
+    '\n❌  Firebase init failed: ' +
+      err.message +
+      '\n' +
+      '   Run: gcloud auth application-default login\n',
   );
   process.exit(1);
 }
@@ -151,10 +153,7 @@ async function setupAccount(account) {
 
   // 2. Owner profile
   try {
-    await db
-      .collection('ownerProfiles')
-      .doc(account.uid)
-      .set(ownerProfile(account));
+    await db.collection('ownerProfiles').doc(account.uid).set(ownerProfile(account));
     console.log(`  ✔ Owner profile created`);
   } catch (err) {
     console.error(`  ✖ Owner profile failed: ${err.message}`);
@@ -163,10 +162,7 @@ async function setupAccount(account) {
   // 3. Dispensary claim
   const claimId = `${account.uid}_${DEMO_STOREFRONT_ID}`;
   try {
-    await db
-      .collection('dispensaryClaims')
-      .doc(claimId)
-      .set(dispensaryClaim(account));
+    await db.collection('dispensaryClaims').doc(claimId).set(dispensaryClaim(account));
     console.log(`  ✔ Dispensary claim created (${claimId})`);
   } catch (err) {
     console.error(`  ✖ Dispensary claim failed: ${err.message}`);
@@ -196,10 +192,7 @@ async function setupAccount(account) {
 
   // 6. Subscription (trial)
   try {
-    await db
-      .collection('subscriptions')
-      .doc(account.uid)
-      .set(subscription(account));
+    await db.collection('subscriptions').doc(account.uid).set(subscription(account));
     console.log(`  ✔ Trial subscription created (30 days)`);
   } catch (err) {
     console.error(`  ✖ Subscription failed: ${err.message}`);

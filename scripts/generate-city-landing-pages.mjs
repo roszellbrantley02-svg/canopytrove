@@ -4,7 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
-const storefrontDataPath = path.join(repoRoot, 'src', 'data', 'ocmVerifiedStorefrontRecords.generated.ts');
+const storefrontDataPath = path.join(
+  repoRoot,
+  'src',
+  'data',
+  'ocmVerifiedStorefrontRecords.generated.ts',
+);
 const publicPagesRoot = path.join(repoRoot, 'public-release-pages');
 const cityPagesRoot = path.join(publicPagesRoot, 'dispensaries');
 const lastUpdated = 'April 9, 2026';
@@ -217,7 +222,10 @@ function renderCityCard(cityData) {
 function renderHubPage(cityPages, statewideTotal) {
   const cards = cityPages.map(renderCityCard).join('\n');
   const topCities = cityPages
-    .map((cityPage) => `<li><a class="inline-link" href="/dispensaries/${cityPage.slug}/">${escapeHtml(cityPage.label)}</a> — ${formatNumber(cityPage.count)} storefronts</li>`)
+    .map(
+      (cityPage) =>
+        `<li><a class="inline-link" href="/dispensaries/${cityPage.slug}/">${escapeHtml(cityPage.label)}</a> — ${formatNumber(cityPage.count)} storefronts</li>`,
+    )
     .join('\n');
 
   const body = `        <section class="hero">
@@ -322,7 +330,8 @@ function renderCityPage(cityPage, cityPages, statewideTotal) {
   const otherCities = cityPages
     .filter((otherCity) => otherCity.slug !== cityPage.slug)
     .map(
-      (otherCity) => `                  <a href="/dispensaries/${otherCity.slug}/">${escapeHtml(otherCity.label)}</a>`,
+      (otherCity) =>
+        `                  <a href="/dispensaries/${otherCity.slug}/">${escapeHtml(otherCity.label)}</a>`,
     )
     .join('\n');
 
@@ -333,18 +342,15 @@ function renderCityPage(cityPage, cityPages, statewideTotal) {
   const featuredCards = [
     {
       title: 'Check the basics quickly',
-      copy:
-        'These pages are tuned for people who want licensed storefronts, real hours, and direct next steps without wading through marketplace clutter first.',
+      copy: 'These pages are tuned for people who want licensed storefronts, real hours, and direct next steps without wading through marketplace clutter first.',
     },
     {
       title: 'Move into the live app when ready',
-      copy:
-        'Once someone is ready to compare more deeply, the city page hands them straight into the live Canopy Trove web app for browse, storefront details, and reviews.',
+      copy: 'Once someone is ready to compare more deeply, the city page hands them straight into the live Canopy Trove web app for browse, storefront details, and reviews.',
     },
     {
       title: 'Built from actual storefront coverage',
-      copy:
-        'The city pages are generated from the same verified storefront dataset that powers the app, so the public story and the real product surface stay aligned.',
+      copy: 'The city pages are generated from the same verified storefront dataset that powers the app, so the public story and the real product surface stay aligned.',
     },
   ]
     .map(
@@ -493,10 +499,16 @@ function main() {
   for (const cityPage of cityPages) {
     const cityDir = path.join(cityPagesRoot, cityPage.slug);
     mkdirSync(cityDir, { recursive: true });
-    writeFileSync(path.join(cityDir, 'index.html'), renderCityPage(cityPage, cityPages, statewideTotal), 'utf8');
+    writeFileSync(
+      path.join(cityDir, 'index.html'),
+      renderCityPage(cityPage, cityPages, statewideTotal),
+      'utf8',
+    );
   }
 
-  console.log(`Generated ${cityPages.length + 1} public dispensary landing pages in ${cityPagesRoot}`);
+  console.log(
+    `Generated ${cityPages.length + 1} public dispensary landing pages in ${cityPagesRoot}`,
+  );
 }
 
 main();

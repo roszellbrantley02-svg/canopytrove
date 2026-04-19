@@ -34,4 +34,3 @@ If deletion is blocked or incomplete:
 Support email:
 
 - `askmehere@canopytrove.com`
-

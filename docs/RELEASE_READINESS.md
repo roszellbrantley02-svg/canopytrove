@@ -60,7 +60,7 @@ The repo now includes production env templates to fill these in:
    - `OWNER_BILLING_SUCCESS_URL`
    - `OWNER_BILLING_CANCEL_URL`
    - `OWNER_BILLING_PORTAL_RETURN_URL`
-   The billing code now reports any missing env vars explicitly on both app and backend paths.
+     The billing code now reports any missing env vars explicitly on both app and backend paths.
 
 3. Publish the legal documents and point the public app env at them.
    Current code expects:
@@ -68,7 +68,7 @@ The repo now includes production env templates to fill these in:
    - `EXPO_PUBLIC_TERMS_URL`
    - `EXPO_PUBLIC_COMMUNITY_GUIDELINES_URL`
    - `EXPO_PUBLIC_SUPPORT_EMAIL`
-   Recommended companion links:
+     Recommended companion links:
    - `EXPO_PUBLIC_APP_WEBSITE_URL`
    - `EXPO_PUBLIC_ACCOUNT_DELETION_HELP_URL`
 

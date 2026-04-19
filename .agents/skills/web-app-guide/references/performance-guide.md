@@ -9,12 +9,14 @@ Google's three UX metrics that affect both user experience and search ranking.
 Measures how fast the main content loads. Target: under 2.5 seconds.
 
 **Common causes of slow LCP:**
+
 - Large unoptimized images
 - Render-blocking JavaScript
 - Slow server response (TTFB)
 - Client-side rendering without SSR/SSG
 
 **Fixes:**
+
 - Preload the LCP image (`<link rel="preload" as="image">`)
 - Do NOT lazy-load the hero/LCP image — this delays it further
 - Optimize image format (WebP/AVIF) and dimensions
@@ -26,12 +28,14 @@ Measures how fast the main content loads. Target: under 2.5 seconds.
 Measures responsiveness — how fast the app reacts to user input. Target: under 200ms.
 
 **Common causes of poor INP:**
+
 - Heavy JavaScript execution blocking the main thread
 - Too many animations running on the JS thread
 - Large re-renders triggered by state changes
 - Expensive synchronous operations in event handlers
 
 **Fixes:**
+
 - Move heavy computation off the main thread (Web Workers)
 - Use `useNativeDriver: true` for animations on native
 - Skip JS-driven animations on web entirely (Canopy Trove's MotionInView pattern)
@@ -44,12 +48,14 @@ Measures responsiveness — how fast the app reacts to user input. Target: under
 Measures visual stability — how much the layout moves during load. Target: under 0.1.
 
 **Common causes of CLS:**
+
 - Images without explicit dimensions
 - Fonts loading and causing text reflow (FOIT/FOUT)
 - Dynamic content injected above existing content
 - Ads or embeds without reserved space
 
 **Fixes:**
+
 - Always set explicit width/height or aspect-ratio on images
 - Use `font-display: swap` with size-adjusted fallback fonts
 - Reserve space for dynamic content with skeleton screens
@@ -66,6 +72,7 @@ The #1 performance killer in React Native Web apps is JS-driven animation.
 JS thread and causes visible jitter.
 
 **The pattern Canopy Trove uses:**
+
 ```typescript
 const isWeb = Platform.OS === 'web';
 
@@ -123,6 +130,7 @@ For lists with many items:
 ```
 
 **Rules:**
+
 - Always include explicit width and height (prevents CLS)
 - Use `loading="lazy"` for below-the-fold images
 - Never lazy-load the LCP/hero image
@@ -154,6 +162,7 @@ synchronous user gesture handler. If you `await` something between the user's ta
 the browser will silently block it.
 
 **Broken pattern:**
+
 ```typescript
 onPress={async () => {
   await checkPermission();    // async — breaks gesture chain
@@ -162,6 +171,7 @@ onPress={async () => {
 ```
 
 **Fixed pattern:**
+
 ```typescript
 onPress={async () => {
   if (Platform.OS !== 'web') {

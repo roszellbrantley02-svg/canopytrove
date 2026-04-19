@@ -34,29 +34,29 @@ Or use the direct asset API for new UI:
 
 ```tsx
 import { V4cIcon } from './icons/ProvidedGlyphIconsV4c';
-<V4cIcon asset="CT_Trophy_Crown" size={48} />
+<V4cIcon asset="CT_Trophy_Crown" size={48} />;
 ```
 
 ## Glyph-name → v4c asset mapping (for the SVG drop-in)
 
-| Old glyph   | v4c asset              |
-|-------------|------------------------|
-| deals       | AppNav_HotDeals        |
-| favorites   | AppNav_Favorites       |
-| badges      | CT_Badge_StarOrange    |
-| browse      | AppNav_Browse          |
-| close       | AppNav_Filter (keep SVG if exact X is needed) |
-| location    | AppNav_Nearby          |
-| map         | AppNav_MapApp          |
-| profile     | AppNav_Profile         |
-| storefront  | AppNav_Browse          |
-| reviews     | CT_Trophy_Star         |
-| saved       | AppNav_Favorites       |
-| search      | AppNav_Search          |
-| stars       | CT_Badge_StarOrange    |
-| travel      | AppNav_Compass         |
-| verify      | AppNav_Verify          |
-| trophy      | CT_Trophy_Compass      |
+| Old glyph  | v4c asset                                     |
+| ---------- | --------------------------------------------- |
+| deals      | AppNav_HotDeals                               |
+| favorites  | AppNav_Favorites                              |
+| badges     | CT_Badge_StarOrange                           |
+| browse     | AppNav_Browse                                 |
+| close      | AppNav_Filter (keep SVG if exact X is needed) |
+| location   | AppNav_Nearby                                 |
+| map        | AppNav_MapApp                                 |
+| profile    | AppNav_Profile                                |
+| storefront | AppNav_Browse                                 |
+| reviews    | CT_Trophy_Star                                |
+| saved      | AppNav_Favorites                              |
+| search     | AppNav_Search                                 |
+| stars      | CT_Badge_StarOrange                           |
+| travel     | AppNav_Compass                                |
+| verify     | AppNav_Verify                                 |
+| trophy     | CT_Trophy_Compass                             |
 
 ## Gotchas
 

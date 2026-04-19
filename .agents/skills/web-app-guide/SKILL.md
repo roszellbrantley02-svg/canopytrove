@@ -187,14 +187,14 @@ Bad wording is often a design failure, not just a writing failure.
 
 ## Best Build Stack (2026)
 
-| Layer | Recommended |
-|-------|-------------|
-| Frontend | React/Next.js, Vite, or Expo Web |
-| Backend | Node/Express, Next API routes |
-| Auth | Managed auth (Firebase, Auth0) or hardened custom |
-| Database | Postgres, Firestore, or similar |
-| Hosting | HTTPS-first platform (Firebase Hosting, Vercel, Cloudflare) |
-| PWA | Optional layer for installability |
+| Layer    | Recommended                                                 |
+| -------- | ----------------------------------------------------------- |
+| Frontend | React/Next.js, Vite, or Expo Web                            |
+| Backend  | Node/Express, Next API routes                               |
+| Auth     | Managed auth (Firebase, Auth0) or hardened custom           |
+| Database | Postgres, Firestore, or similar                             |
+| Hosting  | HTTPS-first platform (Firebase Hosting, Vercel, Cloudflare) |
+| PWA      | Optional layer for installability                           |
 
 ## Safest Launch Baseline
 

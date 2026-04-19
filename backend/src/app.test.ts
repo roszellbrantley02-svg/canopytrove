@@ -1825,4 +1825,12 @@ test('rejects analytics batches with stale occurredAt timestamps', async () => {
           eventType: 'app_open',
           installId: 'install-1',
           sessionId: 'session-1',
-          occ
+          occurredAt: staleOccurredAt,
+          screen: 'Nearby',
+        },
+      ],
+    }),
+  });
+
+  assert.equal(response.status, 400);
+});

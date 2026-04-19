@@ -9,16 +9,16 @@ Use this skill when writing or modifying code for Canopy Trove — a licensed di
 
 ## Stack
 
-| Layer | Tech |
-|-------|------|
-| Frontend | React Native, Expo SDK, TypeScript, Expo Router |
-| Backend | Node.js/Express on Cloud Run (`canopytrove-api`, `us-east4`) |
-| Database | Firestore named database `canopytrove` (NOT `(default)`) |
-| Auth | Firebase Auth |
-| Maps | Google Places API (backend gateway pattern — keys never on client) |
-| Build | EAS Build (development, preview, production profiles) |
-| Monitoring | Sentry (frontend + backend), Cloud Logging |
-| Bundle ID | `com.rezell.canopytrove` |
+| Layer      | Tech                                                               |
+| ---------- | ------------------------------------------------------------------ |
+| Frontend   | React Native, Expo SDK, TypeScript, Expo Router                    |
+| Backend    | Node.js/Express on Cloud Run (`canopytrove-api`, `us-east4`)       |
+| Database   | Firestore named database `canopytrove` (NOT `(default)`)           |
+| Auth       | Firebase Auth                                                      |
+| Maps       | Google Places API (backend gateway pattern — keys never on client) |
+| Build      | EAS Build (development, preview, production profiles)              |
+| Monitoring | Sentry (frontend + backend), Cloud Logging                         |
+| Bundle ID  | `com.rezell.canopytrove`                                           |
 
 ## Design Tokens (ALWAYS use these)
 
@@ -56,6 +56,7 @@ sm: 4, md: 8, lg: 12, xl: 16
 ## Frontend Code Conventions
 
 ### File Structure
+
 - Screens: `src/screens/OwnerPortal*.tsx`, `src/screens/ownerPortal/*.ts` (hooks, utils, sections)
 - Components: `src/components/*.tsx` (shared), screen-specific sections in screen folders
 - Services: `src/services/*.ts` (API calls, business logic)
@@ -64,6 +65,7 @@ sm: 4, md: 8, lg: 12, xl: 16
 - Icons: `src/icons/AppUiIcon.tsx` (Ionicons-based, use `AppUiIconName` type)
 
 ### Component Patterns
+
 - Use `StyleSheet.create()` for styles, defined at bottom of file as `localStyles` or descriptive name
 - Functional components only, no class components
 - Import colors/spacing/textStyles from `../theme/tokens` — never hardcode token values
@@ -75,6 +77,7 @@ sm: 4, md: 8, lg: 12, xl: 16
 - Cap font scaling: `maxFontSizeMultiplier={1.3}` on Text, `1.2` on labels
 
 ### Hook Patterns
+
 - Custom hooks in `use*.ts` files next to their screen
 - `useOwnerPortalWorkspace(preview)` is the main workspace hook — returns workspace data + mutation functions
 - Always clean up with AbortController in useEffect
@@ -82,6 +85,7 @@ sm: 4, md: 8, lg: 12, xl: 16
 - Wrap `useFocusEffect` callback in `useCallback`
 
 ### API Service Pattern
+
 ```typescript
 // Frontend services call requestJson or requestOwnerPortalJson
 export function doSomething(input: InputType, locationId?: string | null) {
@@ -93,6 +97,7 @@ export function doSomething(input: InputType, locationId?: string | null) {
 ```
 
 ### Error Handling
+
 - `BackendTierAccessError` for tier-gated features (detected automatically in HTTP layer)
 - `getWorkspaceErrorMessage(error, fallback)` for user-facing error strings
 - `isBackendTierAccessError(error)` type guard for tier errors
@@ -100,6 +105,7 @@ export function doSomething(input: InputType, locationId?: string | null) {
 ## Backend Code Conventions
 
 ### File Structure
+
 - Routes: `backend/src/routes/ownerPortal*.ts`
 - Services: `backend/src/services/*.ts` (business logic, one service per domain)
 - Collections: `backend/src/services/*Collections.ts` (Firestore collection accessors)
@@ -107,14 +113,16 @@ export function doSomething(input: InputType, locationId?: string | null) {
 - Config: `backend/src/config.ts`
 
 ### Route Pattern
+
 ```typescript
 // All owner routes use createOwnerPortalJsonRoute wrapper
-router.post('/owner-portal/endpoint',
+router.post(
+  '/owner-portal/endpoint',
   rateLimiter,
   createOwnerPortalJsonRoute('Fallback error message', async ({ ownerUid, request }) => {
     // Extract locationId from body for multi-location support
-    const locationId = typeof request.body?.locationId === 'string'
-      ? request.body.locationId.trim() || null : null;
+    const locationId =
+      typeof request.body?.locationId === 'string' ? request.body.locationId.trim() || null : null;
     // Tier gating if needed
     await requireTierAccess(ownerUid, 'growth', 'Feature Name');
     // Runtime policy check
@@ -126,6 +134,7 @@ router.post('/owner-portal/endpoint',
 ```
 
 ### Service Pattern
+
 ```typescript
 export async function serviceFunction(
   ownerUid: string,
@@ -138,8 +147,8 @@ export async function serviceFunction(
     requireActiveSubscription: true,
   });
   // 2. Resolve active location (multi-location support)
-  const targetStorefrontId = await resolveOwnerActiveLocation(ownerUid, locationId)
-    ?? ownerState.storefrontId!;
+  const targetStorefrontId =
+    (await resolveOwnerActiveLocation(ownerUid, locationId)) ?? ownerState.storefrontId!;
   // 3. Resolve tier and enforce limits
   const ownerTier = await resolveOwnerTier(ownerUid);
   const tierLimits = getTierLimits(ownerTier);
@@ -148,6 +157,7 @@ export async function serviceFunction(
 ```
 
 ### Tier System
+
 - Three tiers: `verified` ($79), `growth` ($149), `pro` ($249)
 - `resolveOwnerTier(ownerUid)` reads from Firestore subscriptions collection
 - `getTierLimits(tier)` returns feature flags and numeric limits
@@ -155,6 +165,7 @@ export async function serviceFunction(
 - `TierAccessError` → 403 with `{ code: 'TIER_ACCESS_DENIED', requiredTier, currentTier }`
 
 ### Firestore Patterns
+
 - Always use `getBackendFirebaseDb()` — returns null if DB unavailable
 - Named database: `canopytrove` (set via `FIREBASE_DATABASE_ID` env var)
 - Use `Promise.allSettled` for parallel reads where partial failure is acceptable
@@ -162,12 +173,14 @@ export async function serviceFunction(
 - Collection helpers in `*Collections.ts` files return `CollectionReference | null`
 
 ### Error Handling
+
 - `TierAccessError` for tier violations (auto-serialized by route utils)
 - Standard `Error` for business logic violations
 - `getOwnerPortalRouteErrorPayload` handles error → JSON response mapping
 - Never expose stack traces — only error messages and codes
 
 ## Key Terms
+
 - **storefront**: A dispensary listing (627 in DB)
 - **discovery run**: Backend sweep enriching storefronts via Google Places API
 - **routeMode**: `preview` vs `verified` — affects navigation URL generation
@@ -176,6 +189,7 @@ export async function serviceFunction(
 - **OCM**: Office of Cannabis Management (NY regulator)
 
 ## Important Rules
+
 1. ALWAYS use design tokens — never hardcode colors, spacing, or font values
 2. ALWAYS support multi-location by passing `locationId` through mutations
 3. ALWAYS check tier access before gated features

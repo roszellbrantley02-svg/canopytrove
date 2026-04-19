@@ -76,4 +76,10 @@ paymentMethodsRoutes.post(
       logger.error('[paymentMethods] Report failed', {
         error: error instanceof Error ? error.message : String(error),
       });
-      response.status(500).
+      response.status(500).json({
+        ok: false,
+        error: 'Internal server error',
+      });
+    }
+  },
+);

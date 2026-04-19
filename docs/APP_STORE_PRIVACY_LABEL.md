@@ -11,10 +11,12 @@ This document tracks the App Store Privacy Nutrition Label updates required for 
 **Classification:** Data Not Linked to You
 
 **Section:** "Data Used to Track You"
+
 - Status: **Set to "Not Tracked"**
 - Rationale: Product scan events are logged at the install ID level, never at the user identity level. The install ID is a per-app device identifier. Scan data does not enable cross-app tracking and is not used to create profiles that link your identity across different apps or websites owned by other companies.
 
 **Linked to purposes:**
+
 - App Functionality (primary use: trending brands near you, operator dashboards)
 - Analytics (secondary use: aggregating brand signal by region)
 
@@ -25,10 +27,12 @@ This document tracks the App Store Privacy Nutrition Label updates required for 
 **Classification:** Data Not Linked to You (optional, aggregate-only)
 
 **Section:** "Data Used to Track You"
+
 - Status: **Set to "Not Tracked"** (users opt-in at scan time; location never persisted with scan records)
 - Rationale: Coarse location (approximate region) is only collected when the user grants permission during a product scan. It is never linked to the user's identity and is only used to aggregate brand popularity by geographic area. Users can disable location sharing in Profile → Privacy settings.
 
 **Linked to purposes:**
+
 - App Functionality (powering "trending near you" features)
 
 ---

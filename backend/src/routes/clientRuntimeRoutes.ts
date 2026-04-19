@@ -36,4 +36,5 @@ clientRuntimeRoutes.post('/client-errors', clientErrorRateLimiter, async (reques
   await recordClientRuntimeError(payload, request.ip, {
     accountId: identity.accountId,
   });
-  res
+  response.status(202).json({ accepted: true });
+});

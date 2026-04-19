@@ -906,4 +906,7 @@ export async function handleOwnerBillingWebhook(
       return {
         ok: true,
         ignored: true,
-        type: event.ty
+        type: event.type,
+      };
+  }
+}

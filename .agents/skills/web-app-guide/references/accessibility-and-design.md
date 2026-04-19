@@ -31,14 +31,14 @@ WCAG 2.2 is the current accessibility standard. It goes far beyond color contras
 
 Use the right element before reaching for ARIA:
 
-| Want this | Use this | Not this |
-|-----------|----------|----------|
-| Button | `<button>` | `<div onClick>` |
-| Link | `<a href>` | `<span onClick>` |
-| Heading | `<h1>`–`<h6>` | `<div class="title">` |
-| List | `<ul>/<ol>` | Nested `<div>`s |
-| Form field | `<input>` + `<label>` | `<div>` with text |
-| Navigation | `<nav>` | `<div class="nav">` |
+| Want this  | Use this              | Not this              |
+| ---------- | --------------------- | --------------------- |
+| Button     | `<button>`            | `<div onClick>`       |
+| Link       | `<a href>`            | `<span onClick>`      |
+| Heading    | `<h1>`–`<h6>`         | `<div class="title">` |
+| List       | `<ul>/<ol>`           | Nested `<div>`s       |
+| Form field | `<input>` + `<label>` | `<div>` with text     |
+| Navigation | `<nav>`               | `<div class="nav">`   |
 
 In React Native Web, `accessibilityRole` maps to semantic HTML roles automatically.
 

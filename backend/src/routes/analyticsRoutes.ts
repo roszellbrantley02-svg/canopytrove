@@ -25,4 +25,7 @@ analyticsRoutes.post('/analytics/events', async (request, response, next) => {
     });
 
     response.status(202).json(result);
- 
+  } catch (error) {
+    next(error);
+  }
+});

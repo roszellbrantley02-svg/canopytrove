@@ -87,77 +87,82 @@ const ingestRateLimiter = createRateLimitMiddleware({
   methods: ['POST'],
 });
 
-scanIngestRoutes.post('/scans/ingest', scanAppCheck, ingestRateLimiter, async (request, response) => {
-  try {
-    // Validate request body
-    const body = request.body as unknown;
-    let validatedBody: ScanIngestRequest;
+scanIngestRoutes.post(
+  '/scans/ingest',
+  scanAppCheck,
+  ingestRateLimiter,
+  async (request, response) => {
     try {
-      validatedBody = ScanIngestRequestSchema.parse(body);
-    } catch (validationError) {
-      response.status(400).json({
-        ok: false,
-        error: 'Invalid request body',
-        details: validationError instanceof z.ZodError ? validationError.issues : undefined,
-      });
-      return;
-    }
+      // Validate request body
+      const body = request.body as unknown;
+      let validatedBody: ScanIngestRequest;
+      try {
+        validatedBody = ScanIngestRequestSchema.parse(body);
+      } catch (validationError) {
+        response.status(400).json({
+          ok: false,
+          error: 'Invalid request body',
+          details: validationError instanceof z.ZodError ? validationError.issues : undefined,
+        });
+        return;
+      }
 
-    // Ingest the scan
-    const result = await ingestScan({
-      rawCode: validatedBody.rawCode,
-      installId: validatedBody.installId,
-      profileId: validatedBody.profileId,
-      location: validatedBody.location,
-      nearStorefrontId: validatedBody.nearStorefrontId,
-    });
-
-    // Log client analytics passthrough if present
-    if (validatedBody.clientAnalytics) {
-      logger.info('[scanIngest] Client analytics event', {
+      // Ingest the scan
+      const result = await ingestScan({
+        rawCode: validatedBody.rawCode,
         installId: validatedBody.installId,
-        event: validatedBody.clientAnalytics.eventName,
-        context: validatedBody.clientAnalytics.context,
+        profileId: validatedBody.profileId,
+        location: validatedBody.location,
+        nearStorefrontId: validatedBody.nearStorefrontId,
+      });
+
+      // Log client analytics passthrough if present
+      if (validatedBody.clientAnalytics) {
+        logger.info('[scanIngest] Client analytics event', {
+          installId: validatedBody.installId,
+          event: validatedBody.clientAnalytics.eventName,
+          context: validatedBody.clientAnalytics.context,
+        });
+      }
+
+      // Shape response
+      const payload = {
+        ok: true,
+        kind: result.resolution.kind,
+        license: shapeLicense(result.resolution),
+        coa: shapeCoa(result.resolution),
+        verificationState:
+          result.resolution.kind === 'license' ? result.resolution.verificationState : undefined,
+        catalogState:
+          result.resolution.kind === 'product' ? result.resolution.catalogState : undefined,
+        reason: result.resolution.kind === 'unknown' ? result.resolution.reason : undefined,
+        suggestedShops: [] as Array<{
+          storefrontId: string;
+          name: string;
+          distanceMeters: number;
+        }>,
+        // TODO: wire operator brand inventory when owner portal brands-we-carry lands
+      };
+
+      response.setHeader('Cache-Control', 'no-store');
+      response.json(payload);
+
+      logger.info('[scanIngest] Ingest completed', {
+        installId: validatedBody.installId,
+        kind: result.resolution.kind,
+        persisted: result.persisted,
+      });
+    } catch (error) {
+      logger.error('[scanIngest] Unexpected error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      response.status(500).json({
+        ok: false,
+        error: 'Internal server error',
       });
     }
-
-    // Shape response
-    const payload = {
-      ok: true,
-      kind: result.resolution.kind,
-      license: shapeLicense(result.resolution),
-      coa: shapeCoa(result.resolution),
-      verificationState:
-        result.resolution.kind === 'license' ? result.resolution.verificationState : undefined,
-      catalogState:
-        result.resolution.kind === 'product' ? result.resolution.catalogState : undefined,
-      reason: result.resolution.kind === 'unknown' ? result.resolution.reason : undefined,
-      suggestedShops: [] as Array<{
-        storefrontId: string;
-        name: string;
-        distanceMeters: number;
-      }>,
-      // TODO: wire operator brand inventory when owner portal brands-we-carry lands
-    };
-
-    response.setHeader('Cache-Control', 'no-store');
-    response.json(payload);
-
-    logger.info('[scanIngest] Ingest completed', {
-      installId: validatedBody.installId,
-      kind: result.resolution.kind,
-      persisted: result.persisted,
-    });
-  } catch (error) {
-    logger.error('[scanIngest] Unexpected error', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    response.status(500).json({
-      ok: false,
-      error: 'Internal server error',
-    });
-  }
-});
+  },
+);
 
 // Request validation schema for COA opened
 const CoaOpenedRequestSchema = z
@@ -186,45 +191,50 @@ const coaOpenedRateLimiter = createRateLimitMiddleware({
   methods: ['POST'],
 });
 
-scanIngestRoutes.post('/scans/coa-opened', scanAppCheck, coaOpenedRateLimiter, async (request, response) => {
-  try {
-    // Validate request body
-    const body = request.body as unknown;
-    let validatedBody: CoaOpenedRequest;
+scanIngestRoutes.post(
+  '/scans/coa-opened',
+  scanAppCheck,
+  coaOpenedRateLimiter,
+  async (request, response) => {
     try {
-      validatedBody = CoaOpenedRequestSchema.parse(body);
-    } catch (validationError) {
-      response.status(400).json({
-        ok: false,
-        error: 'Invalid request body',
-        details: validationError instanceof z.ZodError ? validationError.issues : undefined,
+      // Validate request body
+      const body = request.body as unknown;
+      let validatedBody: CoaOpenedRequest;
+      try {
+        validatedBody = CoaOpenedRequestSchema.parse(body);
+      } catch (validationError) {
+        response.status(400).json({
+          ok: false,
+          error: 'Invalid request body',
+          details: validationError instanceof z.ZodError ? validationError.issues : undefined,
+        });
+        return;
+      }
+
+      // Record the COA opened event
+      await recordCoaOpened({
+        installId: validatedBody.installId,
+        profileId: validatedBody.profileId,
+        brandId: validatedBody.brandId,
+        labName: validatedBody.labName,
+        batchId: validatedBody.batchId,
       });
-      return;
+
+      response.setHeader('Cache-Control', 'no-store');
+      response.status(204).end();
+
+      logger.info('[coaOpened] Event recorded', {
+        installId: validatedBody.installId,
+        profileId: validatedBody.profileId,
+      });
+    } catch (error) {
+      logger.error('[coaOpened] Unexpected error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      response.status(500).json({
+        ok: false,
+        error: 'Internal server error',
+      });
     }
-
-    // Record the COA opened event
-    await recordCoaOpened({
-      installId: validatedBody.installId,
-      profileId: validatedBody.profileId,
-      brandId: validatedBody.brandId,
-      labName: validatedBody.labName,
-      batchId: validatedBody.batchId,
-    });
-
-    response.setHeader('Cache-Control', 'no-store');
-    response.status(204).end();
-
-    logger.info('[coaOpened] Event recorded', {
-      installId: validatedBody.installId,
-      profileId: validatedBody.profileId,
-    });
-  } catch (error) {
-    logger.error('[coaOpened] Unexpected error', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    response.status(500).json({
-      ok: false,
-      error: 'Internal server error',
-    });
-  }
-});
+  },
+);

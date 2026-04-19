@@ -122,4 +122,31 @@ function parseAnalyticsEvent(value: unknown, field: string) {
       maxLength: MAX_ID_LENGTH,
     }),
     metadata: parseAnalyticsMetadata(body.metadata, `${field}.metadata`),
-  
+  };
+}
+
+export function parseAnalyticsEventBatchBody(value: unknown): AnalyticsEventBatchRequest {
+  const body = asObject(value, 'body');
+  const platform = parseTrimmedString(body.platform, 'body.platform', {
+    maxLength: 40,
+  });
+  const appVersion = parseNullableTrimmedString(body.appVersion, 'body.appVersion', {
+    maxLength: 40,
+  });
+
+  if (!Array.isArray(body.events)) {
+    throw new RequestValidationError('body.events must be an array.');
+  }
+  if (body.events.length === 0) {
+    throw new RequestValidationError('body.events must not be empty.');
+  }
+  if (body.events.length > MAX_ANALYTICS_EVENTS) {
+    throw new RequestValidationError(`body.events may not exceed ${MAX_ANALYTICS_EVENTS} events.`);
+  }
+
+  const events = body.events.map((event, index) =>
+    parseAnalyticsEvent(event, `body.events[${index}]`),
+  );
+
+  return { platform, appVersion, events };
+}

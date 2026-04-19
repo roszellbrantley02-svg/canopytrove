@@ -144,4 +144,3 @@ Build in this order instead:
 6. polish
 
 That order is less exciting, but it is the one most likely to hold up under real use.
-

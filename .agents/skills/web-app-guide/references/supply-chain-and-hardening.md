@@ -9,11 +9,12 @@ tampered resources:
 <script
   src="https://cdn.example.com/lib.js"
   integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8w"
-  crossorigin="anonymous">
-</script>
+  crossorigin="anonymous"
+></script>
 ```
 
 How it works:
+
 1. Generate a hash of the expected file content
 2. Browser downloads the file and computes the hash
 3. If hashes don't match, the browser refuses to execute/render the resource
@@ -61,6 +62,7 @@ Cross-Origin-Opener-Policy: same-origin
 ```
 
 This prevents:
+
 - Other windows from accessing `window.opener`
 - Spectre-class side-channel attacks via shared browsing context groups
 - Pop-under attacks that manipulate the opener window
@@ -102,6 +104,7 @@ Permissions-Policy: camera=(), microphone=(), geolocation=(self)
 ```
 
 Canopy Trove's backend already sets this header. Review which features are actually needed:
+
 - `geolocation=(self)` — needed for nearby dispensary finding
 - `camera=()` — could be `(self)` if in-browser camera is used for review photos
 - `microphone=()` — not needed
@@ -126,6 +129,7 @@ If users upload files (review photos, profile images), treat uploads as hostile:
 ### Canopy Trove Considerations
 
 Review photo uploads go through the backend with Zod validation. Verify:
+
 - File size limits are enforced server-side
 - Filenames are generated, not user-provided
 - EXIF stripping happens before storage (user location data in photos is a privacy risk)
@@ -197,14 +201,14 @@ Both NIST and OWASP recommend threat modeling as part of the engineering process
 
 For each component/boundary in your system, ask:
 
-| Threat | Question | Example |
-|--------|----------|---------|
-| **S**poofing | Can someone pretend to be someone else? | Fake auth tokens |
-| **T**ampering | Can someone modify data in transit or at rest? | Modify review content |
-| **R**epudiation | Can someone deny they took an action? | Delete audit logs |
-| **I**nformation Disclosure | Can someone see data they shouldn't? | Leaking user emails |
-| **D**enial of Service | Can someone make the system unavailable? | API flooding |
-| **E**levation of Privilege | Can someone gain unauthorized access? | Regular user → admin |
+| Threat                     | Question                                       | Example               |
+| -------------------------- | ---------------------------------------------- | --------------------- |
+| **S**poofing               | Can someone pretend to be someone else?        | Fake auth tokens      |
+| **T**ampering              | Can someone modify data in transit or at rest? | Modify review content |
+| **R**epudiation            | Can someone deny they took an action?          | Delete audit logs     |
+| **I**nformation Disclosure | Can someone see data they shouldn't?           | Leaking user emails   |
+| **D**enial of Service      | Can someone make the system unavailable?       | API flooding          |
+| **E**levation of Privilege | Can someone gain unauthorized access?          | Regular user → admin  |
 
 ### When to Threat Model
 
@@ -217,6 +221,7 @@ For each component/boundary in your system, ask:
 ### Canopy Trove Trust Boundaries
 
 Key boundaries to review:
+
 1. Browser ↔ Firebase Hosting (static assets)
 2. Browser ↔ Cloud Run API (authenticated requests)
 3. Cloud Run API ↔ Firestore (service account access)

@@ -44,4 +44,12 @@ export async function recordClientRuntimeError(
     screen: report.screen ?? null,
     platform: report.platform ?? null,
     metadata: {
-      i
+      ip: ip ?? null,
+      accountId: options?.accountId ?? null,
+      clientReportedFatal,
+      name: report.name ?? 'Error',
+      stack: report.stack ?? null,
+      reportedAt: report.reportedAt ?? new Date().toISOString(),
+    },
+  });
+}

@@ -13,6 +13,7 @@ to the user's device (or synced via iCloud/Google Password Manager). Benefits ov
 - Better UX for returning users: biometric or device unlock instead of typing
 
 Implementation path for a web app:
+
 1. Use the Web Authentication API (navigator.credentials.create / .get)
 2. Store the public key server-side, keyed to the user account
 3. Support passkeys alongside traditional login initially — don't force migration
@@ -36,13 +37,13 @@ Source: OWASP Forgot Password Cheat Sheet
 
 MFA helps, but not all MFA is equal:
 
-| Method | Phishing Resistance | User Friction | Recommendation |
-|--------|-------------------|---------------|----------------|
-| SMS OTP | Low (SIM swap, interception) | Medium | Acceptable fallback only |
-| TOTP (authenticator app) | Medium | Medium | Good default |
-| Push notification | Medium | Low | Good for mobile-first apps |
-| Passkey/WebAuthn | High | Low | Best option when available |
-| Hardware security key | High | High | Best for high-value accounts |
+| Method                   | Phishing Resistance          | User Friction | Recommendation               |
+| ------------------------ | ---------------------------- | ------------- | ---------------------------- |
+| SMS OTP                  | Low (SIM swap, interception) | Medium        | Acceptable fallback only     |
+| TOTP (authenticator app) | Medium                       | Medium        | Good default                 |
+| Push notification        | Medium                       | Low           | Good for mobile-first apps   |
+| Passkey/WebAuthn         | High                         | Low           | Best option when available   |
+| Hardware security key    | High                         | High          | Best for high-value accounts |
 
 Sources: OWASP MFA Cheat Sheet, NIST SP 800-63B
 
@@ -71,6 +72,7 @@ Set-Cookie: session_id=abc123;
 ```
 
 Key flags:
+
 - `Secure`: Only sent over HTTPS
 - `HttpOnly`: Blocks `document.cookie` access (mitigates XSS token theft)
 - `SameSite=Lax`: Blocks cross-site POST requests with the cookie (CSRF baseline)
@@ -80,6 +82,7 @@ Key flags:
 ### Session Visibility and Control
 
 Good session UX includes:
+
 - Showing users their active sessions (device, location, last active)
 - Remote session termination ("sign out all other devices")
 - Careful cache cleanup on logout (no sensitive data persisted in browser cache)
@@ -90,17 +93,18 @@ Sources: OWASP Session Management Cheat Sheet, MDN Set-Cookie
 
 ### Storage Options and Limits
 
-| Storage | Capacity | Persistence | Access | Best For |
-|---------|----------|-------------|--------|----------|
-| Cookies | ~4 KB per cookie | Configurable | Server + client | Auth tokens, session IDs |
-| localStorage | ~5 MB | Until cleared | Client only | User preferences, small state |
-| sessionStorage | ~5 MB | Tab lifetime | Client only | Tab-specific temporary data |
-| IndexedDB | Large (quota-managed) | Until cleared | Client only | Structured data, offline cache |
-| Cache API | Large (quota-managed) | Until cleared | Client only | HTTP response caching (service workers) |
+| Storage        | Capacity              | Persistence   | Access          | Best For                                |
+| -------------- | --------------------- | ------------- | --------------- | --------------------------------------- |
+| Cookies        | ~4 KB per cookie      | Configurable  | Server + client | Auth tokens, session IDs                |
+| localStorage   | ~5 MB                 | Until cleared | Client only     | User preferences, small state           |
+| sessionStorage | ~5 MB                 | Tab lifetime  | Client only     | Tab-specific temporary data             |
+| IndexedDB      | Large (quota-managed) | Until cleared | Client only     | Structured data, offline cache          |
+| Cache API      | Large (quota-managed) | Until cleared | Client only     | HTTP response caching (service workers) |
 
 ### Quota and Eviction
 
 Browsers cap storage tightly and vary widely on quota and eviction:
+
 - Most browsers give 5-10 MB for localStorage per origin
 - IndexedDB/Cache API share a larger quota pool (varies: 50% of disk on Chrome, 2 GB on Firefox)
 - Under storage pressure, browsers will evict data from non-persistent origins

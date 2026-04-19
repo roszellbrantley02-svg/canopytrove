@@ -43,7 +43,9 @@ if (blocked.length > 0) {
   }
 
   console.error('');
-  console.error('Move signing files outside the repository or into managed credentials, then unstage them.');
+  console.error(
+    'Move signing files outside the repository or into managed credentials, then unstage them.',
+  );
   console.error('If you force-added one of these files, run: git restore --staged <path>');
   process.exit(1);
 }

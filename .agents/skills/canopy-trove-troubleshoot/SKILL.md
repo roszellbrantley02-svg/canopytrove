@@ -23,15 +23,16 @@ Before diving into code, identify which layer is failing:
 
 The #1 cause of "works locally, breaks on Cloud Run."
 
-| Env Var | Required Value | What Breaks Without It |
-|---------|---------------|----------------------|
-| `STOREFRONT_BACKEND_SOURCE` | `firestore` | Defaults to `mock` — all storefront data is fake |
-| `FIREBASE_DATABASE_ID` | `canopytrove` | Reads from `(default)` database — empty collections |
-| `GOOGLE_MAPS_API_KEY` | Via Secret Manager | All Places API calls return 403 |
-| `ADMIN_API_KEY` | Via Secret Manager | Admin endpoints reject all requests |
-| `SENTRY_DSN` | Sentry project DSN | Backend errors silently lost |
+| Env Var                     | Required Value     | What Breaks Without It                              |
+| --------------------------- | ------------------ | --------------------------------------------------- |
+| `STOREFRONT_BACKEND_SOURCE` | `firestore`        | Defaults to `mock` — all storefront data is fake    |
+| `FIREBASE_DATABASE_ID`      | `canopytrove`      | Reads from `(default)` database — empty collections |
+| `GOOGLE_MAPS_API_KEY`       | Via Secret Manager | All Places API calls return 403                     |
+| `ADMIN_API_KEY`             | Via Secret Manager | Admin endpoints reject all requests                 |
+| `SENTRY_DSN`                | Sentry project DSN | Backend errors silently lost                        |
 
 **Debug steps:**
+
 ```bash
 # List current env vars on Cloud Run
 gcloud run services describe canopytrove-api --region=us-east4 --format='yaml(spec.template.spec.containers[0].env)'
@@ -94,13 +95,14 @@ gcloud firestore documents list --database=canopytrove --collection-ids=storefro
 
 Three build profiles: `development`, `preview`, `production`.
 
-| Profile | Use | Common Issue |
-|---------|-----|-------------|
-| `development` | Local dev client | Missing `EXPO_PUBLIC_*` vars in `.env` |
-| `preview` | TestFlight/internal | Provisioning profile mismatch |
-| `production` | App Store | Bundle ID must be `com.rezell.canopytrove` |
+| Profile       | Use                 | Common Issue                               |
+| ------------- | ------------------- | ------------------------------------------ |
+| `development` | Local dev client    | Missing `EXPO_PUBLIC_*` vars in `.env`     |
+| `preview`     | TestFlight/internal | Provisioning profile mismatch              |
+| `production`  | App Store           | Bundle ID must be `com.rezell.canopytrove` |
 
 **Debug steps:**
+
 ```bash
 # Check recent build status
 eas build:list --limit=5
@@ -121,11 +123,13 @@ grep -r "com.rezell.canopytrove" app.json app.config.*
 ### TypeScript Compilation
 
 Always verify after changes:
+
 ```bash
 npx tsc --noEmit
 ```
 
 Common issues in this codebase:
+
 - Missing fields in object literals (e.g., `OwnerPromotionPerformanceSnapshot` requires all metric fields)
 - `colors.primary` vs `colors.accent` — check `src/theme/tokens.ts` for actual exported names
 - Icon names must exist in `AppUiIcon` — grep `src/icons/AppUiIcon.tsx` before using
@@ -227,18 +231,18 @@ A discovery run stuck in `running` status forever:
 
 ## Quick Reference: Where to Look
 
-| Symptom | First Place to Check |
-|---------|---------------------|
-| Blank screen on load | `useFocusEffect` in the screen, network tab for failed API calls |
-| "Could not load workspace" | Backend `/owner-portal/workspace` endpoint, check auth token |
-| 403 on mutation | `requireTierAccess` — owner's tier vs required tier |
-| Firestore reads empty | Database name — must be `canopytrove` not `(default)` |
-| Build fails on EAS | `eas build:view` logs, check `app.json` config |
-| TypeScript errors | `npx tsc --noEmit`, read the full error chain |
-| Cloud Run 502/503 | Health probe failing, check `/readyz` and startup logs |
-| Promotions not saving | Check tier limits (`maxPromotions`), locationId resolution |
-| Badges not toggling | Check `badgeCustomizationEnabled` for current tier |
-| AI insights locked | Pro-only feature — verify `isProTier` check |
+| Symptom                    | First Place to Check                                             |
+| -------------------------- | ---------------------------------------------------------------- |
+| Blank screen on load       | `useFocusEffect` in the screen, network tab for failed API calls |
+| "Could not load workspace" | Backend `/owner-portal/workspace` endpoint, check auth token     |
+| 403 on mutation            | `requireTierAccess` — owner's tier vs required tier              |
+| Firestore reads empty      | Database name — must be `canopytrove` not `(default)`            |
+| Build fails on EAS         | `eas build:view` logs, check `app.json` config                   |
+| TypeScript errors          | `npx tsc --noEmit`, read the full error chain                    |
+| Cloud Run 502/503          | Health probe failing, check `/readyz` and startup logs           |
+| Promotions not saving      | Check tier limits (`maxPromotions`), locationId resolution       |
+| Badges not toggling        | Check `badgeCustomizationEnabled` for current tier               |
+| AI insights locked         | Pro-only feature — verify `isProTier` check                      |
 
 ## Sentry Integration
 

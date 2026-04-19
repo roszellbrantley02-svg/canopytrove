@@ -22,7 +22,7 @@ The backend has a full runtime ops layer:
 - Graceful shutdown on SIGTERM with 9 s drain window.
 
 The release readiness check (`npm run release:check --prefix backend`) already
-validates Sentry DSN, OPS_HEALTHCHECK_* targets, and alert webhook presence as
+validates Sentry DSN, OPS*HEALTHCHECK*\* targets, and alert webhook presence as
 recommended (non-blocking) items.
 
 ## Step 1 — Sentry project
@@ -146,12 +146,12 @@ Both approaches are complementary: the GCP uptime check catches full outages
 
 ## Env var summary
 
-| Var | Where | Required for launch |
-|-----|-------|---------------------|
-| `SENTRY_DSN` | Cloud Run | Recommended |
-| `EXPO_PUBLIC_SENTRY_DSN` | EAS secrets | Recommended |
-| `SENTRY_TRACES_SAMPLE_RATE` | Cloud Run | Optional (default 0.15) |
-| `OPS_HEALTHCHECK_API_URL` | Cloud Run | Recommended |
-| `OPS_HEALTHCHECK_API_RAW_URL` | Cloud Run | Recommended |
-| `OPS_HEALTHCHECK_SITE_URL` | Cloud Run | Optional |
-| `OPS_ALERT_WEBHOOK_URL` | Cloud Run | Recommended |
+| Var                           | Where       | Required for launch     |
+| ----------------------------- | ----------- | ----------------------- |
+| `SENTRY_DSN`                  | Cloud Run   | Recommended             |
+| `EXPO_PUBLIC_SENTRY_DSN`      | EAS secrets | Recommended             |
+| `SENTRY_TRACES_SAMPLE_RATE`   | Cloud Run   | Optional (default 0.15) |
+| `OPS_HEALTHCHECK_API_URL`     | Cloud Run   | Recommended             |
+| `OPS_HEALTHCHECK_API_RAW_URL` | Cloud Run   | Recommended             |
+| `OPS_HEALTHCHECK_SITE_URL`    | Cloud Run   | Optional                |
+| `OPS_ALERT_WEBHOOK_URL`       | Cloud Run   | Recommended             |

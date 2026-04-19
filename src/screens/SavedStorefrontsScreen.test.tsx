@@ -87,7 +87,7 @@ describe('SavedStorefrontsScreen', () => {
     return renderer;
   }
 
-  function collectTextContent(renderer: ReactTestRenderer) {
+  function _collectTextContent(renderer: ReactTestRenderer) {
     return renderer.root
       .findAllByType(Text as any)
       .flatMap((node) => node.props.children)

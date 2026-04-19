@@ -3,6 +3,7 @@
 Research-backed best practices (2025-2026) for React Native/Expo.
 
 ## 1. Bundle Optimization
+
 - **Hermes V1** (RN 0.84+): default engine, 7-9% real-world perf gain, AOT bytecode
 - Hermes bytecode diffing in EAS Update: 75% smaller OTA diffs
 - `inlineRequires: true` in metro.config.js (critical for Hermes)
@@ -12,6 +13,7 @@ Research-backed best practices (2025-2026) for React Native/Expo.
 - Target: <3MB production bundle (after bytecode)
 
 ## 2. Image Optimization (expo-image)
+
 - expo-image: cross-platform, BlurHash/ThumbHash placeholders, priority loading
 - Cache hierarchy: `memory-disk` (hero images) → `disk` (default) → `memory` (temp) → `none`
 - `recyclingKey={item.id}` CRITICAL in FlatList to prevent memory leaks
@@ -21,6 +23,7 @@ Research-backed best practices (2025-2026) for React Native/Expo.
 - CDN dynamic resizing: `?w=${width}&quality=80&fmt=webp`
 
 ## 3. Offline Support
+
 - NetInfo + Zustand store for online/offline state management
 - Firestore offline persistence NOT fully supported in RN — use polyfill or manual AsyncStorage caching
 - Queue-and-retry pattern: AsyncStorage queue with `type`, `collectionPath`, `docId`, `data`, `retryCount`
@@ -29,6 +32,7 @@ Research-backed best practices (2025-2026) for React Native/Expo.
 - `useOfflineData` hook: load from AsyncStorage cache first, then Firestore snapshot when online
 
 ## 4. Deep Linking
+
 - iOS: `associatedDomains: ["applinks:canopytrove.com"]` in app.json
 - `.well-known/apple-app-site-association` on Firebase Hosting
 - Android: `intentFilters` with `autoVerify: true`
@@ -38,6 +42,7 @@ Research-backed best practices (2025-2026) for React Native/Expo.
 - Deferred deep linking: redirect to app or app store based on User-Agent
 
 ## 5. Push Notifications
+
 - expo-notifications + FCM (Android) + APNs (iOS)
 - Permission flow: check status → if undetermined, request → if denied, show settings prompt
 - Best practice: request after first interaction (delay 3s), not on first launch
@@ -46,6 +51,7 @@ Research-backed best practices (2025-2026) for React Native/Expo.
 - Store FCM tokens in backend, handle token refresh
 
 ## 6. Crash Reporting (Sentry)
+
 - `@sentry/react-native` with `withSentryConfig(metroConfig)`
 - `tracesSampleRate: 0.1` (10% in production)
 - `replayOnErrorSampleRate: 1.0` — capture replay on every error
@@ -55,6 +61,7 @@ Research-backed best practices (2025-2026) for React Native/Expo.
 - Source maps: auto-uploaded with EAS Build
 
 ## 7. App Store Optimization (ASO)
+
 - First 3 description sentences = preview (critical for conversion)
 - Keyword strategy: long-tail, intent-based, competitor, regional
 - Screenshot sequence: hero shot → feature → social proof → CTA
@@ -62,6 +69,7 @@ Research-backed best practices (2025-2026) for React Native/Expo.
 - Update cadence: keywords biweekly, screenshots every 6 weeks, full audit quarterly
 
 ## 8. OTA Updates (EAS Update)
+
 - Channels: production, staging/preview, development
 - Progressive rollout: 10% → 50% → 100% (monitor 24hrs between steps)
 - Rollback: `eas update:rollback --branch production`
@@ -70,6 +78,7 @@ Research-backed best practices (2025-2026) for React Native/Expo.
 - Include breaking change info in update message
 
 ## 9. Startup Performance
+
 - TTI targets: iOS flagship ≤1.5s, iOS mid-tier ≤2s, Android flagship ≤2s, Android mid-tier ≤2.5s
 - Splash screen: preload hero images, critical fonts, Firebase init
 - Defer non-critical: analytics, A/B testing, social SDKs → `setTimeout(init, 2000)` after TTI
@@ -77,6 +86,7 @@ Research-backed best practices (2025-2026) for React Native/Expo.
 - Measure TTI: `Date.now() - startTimeRef.current` → report to Sentry if >2000ms
 
 ## 10. Memory Management
+
 - FlatList: `removeClippedSubviews={true}` (50% memory reduction, but may flicker images)
 - expo-image `recyclingKey` for FlatList items
 - Monitor memory: alert if >300MB, reduce image quality
@@ -85,6 +95,7 @@ Research-backed best practices (2025-2026) for React Native/Expo.
 - Always clean up: timers, event listeners, subscriptions, WebSockets
 
 ## 11. Testing Strategy
+
 - **Unit**: Vitest/Jest for utils, hooks (renderHook + waitFor)
 - **Integration**: React Native Testing Library for screens (render + fireEvent + waitFor)
 - **E2E**: Maestro (YAML, zero-config, 2025 favorite) > Detox
@@ -92,24 +103,28 @@ Research-backed best practices (2025-2026) for React Native/Expo.
 - `maestro test ./e2e/flows --app-file ./build/app.apk`
 
 ## 12. CI/CD Pipeline
+
 - EAS Workflows: build iOS+Android → E2E tests → submit
 - eas.json: development (APK/internal), preview (APK/internal), production (AAB/auto-submit)
 - GitHub Actions: `expo/expo-github-action@v8` with `secrets.EXPO_TOKEN`
 - Build → Test (Maestro) → Submit (auto on main branch)
 
 ## 13. Localization Readiness
+
 - Even for English-only: set up i18next structure to avoid future refactoring
 - `t('screens.home.welcome')` instead of hardcoded strings
 - RTL support: `I18nManager.forceRTL()` based on locale
 - Use `Intl.DateTimeFormat` and `Intl.NumberFormat` for locale-aware formatting
 
 ## 14. Privacy Compliance
+
 - iOS Privacy Manifest: declare NSUserDefaultsAPI, NSFileModificationDateAPI, NSSystemBootTimeAPI
 - ATT: request after 5th app launch (not first), show custom prompt before system prompt
 - GDPR for EU users: locale-based detection, right-to-deletion implementation
 - Account deletion must be accessible and clear per App Store requirements
 
 ## Production Checklist
+
 - [ ] Hermes enabled (jsEngine: hermes)
 - [ ] Inline requires configured
 - [ ] Source maps uploaded to Sentry

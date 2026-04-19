@@ -12,10 +12,7 @@ function normalizeConfiguredValue(value: string | null | undefined) {
   return normalized ? normalized : null;
 }
 
-function parseBoolean(
-  value: string | null | undefined,
-  fallback: boolean,
-): boolean {
+function parseBoolean(value: string | null | undefined, fallback: boolean): boolean {
   const normalized = normalizeConfiguredValue(value)?.toLowerCase();
   if (normalized === null || normalized === undefined) {
     return fallback;
@@ -40,10 +37,7 @@ function parseBoolean(
  * Skia overlay app-wide without shipping new native code.
  */
 export function isCardSkiaEnabled(): boolean {
-  const disabled = parseBoolean(
-    process.env.EXPO_PUBLIC_DISABLE_CARD_SKIA,
-    false,
-  );
+  const disabled = parseBoolean(process.env.EXPO_PUBLIC_DISABLE_CARD_SKIA, false);
   return !disabled;
 }
 

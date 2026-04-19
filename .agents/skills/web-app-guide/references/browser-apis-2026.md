@@ -36,11 +36,9 @@ with View Transitions, this makes navigation feel instant.
 
 ```html
 <script type="speculationrules">
-{
-  "prerender": [
-    { "where": { "href_matches": "/storefront/*" } }
-  ]
-}
+  {
+    "prerender": [{ "where": { "href_matches": "/storefront/*" } }]
+  }
 </script>
 ```
 
@@ -93,13 +91,13 @@ NEL: {"report_to":"default","max_age":31536000}
 
 ## Canopy Trove Gaps
 
-| Feature | Status | Priority |
-|---------|--------|----------|
-| web-vitals library | Missing | Medium |
-| Reporting API / NEL | Missing | Low |
-| View Transitions | Not applicable (SPA) | Low |
-| Speculation Rules | Not applicable (SPA) | Low |
-| Popover API | Not needed (RN Modal) | Low |
-| Scroll-Driven Animations | Not implemented | Low |
+| Feature                  | Status                | Priority |
+| ------------------------ | --------------------- | -------- |
+| web-vitals library       | Missing               | Medium   |
+| Reporting API / NEL      | Missing               | Low      |
+| View Transitions         | Not applicable (SPA)  | Low      |
+| Speculation Rules        | Not applicable (SPA)  | Low      |
+| Popover API              | Not needed (RN Modal) | Low      |
+| Scroll-Driven Animations | Not implemented       | Low      |
 
 Sources: Chrome DevRel Blog, WebKit Blog (Interop 2026), MDN Web Docs, web.dev

@@ -416,4 +416,55 @@ export async function recordCommunityPaymentReport(input: {
   installId: string;
 }): Promise<{
   ok: true;
-  outcome:
+  outcome: 'recorded' | 'duplicate' | 'flipped';
+}> {
+  const { storefrontId, methodId, accepted, installId } = input;
+  const db = getBackendFirebaseDb();
+  if (!db) {
+    throw new Error('Firestore not available; cannot record community vote.');
+  }
+  const installHash = createHash('sha256').update(installId).digest('hex');
+  const voteRef = db
+    .collection(PAYMENT_METHOD_REPORTS_COLLECTION)
+    .doc(`${storefrontId}_${methodId}`)
+    .collection(PAYMENT_METHOD_REPORT_VOTES_SUBCOLLECTION)
+    .doc(installHash);
+
+  const outcome = await db.runTransaction<'recorded' | 'duplicate' | 'flipped'>(async (tx) => {
+    const existing = await tx.get(voteRef);
+    if (existing.exists) {
+      const prior = existing.data() as { accepted: boolean } | undefined;
+      if (prior?.accepted === accepted) {
+        return 'duplicate';
+      }
+      tx.set(
+        voteRef,
+        {
+          storefrontId,
+          methodId,
+          accepted,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+      return 'flipped';
+    }
+    tx.set(voteRef, {
+      storefrontId,
+      methodId,
+      accepted,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    return 'recorded';
+  });
+
+  logger.info('[paymentMethods] Community vote', {
+    storefrontId,
+    methodId,
+    accepted,
+    outcome,
+  });
+
+  return { ok: true, outcome };
+}

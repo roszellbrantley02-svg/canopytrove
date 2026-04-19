@@ -42,4 +42,3 @@ Before launch, send a real test email to `askmehere@canopytrove.com` and confirm
 ## Account Deletion Help
 
 If you need help deleting your account, use the in-app deletion flow first from the Profile area. If the app tells you that login removal needs a recent sign-in, sign in again and retry. If the issue continues, contact support and mention that account deletion needs manual follow-up.
-

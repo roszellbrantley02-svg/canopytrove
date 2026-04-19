@@ -25,14 +25,14 @@ build. The `app.json` already has:
 
 ## Files
 
-| File | Role |
-| --- | --- |
-| `musicManifest.ts` | Track list + default volume + fade duration. Add new songs here. |
-| `musicPlayerService.ts` | Imperative wrapper around `expo-audio`: random shuffle, fade in/out, finish-advance loop. |
-| `musicPreferenceStorage.ts` | Reads/writes the on/off toggle to AsyncStorage. |
-| `MusicPlayerContext.tsx` | Provider + `useMusicPlayer()` hook. Handles owner suppression and app-state resume. |
-| `MusicToggleRow.tsx` | Profile-screen row with a description + Switch. |
-| `index.ts` | Barrel exports. |
+| File                        | Role                                                                                      |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `musicManifest.ts`          | Track list + default volume + fade duration. Add new songs here.                          |
+| `musicPlayerService.ts`     | Imperative wrapper around `expo-audio`: random shuffle, fade in/out, finish-advance loop. |
+| `musicPreferenceStorage.ts` | Reads/writes the on/off toggle to AsyncStorage.                                           |
+| `MusicPlayerContext.tsx`    | Provider + `useMusicPlayer()` hook. Handles owner suppression and app-state resume.       |
+| `MusicToggleRow.tsx`        | Profile-screen row with a description + Switch.                                           |
+| `index.ts`                  | Barrel exports.                                                                           |
 
 ## Adding more songs
 

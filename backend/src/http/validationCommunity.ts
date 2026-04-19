@@ -187,4 +187,6 @@ export function parseClientRuntimeErrorBody(value: unknown) {
     platform: parseOptionalTrimmedString(body.platform, 'body.platform', {
       maxLength: 40,
     }),
-    reportedAt: parseOptionalIsoDateString(body.reportedAt, 'body.reportedA
+    reportedAt: parseOptionalIsoDateString(body.reportedAt, 'body.reportedAt'),
+  };
+}

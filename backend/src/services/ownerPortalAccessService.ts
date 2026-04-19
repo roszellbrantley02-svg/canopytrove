@@ -63,10 +63,7 @@ export async function ensureOwnerPortalAccess(request: Request) {
         ownerUid: decodedToken.uid,
         email: tokenEmail,
       });
-      throw new OwnerPortalAccessError(
-        'This account is no longer approved for owner access.',
-        403,
-      );
+      throw new OwnerPortalAccessError('This account is no longer approved for owner access.', 403);
     }
 
     return {
@@ -82,10 +79,7 @@ export async function ensureOwnerPortalAccess(request: Request) {
     // client knows to refresh.
     const maybeFirebaseError = error as { code?: string } | null;
     if (maybeFirebaseError?.code === 'auth/id-token-revoked') {
-      throw new OwnerPortalAccessError(
-        'Session was revoked. Please sign in again.',
-        401,
-      );
+      throw new OwnerPortalAccessError('Session was revoked. Please sign in again.', 401);
     }
     throw new OwnerPortalAccessError('Invalid owner authentication token.', 401);
   }

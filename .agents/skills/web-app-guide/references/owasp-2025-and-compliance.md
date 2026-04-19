@@ -6,22 +6,23 @@ Research compiled April 2026 from OWASP, W3C WAI, EU Commission, and MDN.
 
 The 2025 edition analyzed 589 CWEs (up from ~400 in 2021) across 175,000+ CVE records.
 
-| Rank | Category | Change from 2021 |
-|------|----------|-----------------|
-| A01 | Broken Access Control | Stayed #1 |
-| A02 | Security Misconfiguration | Up from #5 |
-| A03 | **Software Supply Chain Failures** | **NEW** |
-| A04 | Cryptographic Failures | Down from #2 |
-| A05 | Injection | Down from #3 |
-| A06 | Insecure Design | Down from #4 |
-| A07 | Authentication Failures | Down from #7 |
-| A08 | Software or Data Integrity Failures | Stayed #8 |
-| A09 | Security Logging and Alerting Failures | Was #9 |
-| A10 | **Mishandling of Exceptional Conditions** | **NEW** |
+| Rank | Category                                  | Change from 2021 |
+| ---- | ----------------------------------------- | ---------------- |
+| A01  | Broken Access Control                     | Stayed #1        |
+| A02  | Security Misconfiguration                 | Up from #5       |
+| A03  | **Software Supply Chain Failures**        | **NEW**          |
+| A04  | Cryptographic Failures                    | Down from #2     |
+| A05  | Injection                                 | Down from #3     |
+| A06  | Insecure Design                           | Down from #4     |
+| A07  | Authentication Failures                   | Down from #7     |
+| A08  | Software or Data Integrity Failures       | Stayed #8        |
+| A09  | Security Logging and Alerting Failures    | Was #9           |
+| A10  | **Mishandling of Exceptional Conditions** | **NEW**          |
 
 ### Key Changes
 
 **A03: Software Supply Chain Failures** — Now a standalone category. Covers:
+
 - Compromised npm packages and CDN resources
 - Missing dependency auditing (`npm audit`, Snyk)
 - Unpinned dependency versions
@@ -29,6 +30,7 @@ The 2025 edition analyzed 589 CWEs (up from ~400 in 2021) across 175,000+ CVE re
 - Build pipeline integrity
 
 **A10: Mishandling of Exceptional Conditions** — Covers:
+
 - Stack traces leaked to clients
 - Unhandled promise rejections
 - Missing or generic error handlers
@@ -39,22 +41,23 @@ The 2025 edition analyzed 589 CWEs (up from ~400 in 2021) across 175,000+ CVE re
 
 ### Canopy Trove Status Against OWASP 2025
 
-| Category | Status | Notes |
-|----------|--------|-------|
-| A01: Broken Access Control | Strong | ensureProfileReadAccess/WriteAccess, per-resource auth |
-| A02: Security Misconfiguration | Strong | Custom security headers, restrictive CSP |
-| A03: Supply Chain | Partial | No CI audit step, ^ version ranges, no SRI on self-hosted scripts |
-| A04: Cryptographic Failures | Strong | HTTPS everywhere, HSTS with preload |
-| A05: Injection | Strong | Zod validation, prototype pollution protection, HTML sanitization |
-| A06: Insecure Design | Strong | Backend gateway pattern, timing-safe comparisons |
-| A07: Authentication Failures | Strong | Firebase Auth, brute-force detection, rate limiting |
-| A08: Integrity Failures | Good | Signed URLs, content-type enforcement |
-| A09: Logging Failures | Strong | Pino structured logging, Sentry, audit log |
-| A10: Exception Handling | Strong | Global error handler, no stack trace leakage, unhandled rejection catching |
+| Category                       | Status  | Notes                                                                      |
+| ------------------------------ | ------- | -------------------------------------------------------------------------- |
+| A01: Broken Access Control     | Strong  | ensureProfileReadAccess/WriteAccess, per-resource auth                     |
+| A02: Security Misconfiguration | Strong  | Custom security headers, restrictive CSP                                   |
+| A03: Supply Chain              | Partial | No CI audit step, ^ version ranges, no SRI on self-hosted scripts          |
+| A04: Cryptographic Failures    | Strong  | HTTPS everywhere, HSTS with preload                                        |
+| A05: Injection                 | Strong  | Zod validation, prototype pollution protection, HTML sanitization          |
+| A06: Insecure Design           | Strong  | Backend gateway pattern, timing-safe comparisons                           |
+| A07: Authentication Failures   | Strong  | Firebase Auth, brute-force detection, rate limiting                        |
+| A08: Integrity Failures        | Good    | Signed URLs, content-type enforcement                                      |
+| A09: Logging Failures          | Strong  | Pino structured logging, Sentry, audit log                                 |
+| A10: Exception Handling        | Strong  | Global error handler, no stack trace leakage, unhandled rejection catching |
 
 ## CSP Modernization: Nonce and strict-dynamic
 
 The current Canopy Trove backend CSP is:
+
 ```
 Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 ```
@@ -63,6 +66,7 @@ This is very restrictive and appropriate for an API-only backend. However, the *
 (served by Firebase Hosting) should have its own CSP. Modern best practice:
 
 ### Nonce-Based Strict CSP
+
 ```
 Content-Security-Policy:
   default-src 'self';
@@ -81,6 +85,7 @@ Since Expo Web generates static HTML, a hash-based approach may be simpler than 
 compute the hash of inline scripts and add them to the CSP.
 
 ### Implementation Path
+
 1. Start with `Content-Security-Policy-Report-Only` to identify issues
 2. Use browser developer tools to find blocked resources
 3. Add appropriate nonces or hashes
@@ -111,20 +116,21 @@ Additions beyond WCAG 2.1:
 
 ### Canopy Trove WCAG 2.2 Status
 
-| Criterion | Status | Notes |
-|-----------|--------|-------|
-| 2.4.11 Focus Not Obscured | Needs review | Check modals and sticky headers |
-| 2.5.7 Dragging Movements | N/A | No drag operations in current UI |
-| 2.5.8 Target Size | Pass | 48dp minimum throughout |
-| 3.2.6 Consistent Help | Needs review | Legal Center is accessible but no persistent help link |
-| 3.3.7 Redundant Entry | Pass | Forms don't re-ask for provided data |
-| 3.3.8 Accessible Auth | Pass | Standard email/password, no CAPTCHAs |
+| Criterion                 | Status       | Notes                                                  |
+| ------------------------- | ------------ | ------------------------------------------------------ |
+| 2.4.11 Focus Not Obscured | Needs review | Check modals and sticky headers                        |
+| 2.5.7 Dragging Movements  | N/A          | No drag operations in current UI                       |
+| 2.5.8 Target Size         | Pass         | 48dp minimum throughout                                |
+| 3.2.6 Consistent Help     | Needs review | Legal Center is accessible but no persistent help link |
+| 3.3.7 Redundant Entry     | Pass         | Forms don't re-ask for provided data                   |
+| 3.3.8 Accessible Auth     | Pass         | Standard email/password, no CAPTCHAs                   |
 
 ## Privacy Regulation Updates (2025-2026)
 
 ### EU Digital Omnibus Package (November 2025)
 
 The European Commission proposed revisions to GDPR and other digital rules:
+
 - **Universal consent settings**: Browser/OS-level preference mechanisms that sites must honor
 - **Cookie-consent simplification**: Technical standards for consistent consent across websites
 - **One-click rejection**: Mandatory across EU member states for cookie banners
@@ -146,12 +152,14 @@ in the future, consent infrastructure becomes mandatory. The current privacy-pre
 ## Structured Data for Dispensary Discovery
 
 ### Current State
+
 Canopy Trove has `WebApplication` schema in web/index.html. This is correct for the app itself
 but misses the local business discovery angle.
 
 ### Recommended Additions
 
 **Organization schema** (on the main app page):
+
 ```json
 {
   "@context": "https://schema.org",
@@ -164,6 +172,7 @@ but misses the local business discovery angle.
 ```
 
 **FAQ schema** (common dispensary questions):
+
 ```json
 {
   "@context": "https://schema.org",
@@ -182,6 +191,7 @@ but misses the local business discovery angle.
 ```
 
 **LocalBusiness schema** on individual storefront pages (if server-rendered or prerendered):
+
 - Requires dynamic structured data per storefront
 - Best implemented via server-side rendering or prerendering
 - Not practical in a client-rendered SPA without SSR

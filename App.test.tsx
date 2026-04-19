@@ -291,4 +291,14 @@ describe('App entry flow', () => {
     });
 
     expect(renderer.root.findAllByType('RootNavigator')).toHaveLength(1);
-    expect(renderer.root.findAllByType('AgeGateScreen')).toHaveLen
+    expect(renderer.root.findAllByType('AgeGateScreen')).toHaveLength(0);
+    expect(ageGateMocks.acceptAgeGate).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveAcceptGate?.();
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findAllByType('RootNavigator')).toHaveLength(1);
+  });
+});

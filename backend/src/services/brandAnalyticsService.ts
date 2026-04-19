@@ -189,9 +189,7 @@ export async function getBrandScansNearStorefront(options: {
 
     if (pendingBrandIds.length > 0) {
       try {
-        const refs = pendingBrandIds.map((brandId) =>
-          db.collection('brandCounters').doc(brandId),
-        );
+        const refs = pendingBrandIds.map((brandId) => db.collection('brandCounters').doc(brandId));
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const snapshots = await (db as any).getAll(...refs);
         snapshots.forEach((snap: FirebaseFirestore.DocumentSnapshot, idx: number) => {

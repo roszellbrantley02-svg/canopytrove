@@ -50,4 +50,3 @@ Updated: April 1, 2026
 - Apple organization seller-name setup still depends on the D-U-N-S / organization-enrollment path
 - Native package identifiers remain `com.rezell.canopytrove`, which is acceptable for this doc pass but still a brand-alignment decision for release
 - See `docs/LAUNCH_OPERATIONS_VERIFICATION.md` for the exact human drill sequence
-
