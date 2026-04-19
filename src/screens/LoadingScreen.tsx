@@ -1,6 +1,13 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View, type ViewStyle } from 'react-native';
+import {
+  Animated,
+  Easing,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 /**
  * Canopy Trove loading screen.
@@ -10,12 +17,21 @@ import { Animated, Easing, StyleSheet, View, type ViewStyle } from 'react-native
  * runs on the UI thread, no JS work per frame.
  *
  * Source art:
- *   assets/loading/pin.png     — green pin teardrop, centered on its head pivot
- *   assets/loading/compass.png — gold 8-point compass rose
+ *   assets/loading/pin.png     — green pin teardrop, tight-cropped so the
+ *                                visible shape fills ~86% of the canvas
+ *   assets/loading/compass.png — gold 8-point compass rose, tight-cropped
+ *
+ * Sizing: when `size` is omitted, the pin fills ~85% of the screen's shorter
+ * dimension so the logo dominates the view on boot. Pass an explicit `size`
+ * only when embedding inline in a smaller surface.
  */
 
 type LoadingScreenProps = {
-  /** Overall pin size in dp. Default 220. */
+  /**
+   * Overall pin size in dp. When omitted, defaults to ~85% of the shorter
+   * window dimension so the logo fills the screen on boot. Pass an explicit
+   * value only for small inline placements.
+   */
   size?: number;
   /** One full rotation period in ms. Default 3200 (slower = calmer). */
   durationMs?: number;
@@ -28,12 +44,22 @@ type LoadingScreenProps = {
 const PIN_SOURCE = require('../../assets/loading/pin.png');
 const COMPASS_SOURCE = require('../../assets/loading/compass.png');
 
+// When no explicit size is passed, fill this fraction of the shorter window
+// dimension. Chosen so that the spinning pin dominates the boot view without
+// touching the notch/home-indicator safe insets.
+const DEFAULT_FILL_FRACTION = 0.85;
+
 export function LoadingScreen({
-  size = 220,
+  size,
   durationMs = 3200,
   variant = 'full',
   backgroundColor = '#121614',
 }: LoadingScreenProps) {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const resolvedSize =
+    typeof size === 'number' && size > 0
+      ? size
+      : Math.min(windowWidth, windowHeight) * DEFAULT_FILL_FRACTION;
   const pinSpin = useRef(new Animated.Value(0)).current;
   const compassSpin = useRef(new Animated.Value(0)).current;
 
@@ -72,16 +98,18 @@ export function LoadingScreen({
     outputRange: ['0deg', '-360deg'], // opposite direction
   });
 
-  // Compass is 512px natural; its center must coincide with the pin's center (pin PNG is 1024px
-  // centered on its head). Rendering both at `size` dp with identical bounds keeps the centers aligned.
-  const compassSize = size * 0.45; // compass visually fills the ring inside the pin head
+  // Compass and pin PNGs are now both center-cropped to their visible content
+  // so rendering both at `resolvedSize` dp keeps their geometric centers
+  // aligned. The compass is intentionally smaller than the pin so it reads as
+  // sitting inside the pin's head circle rather than overlaying the whole pin.
+  const compassSize = resolvedSize * 0.4;
 
   const containerStyle: ViewStyle =
     variant === 'full' ? { ...styles.full, backgroundColor } : { ...styles.inline };
-  const loaderStageStyle = { width: size, height: size };
+  const loaderStageStyle = { width: resolvedSize, height: resolvedSize };
   const pinStyle = {
-    width: size,
-    height: size,
+    width: resolvedSize,
+    height: resolvedSize,
     transform: [{ rotate: pinRotate }],
   };
   const compassStyle = {
