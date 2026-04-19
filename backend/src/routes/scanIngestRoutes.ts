@@ -12,11 +12,17 @@
  * Returns suggested shops (empty until owner portal brand inventory ships).
  */
 
+import type { Request } from 'express';
 import { Router } from 'express';
 import { z } from 'zod';
 import { createAppCheckStrictMiddleware } from '../http/appCheckGuard';
 import { createRateLimitMiddleware } from '../http/rateLimit';
 import { logger } from '../observability/logger';
+import {
+  ProfileAccessError,
+  ensureProfileWriteAccess,
+  getProfileAccessErrorStatus,
+} from '../services/profileAccessService';
 import { ingestScan, recordCoaOpened } from '../services/scanIngestionService';
 import type { ProductCOA, ScanResolution } from '../types';
 
@@ -74,6 +80,27 @@ function shapeCoa(resolution: ScanResolution): ProductCOA | null {
 }
 
 /**
+ * Verify that the request caller actually owns the claimed profileId. If the
+ * profile is owned by a different signed-in account, reject with 403. If the
+ * caller is anonymous but the profile is an unclaimed anonymous profile, the
+ * profile access service allows it through (matches the rest of the app).
+ *
+ * Returns the verified profileId (or undefined when no profileId was
+ * supplied). Throws ProfileAccessError on mismatch.
+ */
+async function verifyScanProfileOwnership(
+  request: Request,
+  profileId: string | undefined,
+): Promise<string | undefined> {
+  if (!profileId) {
+    return undefined;
+  }
+
+  await ensureProfileWriteAccess(request, profileId);
+  return profileId;
+}
+
+/**
  * POST /scans/ingest
  *
  * Public endpoint for scanning and resolving codes.
@@ -107,11 +134,28 @@ scanIngestRoutes.post(
         return;
       }
 
+      // Verify the caller actually owns any claimed profileId before we
+      // attribute the scan (or any gamification rewards) to that profile.
+      let verifiedProfileId: string | undefined;
+      try {
+        verifiedProfileId = await verifyScanProfileOwnership(request, validatedBody.profileId);
+      } catch (accessError) {
+        const status = getProfileAccessErrorStatus(accessError);
+        response.status(status).json({
+          ok: false,
+          error:
+            accessError instanceof ProfileAccessError
+              ? accessError.message
+              : 'Profile ownership check failed.',
+        });
+        return;
+      }
+
       // Ingest the scan
       const result = await ingestScan({
         rawCode: validatedBody.rawCode,
         installId: validatedBody.installId,
-        profileId: validatedBody.profileId,
+        profileId: verifiedProfileId,
         location: validatedBody.location,
         nearStorefrontId: validatedBody.nearStorefrontId,
       });
@@ -211,10 +255,27 @@ scanIngestRoutes.post(
         return;
       }
 
+      // Verify the caller actually owns any claimed profileId before we
+      // attribute the COA-open (and its gamification reward) to that profile.
+      let verifiedProfileId: string | undefined;
+      try {
+        verifiedProfileId = await verifyScanProfileOwnership(request, validatedBody.profileId);
+      } catch (accessError) {
+        const status = getProfileAccessErrorStatus(accessError);
+        response.status(status).json({
+          ok: false,
+          error:
+            accessError instanceof ProfileAccessError
+              ? accessError.message
+              : 'Profile ownership check failed.',
+        });
+        return;
+      }
+
       // Record the COA opened event
       await recordCoaOpened({
         installId: validatedBody.installId,
-        profileId: validatedBody.profileId,
+        profileId: verifiedProfileId,
         brandId: validatedBody.brandId,
         labName: validatedBody.labName,
         batchId: validatedBody.batchId,
@@ -225,7 +286,7 @@ scanIngestRoutes.post(
 
       logger.info('[coaOpened] Event recorded', {
         installId: validatedBody.installId,
-        profileId: validatedBody.profileId,
+        profileId: verifiedProfileId,
       });
     } catch (error) {
       logger.error('[coaOpened] Unexpected error', {
