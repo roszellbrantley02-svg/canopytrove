@@ -129,6 +129,7 @@ function loadHostedCloudRunEnv() {
       {
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: 30_000,
       },
     );
     const parsed = JSON.parse(raw) as {

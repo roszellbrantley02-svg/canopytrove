@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
 
 # Cancel in-progress runs when a new commit is pushed to the same ref. Keeps
@@ -134,3 +134,91 @@ jobs:
           --project demo-canopytrove
           --only firestore,storage
           "npx vitest run --config vitest.rules.config.ts"
+
+  # ---------------------------------------------------------------------------
+  # Clean-room backend image build.
+  # This catches missing runtime dependencies before Cloud Run, because Docker
+  # installs from package-lock instead of reusing the developer's node_modules.
+  # ---------------------------------------------------------------------------
+  docker-build:
+    name: Docker build dry-run
+    runs-on: ubuntu-latest
+    needs: static-checks
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image from clean context
+        run: docker build --pull -t canopytrove-api-ci:${{ github.sha }} .
+
+  # ---------------------------------------------------------------------------
+  # Production release checks.
+  # Runs on trusted pushes only because the backend release check needs live
+  # provider secrets. Add the repository secrets referenced below before relying
+  # on this as the final deploy gate.
+  # ---------------------------------------------------------------------------
+  release-checks:
+    name: Release readiness checks
+    runs-on: ubuntu-latest
+    needs: [static-checks, docker-build]
+    if: github.event_name == 'push'
+    env:
+      EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      STOREFRONT_BACKEND_SOURCE: firestore
+      CORS_ORIGIN: https://canopytrove.com,https://app.canopytrove.com,https://canopytrove-webapp.web.app
+      ALLOW_DEV_SEED: 'false'
+      RATE_LIMIT_PEPPER: ${{ secrets.RATE_LIMIT_PEPPER }}
+      FIREBASE_PROJECT_ID: canopy-trove
+      FIREBASE_STORAGE_BUCKET: canopy-trove.firebasestorage.app
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+      GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+      EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: gpt-4o-mini
+      PHOTO_MODERATION_MODE: auto_approve
+      OWNER_PORTAL_PRELAUNCH_ENABLED: 'true'
+      OWNER_PORTAL_ALLOWLIST: ${{ secrets.OWNER_PORTAL_ALLOWLIST }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      SENTRY_ENVIRONMENT: production
+      SENTRY_TRACES_SAMPLE_RATE: '0.15'
+      OPS_HEALTHCHECK_ENABLED: 'true'
+      OPS_HEALTHCHECK_API_URL: https://api.canopytrove.com/health
+      OPS_HEALTHCHECK_API_RAW_URL: https://canopytrove-api-948351810374.us-east4.run.app/health
+      OPS_HEALTHCHECK_SITE_URL: https://canopytrove.com
+      OPS_ALERT_WEBHOOK_URL: ${{ secrets.OPS_ALERT_WEBHOOK_URL }}
+      WELCOME_EMAILS_ENABLED: 'true'
+      EMAIL_DELIVERY_PROVIDER: resend
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_WEBHOOK_SECRET: ${{ secrets.RESEND_WEBHOOK_SECRET }}
+      EMAIL_FROM_ADDRESS: ${{ secrets.EMAIL_FROM_ADDRESS }}
+      EMAIL_REPLY_TO_ADDRESS: askmehere@canopytrove.com
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      STRIPE_OWNER_MONTHLY_PRICE_ID: ${{ secrets.STRIPE_OWNER_MONTHLY_PRICE_ID }}
+      STRIPE_OWNER_ANNUAL_PRICE_ID: ${{ secrets.STRIPE_OWNER_ANNUAL_PRICE_ID }}
+      OWNER_BILLING_SUCCESS_URL: https://canopytrove.com/owner/billing/success
+      OWNER_BILLING_CANCEL_URL: https://canopytrove.com/owner/billing/cancel
+      OWNER_BILLING_PORTAL_RETURN_URL: https://canopytrove.com/owner/billing
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm --prefix backend ci
+
+      - name: App release readiness
+        run: node ./scripts/check-release-readiness.mjs --production
+
+      - name: Backend release readiness
+        run: npm --prefix backend run release:check -- --production
+
+      - name: Dependency audit
+        run: npm run audit:deps
