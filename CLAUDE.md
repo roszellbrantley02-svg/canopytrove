@@ -213,42 +213,70 @@ Rozell (rozell), solo founder building Canopy Trove — a licensed dispensary di
 | FUSE sandbox git/npm workarounds | Build    | memory/context/build-and-release.md   |
 | expo-build-properties for iOS    | Build    | memory/context/build-and-release.md   |
 
-## Recent Shipped Work (Apr 2026)
+## Apple Submission Posture (Apr 19 2026)
 
-| Commit    | What                                                                                       |
-| --------- | ------------------------------------------------------------------------------------------ |
-| `b13f127` | Profile redesign — colored pill rows (green/gold/blue/cream) replacing dark monochrome     |
-| `abaebc2` | Loading screen responsive sizing + splash icon UnsharpMask sharpening                      |
-| `13c3a14` | Full icon repaint from crisp pin+compass SVG sources (iOS/Android/adaptive/monochrome)     |
-| `0fab252` | EAS build unblock: SDK 55 schema migration to expo-build-properties plugin                 |
-| `d46eb0a` | EAS build unblock: add expo-asset peer + pin skia/reanimated/worklets                      |
-| `9e8e4fe` | EAS build unblock: wire google-services.json for Android Firebase                          |
-| `5a62dd5` | Web icon refresh — favicon.ico/png, apple-touch-icon, OG image from repainted sources      |
-| `e45d43c` | Storefront detail — prefer resolved open/closed status over "See Details" fallback         |
-| `5bbd2a5` | Profile hero — anchor glow beneath primary button, raise kicker copy                       |
-| `5ae4956` | Music — default off + 500ms polling watchdog for reliable playlist loop                    |
-| `a6ee24e` | Location — iOS NSLocationWhenInUseUsageDescription + Android lastKnown/Balanced race       |
-| `6bb5002` | Lockfile sync — align package-lock.json with pinned deps from EAS-unblock commits          |
-| `538ba60` | Payment badges on listing cards — drop broken outer batch timeout (Promise.allSettled)     |
-| `4cb8384` | Route-card hours — trust resolved openNow boolean even when hours array is empty (Android) |
-| `87c6ee1` | Scan camera — safe-area insets so Menu/back pill clears notch + status bar                 |
+Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 public-release-pages HTML pages + review notes + privacy label all aligned). Earlier mismatch with `support@canopytrove.com` is resolved.
+
+**Verify tab has two user-facing verification paths — reviewers must understand both to avoid reading one as a bug:**
+
+- **Verify OCM license** — in-app form → backend → in-app result card. Stays in the app end-to-end, renders the "Per OCM public records" pill. Used by typing a dispensary name/license/address.
+- **Scan shop QR** — camera decodes any URL-encoded QR (state Scan-to-Verify placard, Google Reviews QR, Weedmaps, Leafly, website) and opens the decoded URL in the system browser via `Linking.openURL`. No in-app result screen for this path; the destination page is the result. Reviewer prime: *"scanning a state placard should expect Safari to open on cannabis.ny.gov; this is the intended handoff, not a scan failure."*
+
+**OCM Scan-to-Verify placard** is a state-mandated QR code that licensed NY dispensaries must display in public view (ref: `https://cannabis.ny.gov/dispensary-location-verification`). Canopy Trove's scan flow is the consumer-facing interface for that state-issued compliance artifact — key Guideline 1.4.3 framing.
+
+**Pre-launch empty-data context** is documented in `docs/APPLE_APP_REVIEW_NOTES.md`: Rating Pending / 1-of-10 ratings / empty photo slots / "CLOSED" cards are all expected pre-launch behavior, not broken UI. Reviewer needs to know this up front.
+
+**Screenshots posture (submission-safe):**
+
+- Lead with **Verify tab** (compliance first) + **21+ age gate** (proves 1.4.3 compliance).
+- Clean **review shot** (Helpful staff / Selection / Good parking / Easy to find tags; storefront-experience language only — no "Fast checkout", no "Verified Purchase", no specific product names).
+- Nearby/Browse with neutral storefront names and at least one OPEN card during business-hours capture.
+- Never show "$", Order, Buy, Delivery, or add-to-cart language anywhere.
+
+**Rejected review-tag pattern (must not ship):** "Fast checkout" — reads as in-app checkout and is a 1.4.3 trip wire. User may still need to source-rename this tag; grep the review-tags source file.
+
+**Rejected review-body patterns:** "Verified Purchase" phrasing (implies transaction verification the app doesn't do), specific cannabis product names ("Orange Cream Pop", "moon rocks", etc.), "energy was high" (cannabis-connotation in context). Community guidelines need to scrub these.
 
 ## Launch Readiness (Apr 19 2026)
 
-| Item                                                          | Status                                                           |
-| ------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Legal pages live (privacy, terms, support, deletion, CG)      | ✅                                                               |
-| Screenshots exported (1290×2796)                              | ✅ (pending upload to ASC after next build)                      |
-| Apple review notes written (`docs/APPLE_APP_REVIEW_NOTES.md`) | ✅                                                               |
-| Mailbox active + monitored                                    | ✅                                                               |
-| Reviewer credentials ready                                    | ✅                                                               |
-| Real-phone QA in rotation                                     | ✅                                                               |
-| Account deletion in-app matches help page                     | ✅                                                               |
-| Seller-name path / D-U-N-S                                    | ✅                                                               |
-| OCM verifier smoke                                            | ✅                                                               |
-| Cloud Run `/livez` + `/readyz` green                          | ✅                                                               |
-| Privacy nutrition label entered in ASC                        | ⬜                                                               |
-| 17+ age rating questionnaire completed in ASC                 | ⬜                                                               |
-| Final screenshots uploaded to ASC                             | ⬜                                                               |
-| **Production EAS iOS build on top of a6ee24e or later**       | ⬜ (blocker — NSLocationWhenInUseUsageDescription native change) |
-| Support email alignment (app `askmehere@` vs site `support@`) | ⬜ (pick one canonical address)                                  |
+| Item                                                       | Status                                                                                              |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Mailbox active + monitored (`askmehere@canopytrove.com`)   | ✅ confirmed by founder                                                                              |
+| Reviewer credentials ready (customer + owner)              | ✅ confirmed by founder                                                                              |
+| Real-phone QA in active rotation                           | ✅ ongoing                                                                                           |
+| Account deletion end-to-end matches public help page       | ✅ verified Apr 19 2026                                                                              |
+| Public site email normalized to `askmehere@`               | ✅ commit `b79d932`                                                                                  |
+| Privacy nutrition label doc matches reality                | ✅ commit `26765ce`                                                                                  |
+| Apple review notes — OCM placard + pre-launch context      | ✅ commit `d79dfe1`                                                                                  |
+| Apple review notes — Scan shop QR path honest about Safari | ✅ commit `d6a2a66`                                                                                  |
+| D-U-N-S / seller name path ready                           | ✅ confirmed by founder                                                                              |
+| OCM verifier smoke check green                             | ✅ confirmed by founder                                                                              |
+| Cloud Run `/livez` + `/readyz` green                       | ✅ confirmed by founder                                                                              |
+| Production EAS iOS build on top of `a6ee24e`+              | ⏳ blocked on founder — `NSLocationWhenInUseUsageDescription` is a native plist change               |
+| App Store Connect privacy nutrition label entered          | ⏳ blocked on founder — enter verbatim from `docs/APP_STORE_PRIVACY_LABEL.md`                        |
+| 17+ age rating declared via ASC questionnaire              | ⏳ blocked on founder                                                                                |
+| Final screenshots uploaded to ASC                          | ⏳ blocked on founder — Verify + age gate + clean review shot + neutral storefronts; captions ready  |
+| "Fast checkout" review tag source rename                   | ⏳ product-level; grep the tags source file and rename (user opted to handle)                        |
+
+**Approval odds (current posture):** 75–82% first-submit, 90%+ by round 2.
+
+**Most likely round-2 vector:** 1.4.3 geo-restriction question — if ASC availability is all-US, a reviewer may ask why the app is available in states where cannabis is illegal. Fix: limit ASC availability to states with legal adult-use cannabis, OR ship an in-app geo-check that blocks non-legal states.
+
+**Second-most-likely round-2 vector:** privacy nutrition label in ASC doesn't match the privacy policy URL verbatim. Fix: enter the label straight from `docs/APP_STORE_PRIVACY_LABEL.md`.
+
+## Recent Shipped Work
+
+| Commit     | What                                                                                                                                          |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `d6a2a66`  | docs(apple-review): Scan shop QR description matches actual code path (Linking.openURL → Safari for state placard)                            |
+| `d79dfe1`  | docs(apple-review): OCM Scan-to-Verify placard context + pre-launch reviewer framing + scan-logging claim fix                                 |
+| `26765ce`  | docs: privacy nutrition label corrected to match shipped reality (scan-logging toggle planned, not shipped)                                   |
+| `b79d932`  | public site: normalize support email to `askmehere@canopytrove.com` across 15 HTML pages                                                      |
+| `e786011`  | docs(memory): capture confirmed Apple launch readiness + open items                                                                           |
+| `87c6ee1`  | fix(scan-camera): safe-area insets on Menu/back pills — clears notch/status bar                                                               |
+| `4cb8384`  | fix(route-card): trust resolved `openNow` boolean when hours are missing (Android)                                                            |
+| `a6ee24e`  | Add `NSLocationWhenInUseUsageDescription` plist key (native, requires EAS build)                                                              |
+| `538ba60`  | Payment badges on listing cards — drop batch timeout, `Promise.allSettled` fan-out                                                            |
+| `5ae4956`  | Music default off + 500ms watchdog for playlist loop reliability                                                                              |
+| `5bbd2a5`  | Profile hero: glow under primary button, kicker copy raised                                                                                   |
+| `e45d43c`  | Storefront detail hours: prefer resolved open/closed over "See Details" fallback                                                              |
