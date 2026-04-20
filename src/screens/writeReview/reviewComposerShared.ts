@@ -1,12 +1,7 @@
 export const MIN_REVIEW_TEXT_LENGTH = 20;
 export const MIN_EDIT_REVIEW_TEXT_LENGTH = 10;
 
-export const REVIEW_TAGS = [
-  'Helpful staff',
-  'Good parking',
-  'Selection',
-  'Easy to find',
-] as const;
+export const REVIEW_TAGS = ['Helpful staff', 'Good parking', 'Selection', 'Easy to find'] as const;
 
 export const REVIEW_EMOJIS = [
   '\u{1F525}',

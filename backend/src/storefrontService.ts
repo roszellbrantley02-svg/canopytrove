@@ -156,10 +156,6 @@ function stripMemberOnlyDetailPromotionFields(detail: StorefrontDetailApiDocumen
     activePromotions: [],
     photoCount: detail.photoUrls.length,
     photoUrls: visiblePhotoUrls,
-    appReviews: detail.appReviews.map((review) => ({
-      ...review,
-      photoUrls: [],
-    })),
   } satisfies StorefrontDetailApiDocument;
 }
 
@@ -190,10 +186,6 @@ function stripAndroidDetailCommerceFields(detail: StorefrontDetailApiDocument) {
     photoUrls: [],
     ownerFeaturedBadges: [],
     editorialSummary: null,
-    appReviews: detail.appReviews.map((review) => ({
-      ...review,
-      photoUrls: [],
-    })),
   } satisfies StorefrontDetailApiDocument;
 }
 

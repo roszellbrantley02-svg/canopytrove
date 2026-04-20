@@ -20,6 +20,7 @@ vi.mock('react-native', () => ({
   },
   Text: 'Text',
   View: 'View',
+  Image: 'Image',
 }));
 
 vi.mock('react-native-svg', () => ({

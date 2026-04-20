@@ -198,6 +198,51 @@ function createPromotionRecord(
   };
 }
 
+function createFakeReviewPhotoStorageBucket() {
+  const storedFiles = new Map<string, Buffer>();
+
+  return {
+    name: 'fake-review-photo-bucket',
+    file(filePath: string) {
+      return {
+        async exists() {
+          return [storedFiles.has(filePath)] as [boolean];
+        },
+        async download() {
+          const bytes = storedFiles.get(filePath);
+          if (!bytes) {
+            throw new Error(`Missing fake file: ${filePath}`);
+          }
+          return [Buffer.from(bytes)] as [Buffer];
+        },
+        async save(bytes: Buffer) {
+          storedFiles.set(filePath, Buffer.from(bytes));
+        },
+        async delete() {
+          storedFiles.delete(filePath);
+        },
+        async getSignedUrl() {
+          return [`https://example.invalid/${encodeURIComponent(filePath)}`] as [string];
+        },
+        async copy(target: unknown) {
+          const writableTarget =
+            target && typeof target === 'object' && 'save' in target
+              ? (target as { save: (bytes: Buffer) => Promise<unknown> })
+              : null;
+          if (!writableTarget) {
+            throw new Error(`Invalid fake copy target for ${filePath}`);
+          }
+          const bytes = storedFiles.get(filePath);
+          if (!bytes) {
+            throw new Error(`Missing fake file for copy: ${filePath}`);
+          }
+          await writableTarget.save(Buffer.from(bytes));
+        },
+      };
+    },
+  };
+}
+
 test('rejects invalid storefront summary pagination', async () => {
   const { baseUrl } = await startTestServer();
   const response = await request(baseUrl, '/storefront-summaries?limit=999');
@@ -1085,6 +1130,32 @@ test('hides the full active promotion stack from signed-out storefront detail pa
   ownerStorefrontPromotionCache.clear();
   storefrontDetailEnhancementCache.clear();
 
+  const reviewPhotoService = await import('./services/reviewPhotoModerationService');
+  reviewPhotoService.setReviewPhotoStorageBucketForTests(createFakeReviewPhotoStorageBucket());
+  const photoSession = await reviewPhotoService.createReviewPhotoUploadSession({
+    storefrontId: testStorefrontId,
+    profileId: 'profile-review-photo',
+    fileName: 'review-photo.jpg',
+    contentType: 'image/jpeg',
+    sizeBytes: 4,
+    forceMemoryMode: true,
+  });
+  reviewPhotoService.seedReviewPhotoUploadBytesForTests(
+    photoSession.id,
+    Buffer.from([0xff, 0xd8, 0xff, 0xd9]),
+  );
+  await reviewPhotoService.completeReviewPhotoUpload(photoSession.id);
+
+  const { submitStorefrontAppReview } = await import('./services/storefrontCommunityService');
+  const submittedReview = await submitStorefrontAppReview({
+    ...createReviewPayload('profile-review-photo', {
+      text: 'Community review with an approved photo should stay visible to signed-out readers.',
+    }),
+    storefrontId: testStorefrontId,
+    photoCount: 1,
+    photoUploadIds: [photoSession.id],
+  });
+
   const response = await request(baseUrl, `/storefront-details/${testStorefrontId}`);
 
   assert.equal(response.status, 200);
@@ -1092,12 +1163,15 @@ test('hides the full active promotion stack from signed-out storefront detail pa
     activePromotions?: Array<{ id?: string; description?: string; badges?: string[] }>;
     photoUrls?: string[];
     photoCount?: number;
-    appReviews?: Array<{ photoUrls?: string[] }>;
+    appReviews?: Array<{ id?: string; photoUrls?: string[] }>;
   } | null;
   assert.deepEqual(detail?.activePromotions ?? [], []);
   assert.ok((detail?.photoUrls?.length ?? 0) <= 2);
   assert.ok((detail?.photoCount ?? 0) >= (detail?.photoUrls?.length ?? 0));
-  assert.ok((detail?.appReviews ?? []).every((review) => (review.photoUrls?.length ?? 0) === 0));
+  const reviewWithPhoto = (detail?.appReviews ?? []).find(
+    (review) => review.id === submittedReview.review.id,
+  );
+  assert.deepEqual(reviewWithPhoto?.photoUrls, submittedReview.review.photoUrls);
 });
 
 test('publishes the full active promotion stack onto member storefront detail payloads', async () => {

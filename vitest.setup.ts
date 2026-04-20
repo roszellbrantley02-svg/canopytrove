@@ -22,6 +22,15 @@ globalThis.cancelAnimationFrame = () => {};
 
 import { vi } from 'vitest';
 
+// Metro resolves image require() calls to native asset records. In Vitest/Node,
+// those same require('*.png') calls need a lightweight stand-in so native icon
+// packs can be imported without trying to execute PNG bytes as JavaScript.
+if (typeof require !== 'undefined' && require.extensions) {
+  require.extensions['.png'] = (module, filename) => {
+    module.exports = { uri: filename };
+  };
+}
+
 // Mock expo-secure-store before any transitive import can reach the native binary.
 // The real module tries to load ExpoSecureStore (a native C++ addon) which doesn't
 // exist in the Node test environment.
