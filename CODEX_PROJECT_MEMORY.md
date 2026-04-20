@@ -16,6 +16,80 @@ Purpose: persistent working memory for this repo so future Codex sessions can re
    - any required deploy/build follow-up
 6. Do not use this file to replace source-of-truth code. Use it as a fast orientation layer.
 
+## CURRENT STATUS - 2026-04-20 (Read This First)
+
+**Apple/App Store release posture: app-side production blockers are clear.** Sentry mobile source maps, GitHub CI trigger coverage, Docker build dry-run, backend release checks, Google Cloud auth, and Firestore read access are now wired and verified.
+
+### Final release/CI status from Apr 20 setup pass
+
+| Gate                                      | Status |
+| ----------------------------------------- | ------ |
+| GitHub CI trigger on `master`             | PASS   |
+| Static checks (typecheck + lint + format) | PASS   |
+| Frontend Vitest jobs                      | PASS   |
+| Backend tests + typecheck                 | PASS   |
+| Firebase rules tests                      | PASS   |
+| Docker build dry-run                      | PASS   |
+| App release readiness in CI               | PASS   |
+| Backend release readiness in CI           | PASS   |
+| Dependency audit in CI                    | PASS   |
+| Google Cloud auth in CI                   | PASS   |
+| `gcloud` setup in CI                      | PASS   |
+| EAS production Sentry env                 | PASS   |
+| Production Sentry source-map upload gate  | PASS   |
+
+### Key commits from this pass
+
+- `af44b85` - CI now runs on `master`, adds Docker build dry-run, and adds trusted push-only release readiness checks.
+- `1798a52` - Production EAS profile no longer sets `SENTRY_DISABLE_AUTO_UPLOAD=true`.
+- `2bed635` - CI hardcodes public Sentry metadata (`SENTRY_ORG=canopy-trove`, `SENTRY_PROJECT=react-native`) so GitHub only needs secret values for sensitive data.
+- `c79a60d` - CI authenticates to Google Cloud via `google-github-actions/auth@v2` and sets up `gcloud`; backend release checker lets Cloud Run env replace blank GitHub secret placeholders.
+- `7c8ddfb`, `86f635f`, `bdf18e7` - empty rerun commits used to verify CI after GitHub secret/IAM changes.
+
+### Final verified GitHub Actions run
+
+Run `24690824516` on commit `bdf18e7` completed fully green:
+
+- Static checks: success
+- Frontend tests: success
+- Docker build dry-run: success
+- Backend tests + typecheck: success
+- Firebase rules tests: success
+- Release readiness checks: success
+- App release readiness: `Required 20/20`, `Recommended 11/11`
+- Backend release readiness: success
+- Dependency audit: success
+
+### Secrets/IAM now known good
+
+GitHub repository secrets were fixed after an initial naming mix-up. The secret **names** must be readable labels; random values belong in the hidden `Secret` box.
+
+Known-good GitHub secrets used by CI:
+
+- `SENTRY_AUTH_TOKEN`
+- `EXPO_PUBLIC_SENTRY_DSN`
+- `OPS_ALERT_WEBHOOK_URL`
+- `GCP_SERVICE_ACCOUNT_KEY`
+
+The Google service account JSON secret authenticates successfully. The service account also needed `Cloud Datastore User`; after adding that role, Firestore storefront summary reads passed and the release job went green.
+
+EAS production env is also configured:
+
+- `SENTRY_ORG=canopy-trove`
+- `SENTRY_PROJECT=react-native`
+- `SENTRY_AUTH_TOKEN` present and hidden
+- `EXPO_PUBLIC_SENTRY_DSN` present and hidden
+
+### Current answer to "are we done?"
+
+For the Sentry source-map setup, GitHub CI safety gates, Docker dry-run, Google Cloud auth, and release readiness automation: **yes, done and verified green**.
+
+Still optional / separate from this pass:
+
+- Build and submit the actual EAS/App Store artifact.
+- Device/TestFlight validation on real iOS hardware.
+- Keep monitoring the two non-blocking backend recommended warnings when running locally: storefront discovery freshness can time out, and alerts depend on the configured webhook destination staying valid.
+
 ## CURRENT STATUS — 2026-04-03 (Read This First)
 
 **Launch readiness is nearly complete.** Here is the verified state:
