@@ -41,9 +41,10 @@ type MusicPlayerProviderProps = {
  * Provides background music state + controls.
  *
  * Rules enforced here:
- *   1. Default ON for everyone (guests, members) — app ships with music.
- *   2. Owners get it OFF the moment they sign in or sign up. Sign out → music
- *      returns (if the toggle is still on).
+ *   1. Default OFF for everyone (guests, members). Users must opt in from
+ *      Profile → Background music.
+ *   2. Owners get it forcibly silenced the moment they sign in or sign up.
+ *      Sign out → music can resume only if the user explicitly toggled it on.
  *   3. User toggle on the profile screen is always authoritative over the
  *      default. It persists across launches via AsyncStorage.
  *

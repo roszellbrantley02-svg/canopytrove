@@ -960,6 +960,38 @@ Follow-up:
 - Route-level integration tests are still the next process-maturity gap if the goal is to move enterprise readiness higher.
 - After commit/push, confirm GitHub Actions stays green on `master`.
 
+### 2026-04-20 - Background Music Default-Off Lock
+
+What changed:
+
+- Confirmed `MUSIC_ENABLED_DEFAULT` is `false`; fresh installs and storage read failures keep background music off.
+- Corrected stale `MusicPlayerContext.tsx` comments that still described the old default-on behavior.
+- Added `src/music/musicPreferenceStorage.test.ts` to lock the default-off behavior, storage-failure fallback, explicit opt-in, and opt-out persistence.
+- Added the new preference-storage test to `npm run test:frontend-core`.
+
+Main files:
+
+- `src/music/musicPreferenceStorage.ts`
+- `src/music/musicPreferenceStorage.test.ts`
+- `src/music/MusicPlayerContext.tsx`
+- `package.json`
+
+Why:
+
+- The owner wanted to make sure background music is off by default. Runtime behavior already matched that, but stale comments created future implementation risk and there was no direct regression test pinning the default.
+
+Verification:
+
+- `npx vitest run src/music/musicPreferenceStorage.test.ts src/music/musicPlayerService.test.ts`
+- `npm run test:frontend-core`
+- `npm run typecheck`
+- `npm run lint:strict`
+- `npm run format:check`
+
+Follow-up:
+
+- None for default behavior. Users can still opt in manually from Profile -> Background music.
+
 ### 2026-04-03 - Agent One Safety Protocol Change Required By User
 
 User instruction: Agent One is now treated as a write-risk until proven otherwise.
