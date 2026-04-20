@@ -2,7 +2,7 @@
 
 **App:** Canopy Trove
 **Bundle ID:** com.rezell.canopytrove
-**Last updated:** 2026-04-05
+**Last updated:** 2026-04-20
 
 ---
 
@@ -14,7 +14,7 @@ Use these answers when filling out the Data Safety form in the Play Console.
 
 | Data type              | Collected | Shared | Purpose                                                            |
 | ---------------------- | --------- | ------ | ------------------------------------------------------------------ |
-| Location (approximate) | Yes       | No     | App functionality — finding nearby licensed dispensaries           |
+| Location (approximate) | Yes       | No     | App functionality — finding nearby licensed storefronts            |
 | Location (precise)     | Yes       | No     | App functionality — distance calculations, turn-by-turn directions |
 | Name                   | Yes       | No     | Account functionality — display name for reviews and profiles      |
 | Email address          | Yes       | No     | Account functionality — authentication via Firebase Auth           |
@@ -47,7 +47,7 @@ Use these answers when filling out the Data Safety form in the Play Console.
 - "Canopy Trove does not process financial transactions."
 - "Canopy Trove does not facilitate cannabis purchases, ordering, pickup, or delivery."
 - "Canopy Trove does not collect or store any payment information."
-- "User-generated content (owner updates, reviews) is moderated for policy compliance."
+- "User reviews are moderated for policy compliance; Android does not expose owner-publishing tools."
 
 ---
 
@@ -57,7 +57,7 @@ Paste this into the **"App content" > "Content rating" > "Additional information
 
 > **What Canopy Trove does:**
 >
-> Canopy Trove is a licensed dispensary discovery and business-information platform for New York State. It helps users find state-licensed dispensaries, view business information (hours, location, amenities, reviews), and read community updates from verified dispensary owners.
+> Canopy Trove is a licensed storefront discovery and official-verification platform for New York State. It helps adults 21+ find state-licensed storefronts, view business information (hours, location, amenities, reviews), and check licensing context against official public records.
 >
 > **What Canopy Trove does NOT do:**
 >
@@ -67,10 +67,11 @@ Paste this into the **"App content" > "Content rating" > "Additional information
 > - It does not display product menus, prices, or inventory.
 > - It does not contain cannabis product imagery in the Android experience.
 > - It does not initiate owner billing or subscription management inside the Android app.
+> - It does not expose owner business-workspace tools inside the Android app.
 >
 > **Content moderation system:**
 >
-> Dispensary owners can publish informational cards (announcements, events, hours changes, community updates). On Android, all owner-created content is classified by an automated moderation engine before publication:
+> The Android app does not expose owner-publishing tools. Any owner-created content that may exist in backend data is filtered before Android display:
 >
 > - **Green (auto-approved):** Informational content such as store hours, community events, educational sessions, and amenity updates.
 > - **Yellow (manual review required):** Ambiguous content that could be informational or commercial. Held for human review before appearing on Android.
@@ -93,10 +94,10 @@ When completing the IARC content rating questionnaire:
 | Violence                 | None                                                                                       |
 | Sexuality                | None                                                                                       |
 | Language                 | Mild (user reviews may contain informal language)                                          |
-| Controlled substance     | Reference to controlled substances (the app lists licensed cannabis dispensaries)          |
+| Controlled substance     | Reference to controlled substances (the app lists licensed adult-use storefronts)          |
 | Gambling                 | None                                                                                       |
 | User interaction         | Users can interact (reviews, following storefronts)                                        |
-| Users can share location | Yes (for nearby dispensary discovery)                                                      |
+| Users can share location | Yes (for nearby storefront discovery)                                                      |
 | Digital purchases        | None in the Android build (no in-app purchases, no transactions, no billing checkout flow) |
 
 This should result in a **17+ / Mature** rating, which is appropriate.
@@ -107,19 +108,18 @@ This should result in a **17+ / Mature** rating, which is appropriate.
 
 ### App title
 
-"Canopy Trove — Licensed Dispensary Finder"
+"Canopy Trove — Licensed Storefront Verifier"
 
 ### Short description (80 chars max)
 
-"Find licensed dispensaries near you. Hours, reviews, events, and updates."
+"Verify licensed storefronts nearby. Adults 21+ where lawful."
 
 ### Full description — key phrases to INCLUDE
 
-- "licensed dispensary discovery"
+- "licensed storefront discovery"
+- "official license verification"
 - "business information platform"
-- "community updates and events"
-- "verified dispensary hours and locations"
-- "owner-published announcements"
+- "verified storefront hours and locations"
 - "user reviews and ratings"
 
 ### Full description — phrases to AVOID
@@ -138,11 +138,11 @@ This should result in a **17+ / Mature** rating, which is appropriate.
 
 ### What to show in Android screenshots
 
-1. **Map view** — dispensary pins on a clean map with distance labels
+1. **Map view** — storefront pins on a clean map with distance labels
 2. **Storefront list** — sorted by distance or rating, showing name/address/hours/rating. No promotion badges or deal text visible.
-3. **Storefront detail** — hours, amenities, reviews, community updates. No "active promotions" section.
-4. **Owner update card** — an informational card like "Open late Friday" or "Community cleanup this Saturday"
-5. **Review screen** — a user review with rating stars and reply from owner
+3. **Storefront detail** — hours, amenities, reviews. No "active promotions" section.
+4. **License verification** — official-record lookup and verification badges
+5. **Review screen** — a user review with rating stars
 6. **Profile/gamification** — badges, points, level progression
 
 ### What to NEVER show in Android screenshots
@@ -155,19 +155,19 @@ This should result in a **17+ / Mature** rating, which is appropriate.
 
 ### Recommended screenshot flow
 
-| Screenshot | Content                                | Purpose              |
-| ---------- | -------------------------------------- | -------------------- |
-| 1          | Map with dispensary pins               | Discovery            |
-| 2          | List view sorted by distance           | Browsing             |
-| 3          | Storefront detail with hours + reviews | Business info        |
-| 4          | Owner "Community Event" update card    | Owner content (safe) |
-| 5          | User review with owner reply           | Community            |
-| 6          | Profile with badges and level          | Engagement           |
+| Screenshot | Content                                | Purpose          |
+| ---------- | -------------------------------------- | ---------------- |
+| 1          | Map with storefront pins               | Discovery        |
+| 2          | List view sorted by distance           | Browsing         |
+| 3          | Storefront detail with hours + reviews | Business info    |
+| 4          | License verification lookup            | Official records |
+| 5          | User review                            | Community        |
+| 6          | Profile with badges and level          | Engagement       |
 
 ### Screenshot production notes
 
 - Use a real Android device or Android emulator — not iOS screenshots
-- The Android build should already show "Updates" not "Specials" in the filter bar
+- The Android build should show "Featured" instead of "Hot Deals" in the tab bar
 - Verify no deal/promo language appears anywhere in visible text
 - If any promotion text leaks through, re-run the moderation classifier or use a test account with no active promotions
 
@@ -175,10 +175,10 @@ This should result in a **17+ / Mature** rating, which is appropriate.
 
 ## 6. Category and Tags
 
-| Field    | Recommended value                                                                                          |
-| -------- | ---------------------------------------------------------------------------------------------------------- |
-| Category | Maps & Navigation (primary) or Lifestyle                                                                   |
-| Tags     | "dispensary finder", "licensed dispensary", "cannabis directory", "dispensary hours", "dispensary reviews" |
+| Field    | Recommended value                                                                     |
+| -------- | ------------------------------------------------------------------------------------- |
+| Category | Maps & Navigation (primary) or Lifestyle                                              |
+| Tags     | "licensed storefront", "license verifier", "business directory", "storefront reviews" |
 
 Avoid tags like "cannabis deals", "weed delivery", "marijuana shop".
 
@@ -194,9 +194,9 @@ Avoid tags like "cannabis deals", "weed delivery", "marijuana shop".
 - [ ] No screenshot contains deal, discount, or product language
 - [ ] App bundle uses the Android moderation build (server-side filtering confirmed)
 - [ ] Test on a real Android device: open 5 storefronts, verify no blocked promo text appears
-- [ ] Updates surfaces say "Updates" and do not surface "Hot Deals" copy
+- [ ] Featured surfaces say "Featured" and do not surface "Hot Deals" copy
 - [ ] Notification channel shows "Favorite store updates" not "Favorite store deals" in Android settings
-- [ ] Owner billing screen is read-only on Android and does not open external checkout or billing management
+- [ ] Owner, product, brand, and promotion routes show Android policy fallback screens
 - [ ] External links labeled "Website" not "Menu" (if gating applied)
 - [ ] Privacy policy URL works and is accessible
 - [ ] Terms of service URL works and is accessible

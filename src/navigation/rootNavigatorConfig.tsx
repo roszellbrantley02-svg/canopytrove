@@ -14,6 +14,8 @@ import { VerifyScreen } from '../screens/VerifyScreen';
 import { VerifyManualEntryScreen } from '../screens/VerifyManualEntryScreen';
 import { ScanResultScreen } from '../screens/ScanResultScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { AndroidPolicyUnavailableScreen } from '../screens/AndroidPolicyUnavailableScreen';
+import { supportsOwnerWorkspaceUi, supportsProductDiscoveryUi } from '../config/playStorePolicy';
 
 /* ── Lazy-loaded helper ──
  * On web, React.lazy splits these into separate chunks loaded on navigation.
@@ -40,6 +42,13 @@ function lazyScreen<T extends React.ComponentType<any>>(
       return { default: component } as { default: T };
     }),
   );
+}
+
+// Android Play review stays on a narrow storefront-directory surface. Keep
+// policy-sensitive stack routes from loading even if reached via stale links.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function gateReviewSurface<T extends React.ComponentType<any>>(component: T, enabled: boolean) {
+  return enabled ? component : AndroidPolicyUnavailableScreen;
 }
 
 /* ── Secondary routes — lazy-loaded for smaller initial bundle ── */
@@ -446,7 +455,7 @@ export const stackScreens = [
   { name: 'ScanCamera', component: ScanCameraScreen, options: bottomRiseScreenOptions },
   {
     name: 'RateProductPicker',
-    component: RateProductPickerScreen,
+    component: gateReviewSurface(RateProductPickerScreen, supportsProductDiscoveryUi),
     options: bottomRiseScreenOptions,
   },
   {
@@ -461,7 +470,7 @@ export const stackScreens = [
   },
   {
     name: 'OwnerSignIn',
-    component: OwnerSignInScreen,
+    component: gateReviewSurface(OwnerSignInScreen, supportsOwnerWorkspaceUi),
     options: bottomRiseScreenOptions,
   },
   {
@@ -481,87 +490,87 @@ export const stackScreens = [
   },
   {
     name: 'OwnerPortalAccess',
-    component: OwnerPortalAccessScreen,
+    component: gateReviewSurface(OwnerPortalAccessScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalSignIn',
-    component: OwnerPortalSignInScreen,
+    component: gateReviewSurface(OwnerPortalSignInScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalSignUp',
-    component: OwnerPortalSignUpScreen,
+    component: gateReviewSurface(OwnerPortalSignUpScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalForgotPassword',
-    component: OwnerPortalForgotPasswordScreen,
+    component: gateReviewSurface(OwnerPortalForgotPasswordScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalHome',
-    component: OwnerPortalHomeScreen,
+    component: gateReviewSurface(OwnerPortalHomeScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalReviewInbox',
-    component: OwnerPortalReviewInboxScreen,
+    component: gateReviewSurface(OwnerPortalReviewInboxScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalPromotions',
-    component: OwnerPortalPromotionsScreen,
+    component: gateReviewSurface(OwnerPortalPromotionsScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalProfileTools',
-    component: OwnerPortalProfileToolsScreen,
+    component: gateReviewSurface(OwnerPortalProfileToolsScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalBusinessDetails',
-    component: OwnerPortalBusinessDetailsScreen,
+    component: gateReviewSurface(OwnerPortalBusinessDetailsScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalClaimListing',
-    component: OwnerPortalClaimListingScreen,
+    component: gateReviewSurface(OwnerPortalClaimListingScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalBusinessVerification',
-    component: OwnerPortalBusinessVerificationScreen,
+    component: gateReviewSurface(OwnerPortalBusinessVerificationScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalIdentityVerification',
-    component: OwnerPortalIdentityVerificationScreen,
+    component: gateReviewSurface(OwnerPortalIdentityVerificationScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalSubscription',
-    component: OwnerPortalSubscriptionScreen,
+    component: gateReviewSurface(OwnerPortalSubscriptionScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalBadges',
-    component: OwnerPortalBadgesScreen,
+    component: gateReviewSurface(OwnerPortalBadgesScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalHours',
-    component: OwnerPortalHoursScreen,
+    component: gateReviewSurface(OwnerPortalHoursScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalBrandRoster',
-    component: OwnerPortalBrandRosterScreen,
+    component: gateReviewSurface(OwnerPortalBrandRosterScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
     name: 'OwnerPortalPaymentMethods',
-    component: OwnerPortalPaymentMethodsScreen,
+    component: gateReviewSurface(OwnerPortalPaymentMethodsScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {
@@ -581,32 +590,32 @@ export const stackScreens = [
   },
   {
     name: 'MyBrands',
-    component: MyBrandsScreen,
+    component: gateReviewSurface(MyBrandsScreen, supportsProductDiscoveryUi),
     options: detailFlowScreenOptions,
   },
   {
     name: 'BrowseBrands',
-    component: BrowseBrandsScreen,
+    component: gateReviewSurface(BrowseBrandsScreen, supportsProductDiscoveryUi),
     options: detailFlowScreenOptions,
   },
   {
     name: 'BrandDetail',
-    component: BrandDetailScreen,
+    component: gateReviewSurface(BrandDetailScreen, supportsProductDiscoveryUi),
     options: detailFlowScreenOptions,
   },
   {
     name: 'MyProducts',
-    component: MyProductsScreen,
+    component: gateReviewSurface(MyProductsScreen, supportsProductDiscoveryUi),
     options: detailFlowScreenOptions,
   },
   {
     name: 'ProductReviewsDetail',
-    component: ProductReviewsDetailScreen,
+    component: gateReviewSurface(ProductReviewsDetailScreen, supportsProductDiscoveryUi),
     options: detailFlowScreenOptions,
   },
   {
     name: 'ProductReviewComposer',
-    component: ProductReviewComposerScreen,
+    component: gateReviewSurface(ProductReviewComposerScreen, supportsProductDiscoveryUi),
     options: bottomRiseScreenOptions,
   },
   {

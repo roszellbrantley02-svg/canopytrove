@@ -163,6 +163,40 @@ function stripMemberOnlyDetailPromotionFields(detail: StorefrontDetailApiDocumen
   } satisfies StorefrontDetailApiDocument;
 }
 
+function stripAndroidSummaryCommerceFields(summary: StorefrontSummaryApiDocument) {
+  return {
+    ...summary,
+    promotionText: null,
+    promotionBadges: [],
+    promotionExpiresAt: null,
+    activePromotionId: null,
+    activePromotionCount: 0,
+    promotionPlacementSurfaces: [],
+    promotionPlacementScope: null,
+    ownerFeaturedBadges: [],
+    ownerCardSummary: null,
+    thumbnailUrl: null,
+    menuUrl: null,
+    premiumCardVariant: 'standard',
+  } satisfies StorefrontSummaryApiDocument;
+}
+
+function stripAndroidDetailCommerceFields(detail: StorefrontDetailApiDocument) {
+  return {
+    ...detail,
+    menuUrl: null,
+    activePromotions: [],
+    photoCount: 0,
+    photoUrls: [],
+    ownerFeaturedBadges: [],
+    editorialSummary: null,
+    appReviews: detail.appReviews.map((review) => ({
+      ...review,
+      photoUrls: [],
+    })),
+  } satisfies StorefrontDetailApiDocument;
+}
+
 function createPublishedStorefrontDetailFallback(input: {
   storefrontId: string;
   summary: StorefrontSummaryApiDocument;
@@ -264,19 +298,8 @@ async function enhanceSummary(
     ? runtimeEnhanced
     : stripMemberOnlySummaryPromotionFields(runtimeEnhanced);
 
-  // Android filtering: strip all promotion-related fields if content isn't eligible
-  // The enhancement layer already computed promotionAndroidEligible from the stored
-  // promotion data (which includes platformVisibility), so trust that persisted state.
-  if (clientPlatform === 'android' && enhanced.promotionAndroidEligible === false) {
-    finalResult = {
-      ...finalResult,
-      promotionText: null,
-      promotionBadges: [],
-      promotionExpiresAt: null,
-      activePromotionId: null,
-      activePromotionCount: 0,
-      premiumCardVariant: finalResult.ownerFeaturedBadges?.length ? 'owner_featured' : 'standard',
-    };
+  if (clientPlatform === 'android') {
+    finalResult = stripAndroidSummaryCommerceFields(finalResult);
   }
 
   return finalResult;
@@ -291,14 +314,8 @@ async function enhanceDetail(
   const enhanced = await applyOwnerWorkspaceDetailEnhancements(detail, viewerContext);
   let result = includeMemberDeals ? enhanced : stripMemberOnlyDetailPromotionFields(enhanced);
 
-  // Android filtering: strip promotions that aren't eligible for Android
-  // The enhancement layer already computed androidEligible on each promotion,
-  // so trust that persisted state instead of reclassifying at read time.
-  if (clientPlatform === 'android' && result.activePromotions) {
-    result = {
-      ...result,
-      activePromotions: result.activePromotions.filter((promo) => promo.androidEligible !== false),
-    };
+  if (clientPlatform === 'android') {
+    result = stripAndroidDetailCommerceFields(result);
   }
 
   return result;
@@ -567,7 +584,11 @@ export async function getStorefrontDetail(
 
     const enhancedDetail = await withTimeoutFallback(
       enhanceDetail(detail, includeMemberDeals, viewerContext, clientPlatform),
-      includeMemberDeals ? detail : stripMemberOnlyDetailPromotionFields(detail),
+      clientPlatform === 'android'
+        ? stripAndroidDetailCommerceFields(detail)
+        : includeMemberDeals
+          ? detail
+          : stripMemberOnlyDetailPromotionFields(detail),
       DETAIL_ENHANCEMENT_TIMEOUT_MS,
     );
     const withOcm = await attachOcmVerificationToDetail(enhancedDetail, summary);

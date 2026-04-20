@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { brand } from '../config/brand';
+import { isAndroidPlayStoreBuild } from '../config/playStorePolicy';
 import { MotionInView } from '../components/MotionInView';
 import { HapticPressable } from '../components/HapticPressable';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
@@ -28,6 +29,9 @@ function AgeGateScreenInner({ onAccept }: AgeGateScreenProps) {
   const { width, height } = useWindowDimensions();
   const compactLayout = width < 390 || height < 780;
   const isWeb = Platform.OS === 'web';
+  const directoryDescription = isAndroidPlayStoreBuild
+    ? `${brand.productDisplayName} is an adults-only licensed storefront verification directory. Ordering, pickup, delivery, and product sales are not available in this Android app.`
+    : `${brand.productDisplayName} is an adults-only cannabis storefront directory. You must be at least 21 to continue.`;
 
   const blockAccess = React.useCallback(() => {
     setIsAccessBlocked(true);
@@ -79,8 +83,7 @@ function AgeGateScreenInner({ onAccept }: AgeGateScreenProps) {
                     Confirm you are 21 or older.
                   </Text>
                   <Text style={[styles.body, compactLayout && styles.bodyCompact]}>
-                    {brand.productDisplayName} is an adults-only cannabis storefront directory. You
-                    must be at least 21 to continue.
+                    {directoryDescription}
                   </Text>
                 </View>
 

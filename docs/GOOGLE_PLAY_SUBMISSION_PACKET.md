@@ -1,6 +1,6 @@
 # Google Play Submission Packet
 
-Updated: April 4, 2026
+Updated: April 20, 2026
 
 This file is the single handoff packet for Google Play Console copy, screenshot
 specs, content rating guidance, and the remaining non-code blockers.
@@ -32,35 +32,33 @@ Still needed:
 
 ### Short description (max 80 chars)
 
-`Find licensed dispensaries near you. Adults 21+ where lawful.`
+`Verify licensed storefronts nearby. Adults 21+ where lawful.`
 
 ### Full description (max 4000 chars)
 
-Canopy Trove helps adults discover licensed dispensaries with a calmer, more
-trusted experience. Browse storefronts, check the details that matter, save
-favorites, and read thoughtful community feedback before you choose where to go.
+Canopy Trove helps adults verify and browse licensed storefronts with a calmer,
+more trusted experience. Check official-license context, storefront details,
+hours, ratings, and community feedback before deciding whether a location is
+worth visiting.
 
-The current release is New York-first and built around lawful discovery for
-adults 21+ where applicable. Storefront pages bring together hours, links,
-ratings, photos, and useful community context in one place so the experience
-feels considered instead of crowded.
+The Android release is New York-first and built around official license checks
+and business information for adults 21+ where applicable. Storefront pages bring
+together hours, contact details, ratings, photos, and useful community context in
+one place so the experience feels considered instead of crowded.
 
 Key features:
 
-- Browse licensed dispensaries by location, distance, or category
+- Browse licensed storefronts by location, distance, or category
 - View hours, contact info, photos, and verified licensing details
-- Save favorites and get notified about new updates at saved storefronts
+- Save favorite storefronts
 - Read and write thoughtful community reviews with photo support
-- Private tools for verified dispensary operators (claim listing, manage
-  updates, respond to reviews)
+- Verify storefront license information against official public records
 
 Canopy Trove is not an ordering, checkout, or delivery platform. The product is
-positioned around licensed storefront discovery, trusted details, favorites,
-alerts, and community reviews. No in-app purchasing of cannabis products occurs.
-
-Canopy Trove includes private tools for verified dispensary operators managing a
-claimed storefront. Those owner tools cover listing management, review follow-up,
-owner updates, verification, and business-workspace billing status.
+positioned around licensed storefront discovery, official verification, trusted
+details, favorites, and community reviews. The Android app does not include
+product catalogs, product menus, product reviews, owner business tools, checkout,
+pickup scheduling, delivery coordination, or cannabis-product purchasing.
 
 ### Category
 
@@ -68,19 +66,19 @@ owner updates, verification, and business-workspace billing status.
 
 ### Tags
 
-`dispensary`, `cannabis`, `licensed`, `discovery`, `storefront`, `reviews`
+`licensed storefront`, `license verifier`, `business directory`, `reviews`
 
 ## Content Rating (IARC Questionnaire)
 
 Answer these questions in the Google Play Console IARC questionnaire:
 
-| Question                                                            | Answer                                      | Rationale                                                                                                                          |
-| ------------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Does the app contain references to drugs or drug use?               | Yes — cannabis/marijuana references         | The app is a licensed dispensary directory. It references cannabis by nature but does not sell, order, or facilitate transactions. |
-| Does the app facilitate the sale of drugs or controlled substances? | No                                          | The app is discovery-only. No cart, no ordering, no delivery. Users navigate to dispensary websites externally.                    |
-| Does the app contain user-generated content?                        | Yes                                         | Community reviews with photos (moderated before publishing).                                                                       |
-| Does the app share the user's location?                             | Yes — approximate and precise, with consent | Used to find nearby dispensaries. Standard location permission flow.                                                               |
-| Does the app contain in-app purchases?                              | No                                          | The Android build does not initiate owner-plan checkout or billing management inside the app. Consumer use stays free.             |
+| Question                                                            | Answer                                      | Rationale                                                                                                                        |
+| ------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Does the app contain references to drugs or drug use?               | Yes — adult-use storefront references       | The app lists licensed adult-use storefronts by nature but does not sell, order, or facilitate transactions.                     |
+| Does the app facilitate the sale of drugs or controlled substances? | No                                          | The Android app is directory and verification-only. No cart, no ordering, no pickup scheduling, no delivery, no product catalog. |
+| Does the app contain user-generated content?                        | Yes                                         | Community reviews with photos (moderated before publishing).                                                                     |
+| Does the app share the user's location?                             | Yes — approximate and precise, with consent | Used to find nearby dispensaries. Standard location permission flow.                                                             |
+| Does the app contain in-app purchases?                              | No                                          | The Android build does not initiate owner-plan checkout or billing management inside the app. Consumer use stays free.           |
 
 Expected IARC rating: **Mature 17+** or equivalent (varies by region).
 
@@ -104,12 +102,11 @@ Google Play requires screenshots for at least one device type. Recommended:
 
 ### Suggested screenshot sequence (reuse Apple set, re-render at Android sizes)
 
-1. **Discovery** — Map/list view showing nearby licensed dispensaries
+1. **Discovery** — Map/list view showing nearby licensed storefronts
 2. **Confidence** — Licensing verification badges and trust signals
 3. **Detail** — Full storefront detail page (hours, photos, ratings)
 4. **Profile** — Saved favorites, visit history, and personalization
 5. **Reviews** — Community review thread with photos
-6. **Owner tools** — Operator dashboard (optional, differentiator)
 
 The existing HTML screenshot templates at `public-release-pages/store-screenshots/`
 can be re-rendered at the Android dimensions above. Adjust the device frame from
@@ -117,19 +114,20 @@ iPhone to a Pixel 8 or generic Android frame.
 
 ## Google Play Policy Compliance
 
-Canopy Trove is compliant with Google Play's cannabis app restrictions because:
+Canopy Trove is prepared for Google Play review around a narrow
+directory-and-verification Android experience:
 
-1. **No in-app transactions for cannabis products.** The app does not have a
-   shopping cart, product catalog with "add to cart" buttons, or any checkout
-   flow for cannabis. Users discover dispensaries and navigate externally.
+1. **No in-app transactions for cannabis products.** The Android app does not
+   have a shopping cart, product catalog, product reviews, "add to cart" buttons,
+   or any checkout flow for cannabis.
 
 2. **No delivery arrangement.** The app provides directions to dispensaries via
    Google Maps deep links. It does not coordinate delivery, pickup scheduling,
    or courier services.
 
-3. **Discovery and information only.** The app shows dispensary name, location,
-   hours, reviews, and licensing status. This is the same category as Weedmaps
-   and Leafly, both of which are live on Google Play.
+3. **Discovery and information only.** The Android app shows storefront name,
+   location, hours, reviews, and licensing status. It does not expose product
+   menus, product brands, pricing, discounts, or owner promotion tools.
 
 4. **Age gate enforced.** A 21+ age verification screen appears on first launch
    before any content is accessible. Acceptance is persisted locally.
@@ -138,12 +136,10 @@ Canopy Trove is compliant with Google Play's cannabis app restrictions because:
    Office of Cannabis Management (OCM) licensed dispensary registry. The app
    does not list unlicensed or gray-market operations.
 
-If the app is rejected, appeal with:
-
-- Reference to Weedmaps (com.weedmaps.app.android) and Leafly (leafly.android)
-  as precedent for discovery-only cannabis apps on Google Play
-- Point to the age gate, absence of any cart/checkout/delivery, and OCM
-  licensing data as differentiators from prohibited transaction-facilitating apps
+If the app is rejected, appeal by pointing to the age gate, absence of any
+cart/checkout/delivery/pickup/product-catalog functionality, OCM licensing data,
+and the Android-specific policy gates that remove owner, product, brand, and
+promotion surfaces.
 
 ## Privacy Policy and Data Safety
 
@@ -153,7 +149,7 @@ Google Play requires a Data Safety section. Here is the declaration:
 
 | Data type            | Collected                 | Shared | Purpose                               |
 | -------------------- | ------------------------- | ------ | ------------------------------------- |
-| Approximate location | Yes                       | No     | Find nearby dispensaries              |
+| Approximate location | Yes                       | No     | Find nearby licensed storefronts      |
 | Precise location     | Yes                       | No     | Distance calculation, visit detection |
 | Email address        | Yes (if signed in)        | No     | Account, owner portal auth            |
 | Photos               | Yes (if uploading review) | No     | Review attachments (moderated)        |
@@ -173,7 +169,7 @@ Google Play requires a 1024 x 500 feature graphic. Create one with:
 
 - Dark background (#0A1117 or #121614)
 - Canopy Trove logo centered
-- Tagline: "Licensed dispensary discovery"
+- Tagline: "Licensed storefront verification"
 - Clean, minimal — no screenshots in the feature graphic
 
 ## Public URLs (same as Apple)

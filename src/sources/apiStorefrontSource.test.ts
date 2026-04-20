@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getCanopyTroveStorefrontReadIdToken = vi.fn();
 
+vi.mock('react-native', () => ({
+  Platform: { OS: 'android' },
+}));
+
 vi.mock('../services/canopyTroveAuthService', () => ({
   getCanopyTroveStorefrontReadIdToken,
 }));
@@ -50,6 +54,7 @@ describe('apiStorefrontSource', () => {
 
     const headers = fetchMock.mock.calls[0]?.[1]?.headers as Headers;
     expect(headers.has('Authorization')).toBe(false);
+    expect(headers.get('X-Client-Platform')).toBe('android');
   });
 
   it('does not send the areaId sentinel for statewide browse queries', async () => {

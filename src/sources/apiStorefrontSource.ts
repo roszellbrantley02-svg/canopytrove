@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { storefrontApiBaseUrl } from '../config/storefrontSourceConfig';
 import {
   fromStorefrontDetailApiDocument,
@@ -18,6 +19,12 @@ import type {
 const API_REQUEST_TIMEOUT_MS = 10_000;
 const API_RETRY_DELAY_MS = 1_500;
 const API_MAX_RETRIES = 1;
+
+function getClientPlatformHeader(): string {
+  if (Platform.OS === 'android') return 'android';
+  if (Platform.OS === 'ios') return 'ios';
+  return 'web';
+}
 
 class StorefrontApiHttpError extends Error {
   readonly statusCode: number;
@@ -78,6 +85,7 @@ async function singleRequestJson<T>(
     if (idToken) {
       headers.set('Authorization', `Bearer ${idToken}`);
     }
+    headers.set('X-Client-Platform', getClientPlatformHeader());
 
     const response = await fetch(url, {
       headers,

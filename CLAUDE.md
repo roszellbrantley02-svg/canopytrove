@@ -220,7 +220,7 @@ Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 pub
 **Verify tab has two user-facing verification paths — reviewers must understand both to avoid reading one as a bug:**
 
 - **Verify OCM license** — in-app form → backend → in-app result card. Stays in the app end-to-end, renders the "Per OCM public records" pill. Used by typing a dispensary name/license/address.
-- **Scan shop QR** — camera decodes any URL-encoded QR (state Scan-to-Verify placard, Google Reviews QR, Weedmaps, Leafly, website) and opens the decoded URL in the system browser via `Linking.openURL`. No in-app result screen for this path; the destination page is the result. Reviewer prime: *"scanning a state placard should expect Safari to open on cannabis.ny.gov; this is the intended handoff, not a scan failure."*
+- **Scan shop QR** — camera decodes any URL-encoded QR (state Scan-to-Verify placard, Google Reviews QR, Weedmaps, Leafly, website) and opens the decoded URL in the system browser via `Linking.openURL`. No in-app result screen for this path; the destination page is the result. Reviewer prime: _"scanning a state placard should expect Safari to open on cannabis.ny.gov; this is the intended handoff, not a scan failure."_
 
 **OCM Scan-to-Verify placard** is a state-mandated QR code that licensed NY dispensaries must display in public view (ref: `https://cannabis.ny.gov/dispensary-location-verification`). Canopy Trove's scan flow is the consumer-facing interface for that state-issued compliance artifact — key Guideline 1.4.3 framing.
 
@@ -241,22 +241,22 @@ Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 pub
 
 | Item                                                       | Status                                                                                              |
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Mailbox active + monitored (`askmehere@canopytrove.com`)   | ✅ confirmed by founder                                                                              |
-| Reviewer credentials ready (customer + owner)              | ✅ confirmed by founder                                                                              |
-| Real-phone QA in active rotation                           | ✅ ongoing                                                                                           |
-| Account deletion end-to-end matches public help page       | ✅ verified Apr 19 2026                                                                              |
-| Public site email normalized to `askmehere@`               | ✅ commit `b79d932`                                                                                  |
-| Privacy nutrition label doc matches reality                | ✅ commit `26765ce`                                                                                  |
-| Apple review notes — OCM placard + pre-launch context      | ✅ commit `d79dfe1`                                                                                  |
-| Apple review notes — Scan shop QR path honest about Safari | ✅ commit `d6a2a66`                                                                                  |
-| D-U-N-S / seller name path ready                           | ✅ confirmed by founder                                                                              |
-| OCM verifier smoke check green                             | ✅ confirmed by founder                                                                              |
-| Cloud Run `/livez` + `/readyz` green                       | ✅ confirmed by founder                                                                              |
-| Production EAS iOS build on top of `a6ee24e`+              | ⏳ blocked on founder — `NSLocationWhenInUseUsageDescription` is a native plist change               |
-| App Store Connect privacy nutrition label entered          | ⏳ blocked on founder — enter verbatim from `docs/APP_STORE_PRIVACY_LABEL.md`                        |
-| 17+ age rating declared via ASC questionnaire              | ⏳ blocked on founder                                                                                |
-| Final screenshots uploaded to ASC                          | ⏳ blocked on founder — Verify + age gate + clean review shot + neutral storefronts; captions ready  |
-| "Fast checkout" review tag source rename                   | ⏳ product-level; grep the tags source file and rename (user opted to handle)                        |
+| Mailbox active + monitored (`askmehere@canopytrove.com`)   | ✅ confirmed by founder                                                                             |
+| Reviewer credentials ready (customer + owner)              | ✅ confirmed by founder                                                                             |
+| Real-phone QA in active rotation                           | ✅ ongoing                                                                                          |
+| Account deletion end-to-end matches public help page       | ✅ verified Apr 19 2026                                                                             |
+| Public site email normalized to `askmehere@`               | ✅ commit `b79d932`                                                                                 |
+| Privacy nutrition label doc matches reality                | ✅ commit `26765ce`                                                                                 |
+| Apple review notes — OCM placard + pre-launch context      | ✅ commit `d79dfe1`                                                                                 |
+| Apple review notes — Scan shop QR path honest about Safari | ✅ commit `d6a2a66`                                                                                 |
+| D-U-N-S / seller name path ready                           | ✅ confirmed by founder                                                                             |
+| OCM verifier smoke check green                             | ✅ confirmed by founder                                                                             |
+| Cloud Run `/livez` + `/readyz` green                       | ✅ confirmed by founder                                                                             |
+| Production EAS iOS build on top of `a6ee24e`+              | ⏳ blocked on founder — `NSLocationWhenInUseUsageDescription` is a native plist change              |
+| App Store Connect privacy nutrition label entered          | ⏳ blocked on founder — enter verbatim from `docs/APP_STORE_PRIVACY_LABEL.md`                       |
+| 17+ age rating declared via ASC questionnaire              | ⏳ blocked on founder                                                                               |
+| Final screenshots uploaded to ASC                          | ⏳ blocked on founder — Verify + age gate + clean review shot + neutral storefronts; captions ready |
+| "Fast checkout" review tag source rename                   | ⏳ product-level; grep the tags source file and rename (user opted to handle)                       |
 
 **Approval odds (current posture):** 75–82% first-submit, 90%+ by round 2.
 
@@ -266,17 +266,17 @@ Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 pub
 
 ## Recent Shipped Work
 
-| Commit     | What                                                                                                                                          |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `d6a2a66`  | docs(apple-review): Scan shop QR description matches actual code path (Linking.openURL → Safari for state placard)                            |
-| `d79dfe1`  | docs(apple-review): OCM Scan-to-Verify placard context + pre-launch reviewer framing + scan-logging claim fix                                 |
-| `26765ce`  | docs: privacy nutrition label corrected to match shipped reality (scan-logging toggle planned, not shipped)                                   |
-| `b79d932`  | public site: normalize support email to `askmehere@canopytrove.com` across 15 HTML pages                                                      |
-| `e786011`  | docs(memory): capture confirmed Apple launch readiness + open items                                                                           |
-| `87c6ee1`  | fix(scan-camera): safe-area insets on Menu/back pills — clears notch/status bar                                                               |
-| `4cb8384`  | fix(route-card): trust resolved `openNow` boolean when hours are missing (Android)                                                            |
-| `a6ee24e`  | Add `NSLocationWhenInUseUsageDescription` plist key (native, requires EAS build)                                                              |
-| `538ba60`  | Payment badges on listing cards — drop batch timeout, `Promise.allSettled` fan-out                                                            |
-| `5ae4956`  | Music default off + 500ms watchdog for playlist loop reliability                                                                              |
-| `5bbd2a5`  | Profile hero: glow under primary button, kicker copy raised                                                                                   |
-| `e45d43c`  | Storefront detail hours: prefer resolved open/closed over "See Details" fallback                                                              |
+| Commit    | What                                                                                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| `d6a2a66` | docs(apple-review): Scan shop QR description matches actual code path (Linking.openURL → Safari for state placard) |
+| `d79dfe1` | docs(apple-review): OCM Scan-to-Verify placard context + pre-launch reviewer framing + scan-logging claim fix      |
+| `26765ce` | docs: privacy nutrition label corrected to match shipped reality (scan-logging toggle planned, not shipped)        |
+| `b79d932` | public site: normalize support email to `askmehere@canopytrove.com` across 15 HTML pages                           |
+| `e786011` | docs(memory): capture confirmed Apple launch readiness + open items                                                |
+| `87c6ee1` | fix(scan-camera): safe-area insets on Menu/back pills — clears notch/status bar                                    |
+| `4cb8384` | fix(route-card): trust resolved `openNow` boolean when hours are missing (Android)                                 |
+| `a6ee24e` | Add `NSLocationWhenInUseUsageDescription` plist key (native, requires EAS build)                                   |
+| `538ba60` | Payment badges on listing cards — drop batch timeout, `Promise.allSettled` fan-out                                 |
+| `5ae4956` | Music default off + 500ms watchdog for playlist loop reliability                                                   |
+| `5bbd2a5` | Profile hero: glow under primary button, kicker copy raised                                                        |
+| `e45d43c` | Storefront detail hours: prefer resolved open/closed over "See Details" fallback                                   |

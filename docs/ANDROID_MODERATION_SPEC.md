@@ -669,19 +669,23 @@ Your code and your store description must tell the same story.
 
 ---
 
-## 22. Highest-Risk Current Files
+## 22. Hardened Current Files
 
-These files contain the most Google-risky language and behavior today:
+These were the highest-risk Google Play files earlier in April. The Android
+review build now keeps them behind platform gates or strips risky data before
+Android responses are sent:
 
-| File                                                                 | Risk                           |
-| -------------------------------------------------------------------- | ------------------------------ |
-| `src/screens/OwnerPortalPromotionsScreen.tsx`                        | Promo composer, deal-shaped UI |
-| `src/components/BrowseFiltersBar.tsx`                                | "Specials" filter/chip         |
-| `src/components/storefrontRouteCard/StorefrontRouteCardSections.tsx` | promotionText, hasLiveDeals    |
-| `backend/src/storefrontService.ts`                                   | Serves promo data unfiltered   |
-| `backend/src/services/ownerPortalWorkspaceService.ts`                | Serves promo data unfiltered   |
-| `backend/src/types.ts`                                               | No moderation fields yet       |
-| `src/types/ownerPortal.ts`                                           | No moderation fields yet       |
+| File                                                                 | Current Android posture                                  |
+| -------------------------------------------------------------------- | -------------------------------------------------------- |
+| `src/navigation/rootNavigatorConfig.tsx`                             | Owner, product, and brand routes show policy fallbacks   |
+| `src/navigation/linkingConfig.ts`                                    | Owner deep links are omitted from Android linking config |
+| `src/screens/OwnerPortalPromotionsScreen.tsx`                        | Not reachable in the Android review build                |
+| `src/components/BrowseFiltersBar.tsx`                                | Hot Deals control is hidden on Android                   |
+| `src/components/storefrontRouteCard/StorefrontRouteCardSections.tsx` | Promotion text and badges are suppressed on Android      |
+| `backend/src/storefrontService.ts`                                   | Android responses strip promo/menu/photo/owner fields    |
+| `backend/src/services/ownerPortalWorkspaceService.ts`                | Classifies owner content for platform visibility         |
+| `backend/src/types.ts`                                               | Includes Android promotion visibility fields             |
+| `src/types/ownerPortal.ts`                                           | Includes Android moderation and visibility fields        |
 
 ---
 
