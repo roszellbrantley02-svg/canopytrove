@@ -168,7 +168,7 @@ Dev builds stay open for developer access, but preview/release builds do not sil
 
 Default public launch posture:
 
-- `EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=false`
+- `EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=true`
 - `EXPO_PUBLIC_OWNER_PORTAL_PREVIEW_ENABLED=false`
 - `EXPO_PUBLIC_OWNER_PORTAL_ALLOWLIST=` blank
 

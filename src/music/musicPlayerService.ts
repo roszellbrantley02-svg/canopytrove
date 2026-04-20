@@ -41,6 +41,7 @@ type AudioPlayerHandle = {
   readonly duration?: number;
   readonly playing?: boolean;
   readonly isLoaded?: boolean;
+  loop?: boolean;
   play: () => void;
   pause: () => void;
   remove: () => void;
@@ -340,6 +341,17 @@ function playTrack(audio: ExpoAudioModule, track: BackgroundTrack, gen: number) 
     player.volume = 0;
   } catch {
     // volume is a setter on the player handle; some platforms no-op.
+  }
+
+  try {
+    // Submission-safe fallback: native-loop the current bundled track so a
+    // missed didJustFinish/status event cannot leave the app silent after one
+    // song. The shuffle/watchdog path stays in place for builds where finish
+    // events are reliable.
+    player.loop = true;
+  } catch {
+    // Older/native-shim builds may expose loop as readonly or omit it; in that
+    // case we fall back to the existing didJustFinish + watchdog advance path.
   }
 
   if (player.addListener) {

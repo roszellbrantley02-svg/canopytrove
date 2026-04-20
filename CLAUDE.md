@@ -115,6 +115,12 @@ in the buffer which PS reads as a command and errors. For multi-line credential 
 - `expo-dev-client@55.0.27` installed, matches Expo SDK 55
 - Build kickoff command: `eas device:list` then `eas build --platform ios --profile development` from `D:\src\canopytrove` on master at `d415475`.
 
+**Preview build 6 device regression triage (Apr 20 2026):**
+
+- Owner portal prelaunch must stay enabled in preview and production app bundles (`EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=true`) until owner onboarding is gated server-side. With it off, `ownerPortalConfig.ts` treats all emails as eligible for owner portal access.
+- Background music symptom: first bundled track plays, then silence. Current submission-safe fix is native-looping the active `expo-audio` player (`player.loop = true`) while keeping the existing `didJustFinish` + watchdog shuffle path as a fallback. Revisit post-launch if 3-track shuffle still matters more than guaranteed continuity.
+- Payment method badge frontend is not the blocker. `PaymentMethodsBadge`, `apiStorefrontAdapter`, and current backend `paymentMethodsService` all support baseline cash/debit chips. Live `https://api.canopytrove.com` responses on Apr 20 still omit both `paymentMethods` and newer `ocmVerification`, and Cloud Run is on `canopytrove-api-00197-vf5` from Apr 11 (`sha256:09dae82c...`). Conclusion: deploy current backend before expecting badges in production; do not patch the render layer for missing backend fields.
+
 ## Me
 
 Rozell (rozell), solo founder building Canopy Trove — a licensed dispensary discovery app for iOS (React Native/Expo). Handles frontend, backend, and deployment.

@@ -90,7 +90,7 @@ The repo now includes production env templates to fill these in:
 The release path should now treat `eas.json` as build metadata only:
 
 - configure preview and production app env in hosted EAS environments
-- keep `EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=false` for public release builds
+- keep `EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=true` for public release builds until owner onboarding is gated server-side
 - keep `EXPO_PUBLIC_OWNER_PORTAL_PREVIEW_ENABLED=false` for public release builds
 - keep `EXPO_PUBLIC_OWNER_PORTAL_ALLOWLIST` blank in the public bundle
 - if owner onboarding still needs a controlled rollout, enforce the allowlist privately on the backend

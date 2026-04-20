@@ -279,17 +279,19 @@ pushCheck(
 );
 
 const easBuildProfiles = ['preview', 'production'];
+const trackedPublicEasEnvAllowlist = new Set(['EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED']);
 const hardcodedEasEnvEntries = easBuildProfiles.flatMap((profileName) => {
   const profileEnv = easConfig.build?.[profileName]?.env ?? {};
   return Object.keys(profileEnv)
     .filter((name) => name.startsWith('EXPO_PUBLIC_'))
+    .filter((name) => !trackedPublicEasEnvAllowlist.has(name))
     .map((name) => `${profileName}.${name}`);
 });
 pushCheck(
   'Tracked EAS profiles do not hardcode public app env',
   hardcodedEasEnvEntries.length === 0,
   hardcodedEasEnvEntries.length === 0
-    ? 'Preview and production EAS profiles rely on hosted env instead of tracked EXPO_PUBLIC values.'
+    ? 'Preview and production EAS profiles rely on hosted env instead of tracked EXPO_PUBLIC values, except allowlisted release-safety flags.'
     : `Move these values out of eas.json and into hosted EAS environments: ${hardcodedEasEnvEntries.join(', ')}.`,
 );
 
@@ -394,11 +396,11 @@ for (const [envVar, label] of [
 
 const ownerPrelaunchEnabled = isTruthy(readValue('EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED'));
 pushCheck(
-  'Owner prelaunch disabled for public release',
-  !ownerPrelaunchEnabled,
-  !ownerPrelaunchEnabled
-    ? 'Owner portal prelaunch mode is off for public release checks.'
-    : 'Set EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=false for a neutral production app bundle. Use the backend OWNER_PORTAL_ALLOWLIST privately if you still want a controlled rollout.',
+  'Owner prelaunch gate enabled',
+  ownerPrelaunchEnabled,
+  ownerPrelaunchEnabled
+    ? 'Owner portal prelaunch mode is on, so owner onboarding stays gated in the app bundle.'
+    : 'Set EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=true until owner onboarding is fully gated server-side.',
   'recommended',
 );
 

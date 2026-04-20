@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
+import type { StorefrontSummaryApiDocument } from '../types';
 
 const firebaseModulePath = require.resolve('../firebase');
+const googlePlacesServiceModulePath = require.resolve('./googlePlacesService');
 const paymentMethodsServicePath = require.resolve('./paymentMethodsService');
 
 const originalFirebaseModule = require.cache[firebaseModulePath];
+const originalGooglePlacesServiceModule = require.cache[googlePlacesServiceModulePath];
 
 function setCachedModule(modulePath: string, exports: unknown) {
   require.cache[modulePath] = {
@@ -50,6 +53,14 @@ function createFakeDb() {
     collection: (name: string) => ({
       doc: (id: string) => createDocRef(`${path}/${name}/${id}`),
     }),
+    get: async () => {
+      const data = documents.get(path);
+      return {
+        exists: data !== undefined,
+        id: path.split('/').at(-1) ?? path,
+        data: () => data,
+      };
+    },
   });
 
   return {
@@ -117,11 +128,55 @@ afterEach(() => {
 
   if (originalFirebaseModule) {
     require.cache[firebaseModulePath] = originalFirebaseModule;
-    return;
+  } else {
+    delete require.cache[firebaseModulePath];
   }
 
-  delete require.cache[firebaseModulePath];
+  if (originalGooglePlacesServiceModule) {
+    require.cache[googlePlacesServiceModulePath] = originalGooglePlacesServiceModule;
+  } else {
+    delete require.cache[googlePlacesServiceModulePath];
+  }
 });
+
+function createSummary(overrides: Partial<StorefrontSummaryApiDocument> = {}) {
+  return {
+    id: 'storefront-1',
+    licenseId: 'license-1',
+    marketId: 'nyc',
+    displayName: 'Canopy Trove Test',
+    legalName: 'Canopy Trove Test LLC',
+    addressLine1: '1 Example Ave',
+    city: 'New York',
+    state: 'NY',
+    zip: '10001',
+    latitude: 40.75,
+    longitude: -73.99,
+    distanceMiles: 0,
+    travelMinutes: 0,
+    rating: 0,
+    reviewCount: 0,
+    openNow: true,
+    hours: [],
+    isVerified: true,
+    mapPreviewLabel: 'Verified OCM storefront',
+    promotionText: null,
+    promotionBadges: [],
+    promotionExpiresAt: null,
+    activePromotionId: null,
+    favoriteFollowerCount: null,
+    menuUrl: null,
+    verifiedOwnerBadgeLabel: null,
+    ownerFeaturedBadges: [],
+    ownerCardSummary: null,
+    premiumCardVariant: 'standard',
+    promotionPlacementSurfaces: [],
+    promotionPlacementScope: null,
+    placeId: undefined,
+    thumbnailUrl: null,
+    ...overrides,
+  } satisfies StorefrontSummaryApiDocument;
+}
 
 test('recordCommunityPaymentReport dedupes repeated install votes and updates flipped votes', async () => {
   const fakeDb = createFakeDb();
@@ -165,4 +220,30 @@ test('recordCommunityPaymentReport dedupes repeated install votes and updates fl
 
   const votePaths = Array.from(fakeDb.documents.keys()).filter((path) => path.includes('/votes/'));
   assert.equal(votePaths.length, 1);
+});
+
+test('attachPaymentMethodsToSummaries seeds baseline cash when sources are unavailable', async () => {
+  const fakeDb = createFakeDb();
+
+  setCachedModule(firebaseModulePath, {
+    getBackendFirebaseDb: () => fakeDb.db,
+  });
+  setCachedModule(googlePlacesServiceModulePath, {
+    getGooglePlacesEnrichment: async () => null,
+  });
+
+  const { attachPaymentMethodsToSummaries } =
+    require('./paymentMethodsService') as typeof import('./paymentMethodsService');
+
+  const [summary] = await attachPaymentMethodsToSummaries([createSummary()]);
+
+  assert.ok(summary?.paymentMethods);
+  assert.deepEqual(summary.paymentMethods.methods, [
+    {
+      methodId: 'cash',
+      accepted: true,
+      source: 'google',
+    },
+  ]);
+  assert.equal(summary.paymentMethods.hasOwnerDeclaration, false);
 });

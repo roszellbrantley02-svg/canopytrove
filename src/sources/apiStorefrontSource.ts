@@ -146,7 +146,6 @@ async function requestJson<T>(
         // Log the URL so we can triage if/when 426 re-emerges in the wild.
         // Kept on console.warn rather than a logger dep to avoid pulling
         // any non-RN module into this edge path.
-        // eslint-disable-next-line no-console
         console.warn('[apiStorefrontSource] 426 Upgrade Required — retrying', {
           url,
           attempt,
