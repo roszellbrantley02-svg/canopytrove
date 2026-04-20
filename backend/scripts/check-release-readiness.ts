@@ -87,7 +87,7 @@ function loadEnvFile(fileName: string) {
 
 function applyDerivedEnv(entries: Record<string, string>) {
   for (const [key, value] of Object.entries(entries)) {
-    if (!initialEnvKeys.has(key)) {
+    if (!initialEnvKeys.has(key) || !readValue(key)) {
       process.env[key] = value;
     }
   }
