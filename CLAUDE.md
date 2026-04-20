@@ -347,3 +347,19 @@ Branch: `codex/gamification-profile-fix` @ `e2b9938`. Commit message: "Fix canon
 - Committing from inside the orphan worktree — writes would land in the OLD repo's object DB, not `D:/src/canopytrove`.
 
 **Still-missing fix after harvest:** `beaker-outline` and `leaf-outline` renderers. Harvest adds `people`, `diamond-outline`, `chatbubbles-outline`, `brush-outline` but NOT beaker/leaf. Write those fresh in phase 1.
+**Phase 1 complete (Apr 20 2026):** `4ca92e0` adds `beaker-outline` + `leaf-outline` renderers directly to `AppUiIcon.tsx` (rejected harvest's `FALLBACK_ICON_NAME` pattern per anti-pattern above). `0074f6a` ports harvest's dynamic coverage test — reads `AppUiIcon.tsx` via regex and asserts every `CANOPYTROVE_BADGES` + `OWNER_EXCLUSIVE_BADGES` icon has a renderer. Catches future drift.
+
+**Phase 2 complete (Apr 20 2026):** six surgical commits on top of Phase 1, each sub-6-line diff:
+
+- `d9631bd` sitemap trailing slashes on `/nearby`, `/browse`, `/hot-deals` (SEO normalization)
+- `8992c59` iOS `associatedDomains` gains `applinks:app.canopytrove.com` — master was only claiming `canopytrove.com` + `www`, missing the actual live web app host
+- `b58d972` Android `intentFilters` gain `app.canopytrove.com` (same fix, Android half)
+- `7559581` CLAUDE.md: LF-on-Windows heredoc anchor gotcha (captured in Dev environment gotchas above)
+- `310bfaf` `eas.json` `submit.production.android` gains `track: "internal"` — Google Play Internal Testing lane; aspirational given Play readiness still 4/10
+- `d0e40b3` `public-release-pages/.well-known/assetlinks.json` placeholder → real SHA256 `BA:AD:A4:A5:B2:C9:FB:C5:F0:33:A0:16:1B:DE:62:39:E2:1E:51:D9:7C:8A:29:02:D4:D2:92:58:5B:07:E6:FF` from `D:/src/canopytrove/credentials/android/keystore.jks`, verified via `keytool -list -v`
+
+**Harvest values for secret-material are untrustworthy.** The harvest branch's `assetlinks.json` fingerprint was `FD:43:1C:F0:...` but the actual release keystore signs with `BA:AD:A4:A5:...` — different keys entirely. Rule: for anything that matches `REPLACE_WITH_*`, or any fingerprint / API key / token / project ID / OAuth client ID, the harvest's concrete value is a guess until re-derived from the actual source. Always re-derive; never copy harvest's concrete value for secret material.
+
+**Keystore layout — decision deferred:** release-signing `keystore.jks` (2196 bytes, Apr 9 2026) currently lives in three places: `D:/src/canopytrove/credentials/android/keystore.jks` (active repo, gitignored via `.gitignore:53:credentials/`), `C:/dev/canopytrove.OLD-2026-04-20/credentials/android/keystore.jks` (OneDrive OLD copy), and stashed `D:/src/_secrets-canopytrove/credentials.json` references it via relative `keystorePath: "credentials/android/keystore.jks"` (only resolves from repo root, not from the stash dir). `.gitignore` has triple coverage (`*.jks` line 16, `credentials/` line 53, `credentials.json` line 54) so zero leak risk, but the OLD OneDrive duplicate should be removed post-May-4 along with the rest of the OLD repo. Canonical layout (stash-everything-absolute vs repo-root-relative) to be decided after harvest reconciliation closes.
+
+**assetlinks redeploy TODO:** master's `public-release-pages/.well-known/assetlinks.json` now has the real fingerprint, but the live `https://app.canopytrove.com/.well-known/assetlinks.json` still serves a 2-byte empty file (observed Apr 20 2026 via `Invoke-WebRequest`). Until `public-release-pages/` gets deployed to the live host (probably Firebase Hosting), Android App Link auto-verification will fail for `app.canopytrove.com/storefronts/*` — intents still open the app but without the "verified" badge. Not a shipping blocker, but `b58d972`'s intent-filter commit depends on this redeploy to be fully effective.
