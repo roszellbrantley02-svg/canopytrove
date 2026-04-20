@@ -163,8 +163,8 @@ jobs:
     if: github.event_name == 'push'
     env:
       EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
-      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      SENTRY_ORG: canopy-trove
+      SENTRY_PROJECT: react-native
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       STOREFRONT_BACKEND_SOURCE: firestore
       CORS_ORIGIN: https://canopytrove.com,https://app.canopytrove.com,https://canopytrove-webapp.web.app
