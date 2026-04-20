@@ -1,6 +1,6 @@
 # Apple App Review Notes
 
-Updated: April 17, 2026
+Updated: April 19, 2026
 
 ## Exact Review Notes To Paste
 
@@ -24,13 +24,26 @@ Camera is used only for on-device QR and barcode scanning. No images are transmi
 
 Every scan event is logged anonymously using only the device's install ID (never personal information or user identity). Scan data includes the code that was scanned, whether it resolved to a shop or product, an optional approximate location (only if the user grants permission during scan), and the brand/batch identifier if it resolved to a COA. This data is used to power features like "trending brands near you" and operator dashboards.
 
-Users never need to sign in to scan. Location at time of scan is entirely optional and is only used to aggregate brand signal by market area — never linked to the user. Users can disable scan logging anytime in the app's Profile → Privacy settings. All scan logging is install-anonymous by default and does not enable cross-app tracking.
+Users never need to sign in to scan. Location at time of scan is entirely optional and is only used to aggregate brand signal by market area — never linked to the user. Users can email askmehere@canopytrove.com to request scan-history deletion at any time; a Profile → Privacy in-app toggle to disable scan logging entirely is called out as planned in the privacy policy and will ship in a near-term release. All scan logging is install-anonymous by default and does not enable cross-app tracking.
 
 ---
 
 ## How Canopy Trove Verifies Storefronts Are Licensed
 
 Every dispensary surfaced in the app is cross-referenced against the New York State Office of Cannabis Management (OCM) public adult-use license registry published at `https://data.ny.gov/resource/jskf-tt3q.json`. Listings without an active OCM license number are either held for owner verification or excluded from consumer discovery. When a dispensary owner claims a storefront, the backend automatically validates their submitted license number against the same OCM registry before granting publication rights. This is our primary compliance mechanism for Guideline 1.4.3.
+
+In addition to backend cross-referencing, the Verify tab's **Scan shop QR** option is designed to read New York State's official "Scan to Verify" license placard — a state-mandated QR code that OCM-licensed dispensaries are required to display in public view at the storefront. Reference: `https://cannabis.ny.gov/dispensary-location-verification`. This means Canopy Trove's in-store scan flow surfaces a regulatory verification artifact that the state itself has deployed; the app is the consumer-facing interface for a state-issued compliance tool, not a private mechanism built on top of cannabis commerce.
+
+### Pre-launch Reviewer Context (Expected Empty-Data Behavior)
+
+The current build is the initial submission, so Canopy Trove has no consumer user base yet. Reviewers will see the following pre-launch conditions, which are expected behavior rather than broken UI:
+
+- **Ratings read "Rating Pending" or "1 / 10 ratings"** on most storefront cards — the app requires a minimum review count before showing an aggregate score.
+- **Storefront photos may be empty** on some listings — the app pulls photos from Google Places where available and shows a neutral placeholder otherwise. No consumer-submitted imagery is expected on day one.
+- **Many storefronts will show "CLOSED"** depending on the time of day the review is performed. Hours come from Google Places and reflect the real operating hours of independent NY dispensaries, which are often more limited than national chains.
+- **Community signals (saves, visits, reports)** will be sparse — these build up post-launch.
+
+None of this affects the compliance flows (OCM verification, Scan shop QR, Scan product COA). Those are testable end-to-end regardless of user base.
 
 Community moderation and safety controls are available in the product:
 
