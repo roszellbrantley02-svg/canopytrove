@@ -1907,6 +1907,36 @@ const iconRenderers = {
       />
     </>
   ),
+  'beaker-outline': ({ color, strokeWidth }) => (
+    <>
+      <Path d="M9 3.5h6" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path
+        d="M9.5 3.5v5.9l-4 9.1a1.5 1.5 0 0 0 1.35 2.1h10.3a1.5 1.5 0 0 0 1.35-2.1L14.5 9.4V3.5"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M7.5 15h9" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </>
+  ),
+  'leaf-outline': ({ color, strokeWidth }) => (
+    <>
+      <Path
+        d="M4.8 19.2C4.8 11.5 10.8 5 19.5 4.5c-.5 8.7-7 14.7-14.7 14.7Z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M4.8 19.2 11.5 12.5"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </>
+  ),
 } satisfies Record<string, (props: IconDrawProps) => React.ReactNode>;
 
 export type AppUiIconName = keyof typeof iconRenderers;
