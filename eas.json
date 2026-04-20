@@ -37,7 +37,8 @@
   "submit": {
     "production": {
       "android": {
-        "serviceAccountKeyPath": "$EAS_ANDROID_SERVICE_ACCOUNT_KEY_PATH"
+        "serviceAccountKeyPath": "$EAS_ANDROID_SERVICE_ACCOUNT_KEY_PATH",
+        "track": "internal"
       }
     }
   }
