@@ -40,7 +40,8 @@ These will block release if they fail:
 - Privacy policy, terms, and community guidelines URLs are public
 - Expo slug and iOS/Android bundle identifiers match production values
 - iOS deployment target is pinned through `expo-build-properties`
-- Android compile/target SDK are pinned to Play-compliant levels
+- Android compile/target SDK are pinned to Expo SDK 55 / Play-compliant levels (`36+`)
+- EAS Update channels are configured for every EAS build profile when `updates.url` is present
 - Android does not request broad photo access (`READ_MEDIA_IMAGES`)
 - Android explicitly blocks inherited image-picker audio permission (`RECORD_AUDIO`)
 

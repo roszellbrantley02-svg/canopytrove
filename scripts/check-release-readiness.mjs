@@ -293,6 +293,43 @@ pushCheck(
     : `Move these values out of eas.json and into hosted EAS environments: ${hardcodedEasEnvEntries.join(', ')}.`,
 );
 
+function resolveEasBuildProfile(profileName, seen = new Set()) {
+  const profile = easConfig.build?.[profileName];
+  if (!profile || typeof profile !== 'object') {
+    return {};
+  }
+
+  const parentName = typeof profile.extends === 'string' ? profile.extends : '';
+  if (!parentName || seen.has(parentName)) {
+    return profile;
+  }
+
+  seen.add(profileName);
+  return {
+    ...resolveEasBuildProfile(parentName, seen),
+    ...profile,
+  };
+}
+
+const easUpdateUrl = String(appIdentity.updates?.url ?? '').trim();
+const easBuildProfileNames = Object.keys(easConfig.build ?? {});
+const easProfilesMissingUpdateChannel =
+  easUpdateUrl.length > 0
+    ? easBuildProfileNames.filter((profileName) => {
+        const resolvedProfile = resolveEasBuildProfile(profileName);
+        return typeof resolvedProfile.channel !== 'string' || !resolvedProfile.channel.trim();
+      })
+    : [];
+pushCheck(
+  'EAS Update channels configured',
+  !easUpdateUrl || easProfilesMissingUpdateChannel.length === 0,
+  !easUpdateUrl
+    ? 'EAS Update is not configured, so build profile channels are not required.'
+    : easProfilesMissingUpdateChannel.length === 0
+      ? 'Every EAS build profile has an update channel.'
+      : `Add channel values to these EAS build profiles: ${easProfilesMissingUpdateChannel.join(', ')}.`,
+);
+
 const sentryClientDsn = readValue('EXPO_PUBLIC_SENTRY_DSN');
 pushCheck(
   'Mobile crash monitoring DSN',
@@ -488,18 +525,18 @@ pushCheck(
 
 pushCheck(
   'Android target SDK configured',
-  Number.isFinite(androidTargetSdkVersion) && androidTargetSdkVersion >= 35,
-  Number.isFinite(androidTargetSdkVersion) && androidTargetSdkVersion >= 35
+  Number.isFinite(androidTargetSdkVersion) && androidTargetSdkVersion >= 36,
+  Number.isFinite(androidTargetSdkVersion) && androidTargetSdkVersion >= 36
     ? `Android target SDK set to ${androidTargetSdkVersion} via expo-build-properties.`
-    : 'Set android.targetSdkVersion to 35 or higher via the expo-build-properties plugin in app.json.',
+    : 'Set android.targetSdkVersion to 36 or higher via the expo-build-properties plugin in app.json.',
 );
 
 pushCheck(
   'Android compile SDK configured',
-  Number.isFinite(androidCompileSdkVersion) && androidCompileSdkVersion >= 35,
-  Number.isFinite(androidCompileSdkVersion) && androidCompileSdkVersion >= 35
+  Number.isFinite(androidCompileSdkVersion) && androidCompileSdkVersion >= 36,
+  Number.isFinite(androidCompileSdkVersion) && androidCompileSdkVersion >= 36
     ? `Android compile SDK set to ${androidCompileSdkVersion} via expo-build-properties.`
-    : 'Set android.compileSdkVersion to 35 or higher via the expo-build-properties plugin in app.json.',
+    : 'Set android.compileSdkVersion to 36 or higher via the expo-build-properties plugin in app.json.',
 );
 
 pushCheck(
