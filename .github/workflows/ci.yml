@@ -150,6 +150,28 @@ jobs:
       - name: Build backend image from clean context
         run: docker build --pull -t canopytrove-api-ci:${{ github.sha }} .
 
+      - name: Smoke-start backend image
+        run: |
+          docker run --rm -d \
+            --name canopytrove-api-ci \
+            -p 8080:8080 \
+            -e RATE_LIMIT_PEPPER=ci-smoke-pepper \
+            -e STOREFRONT_BACKEND_SOURCE=mock \
+            -e ALLOW_DEV_SEED=false \
+            canopytrove-api-ci:${{ github.sha }}
+
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8080/livez >/dev/null; then
+              docker stop canopytrove-api-ci
+              exit 0
+            fi
+            sleep 1
+          done
+
+          docker logs canopytrove-api-ci
+          docker stop canopytrove-api-ci
+          exit 1
+
   # ---------------------------------------------------------------------------
   # Production release checks.
   # Runs on trusted pushes only because the backend release check needs live

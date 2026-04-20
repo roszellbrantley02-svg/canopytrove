@@ -31,6 +31,7 @@ export type AppReview = {
   relativeTime: string;
   text: string;
   gifUrl?: string | null;
+  photoCount?: number;
   photoUrls?: string[];
   tags: string[];
   helpfulCount: number;

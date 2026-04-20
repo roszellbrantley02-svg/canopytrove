@@ -868,6 +868,48 @@ Agent Two's overall assessment:
 
 — Agent Two
 
+### 2026-04-20 - Enterprise Audit Sprint 1 Safety Fixes
+
+What changed:
+
+- Added an explicit iOS `NSPhotoLibraryUsageDescription` to cover review-photo picker access before App Store submission.
+- Hardened the backend runtime Docker image by switching the runtime container to the built-in non-root `node` user.
+- Removed the runtime `curl` install from the Dockerfile and replaced the healthcheck with Node 22's built-in `fetch`.
+- Added a GitHub Actions Docker smoke-start step after the clean image build. CI now runs the backend image, probes `/livez`, dumps logs on failure, and stops the container.
+- Fixed frontend review type drift by adding `photoCount?: number` to the API review type and app review domain type.
+
+Main files:
+
+- `app.json`
+- `Dockerfile`
+- `.github/workflows/ci.yml`
+- `src/types/storefrontApi.ts`
+- `src/types/storefrontBaseTypes.ts`
+
+Why:
+
+- These were the safe, repo-side fixes from the April 20 enterprise audit: reduce App Store rejection risk, catch "image builds but container won't boot" bugs in CI, remove root runtime posture, and align types with review-photo payloads.
+- Production `APP_CHECK_ENFORCEMENT=enforce` was not changed in code because that is a live Cloud Run setting and can block real clients if flipped before token-success monitoring is reviewed.
+- `routeStartsPerHour` remains a product/data decision. The UI supports it, but backend summaries do not currently populate a real per-hour route-start aggregate.
+
+Verification:
+
+- `npx prettier --check app.json .github/workflows/ci.yml src/types/storefrontApi.ts src/types/storefrontBaseTypes.ts`
+- `npm run typecheck`
+- `npm --prefix backend run check`
+- `npm run lint:strict`
+- `npm run format:check`
+- `npm --prefix backend test` — 259/259 passed
+- `npm run test:frontend-core` — 60/60 passed
+- `npm run test:frontend-integration` — 10/10 passed
+- `node ./scripts/check-release-readiness.mjs --production` — required 20/20 and recommended 11/11 passed
+
+Follow-up:
+
+- Docker is not installed in the local Windows environment, so the Docker build/smoke-start must be validated by GitHub Actions after push.
+- If production App Check token-success rate is healthy, flip Cloud Run `APP_CHECK_ENFORCEMENT=enforce` in a separate production-change pass.
+- Decide whether to implement a real `routeStartsPerHour` aggregate or remove the heat-glow data path.
+
 ### 2026-04-03 - Agent One Safety Protocol Change Required By User
 
 User instruction: Agent One is now treated as a write-risk until proven otherwise.

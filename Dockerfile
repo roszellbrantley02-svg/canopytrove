@@ -22,11 +22,11 @@ RUN npm --prefix backend ci --omit=dev && npm cache clean --force
 
 COPY --from=build /app/backend/dist ./backend/dist
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+USER node
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl -f http://localhost:8080/livez || exit 1
+  CMD node -e "fetch('http://localhost:8080/livez').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
 
 CMD ["npm", "--prefix", "backend", "run", "start"]
