@@ -42,6 +42,7 @@ export function useProfileScreenModel(navigation: NativeStackNavigationProp<Root
   const { activeLocation, activeLocationLabel, activeLocationMode } =
     useStorefrontQueryController();
   const { badgeDefinitions, gamificationState, levelTitle } = useStorefrontRewardsController();
+  const isAuthenticatedMember = authSession.status === 'authenticated';
   const { data: rankData } = useGamificationLeaderboardRank();
   const { data: savedStorefronts, isLoading: isLoadingSaved } =
     useSavedSummaries(savedStorefrontIds);
@@ -151,6 +152,7 @@ export function useProfileScreenModel(navigation: NativeStackNavigationProp<Root
     earnedBadges,
     featuredBadges,
     gamificationState,
+    isAuthenticatedMember,
     isLoadingBackendSeedStatus,
     isLoadingEmailSubscription: emailSubscription.isLoading,
     isLoadingRecentIds,
