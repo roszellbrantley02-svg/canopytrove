@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { InlineFeedbackPanel } from '../components/InlineFeedbackPanel';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { supportsProductDiscoveryUi } from '../config/playStorePolicy';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import { classifyScannedCode } from '../services/scanCodeClassifier';
 import { colors, radii, spacing, textStyles } from '../theme/tokens';
@@ -168,6 +169,39 @@ function ScanCameraScreenInner({ route, navigation }: ScanCameraScreenProps) {
       navigation.goBack();
     }
   }, [navigation]);
+
+  if (!supportsProductDiscoveryUi && mode === 'product') {
+    return (
+      <View style={styles.deniedContainer}>
+        <InlineFeedbackPanel
+          tone="info"
+          label="Storefront verification only"
+          title="Product scanning stays off this Android build."
+          body="Use Verify for storefront QR scans and OCM license checks while we prepare Google Play review."
+          iconName="shield-checkmark-outline"
+        />
+        <Pressable
+          onPress={() => navigation.replace('VerifyManualEntry')}
+          style={({ pressed }) => [styles.fallbackButton, pressed && styles.fallbackButtonPressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Verify a storefront license manually"
+        >
+          <Text style={styles.fallbackButtonText}>Verify Storefront License</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => navigation.replace('Tabs', { screen: 'Verify' })}
+          style={({ pressed }) => [
+            styles.secondaryButton,
+            pressed && styles.secondaryButtonPressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Back to Verify menu"
+        >
+          <Text style={styles.secondaryButtonText}>Back to Verify</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

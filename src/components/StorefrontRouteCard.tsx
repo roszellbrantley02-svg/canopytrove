@@ -1,5 +1,6 @@
 import React from 'react';
-import { Platform, Pressable } from 'react-native';
+import { Pressable } from 'react-native';
+import { supportsStorefrontPromotionUi } from '../config/playStorePolicy';
 import type { StorefrontSummary } from '../types/storefront';
 import { useStorefrontOperationalStatus } from '../hooks/useStorefrontOperationalStatus';
 import {
@@ -73,7 +74,7 @@ function StorefrontRouteCardComponent({
   imagePriority = 'normal',
 }: StorefrontRouteCardProps) {
   const compact = variant === 'list';
-  const hasPromotion = hasStorefrontPromotion(storefront);
+  const hasPromotion = supportsStorefrontPromotionUi && hasStorefrontPromotion(storefront);
   const { openNow, isLoading: isOperationalStatusPending } =
     useStorefrontOperationalStatus(storefront);
   const hasPublishedHours = getStorefrontRouteCardHoursState(storefront);
@@ -87,13 +88,11 @@ function StorefrontRouteCardComponent({
     hasPublishedHours,
   });
   const heatLevel = routeStartsToHeatLevel(storefront.routeStartsPerHour ?? 0);
-  const promotionAvailabilityLabel = hasPromotion
-    ? Platform.OS === 'android'
-      ? 'Recent update available.'
-      : 'Live deal available.'
-    : Platform.OS === 'android'
-      ? 'No update highlighted.'
-      : 'No live deal highlighted.';
+  const promotionAvailabilityLabel = supportsStorefrontPromotionUi
+    ? hasPromotion
+      ? 'Live deal available.'
+      : 'No live deal highlighted.'
+    : 'Storefront details available.';
   const accessibilityLabel = `${storefront.displayName}, ${storefront.city}, ${storefront.state}. ${previewStatusLabel}. ${promotionAvailabilityLabel}`;
 
   return (

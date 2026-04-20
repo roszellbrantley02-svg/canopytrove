@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { supportsOwnerWorkspaceUi } from '../config/playStorePolicy';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import { trackAnalyticsEvent } from '../services/analyticsService';
@@ -112,30 +113,32 @@ function WelcomeModePickerScreenInner() {
                 style={[styles.modeButton, styles.modeButtonPrimary]}
                 accessibilityRole="button"
                 accessibilityLabel="I'm a member"
-                accessibilityHint="Sign in as a member to discover licensed dispensaries, save favorites, and earn rewards."
+                accessibilityHint="Sign in as a member to save storefronts, write reviews, and earn rewards."
               >
                 <Text style={[styles.modeButtonLabel, styles.modeButtonLabelPrimary]}>
                   I'm a member
                 </Text>
                 <Text style={[styles.modeButtonSubtitle, styles.modeButtonSubtitlePrimary]}>
-                  Discover licensed dispensaries, save favorites, earn rewards.
+                  Save storefronts, write reviews, earn rewards.
                 </Text>
               </Pressable>
 
-              <Pressable
-                onPress={handleOwnerTap}
-                style={[styles.modeButton, styles.modeButtonSecondary]}
-                accessibilityRole="button"
-                accessibilityLabel="I'm a dispensary owner"
-                accessibilityHint="Sign in as a dispensary owner to manage your verified storefront, reviews, and visibility."
-              >
-                <Text style={[styles.modeButtonLabel, styles.modeButtonLabelSecondary]}>
-                  I'm a dispensary owner
-                </Text>
-                <Text style={[styles.modeButtonSubtitle, styles.modeButtonSubtitleSecondary]}>
-                  Manage your verified storefront, reviews, and visibility.
-                </Text>
-              </Pressable>
+              {supportsOwnerWorkspaceUi ? (
+                <Pressable
+                  onPress={handleOwnerTap}
+                  style={[styles.modeButton, styles.modeButtonSecondary]}
+                  accessibilityRole="button"
+                  accessibilityLabel="I'm a dispensary owner"
+                  accessibilityHint="Sign in as a dispensary owner to manage your verified storefront, reviews, and visibility."
+                >
+                  <Text style={[styles.modeButtonLabel, styles.modeButtonLabelSecondary]}>
+                    I'm a dispensary owner
+                  </Text>
+                  <Text style={[styles.modeButtonSubtitle, styles.modeButtonSubtitleSecondary]}>
+                    Manage your verified storefront, reviews, and visibility.
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           </MotionInView>
 
@@ -145,7 +148,7 @@ function WelcomeModePickerScreenInner() {
                 onPress={handleGuestTap}
                 accessibilityRole="button"
                 accessibilityLabel="Browse as a guest"
-                accessibilityHint="Browse dispensaries without signing in."
+                accessibilityHint="Browse storefronts without signing in."
               >
                 <Text style={styles.guestLinkText}>Just looking around? Browse as a guest.</Text>
               </Pressable>

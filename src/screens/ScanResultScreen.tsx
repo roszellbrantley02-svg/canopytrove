@@ -18,6 +18,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { isAndroidPlayStoreBuild } from '../config/playStorePolicy';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import { ensureAnalyticsInstallId } from '../services/analyticsStorage';
@@ -377,7 +378,48 @@ function ScanResultScreenInner({ route, navigation }: ScanResultScreenProps) {
         </ScrollView>
       )}
 
-      {state.kind === 'product' && (
+      {state.kind === 'product' && isAndroidPlayStoreBuild && (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <MotionInView delay={90}>
+            <View style={styles.stack}>
+              <InlineFeedbackPanel
+                tone="info"
+                label="Storefront verification only"
+                title="This scan points to product information."
+                body="On Android, Canopy Trove keeps Verify focused on storefront QR scans and OCM license checks while we prepare Google Play review."
+                iconName="shield-checkmark-outline"
+              />
+              <Pressable
+                onPress={() => navigation.replace('Tabs', { screen: 'Verify' })}
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  pressed && styles.primaryButtonPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Back to Verify"
+              >
+                <Text style={styles.primaryButtonText}>Back to Verify</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => navigation.replace('VerifyManualEntry')}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  pressed && styles.secondaryButtonPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Verify storefront license manually"
+              >
+                <Text style={styles.secondaryButtonText}>Verify Storefront License</Text>
+              </Pressable>
+            </View>
+          </MotionInView>
+        </ScrollView>
+      )}
+
+      {state.kind === 'product' && !isAndroidPlayStoreBuild && (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}

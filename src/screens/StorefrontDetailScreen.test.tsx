@@ -20,6 +20,9 @@ const analyticsMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('react-native', () => ({
+  Platform: {
+    OS: 'ios',
+  },
   ScrollView: 'ScrollView',
   StyleSheet: {
     create: <T,>(styles: T): T => styles,

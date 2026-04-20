@@ -18,6 +18,7 @@ import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { SectionHeader } from '../components/SectionHeader';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { supportsOwnerWorkspaceUi, supportsProductDiscoveryUi } from '../config/playStorePolicy';
 import { brand } from '../config/brand';
 import { ownerPortalAccessAvailable } from '../config/ownerPortalConfig';
 import { useStorefrontProfileController } from '../context/StorefrontController';
@@ -36,7 +37,8 @@ import { useProfileScreenModel } from './profile/useProfileScreenModel';
 function ProfileScreenInner() {
   const { authSession } = useStorefrontProfileController();
   const { accessState, isCheckingAccess } = useOwnerPortalAccessState(authSession);
-  const ownerPortalUiAvailable = ownerPortalAccessAvailable || Platform.OS === 'web';
+  const ownerPortalUiAvailable =
+    supportsOwnerWorkspaceUi && (ownerPortalAccessAvailable || Platform.OS === 'web');
   const ownerWorkspaceReady =
     ownerPortalUiAvailable &&
     authSession.status === 'authenticated' &&
@@ -63,6 +65,15 @@ function ProfileScreenInner() {
 
   if (ownerWorkspaceReady) {
     return <OwnerProfileWorkspace />;
+  }
+
+  if (
+    !supportsOwnerWorkspaceUi &&
+    authSession.status === 'authenticated' &&
+    accessState.allowlisted &&
+    !isCheckingAccess
+  ) {
+    return <AndroidBusinessNoticeWorkspace />;
   }
 
   if (authSession.status !== 'authenticated') {
@@ -92,15 +103,19 @@ function ProfileLoadingScreen({ title, body }: { title: string; body: string }) 
 }
 
 function ProfileEntryWorkspace() {
-  const isAndroid = Platform.OS === 'android';
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const ownerPortalUiAvailable = ownerPortalAccessAvailable || Platform.OS === 'web';
+  const ownerPortalUiAvailable =
+    supportsOwnerWorkspaceUi && (ownerPortalAccessAvailable || Platform.OS === 'web');
 
   return (
     <ScreenShell
       eyebrow="Profile"
       title="Choose your account"
-      subtitle="Sign in as a member or as an owner. Once you sign in, this tab stays on the right side of the profile until you sign out."
+      subtitle={
+        ownerPortalUiAvailable
+          ? 'Sign in as a member or as an owner. Once you sign in, this tab stays on the right side of the profile until you sign out.'
+          : 'Sign in as a member for saved storefronts, reviews, badges, and personal settings. Business tools stay on iPhone and web.'
+      }
       headerPill="Profile"
     >
       <MotionInView delay={70}>
@@ -115,8 +130,8 @@ function ProfileEntryWorkspace() {
             <View style={internalStyles.entryCopy}>
               <Text style={internalStyles.entryTitle}>Customer account</Text>
               <Text style={internalStyles.entryBody}>
-                Sign in as a member if this profile is for browsing, saving storefronts, and writing
-                reviews.
+                Sign in as a member if this profile is for browsing storefronts, saving favorites,
+                and writing reviews.
               </Text>
             </View>
           </View>
@@ -155,11 +170,7 @@ function ProfileEntryWorkspace() {
         <MotionInView delay={120}>
           <SectionCard
             title="Owner access"
-            body={
-              isAndroid
-                ? 'Use the owner side for storefront photos, profile updates, reviews, updates, and billing.'
-                : 'Use the owner side for storefront photos, profile updates, reviews, offers, and billing.'
-            }
+            body="Use the owner side for storefront photos, profile updates, reviews, offers, and billing."
           >
             <View style={internalStyles.entryCardHeader}>
               <View style={internalStyles.entryIconOwner}>
@@ -200,6 +211,73 @@ function ProfileEntryWorkspace() {
           </SectionCard>
         </MotionInView>
       ) : null}
+    </ScreenShell>
+  );
+}
+
+function AndroidBusinessNoticeWorkspace() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { authSession, signOutSession } = useStorefrontProfileController();
+
+  return (
+    <ScreenShell
+      eyebrow="Profile"
+      title="Business tools stay off Android"
+      subtitle="This Android build stays focused on storefront discovery and verification while we prepare Google Play review."
+      headerPill="Profile"
+    >
+      <MotionInView delay={70}>
+        <SectionCard
+          title="Signed in with a business account"
+          body="Use iPhone or the web owner workspace for storefront management, reviews, profile updates, and billing."
+        >
+          <View style={internalStyles.sessionLockCard}>
+            <View style={internalStyles.sessionCopy}>
+              <Text style={internalStyles.sessionTitle}>Business account detected</Text>
+              <Text style={internalStyles.sessionBody}>
+                {authSession.email ?? authSession.displayName ?? 'Owner account active'}
+              </Text>
+            </View>
+            <View style={internalStyles.ownerChip}>
+              <Text style={internalStyles.ownerChipText}>Owner</Text>
+            </View>
+          </View>
+        </SectionCard>
+      </MotionInView>
+
+      <MotionInView delay={110}>
+        <SectionCard
+          title="What you can do here"
+          body="Browse storefronts, verify licenses, and check public storefront details on Android."
+        >
+          <View style={internalStyles.actionStack}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Browse storefronts"
+              onPress={() => navigation.navigate('Tabs', { screen: 'Browse' })}
+              style={({ pressed }) => [
+                internalStyles.primaryButton,
+                pressed && internalStyles.buttonPressed,
+              ]}
+            >
+              <Text style={internalStyles.primaryButtonText}>Browse Storefronts</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Sign out"
+              onPress={() => {
+                void signOutSession();
+              }}
+              style={({ pressed }) => [
+                internalStyles.secondaryButton,
+                pressed && internalStyles.buttonPressed,
+              ]}
+            >
+              <Text style={internalStyles.secondaryButtonText}>Sign Out</Text>
+            </Pressable>
+          </View>
+        </SectionCard>
+      </MotionInView>
     </ScreenShell>
   );
 }
@@ -398,6 +476,7 @@ function MemberProfileWorkspace() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const model = useProfileScreenModel(navigation);
   const scrollViewRef = React.useRef<ScrollView>(null);
+  const showProductLibrary = supportsProductDiscoveryUi;
 
   const revealDelay = React.useCallback(
     (order: number) => Math.min(order, 5) * Math.round(motion.denseSectionStagger * 0.7),
@@ -431,20 +510,24 @@ function MemberProfileWorkspace() {
         tone: colors.primary,
         onPress: () => navigation.navigate('SavedStorefronts'),
       },
-      {
-        key: 'brands',
-        label: 'My Brands',
-        iconName: 'ribbon-outline',
-        tone: colors.gold,
-        onPress: () => navigation.navigate('MyBrands'),
-      },
-      {
-        key: 'products',
-        label: 'My Products',
-        iconName: 'sparkles-outline',
-        tone: colors.blue,
-        onPress: () => navigation.navigate('MyProducts'),
-      },
+      ...(showProductLibrary
+        ? ([
+            {
+              key: 'brands',
+              label: 'My Brands',
+              iconName: 'ribbon-outline',
+              tone: colors.gold,
+              onPress: () => navigation.navigate('MyBrands'),
+            },
+            {
+              key: 'products',
+              label: 'My Products',
+              iconName: 'sparkles-outline',
+              tone: colors.blue,
+              onPress: () => navigation.navigate('MyProducts'),
+            },
+          ] satisfies QuickAction[])
+        : []),
       {
         key: 'leaderboard',
         label: 'Leaderboard',
@@ -460,7 +543,7 @@ function MemberProfileWorkspace() {
         onPress: () => navigation.navigate('Settings'),
       },
     ],
-    [model, navigation],
+    [model, navigation, showProductLibrary],
   );
 
   return (
@@ -573,40 +656,42 @@ function MemberProfileWorkspace() {
           </View>
         </MotionInView>
 
-        <MotionInView dense delay={revealDelay(3) + 30}>
-          <SectionCard
-            title="Your brand lineup"
-            body="Save brands from scans or browse the NY lineup. Sort by smell, taste, or potency to find your next favorite."
-            iconName="ribbon-outline"
-            badgeLabel="Brands"
-            tone="primary"
-          >
-            <View style={internalStyles.actionStack}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Open My Brands"
-                onPress={() => navigation.navigate('MyBrands')}
-                style={({ pressed }) => [
-                  internalStyles.primaryButton,
-                  pressed && internalStyles.buttonPressed,
-                ]}
-              >
-                <Text style={internalStyles.primaryButtonText}>My Brands</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Browse all brands"
-                onPress={() => navigation.navigate('BrowseBrands')}
-                style={({ pressed }) => [
-                  internalStyles.secondaryButton,
-                  pressed && internalStyles.buttonPressed,
-                ]}
-              >
-                <Text style={internalStyles.secondaryButtonText}>Browse brands</Text>
-              </Pressable>
-            </View>
-          </SectionCard>
-        </MotionInView>
+        {showProductLibrary ? (
+          <MotionInView dense delay={revealDelay(3) + 30}>
+            <SectionCard
+              title="Your brand lineup"
+              body="Save brands from scans or browse the NY lineup. Sort by smell, taste, or potency to find your next favorite."
+              iconName="ribbon-outline"
+              badgeLabel="Brands"
+              tone="primary"
+            >
+              <View style={internalStyles.actionStack}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Open My Brands"
+                  onPress={() => navigation.navigate('MyBrands')}
+                  style={({ pressed }) => [
+                    internalStyles.primaryButton,
+                    pressed && internalStyles.buttonPressed,
+                  ]}
+                >
+                  <Text style={internalStyles.primaryButtonText}>My Brands</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Browse all brands"
+                  onPress={() => navigation.navigate('BrowseBrands')}
+                  style={({ pressed }) => [
+                    internalStyles.secondaryButton,
+                    pressed && internalStyles.buttonPressed,
+                  ]}
+                >
+                  <Text style={internalStyles.secondaryButtonText}>Browse brands</Text>
+                </Pressable>
+              </View>
+            </SectionCard>
+          </MotionInView>
+        ) : null}
 
         <MotionInView dense delay={revealDelay(4)}>
           <View style={internalStyles.section}>

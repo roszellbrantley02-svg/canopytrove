@@ -1,5 +1,6 @@
 import { DEFAULT_ACTION_IDENTIFIER, type NotificationResponse } from 'expo-notifications';
 import type { NavigationContainerRef } from '@react-navigation/native';
+import { supportsOwnerWorkspaceUi } from '../config/playStorePolicy';
 import type { RootStackParamList } from '../navigation/rootNavigatorConfig';
 import type { StorefrontSummary } from '../types/storefront';
 import { parseNotificationPayload } from './notificationPayloadService';
@@ -51,7 +52,12 @@ async function resolveOwnerPortalNotificationTarget(
       routeName: 'OwnerPortalReviewInbox';
       params: RootStackParamList['OwnerPortalReviewInbox'];
     }
+  | null
 > {
+  if (!supportsOwnerWorkspaceUi) {
+    return null;
+  }
+
   try {
     const { ensureOwnerPortalSessionReady } = await import('./ownerPortalSessionService');
     await ensureOwnerPortalSessionReady();

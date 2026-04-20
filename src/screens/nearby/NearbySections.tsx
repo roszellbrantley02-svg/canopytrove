@@ -13,6 +13,7 @@ import { MotionInView } from '../../components/MotionInView';
 import { SearchField } from '../../components/SearchField';
 import { StorefrontRouteCard } from '../../components/StorefrontRouteCard';
 import { StorefrontRouteCardSkeleton } from '../../components/StorefrontRouteCardSkeleton';
+import { supportsStorefrontPromotionUi } from '../../config/playStorePolicy';
 import { colors } from '../../theme/tokens';
 import type { StorefrontSummary } from '../../types/storefront';
 import { styles } from './nearbyStyles';
@@ -183,7 +184,9 @@ export function NearbyStoreList({
             secondaryActionLabel="Details"
             isSaved={isSavedStorefront(store.id)}
             isVisited={visitedSet.has(store.id)}
-            showPromotionText={Boolean(store.promotionText?.trim())}
+            showPromotionText={
+              supportsStorefrontPromotionUi && Boolean(store.promotionText?.trim())
+            }
             onPressIn={() => onPrepareStorefront(store.id)}
             onSecondaryActionPressIn={() => onPrepareStorefront(store.id)}
             onPress={() => onOpenStorefront(store)}

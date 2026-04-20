@@ -29,6 +29,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { supportsProductDiscoveryUi } from '../config/playStorePolicy';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { buildClientProductSlug } from '../services/productReviewService';
 import { colors, fontFamilies, radii, spacing, textStyles, typography } from '../theme/tokens';
@@ -67,6 +68,40 @@ function RateProductPickerScreenInner({ navigation }: RateProductPickerScreenPro
       productName: trimmedProduct,
     });
   }, [canSubmit, isAuthenticated, navigation, slug, trimmedBrand, trimmedProduct]);
+
+  if (!supportsProductDiscoveryUi) {
+    return (
+      <ScreenShell
+        eyebrow="Reviews"
+        title="Product reviews stay off Android"
+        subtitle="This Android build keeps member reviews focused on storefronts while we prepare Google Play review."
+        headerPill={undefined}
+        resetScrollOnFocus={true}
+      >
+        <MotionInView delay={90}>
+          <SectionCard
+            title="Storefront reviews still work"
+            body="Browse storefronts, verify licenses, and leave storefront reviews from this Android build."
+            eyebrow="Android"
+            iconName="shield-checkmark-outline"
+            tone="primary"
+          >
+            <Pressable
+              onPress={() => navigation.replace('Tabs', { screen: 'Profile' })}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                pressed && styles.primaryButtonPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Back to profile"
+            >
+              <Text style={styles.primaryButtonText}>Back to Profile</Text>
+            </Pressable>
+          </SectionCard>
+        </MotionInView>
+      </ScreenShell>
+    );
+  }
 
   return (
     <ScreenShell

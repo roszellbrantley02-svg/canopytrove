@@ -1,18 +1,12 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { ActivityIndicator, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { InlineFeedbackPanel } from '../../components/InlineFeedbackPanel';
 import { MotionInView } from '../../components/MotionInView';
 import { SearchField } from '../../components/SearchField';
 import { StorefrontRouteCard } from '../../components/StorefrontRouteCard';
 import { StorefrontRouteCardSkeleton } from '../../components/StorefrontRouteCardSkeleton';
+import { supportsStorefrontPromotionUi } from '../../config/playStorePolicy';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import { colors } from '../../theme/tokens';
 import type { BrowseSortKey, StorefrontSummary } from '../../types/storefront';
@@ -43,7 +37,6 @@ export function HotDealsFilters({
   sortKey: BrowseSortKey;
   setSortKey: (value: BrowseSortKey) => void;
 }) {
-  const isAndroid = Platform.OS === 'android';
   const { width } = useWindowDimensions();
   const compactHeader = width < 390;
   const activeDealSearchQuery = dealSearchQuery.trim();
@@ -53,15 +46,19 @@ export function HotDealsFilters({
       <View style={styles.filters}>
         <View style={[styles.filtersHeader, compactHeader && styles.filtersHeaderCompact]}>
           <View style={styles.filtersHeaderCopy}>
-            <Text style={styles.filtersEyebrow}>{isAndroid ? 'Updates view' : 'Offers view'}</Text>
+            <Text style={styles.filtersEyebrow}>
+              {supportsStorefrontPromotionUi ? 'Offers view' : 'Featured view'}
+            </Text>
             <Text style={styles.filtersTitle}>
-              {isAndroid ? 'Refine recent storefront updates' : 'Refine active promotions'}
+              {supportsStorefrontPromotionUi
+                ? 'Refine active promotions'
+                : 'Refine featured storefronts'}
             </Text>
           </View>
           <View style={[styles.filtersPill, compactHeader && styles.filtersPillCompact]}>
             <AppUiIcon name="pricetag-outline" size={14} color={colors.textSoft} />
             <Text style={styles.filtersPillText}>
-              {isAndroid ? 'Recent updates' : 'Live offers'}
+              {supportsStorefrontPromotionUi ? 'Live offers' : 'Featured storefronts'}
             </Text>
           </View>
         </View>
@@ -80,9 +77,9 @@ export function HotDealsFilters({
             accessibilityRole="button"
             accessibilityLabel="Apply location"
             accessibilityHint={
-              isAndroid
-                ? 'Applies the location to filter updates.'
-                : 'Applies the location to filter deals.'
+              supportsStorefrontPromotionUi
+                ? 'Applies the location to filter deals.'
+                : 'Applies the location to filter featured storefronts.'
             }
           >
             {isResolvingLocation ? <ActivityIndicator size="small" color="#06130c" /> : null}
@@ -97,7 +94,11 @@ export function HotDealsFilters({
             tone="danger"
             iconName="location-outline"
             label="Location issue"
-            title="Canopy Trove could not apply that offer area."
+            title={
+              supportsStorefrontPromotionUi
+                ? 'Canopy Trove could not apply that offer area.'
+                : 'Canopy Trove could not apply that storefront area.'
+            }
             body={locationError}
           />
         ) : null}
@@ -105,7 +106,9 @@ export function HotDealsFilters({
         <SearchField
           value={dealSearchQuery}
           onChangeText={setDealSearchQuery}
-          placeholder={isAndroid ? 'Search update or storefront' : 'Search deal or storefront'}
+          placeholder={
+            supportsStorefrontPromotionUi ? 'Search deal or storefront' : 'Search storefront'
+          }
           isActive={Boolean(activeDealSearchQuery)}
         />
 
@@ -134,7 +137,7 @@ export function HotDealsFilters({
               style={[styles.sortChip, sortKey === value && styles.sortChipActive]}
               accessibilityRole="button"
               accessibilityLabel={`Sort by ${label}`}
-              accessibilityHint={`Sorts deals by ${label.toLowerCase()}`}
+              accessibilityHint={`Sorts storefronts by ${label.toLowerCase()}`}
             >
               <Text style={[styles.sortChipText, sortKey === value && styles.sortChipTextActive]}>
                 {label}
@@ -148,45 +151,43 @@ export function HotDealsFilters({
 }
 
 export function HotDealsEmptyState({ errorText }: { errorText?: string | null }) {
-  const isAndroid = Platform.OS === 'android';
-
   return (
     <MotionInView delay={180}>
       <CustomerStateCard
         title={
           errorText
-            ? isAndroid
-              ? 'Updates could not refresh right now.'
-              : 'Offers could not refresh right now.'
-            : isAndroid
-              ? 'No recent updates found.'
-              : 'No live offers found.'
+            ? supportsStorefrontPromotionUi
+              ? 'Offers could not refresh right now.'
+              : 'Featured storefronts could not refresh right now.'
+            : supportsStorefrontPromotionUi
+              ? 'No live offers found.'
+              : 'No featured storefronts found.'
         }
         body={
           errorText ??
-          (isAndroid
-            ? 'Recent owner updates show up here when a storefront in the current area posts something new.'
-            : 'Active promotions show up here when a storefront in the current area is running something live.')
+          (supportsStorefrontPromotionUi
+            ? 'Active promotions show up here when a storefront in the current area is running something live.'
+            : 'Featured storefronts show up here when licensed listings in the current area have strong public review activity.')
         }
         tone={errorText ? 'danger' : 'warm'}
         iconName={errorText ? 'alert-circle-outline' : 'pricetag-outline'}
         eyebrow={
           errorText
-            ? isAndroid
-              ? 'Updates issue'
-              : 'Offers issue'
-            : isAndroid
-              ? 'Updates state'
-              : 'Offers state'
+            ? supportsStorefrontPromotionUi
+              ? 'Offers issue'
+              : 'Featured issue'
+            : supportsStorefrontPromotionUi
+              ? 'Offers state'
+              : 'Featured state'
         }
         note={
           errorText
-            ? isAndroid
-              ? 'The last stable updates state stayed in place. Try again in a moment or widen the area.'
-              : 'The last stable offer state stayed in place. Try again in a moment or widen the area.'
-            : isAndroid
-              ? 'Widen the area, broaden the search, or check back when storefronts publish something new.'
-              : 'Widen the area, broaden the search, or check back when the next promotion cycle goes live.'
+            ? supportsStorefrontPromotionUi
+              ? 'The last stable offer state stayed in place. Try again in a moment or widen the area.'
+              : 'The last stable storefront list stayed in place. Try again in a moment or widen the area.'
+            : supportsStorefrontPromotionUi
+              ? 'Widen the area, broaden the search, or check back when the next promotion cycle goes live.'
+              : 'Widen the area, broaden the search, or try a different sort order to surface more storefronts.'
         }
       />
     </MotionInView>
@@ -200,36 +201,32 @@ export function HotDealsMemberGate({
   onOpenMemberSignIn: () => void;
   onOpenMemberSignUp: () => void;
 }) {
-  const isAndroid = Platform.OS === 'android';
-
   return (
     <MotionInView delay={180}>
       <CustomerStateCard
         title={
-          isAndroid
-            ? 'Member access required for updates.'
-            : 'Member access required for live deals.'
+          supportsStorefrontPromotionUi
+            ? 'Member access required for live deals.'
+            : 'Member access required.'
         }
         body={
-          isAndroid
-            ? 'Recent storefront updates are member-only. Sign in to view current owner-posted activity, follow storefronts, and get notified when your favorite licensed dispensaries share something new.'
-            : 'Live deals are now member-only. Sign in to view current promotions, follow storefronts, and get notified when your favorite licensed dispensaries post something new.'
+          supportsStorefrontPromotionUi
+            ? 'Live deals are now member-only. Sign in to view current promotions, follow storefronts, and get notified when your favorite licensed dispensaries post something new.'
+            : 'Sign in to unlock member features for this screen.'
         }
         tone="warm"
         iconName="lock-closed-outline"
         eyebrow="Members only"
         note={
-          isAndroid
-            ? 'Storefront discovery stays public. Updates browsing stays reserved for signed-in members.'
-            : 'Live deals browsing stays reserved for signed-in members.'
+          supportsStorefrontPromotionUi
+            ? 'Live deals browsing stays reserved for signed-in members.'
+            : 'Storefront discovery stays public.'
         }
       >
         <View style={styles.memberGateActions}>
           <Pressable
             accessibilityLabel={
-              isAndroid
-                ? 'Sign in to view members-only updates'
-                : 'Sign in to view members-only live deals'
+              supportsStorefrontPromotionUi ? 'Sign in to view members-only live deals' : 'Sign in'
             }
             accessibilityRole="button"
             accessibilityHint="Opens the sign in screen."
@@ -240,9 +237,9 @@ export function HotDealsMemberGate({
           </Pressable>
           <Pressable
             accessibilityLabel={
-              isAndroid
-                ? 'Create a Canopy Trove account to unlock members-only updates'
-                : 'Create a Canopy Trove account to unlock members-only live deals'
+              supportsStorefrontPromotionUi
+                ? 'Create a Canopy Trove account to unlock members-only live deals'
+                : 'Create a Canopy Trove account'
             }
             accessibilityRole="button"
             accessibilityHint="Opens the account creation screen."
@@ -290,7 +287,6 @@ export function HotDealsList({
   isLoading: boolean;
   onLoadMore: () => void;
 }) {
-  const isAndroid = Platform.OS === 'android';
   // O(1) lookup per row instead of O(n) Array.includes on every render.
   const visitedStorefrontIdSet = React.useMemo(
     () => new Set(visitedStorefrontIds),
@@ -308,7 +304,7 @@ export function HotDealsList({
             secondaryActionLabel="Details"
             isSaved={isSavedStorefront(item.id)}
             isVisited={visitedStorefrontIdSet.has(item.id)}
-            showPromotionText={true}
+            showPromotionText={supportsStorefrontPromotionUi}
             onPress={() => onOpenDetail(item)}
             onPrimaryActionPress={() => onGoNow(item)}
             onSecondaryActionPress={() => onOpenDetail(item)}
@@ -326,8 +322,8 @@ export function HotDealsList({
           >
             <Text style={styles.loadMoreButtonText}>
               {isLoading
-                ? `Loading More ${isAndroid ? 'Updates' : 'Offers'} (${items.length} of ${dataTotal})`
-                : `Load More ${isAndroid ? 'Updates' : 'Offers'} (${items.length} of ${dataTotal})`}
+                ? `Loading More ${supportsStorefrontPromotionUi ? 'Offers' : 'Storefronts'} (${items.length} of ${dataTotal})`
+                : `Load More ${supportsStorefrontPromotionUi ? 'Offers' : 'Storefronts'} (${items.length} of ${dataTotal})`}
             </Text>
           </Pressable>
         </MotionInView>

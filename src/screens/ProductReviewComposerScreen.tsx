@@ -28,6 +28,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { supportsProductDiscoveryUi } from '../config/playStorePolicy';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import {
@@ -151,6 +152,34 @@ function ProductReviewComposerScreenInner({ route, navigation }: ProductReviewCo
     trimmedText,
     validationError,
   ]);
+
+  if (!supportsProductDiscoveryUi) {
+    return (
+      <ScreenShell
+        eyebrow="Reviews"
+        title="Product reviews stay off Android"
+        subtitle="This Android build keeps member reviews focused on storefronts while we prepare Google Play review."
+        headerPill={undefined}
+      >
+        <MotionInView delay={90}>
+          <SectionCard
+            title="Storefront reviews still work"
+            body="Use Browse and Storefront Detail to leave public storefront reviews from this Android build."
+            iconName="shield-checkmark-outline"
+            tone="primary"
+          >
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => navigation.replace('Tabs', { screen: 'Profile' })}
+              style={({ pressed }) => [styles.submitButton, pressed && styles.submitButtonPressed]}
+            >
+              <Text style={styles.submitButtonText}>Back to Profile</Text>
+            </Pressable>
+          </SectionCard>
+        </MotionInView>
+      </ScreenShell>
+    );
+  }
 
   if (!isAuthenticated) {
     return (

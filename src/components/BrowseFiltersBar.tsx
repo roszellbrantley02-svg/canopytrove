@@ -2,7 +2,6 @@ import React from 'react';
 import {
   ActivityIndicator,
   Keyboard,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import {
 } from 'react-native';
 import type { AppUiIconName } from '../icons/AppUiIcon';
 import { AppUiIcon } from '../icons/AppUiIcon';
+import { supportsStorefrontPromotionUi } from '../config/playStorePolicy';
 import { InlineFeedbackPanel } from './InlineFeedbackPanel';
 import { SearchField } from './SearchField';
 import type { BrowseSortKey } from '../types/storefront';
@@ -75,10 +75,8 @@ function BrowseFiltersBarComponent({
             color={colors.textSoft}
           />
           <Text style={styles.livePillText}>
-            {hotDealsOnly
-              ? Platform.OS === 'android'
-                ? 'Recent updates only'
-                : 'Live offers only'
+            {hotDealsOnly && supportsStorefrontPromotionUi
+              ? 'Live offers only'
               : 'Verified storefronts'}
           </Text>
         </View>
@@ -193,10 +191,8 @@ function BrowseFiltersBarComponent({
       <View style={[styles.sortHeaderRow, compactLayout && styles.sortHeaderRowCompact]}>
         <Text style={styles.sortLabel}>Sort storefronts by</Text>
         <Text style={styles.sortCaption}>
-          {hotDealsOnly
-            ? Platform.OS === 'android'
-              ? 'Recent updates view'
-              : 'Live offers view'
+          {hotDealsOnly && supportsStorefrontPromotionUi
+            ? 'Live offers view'
             : 'Verified storefront view'}
         </Text>
       </View>
@@ -222,27 +218,25 @@ function BrowseFiltersBarComponent({
             </Text>
           </Pressable>
         ))}
-        <Pressable
-          onPress={onToggleHotDeals}
-          style={[styles.sortChip, hotDealsOnly && styles.hotDealsChipActive]}
-          accessibilityRole="button"
-          accessibilityLabel={Platform.OS === 'android' ? 'Toggle updates' : 'Toggle hot deals'}
-          accessibilityHint={
-            Platform.OS === 'android'
-              ? 'Shows only storefronts with recent updates.'
-              : 'Shows only storefronts with live deals.'
-          }
-          accessibilityState={{ selected: hotDealsOnly }}
-        >
-          <AppUiIcon
-            name="flame-outline"
-            size={14}
-            color={hotDealsOnly ? colors.backgroundDeep : colors.danger}
-          />
-          <Text style={[styles.sortChipText, hotDealsOnly && styles.hotDealsChipTextActive]}>
-            {Platform.OS === 'android' ? 'Updates' : 'Hot Deals'}
-          </Text>
-        </Pressable>
+        {supportsStorefrontPromotionUi ? (
+          <Pressable
+            onPress={onToggleHotDeals}
+            style={[styles.sortChip, hotDealsOnly && styles.hotDealsChipActive]}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle hot deals"
+            accessibilityHint="Shows only storefronts with live deals."
+            accessibilityState={{ selected: hotDealsOnly }}
+          >
+            <AppUiIcon
+              name="flame-outline"
+              size={14}
+              color={hotDealsOnly ? colors.backgroundDeep : colors.danger}
+            />
+            <Text style={[styles.sortChipText, hotDealsOnly && styles.hotDealsChipTextActive]}>
+              Hot Deals
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );

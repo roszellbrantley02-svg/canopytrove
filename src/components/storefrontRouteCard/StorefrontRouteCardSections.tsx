@@ -4,6 +4,7 @@ import { MapGridPreview } from '../MapGridPreview';
 import type { PreviewStatusTone } from '../mapGridPreview/mapGridPreviewTones';
 import { LicensedBadge } from '../LicensedBadge';
 import { PaymentMethodsBadge } from '../PaymentMethodsBadge';
+import { supportsStorefrontPromotionUi } from '../../config/playStorePolicy';
 import { LocationPinIcon } from '../../icons/AppIcons';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import { colors } from '../../theme/tokens';
@@ -71,13 +72,19 @@ export function StorefrontRouteCardBody({
   previewStatusTone,
   imagePriority = 'normal',
 }: StorefrontRouteCardBodyProps) {
-  const promotionText = storefront.promotionText?.trim() || null;
-  const promotionBadges = getStorefrontPromotionBadges(storefront).slice(0, 5);
-  const promotionExpiryLabel = formatStorefrontPromotionExpiry(storefront.promotionExpiresAt);
-  const activePromotionCount =
-    storefront.activePromotionCount ?? (promotionBadges.length || promotionText ? 1 : 0);
+  const promotionText = supportsStorefrontPromotionUi
+    ? storefront.promotionText?.trim() || null
+    : null;
+  const promotionBadges = supportsStorefrontPromotionUi
+    ? getStorefrontPromotionBadges(storefront).slice(0, 5)
+    : [];
+  const promotionExpiryLabel = supportsStorefrontPromotionUi
+    ? formatStorefrontPromotionExpiry(storefront.promotionExpiresAt)
+    : null;
+  const activePromotionCount = supportsStorefrontPromotionUi
+    ? (storefront.activePromotionCount ?? (promotionBadges.length || promotionText ? 1 : 0))
+    : 0;
   const hasLiveDeals = activePromotionCount > 0;
-  const isAndroid = Platform.OS === 'android';
   const ownerFeaturedBadges = (storefront.ownerFeaturedBadges ?? []).slice(0, 4);
   const heatLevel = routeStartsToHeatLevel(storefront.routeStartsPerHour ?? 0);
   const heatLabel = getHeatLabel(heatLevel);
@@ -258,7 +265,7 @@ export function StorefrontRouteCardBody({
               <View style={styles.promotionBadgeExpiry}>
                 <Text
                   style={styles.promotionBadgeExpiryText}
-                >{`${activePromotionCount} ${isAndroid ? 'updates live' : 'live now'}`}</Text>
+                >{`${activePromotionCount} live now`}</Text>
               </View>
             ) : null}
           </View>
@@ -276,12 +283,8 @@ export function StorefrontRouteCardBody({
             <AppUiIcon name="lock-closed-outline" size={14} color={colors.text} />
             <Text numberOfLines={2} style={styles.promotionTeaserText}>
               {activePromotionCount > 1
-                ? isAndroid
-                  ? `Members unlock ${activePromotionCount} recent updates`
-                  : `Members unlock ${activePromotionCount} live deals`
-                : isAndroid
-                  ? 'Members unlock this recent update'
-                  : 'Members unlock this live deal'}
+                ? `Members unlock ${activePromotionCount} live deals`
+                : 'Members unlock this live deal'}
             </Text>
           </View>
         ) : null}

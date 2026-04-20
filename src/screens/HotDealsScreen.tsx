@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -11,6 +11,7 @@ import {
 import { ErrorRecoveryCard } from '../components/ErrorRecoveryCard';
 import { ScreenShell } from '../components/ScreenShell';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { supportsStorefrontPromotionUi } from '../config/playStorePolicy';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useBrowseSummaries } from '../hooks/useStorefrontSummaryData';
 import { spacing } from '../theme/tokens';
@@ -28,12 +29,13 @@ import {
 const PAGE_SIZE = 6;
 
 function HotDealsScreenInner() {
-  const isAndroid = Platform.OS === 'android';
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [offset, setOffset] = React.useState(0);
   const [items, setItems] = React.useState<StorefrontSummary[]>([]);
   const [dealSearchQuery, setDealSearchQuery] = React.useState('');
-  const [sortKey, setSortKey] = React.useState<BrowseSortKey>('distance');
+  const [sortKey, setSortKey] = React.useState<BrowseSortKey>(
+    supportsStorefrontPromotionUi ? 'distance' : 'reviews',
+  );
   const {
     activeLocationLabel,
     activeLocationMode,
@@ -57,13 +59,13 @@ function HotDealsScreenInner() {
     () => ({
       ...storefrontQuery,
       searchQuery: debouncedDealSearchQuery,
-      hotDealsOnly: true,
-      prioritySurface: 'hot_deals' as const,
+      hotDealsOnly: supportsStorefrontPromotionUi,
+      ...(supportsStorefrontPromotionUi ? { prioritySurface: 'hot_deals' as const } : {}),
     }),
     [debouncedDealSearchQuery, storefrontQuery],
   );
   const { data, error, isLoading } = useBrowseSummaries(query, sortKey, PAGE_SIZE, offset, {
-    enabled: isMemberAuthenticated,
+    enabled: supportsStorefrontPromotionUi ? isMemberAuthenticated : true,
   });
 
   const handleApplyLocationQuery = React.useCallback(() => {
@@ -103,16 +105,18 @@ function HotDealsScreenInner() {
     });
   }, [data.items, data.offset, isLoading]);
 
-  const platformLabel = isAndroid ? 'Updates' : 'Hot Deals';
+  const platformLabel = supportsStorefrontPromotionUi ? 'Hot Deals' : 'Featured';
 
   return (
     <ScreenShell
       eyebrow={platformLabel}
-      title={isAndroid ? 'Recent storefront updates.' : 'Live deals near you.'}
+      title={
+        supportsStorefrontPromotionUi ? 'Live deals near you.' : 'Featured storefronts nearby.'
+      }
       subtitle={
-        isAndroid
-          ? 'Filter by location, storefront, or update details to browse recent owner-posted activity.'
-          : 'Filter by location, storefront, or offer details to browse active promotions.'
+        supportsStorefrontPromotionUi
+          ? 'Filter by location, storefront, or offer details to browse active promotions.'
+          : 'Filter by location, storefront, or review activity to browse licensed storefronts with strong public momentum.'
       }
       headerPill={activeLocationLabel}
       onBrandIconPress={handleRefreshDeviceLocation}
@@ -131,7 +135,7 @@ function HotDealsScreenInner() {
         setSortKey={setSortKey}
       />
 
-      {!isMemberAuthenticated ? (
+      {supportsStorefrontPromotionUi && !isMemberAuthenticated ? (
         <HotDealsMemberGate
           onOpenMemberSignIn={() => navigation.navigate('CanopyTroveSignIn')}
           onOpenMemberSignUp={() => navigation.navigate('CanopyTroveSignUp')}

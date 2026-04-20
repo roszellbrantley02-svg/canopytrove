@@ -1,6 +1,6 @@
 import type { PreviewTone } from '../mapGridPreview/mapGridPreviewTones';
+import { supportsStorefrontPromotionUi } from '../../config/playStorePolicy';
 import type { StorefrontSummary } from '../../types/storefront';
-import { Platform } from 'react-native';
 
 export type StorefrontCardVisualLane =
   | 'hotDeal'
@@ -23,7 +23,7 @@ export function getStorefrontCardVisualLane({
   hasPromotion,
   premiumCardVariant,
 }: StorefrontCardVisualStateInput): StorefrontCardVisualLane {
-  if (hasPromotion || premiumCardVariant === 'hot_deal') {
+  if (supportsStorefrontPromotionUi && (hasPromotion || premiumCardVariant === 'hot_deal')) {
     return 'hotDeal';
   }
 
@@ -73,19 +73,11 @@ export function getStorefrontCardHeroLabel({
   activePromotionCount: number;
   isVerified: boolean;
 }) {
-  const isAndroid = Platform.OS === 'android';
-
   switch (lane) {
     case 'hotDeal':
-      return activePromotionCount > 1
-        ? isAndroid
-          ? `${activePromotionCount} Recent Updates`
-          : `${activePromotionCount} Live Deals`
-        : isAndroid
-          ? 'Recent update'
-          : 'Live deal';
+      return activePromotionCount > 1 ? `${activePromotionCount} Live Deals` : 'Live deal';
     case 'ownerFeatured':
-      return isAndroid ? 'Featured update' : 'Owner featured';
+      return supportsStorefrontPromotionUi ? 'Owner featured' : 'Featured storefront';
     case 'newToYou':
       return 'New to you';
     case 'saved':

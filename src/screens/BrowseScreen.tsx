@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -13,6 +13,7 @@ import { ErrorRecoveryCard } from '../components/ErrorRecoveryCard';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { supportsStorefrontPromotionUi } from '../config/playStorePolicy';
 import { useBrowseSummaries } from '../hooks/useStorefrontSummaryData';
 import { spacing } from '../theme/tokens';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -60,6 +61,7 @@ function buildBrowseQueryIdentity(
 }
 
 function BrowseScreenInner() {
+  const isAndroid = Platform.OS === 'android';
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [offset, setOffset] = React.useState(0);
   const [items, setItems] = React.useState<StorefrontSummary[]>([]);
@@ -92,7 +94,8 @@ function BrowseScreenInner() {
     gamificationState: { visitedStorefrontIds },
   } = useStorefrontRewardsController();
   const isMemberAuthenticated = authSession.status === 'authenticated';
-  const effectiveBrowseHotDealsOnly = isMemberAuthenticated ? browseHotDealsOnly : false;
+  const effectiveBrowseHotDealsOnly =
+    supportsStorefrontPromotionUi && isMemberAuthenticated ? browseHotDealsOnly : false;
 
   const query = React.useMemo(
     () => ({
@@ -156,6 +159,11 @@ function BrowseScreenInner() {
   }, [requestDeviceLocation]);
 
   const handleToggleHotDeals = React.useCallback(() => {
+    if (!supportsStorefrontPromotionUi) {
+      navigation.navigate('Tabs', { screen: 'HotDeals' });
+      return;
+    }
+
     if (!isMemberAuthenticated) {
       navigation.navigate('Tabs', { screen: 'HotDeals' });
       return;
@@ -187,7 +195,7 @@ function BrowseScreenInner() {
   }, []);
 
   React.useEffect(() => {
-    if (isMemberAuthenticated || !browseHotDealsOnly) {
+    if ((supportsStorefrontPromotionUi && isMemberAuthenticated) || !browseHotDealsOnly) {
       return;
     }
 
@@ -332,7 +340,11 @@ function BrowseScreenInner() {
     <ScreenShell
       eyebrow="Browse"
       title="Browse storefronts"
-      subtitle="Pick a location, then narrow things down by distance, rating, reviews, or live offers."
+      subtitle={
+        isAndroid
+          ? 'Pick a location, then narrow things down by distance, rating, or reviews.'
+          : 'Pick a location, then narrow things down by distance, rating, reviews, or live offers.'
+      }
       showTopBar={false}
       showHero={false}
       resetScrollOnFocus={true}

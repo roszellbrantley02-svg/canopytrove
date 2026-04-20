@@ -1,7 +1,8 @@
 import React from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { SectionCard } from '../../components/SectionCard';
+import { supportsStorefrontPromotionUi } from '../../config/playStorePolicy';
 import type { StorefrontActivePromotion } from '../../types/storefront';
 import { getUSHolidayInfo } from '../../utils/holidayUtils';
 import { formatStorefrontPromotionExpiry } from '../../utils/storefrontPromotions';
@@ -124,15 +125,13 @@ export function DetailHoursSection({ hours }: { hours: string[] }) {
 }
 
 function getPromotionToneLabel(cardTone: StorefrontActivePromotion['cardTone']) {
-  const isAndroid = Platform.OS === 'android';
-
   switch (cardTone) {
     case 'hot_deal':
-      return isAndroid ? 'Featured update' : 'Hot deal';
+      return supportsStorefrontPromotionUi ? 'Hot deal' : 'Featured';
     case 'owner_featured':
       return 'Featured';
     default:
-      return isAndroid ? 'Recent update' : 'Live deal';
+      return supportsStorefrontPromotionUi ? 'Live deal' : 'Featured';
   }
 }
 
@@ -172,18 +171,17 @@ export function DetailLiveDealsSection({
 }: {
   promotions: StorefrontActivePromotion[];
 }) {
-  const isAndroid = Platform.OS === 'android';
   const body =
     promotions.length === 1
-      ? isAndroid
-        ? 'This storefront has one recent update right now.'
-        : 'This storefront has one live deal right now.'
-      : isAndroid
-        ? `This storefront has ${promotions.length} recent updates right now.`
-        : `This storefront has ${promotions.length} live deals right now.`;
+      ? supportsStorefrontPromotionUi
+        ? 'This storefront has one live deal right now.'
+        : 'This storefront has one featured item right now.'
+      : supportsStorefrontPromotionUi
+        ? `This storefront has ${promotions.length} live deals right now.`
+        : `This storefront has ${promotions.length} featured items right now.`;
 
   return (
-    <SectionCard title={isAndroid ? 'Recent updates' : 'Live deals'} body={body}>
+    <SectionCard title={supportsStorefrontPromotionUi ? 'Live deals' : 'Featured'} body={body}>
       <View style={styles.liveDealsList}>
         {promotions.map((promotion) => {
           const expiryLabel = formatStorefrontPromotionExpiry(promotion.endsAt);
@@ -244,40 +242,39 @@ export function DetailLockedLiveDealsSection({
   onOpenMemberSignIn: () => void;
   onOpenMemberSignUp: () => void;
 }) {
-  const isAndroid = Platform.OS === 'android';
   const body =
     liveDealCount === 1
-      ? isAndroid
-        ? 'This storefront has a recent update, but the details are only available to members.'
-        : 'This storefront has a live deal, but the details are only available to members.'
-      : isAndroid
-        ? `This storefront has ${liveDealCount} recent updates, but the details are only available to members.`
-        : `This storefront has ${liveDealCount} live deals, but the details are only available to members.`;
+      ? supportsStorefrontPromotionUi
+        ? 'This storefront has a live deal, but the details are only available to members.'
+        : 'This storefront has a featured item, but the details are only available to members.'
+      : supportsStorefrontPromotionUi
+        ? `This storefront has ${liveDealCount} live deals, but the details are only available to members.`
+        : `This storefront has ${liveDealCount} featured items, but the details are only available to members.`;
 
   return (
-    <SectionCard title={isAndroid ? 'Recent updates' : 'Live deals'} body={body}>
+    <SectionCard title={supportsStorefrontPromotionUi ? 'Live deals' : 'Featured'} body={body}>
       <CustomerStateCard
         title={
           liveDealCount === 1
-            ? isAndroid
-              ? 'One recent update is waiting.'
-              : 'One live deal is waiting.'
-            : isAndroid
-              ? `${liveDealCount} recent updates are waiting.`
-              : `${liveDealCount} live deals are waiting.`
+            ? supportsStorefrontPromotionUi
+              ? 'One live deal is waiting.'
+              : 'One featured item is waiting.'
+            : supportsStorefrontPromotionUi
+              ? `${liveDealCount} live deals are waiting.`
+              : `${liveDealCount} featured items are waiting.`
         }
         body={
-          isAndroid
-            ? 'Sign in to see update details, timing, and the full member-only context.'
-            : 'Sign in to see promotion details, timing, and stacked deals.'
+          supportsStorefrontPromotionUi
+            ? 'Sign in to see promotion details, timing, and stacked deals.'
+            : 'Sign in to see the full member-only details.'
         }
         tone="warm"
         iconName="lock-closed-outline"
         eyebrow="Members only"
         note={
-          isAndroid
-            ? 'Guests can browse. Update details unlock with a member account.'
-            : 'Guests can browse. Promotion details unlock with a member account.'
+          supportsStorefrontPromotionUi
+            ? 'Guests can browse. Promotion details unlock with a member account.'
+            : 'Guests can browse. Extra details unlock with a member account.'
         }
       >
         <DetailLockedMemberActions

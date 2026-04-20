@@ -4,6 +4,7 @@ import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { MotionInView } from '../../components/MotionInView';
 import { StorefrontRouteCard } from '../../components/StorefrontRouteCard';
 import { StorefrontRouteCardSkeleton } from '../../components/StorefrontRouteCardSkeleton';
+import { supportsStorefrontPromotionUi } from '../../config/playStorePolicy';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import type { BrowseSortKey, StorefrontSummary } from '../../types/storefront';
 import { colors } from '../../theme/tokens';
@@ -274,7 +275,7 @@ export function BrowseStoreList({
           secondaryActionLabel="Details"
           isSaved={isSavedStorefront(item.id)}
           isVisited={visitedSet.has(item.id)}
-          showPromotionText={Boolean(item.promotionText?.trim())}
+          showPromotionText={supportsStorefrontPromotionUi && Boolean(item.promotionText?.trim())}
           onPressIn={() => onPrepareStorefront(item.id)}
           onPrimaryActionPressIn={() => onPrepareStorefront(item.id)}
           onSecondaryActionPressIn={() => onPrepareStorefront(item.id)}

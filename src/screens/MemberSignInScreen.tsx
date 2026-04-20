@@ -5,6 +5,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
+import { supportsProductDiscoveryUi } from '../config/playStorePolicy';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors } from '../theme/tokens';
 import { trackAnalyticsEvent } from '../services/analyticsService';
@@ -54,6 +55,11 @@ function MemberSignInScreenInner({ navigation, route }: MemberSignInScreenProps)
     }
 
     if (redirectTo?.kind === 'navigate') {
+      if (!supportsProductDiscoveryUi) {
+        navigation.replace('Tabs', { screen: 'Profile' });
+        return;
+      }
+
       if (redirectTo.screen === 'RateProductPicker') {
         navigation.replace('RateProductPicker');
         return;
@@ -105,7 +111,11 @@ function MemberSignInScreenInner({ navigation, route }: MemberSignInScreenProps)
     <ScreenShell
       eyebrow="Member sign-in"
       title="Welcome back, explorer."
-      subtitle="Sign in to save favorites, scan products, and earn badges."
+      subtitle={
+        supportsProductDiscoveryUi
+          ? 'Sign in to save favorites, scan products, and earn badges.'
+          : 'Sign in to save favorites, write reviews, and earn badges.'
+      }
       headerPill="Member"
     >
       <KeyboardAvoidingView

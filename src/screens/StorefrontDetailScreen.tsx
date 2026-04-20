@@ -9,6 +9,7 @@ import { CustomerStateCard } from '../components/CustomerStateCard';
 import { LicensedBadge } from '../components/LicensedBadge';
 import { PaymentMethodsBadge } from '../components/PaymentMethodsBadge';
 import { MotionInView } from '../components/MotionInView';
+import { supportsStorefrontPromotionUi } from '../config/playStorePolicy';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { resolveStorefrontSlug } from '../sources/apiStorefrontSource';
 import { MapGridPreview } from '../components/MapGridPreview';
@@ -147,11 +148,13 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
             </MotionInView>
           ) : null}
 
-          {model.detailData.activePromotions?.length ? (
+          {supportsStorefrontPromotionUi && model.detailData.activePromotions?.length ? (
             <MotionInView delay={120}>
               <DetailLiveDealsSection promotions={model.detailData.activePromotions} />
             </MotionInView>
-          ) : !canViewMemberLockedContent && visibleLiveDealCount > 0 ? (
+          ) : supportsStorefrontPromotionUi &&
+            !canViewMemberLockedContent &&
+            visibleLiveDealCount > 0 ? (
             <MotionInView delay={120}>
               <DetailLockedLiveDealsSection
                 liveDealCount={visibleLiveDealCount}

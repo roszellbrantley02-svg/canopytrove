@@ -4,6 +4,7 @@ import { getPathFromState, NavigationContainer } from '@react-navigation/native'
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { CanopyTroveTabBar } from '../components/CanopyTroveTabBar';
 import { PostVisitPromptHost } from '../components/PostVisitPromptHost';
+import { supportsStorefrontPromotionUi } from '../config/playStorePolicy';
 import { colors } from '../theme/tokens';
 
 /* Notification bridges use expo-notifications which has no web implementation.
@@ -15,7 +16,7 @@ const NotificationResponseBridge =
     : () => null;
 
 const FavoriteDealNotificationBridge =
-  Platform.OS !== 'web'
+  Platform.OS !== 'web' && supportsStorefrontPromotionUi
     ? require('../components/FavoriteDealNotificationBridge').FavoriteDealNotificationBridge
     : () => null;
 /* eslint-enable @typescript-eslint/no-require-imports */
