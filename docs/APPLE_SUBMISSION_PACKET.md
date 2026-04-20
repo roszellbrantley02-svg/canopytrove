@@ -45,7 +45,7 @@ Canopy Trove also includes private tools for verified dispensary operators manag
 
 Use the exact text in:
 
-- [APPLE_APP_REVIEW_NOTES.md](/C:/dev/canopytrove/docs/APPLE_APP_REVIEW_NOTES.md)
+- [APPLE_APP_REVIEW_NOTES.md](./APPLE_APP_REVIEW_NOTES.md)
 
 ## Lawful-Use / Geo-Restriction Story
 
@@ -70,7 +70,7 @@ Use this explanation consistently in App Store Connect and any reviewer replies:
 
 Submission-ready iPhone screenshots are packaged here:
 
-- [app-store-iphone-6.9](/C:/dev/canopytrove/public-release-pages/store-screenshots/app-store-iphone-6.9)
+- [app-store-iphone-6.9](../public-release-pages/store-screenshots/app-store-iphone-6.9)
 
 Current exported size:
 
@@ -79,6 +79,6 @@ Current exported size:
 ## Remaining Manual Apple Steps
 
 1. Finish the D-U-N-S request and move the Apple enrollment to the organization account path so the seller name can be `Canopy Trove LLC`.
-2. Fill in the real reviewer credentials in [APPLE_REVIEWER_CREDENTIALS_TEMPLATE.md](/C:/dev/canopytrove/docs/APPLE_REVIEWER_CREDENTIALS_TEMPLATE.md).
+2. Fill in the real reviewer credentials in [APPLE_REVIEWER_CREDENTIALS_TEMPLATE.md](./APPLE_REVIEWER_CREDENTIALS_TEMPLATE.md).
 3. Confirm the `askmehere@canopytrove.com` inbox is monitored and can reply during review week.
 4. Enter the final copy and screenshots into App Store Connect.
