@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -121,8 +122,29 @@ function readEasConfig() {
   return JSON.parse(fs.readFileSync(easJsonPath, 'utf8'));
 }
 
+function readHostedEasEnvNames(environment) {
+  try {
+    const output = execSync(`eas env:list --environment ${environment} --format short`, {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 15_000,
+    });
+
+    return new Set(
+      output
+        .split(/\r?\n/)
+        .map((line) => line.match(/^([A-Z0-9_]+)=/)?.[1])
+        .filter(Boolean),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
 const appIdentity = readAppIdentity();
 const easConfig = readEasConfig();
+const hostedProductionEnvNames = useProductionEnv ? readHostedEasEnvNames('production') : new Set();
 const checks = [];
 
 function pushCheck(name, ok, detail, severity = 'required') {
@@ -333,11 +355,15 @@ pushCheck(
 );
 
 const sentryClientDsn = readValue('EXPO_PUBLIC_SENTRY_DSN');
+const hasHostedSentryClientDsn = hostedProductionEnvNames.has('EXPO_PUBLIC_SENTRY_DSN');
+const hasSentryClientDsn = Boolean(sentryClientDsn || hasHostedSentryClientDsn);
 pushCheck(
   'Mobile crash monitoring DSN',
-  Boolean(sentryClientDsn),
+  hasSentryClientDsn,
   sentryClientDsn
-    ? 'EXPO_PUBLIC_SENTRY_DSN is configured.'
+    ? 'EXPO_PUBLIC_SENTRY_DSN is configured in local release env.'
+    : hasHostedSentryClientDsn
+      ? 'EXPO_PUBLIC_SENTRY_DSN is configured in hosted EAS production env.'
     : 'Set EXPO_PUBLIC_SENTRY_DSN to enable hosted mobile crash monitoring.',
   'recommended',
 );
@@ -345,16 +371,26 @@ pushCheck(
 const sentryBuildOrg = readValue('SENTRY_ORG');
 const sentryBuildProject = readValue('SENTRY_PROJECT');
 const sentryBuildAuthToken = readValue('SENTRY_AUTH_TOKEN');
-const hasSentryBuildMetadata = Boolean(sentryBuildOrg && sentryBuildProject);
+const hasSentryBuildMetadata = Boolean(
+  (sentryBuildOrg || hostedProductionEnvNames.has('SENTRY_ORG')) &&
+    (sentryBuildProject || hostedProductionEnvNames.has('SENTRY_PROJECT')),
+);
+const hasSentryBuildAuthToken = Boolean(
+  sentryBuildAuthToken || hostedProductionEnvNames.has('SENTRY_AUTH_TOKEN'),
+);
+const productionBuildProfile = resolveEasBuildProfile('production');
+const sentryAutoUploadDisabled =
+  String(productionBuildProfile.env?.SENTRY_DISABLE_AUTO_UPLOAD ?? '').toLowerCase() === 'true';
 pushCheck(
   'Sentry mobile source map upload config',
-  !sentryClientDsn ||
-    (!hasSentryBuildMetadata && !sentryBuildAuthToken) ||
-    (hasSentryBuildMetadata && Boolean(sentryBuildAuthToken)),
-  !sentryClientDsn
+  !hasSentryClientDsn ||
+    (hasSentryBuildMetadata && hasSentryBuildAuthToken && !sentryAutoUploadDisabled),
+  !hasSentryClientDsn
     ? 'Mobile Sentry DSN is not configured yet, so source map upload is not expected.'
-    : hasSentryBuildMetadata && sentryBuildAuthToken
+    : hasSentryBuildMetadata && hasSentryBuildAuthToken && !sentryAutoUploadDisabled
       ? 'Sentry build metadata is configured for native source map upload.'
+      : sentryAutoUploadDisabled
+        ? 'SENTRY_DISABLE_AUTO_UPLOAD is true for the production build profile; native release crash stacks may not map back to source lines.'
       : 'If you want release crash stacks to resolve back to source lines, set SENTRY_ORG, SENTRY_PROJECT, and SENTRY_AUTH_TOKEN in hosted build env.',
   'recommended',
 );
