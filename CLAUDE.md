@@ -388,3 +388,11 @@ Branch: `codex/gamification-profile-fix` @ `e2b9938`. Commit message: "Fix canon
 - **Using literal non-ASCII chars (star, em-dash, minus) inside PowerShell here-strings without `[char]0x____` escape sequences.** The console codepage on Windows can mangle them at parse time even when the file target is UTF-8; git will then show garbled bytes (`Γÿà`, `ΓÇö`, `ΓêÆ`) in the diff. Always use escape sequences + placeholder replacement for unicode in PS scripts that touch source files.
 
 **Cleanup owed (task #24):** `git worktree remove --force "C:/Users/eleve/Documents/New project/canopytrove-profile-fix"`, delete the local branch `codex/gamification-profile-fix` (keep `origin/codex/gamification-profile-fix` on the remote for provenance — don't push-delete), remove the stale worktree admin entry if one survives.
+
+### Phase 7 teardown — concrete finding (closing the post-mortem)
+
+`git worktree remove --force` on the orphan path refused with _"does not point back to .git/worktrees/canopytrove-profile-fix"_. Root cause was a stale reverse-pointer: the orphan's own `.git` file still contained `gitdir: C:/dev/canopytrove.OLD-2026-04-20/.git/worktrees/canopytrove-profile-fix` from the pre-D: OneDrive era, even after we moved the main repo. Git validates bidirectionally — forward-pointer-correct + reverse-pointer-stale fails the remove.
+
+Fallback that worked: `Remove-Item -Recurse -Force .git\worktrees\canopytrove-profile-fix` + `git worktree prune -v` + `git branch -D codex/gamification-profile-fix` + `Remove-Item` on the orphan path. Admin-dir removal is the load-bearing step — once the main repo forgets the worktree, everything else is ordinary file/branch deletion.
+
+**New rejected pattern:** assuming `git worktree remove` will clean up orphan worktrees after a main-repo relocation. The orphan's `.git` file carries a hardcoded path to the main repo's `.git` dir and is NOT auto-updated when the main repo moves. After any main-repo move, either fix the reverse-pointer manually on every worktree (`Set-Content <orphan>\.git "gitdir: <new-main>/.git/worktrees/<name>"`) or plan on the admin-dir-removal fallback.
