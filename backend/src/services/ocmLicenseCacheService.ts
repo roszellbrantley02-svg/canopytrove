@@ -398,3 +398,13 @@ export async function refreshOcmCacheNow(): Promise<void> {
   state.entry = null;
   await ensureRefresh();
 }
+
+/** Test-only helper: clear in-memory cache state between isolated test cases. */
+export function clearOcmLicenseCacheForTests(): void {
+  if (process.env.NODE_ENV !== 'test') {
+    return;
+  }
+
+  state.entry = null;
+  state.refreshInFlight = null;
+}

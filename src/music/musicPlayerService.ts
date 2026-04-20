@@ -72,7 +72,13 @@ type ExpoAudioModule = {
   }) => Promise<void>;
 };
 
+let expoAudioModuleOverrideForTests: ExpoAudioModule | null | undefined;
+
 function loadExpoAudio(): ExpoAudioModule | null {
+  if (expoAudioModuleOverrideForTests !== undefined) {
+    return expoAudioModuleOverrideForTests;
+  }
+
   if (Platform.OS === 'web') {
     return null;
   }
@@ -81,7 +87,7 @@ function loadExpoAudio(): ExpoAudioModule | null {
     const mod = require('expo-audio') as ExpoAudioModule;
     return mod ?? null;
   } catch (error) {
-    if (__DEV__) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
       console.warn(
         '[musicPlayerService] expo-audio not available. Run `npx expo install expo-audio` to enable background music.',
         error,
@@ -154,7 +160,7 @@ async function configureAudioModeOnce(audio: ExpoAudioModule) {
     });
     state.audioModeConfigured = true;
   } catch (error) {
-    if (__DEV__) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
       console.warn('[musicPlayerService] failed to configure audio mode', error);
     }
   }
@@ -318,7 +324,7 @@ function playTrack(audio: ExpoAudioModule, track: BackgroundTrack, gen: number) 
   try {
     player = audio.createAudioPlayer(track.source);
   } catch (error) {
-    if (__DEV__) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
       console.warn('[musicPlayerService] failed to create player for', track.id, error);
     }
     return;
@@ -366,7 +372,7 @@ function playTrack(audio: ExpoAudioModule, track: BackgroundTrack, gen: number) 
         }
       });
     } catch (error) {
-      if (__DEV__) {
+      if (typeof __DEV__ !== 'undefined' && __DEV__) {
         console.warn('[musicPlayerService] addListener failed', error);
       }
       state.listenerSub = null;
@@ -376,7 +382,7 @@ function playTrack(audio: ExpoAudioModule, track: BackgroundTrack, gen: number) 
   try {
     player.play();
   } catch (error) {
-    if (__DEV__) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
       console.warn('[musicPlayerService] play() failed', error);
     }
     // Don't commit lastTrackId if play failed — the user never heard it.
@@ -489,4 +495,8 @@ export function __resetMusicPlayerStateForTests(): void {
   state.lastTrackId = null;
   state.stopRequested = false;
   state.audioModeConfigured = false;
+}
+
+export function __setExpoAudioModuleForTests(audio: ExpoAudioModule | null | undefined): void {
+  expoAudioModuleOverrideForTests = audio;
 }

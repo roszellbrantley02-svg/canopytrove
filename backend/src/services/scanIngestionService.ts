@@ -196,8 +196,9 @@ async function resolveCode(rawCode: string): Promise<ScanResolution> {
   }
 
   // (4,5) OCM license pattern — verified if registry hit, unverified otherwise.
-  if (OCM_LICENSE_PATTERN.test(trimmed)) {
-    const lookup = await lookupOcmLicense(trimmed);
+  const normalizedLicenseCandidate = trimmed.toUpperCase();
+  if (OCM_LICENSE_PATTERN.test(normalizedLicenseCandidate)) {
+    const lookup = await lookupOcmLicense(normalizedLicenseCandidate);
     if (lookup.found && lookup.record) {
       return {
         kind: 'license',
@@ -216,7 +217,7 @@ async function resolveCode(rawCode: string): Promise<ScanResolution> {
     return {
       kind: 'license',
       license: {
-        licenseNumber: trimmed,
+        licenseNumber: normalizedLicenseCandidate,
         licenseType: 'unknown',
         licenseeName: 'Unverified',
         status: 'unverified',

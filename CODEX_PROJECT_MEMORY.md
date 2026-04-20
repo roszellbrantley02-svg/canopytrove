@@ -84,10 +84,13 @@ EAS production env is also configured:
 
 For the Sentry source-map setup, GitHub CI safety gates, Docker dry-run, Google Cloud auth, and release readiness automation: **yes, done and verified green**.
 
+For the Sprint 2 test-hardening pass: **implemented in this pass; final verification commands are listed in the Recent Change Log**. The pass restored scan ingestion coverage, added OCM cache coverage, added music-player race/watchdog coverage, and fixed lowercase OCM license scans.
+
 Still optional / separate from this pass:
 
 - Build and submit the actual EAS/App Store artifact.
 - Device/TestFlight validation on real iOS hardware.
+- Route-level backend integration tests for the five most critical API routes.
 - Keep monitoring the two non-blocking backend recommended warnings when running locally: storefront discovery freshness can time out, and alerts depend on the configured webhook destination staying valid.
 
 ## CURRENT STATUS — 2026-04-03 (Read This First)
@@ -909,6 +912,53 @@ Follow-up:
 - Docker is not installed in the local Windows environment, so the Docker build/smoke-start must be validated by GitHub Actions after push.
 - If production App Check token-success rate is healthy, flip Cloud Run `APP_CHECK_ENFORCEMENT=enforce` in a separate production-change pass.
 - Decide whether to implement a real `routeStartsPerHour` aggregate or remove the heat-glow data path.
+
+### 2026-04-20 - Enterprise Audit Sprint 2 Test Hardening
+
+What changed:
+
+- Restored meaningful coverage in `backend/src/services/scanIngestionService.test.ts` for the high-risk scan ingestion path.
+- Added parser/ingestion tests for six COA URL shapes: Kaycha Labs, NY Green Analytics, ProVerde, Keystone State Testing, ACT Laboratories, and generic COA URLs.
+- Added scan dedupe coverage proving the same install/raw/date only writes one `productScans` document and increments the matching `brandCounters` document once.
+- Added coverage for UPC scans, verified OCM license scans, unverified OCM license scans, and brand-site chain-through URL preservation.
+- Fixed lowercase OCM license scans by uppercasing the candidate before pattern matching and lookup.
+- Added `backend/src/services/ocmLicenseCacheService.test.ts` for license/name/address indexing, one-hour fresh-cache reuse, and stale-serve behavior when refresh fails inside the stale window.
+- Added a test-only OCM cache reset helper guarded to `NODE_ENV === 'test'`.
+- Added `src/music/musicPlayerService.test.ts` for native loop fallback, stop-vs-start race handling, and watchdog advancement when the finish event is missed.
+- Added a narrow test seam in `src/music/musicPlayerService.ts` so frontend tests can inject a fake Expo Audio module without loading the native module.
+- Added the music player test to `npm run test:frontend-core`.
+
+Main files:
+
+- `backend/src/services/scanIngestionService.test.ts`
+- `backend/src/services/scanIngestionService.ts`
+- `backend/src/services/ocmLicenseCacheService.ts`
+- `backend/src/services/ocmLicenseCacheService.test.ts`
+- `src/music/musicPlayerService.ts`
+- `src/music/musicPlayerService.test.ts`
+- `package.json`
+
+Why:
+
+- The scan ingestion pipeline, six lab/parser shapes, OCM cache, and music player watchdog were the highest-ROI uncovered release-risk areas after the Sprint 1 hygiene fixes.
+- Preview-build regressions showed that service logic needed direct regression tests, not just typecheck/lint coverage.
+
+Verification:
+
+- `npx tsx --test src/services/scanIngestionService.test.ts src/services/ocmLicenseCacheService.test.ts` from `backend/`
+- `npm run test:frontend-core`
+- `npm run typecheck`
+- `npm --prefix backend run check`
+- `npm run lint:strict`
+- `npm run format:check`
+- `npm run test:frontend-integration`
+- `npm test`
+- `npm --prefix backend test`
+
+Follow-up:
+
+- Route-level integration tests are still the next process-maturity gap if the goal is to move enterprise readiness higher.
+- After commit/push, confirm GitHub Actions stays green on `master`.
 
 ### 2026-04-03 - Agent One Safety Protocol Change Required By User
 
