@@ -32,7 +32,11 @@
           }
         ]
       },
-      "associatedDomains": ["applinks:canopytrove.com", "applinks:www.canopytrove.com"],
+      "associatedDomains": [
+        "applinks:canopytrove.com",
+        "applinks:www.canopytrove.com",
+        "applinks:app.canopytrove.com"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Canopy Trove uses your camera to scan QR codes, barcodes, and storefront license identifiers for on-the-spot verification.",
