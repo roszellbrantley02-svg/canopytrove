@@ -70,7 +70,7 @@ export const reactionGifCatalog: ReactionGifCatalogEntry[] = [
   {
     id: 'lYjA4tfvCc8UAju1Op',
     title: 'Smooth',
-    keywords: ['smooth', 'easy', 'clean', 'fast checkout'],
+    keywords: ['smooth', 'easy', 'clean', 'easy to find'],
     previewUrl: createGiphyMediaUrl('lYjA4tfvCc8UAju1Op'),
     mediaUrl: createGiphyMediaUrl('lYjA4tfvCc8UAju1Op'),
   },

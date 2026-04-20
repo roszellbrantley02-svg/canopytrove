@@ -233,7 +233,7 @@ Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 pub
 - Nearby/Browse with neutral storefront names and at least one OPEN card during business-hours capture.
 - Never show "$", Order, Buy, Delivery, or add-to-cart language anywhere.
 
-**Rejected review-tag pattern (must not ship):** "Fast checkout" — reads as in-app checkout and is a 1.4.3 trip wire. User may still need to source-rename this tag; grep the review-tags source file.
+**Rejected review-tag pattern (must not ship):** "Fast checkout" — reads as in-app checkout and is a 1.4.3 trip wire. **Removed Apr 20 2026** from `src/screens/writeReview/reviewComposerShared.ts` `REVIEW_TAGS`, scrubbed from `docs/API_CONTRACT.md` JSON examples, removed from `src/data/reactionGifCatalog.ts` keyword list. Do not reintroduce — if a "speed at register" sentiment is needed later, phrase it as "Quick service" or fold into "Helpful staff".
 
 **Rejected review-body patterns:** "Verified Purchase" phrasing (implies transaction verification the app doesn't do), specific cannabis product names ("Orange Cream Pop", "moon rocks", etc.), "energy was high" (cannabis-connotation in context). Community guidelines need to scrub these.
 
@@ -256,7 +256,7 @@ Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 pub
 | App Store Connect privacy nutrition label entered          | ⏳ blocked on founder — enter verbatim from `docs/APP_STORE_PRIVACY_LABEL.md`                       |
 | 17+ age rating declared via ASC questionnaire              | ⏳ blocked on founder                                                                               |
 | Final screenshots uploaded to ASC                          | ⏳ blocked on founder — Verify + age gate + clean review shot + neutral storefronts; captions ready |
-| "Fast checkout" review tag source rename                   | ⏳ product-level; grep the tags source file and rename (user opted to handle)                       |
+| "Fast checkout" review tag source removal                  | ✅ removed Apr 20 2026 from `reviewComposerShared.ts`, `API_CONTRACT.md`, `reactionGifCatalog.ts`   |
 
 **Approval odds (current posture):** 75–82% first-submit, 90%+ by round 2.
 

@@ -2,7 +2,6 @@ export const MIN_REVIEW_TEXT_LENGTH = 20;
 export const MIN_EDIT_REVIEW_TEXT_LENGTH = 10;
 
 export const REVIEW_TAGS = [
-  'Fast checkout',
   'Helpful staff',
   'Good parking',
   'Selection',

@@ -430,8 +430,8 @@ Request body:
   "profileId": "canopytrove-profile-demo",
   "authorName": "Canopy Trove user",
   "rating": 5,
-  "text": "Fast checkout and easy parking. Staff helped quickly.",
-  "tags": ["Fast checkout", "Easy parking"],
+  "text": "Helpful staff and easy parking. Found the spot without any trouble.",
+  "tags": ["Helpful staff", "Good parking"],
   "photoCount": 0
 }
 ```
@@ -454,8 +454,8 @@ Response:
         "authorProfileId": "canopytrove-profile-demo",
         "rating": 5,
         "relativeTime": "Just now",
-        "text": "Fast checkout and easy parking. Staff helped quickly.",
-        "tags": ["Fast checkout", "Easy parking"],
+        "text": "Helpful staff and easy parking. Found the spot without any trouble.",
+        "tags": ["Helpful staff", "Good parking"],
         "helpfulCount": 0
       }
     ],
@@ -505,8 +505,8 @@ Response:
         "authorProfileId": "canopytrove-profile-demo",
         "rating": 5,
         "relativeTime": "Just now",
-        "text": "Fast checkout and easy parking. Staff helped quickly.",
-        "tags": ["Fast checkout", "Easy parking"],
+        "text": "Helpful staff and easy parking. Found the spot without any trouble.",
+        "tags": ["Helpful staff", "Good parking"],
         "helpfulCount": 1
       }
     ],
