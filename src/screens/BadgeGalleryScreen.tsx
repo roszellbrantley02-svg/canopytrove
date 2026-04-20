@@ -24,6 +24,18 @@ function BadgeGalleryScreenInner() {
     rank: null,
   });
 
+  // Everything not earned and not in the measurable-progress list — ornamental
+  // trophies, special events, and badges whose metric isn't tracked yet.
+  // Shown as a locked catalog so new members see the full trove of what's
+  // achievable, not an empty "earn your first one" screen.
+  const lockedBadges = React.useMemo(() => {
+    const earnedIds = new Set(earnedBadges.map((badge) => badge.id));
+    const progressIds = new Set(nextBadges.map((item) => item.badge.id));
+    return badgeDefinitions.filter(
+      (badge) => !earnedIds.has(badge.id) && !progressIds.has(badge.id),
+    );
+  }, [badgeDefinitions, earnedBadges, nextBadges]);
+
   const renderEarnedBadgeCard = ({
     item,
     index,
@@ -94,17 +106,54 @@ function BadgeGalleryScreenInner() {
     </MotionInView>
   );
 
+  const renderLockedBadgeCard = ({
+    item,
+    index,
+  }: {
+    item: (typeof lockedBadges)[0];
+    index: number;
+  }) => (
+    <MotionInView key={item.id} dense delay={Math.min(index, 8) * 40}>
+      <View style={[styles.badgeCard, styles.badgeCardLocked]}>
+        <View style={[styles.badgeIcon, styles.badgeIconLocked]}>
+          <AppUiIcon
+            name={item.icon as AppUiIconName}
+            size={26}
+            color={colors.textMuted}
+          />
+          <View style={styles.lockPip}>
+            <AppUiIcon name="lock-closed-outline" size={10} color={colors.background} />
+          </View>
+        </View>
+        <Text style={[styles.badgeName, styles.badgeNameLocked]} numberOfLines={2}>
+          {item.name}
+        </Text>
+        <Text style={styles.badgeDescription} numberOfLines={3}>
+          {item.description}
+        </Text>
+        <View style={[styles.badgeTierPill, styles.badgeTierPillLocked]}>
+          <Text style={[styles.badgeTierPillText, styles.badgeTierPillTextLocked]}>
+            {item.tier ? item.tier : item.category}
+          </Text>
+        </View>
+      </View>
+    </MotionInView>
+  );
+
   const numColumns = 2;
   const columnWrapperStyle = { gap: spacing.md };
+  const totalDefinitions = badgeDefinitions.length;
+  const subtitle =
+    earnedBadges.length > 0
+      ? `${earnedBadges.length} earned of ${totalDefinitions}`
+      : `${totalDefinitions} milestones to unlock`;
+
+  const hasAnythingToShow =
+    earnedBadges.length > 0 || nextBadges.length > 0 || lockedBadges.length > 0;
 
   return (
-    <ScreenShell
-      eyebrow="Profile"
-      title="Trophy Case"
-      subtitle={`${earnedBadges.length} earned`}
-      showHero={false}
-    >
-      {earnedBadges.length === 0 && nextBadges.length === 0 ? (
+    <ScreenShell eyebrow="Profile" title="Trophy Case" subtitle={subtitle} showHero={false}>
+      {!hasAnythingToShow ? (
         <MotionInView delay={motion.quick}>
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyTitle}>No badges yet</Text>
@@ -149,6 +198,28 @@ function BadgeGalleryScreenInner() {
                 keyExtractor={(item) => item.badge.id}
                 scrollEnabled={false}
                 contentContainerStyle={styles.progressList}
+                initialNumToRender={6}
+                maxToRenderPerBatch={4}
+                windowSize={3}
+                removeClippedSubviews
+              />
+            </View>
+          )}
+
+          {lockedBadges.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Locked</Text>
+                <Text style={styles.sectionCount}>{lockedBadges.length}</Text>
+              </View>
+              <FlatList
+                data={lockedBadges}
+                renderItem={renderLockedBadgeCard}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                numColumns={numColumns}
+                columnWrapperStyle={columnWrapperStyle}
+                contentContainerStyle={styles.badgeGrid}
                 initialNumToRender={6}
                 maxToRenderPerBatch={4}
                 windowSize={3}
@@ -252,6 +323,38 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
+  },
+  badgeCardLocked: {
+    opacity: 0.82,
+    backgroundColor: 'rgba(8, 14, 19, 0.55)',
+    borderColor: 'rgba(255, 251, 247, 0.08)',
+  },
+  badgeIconLocked: {
+    backgroundColor: 'rgba(255, 251, 247, 0.08)',
+    borderColor: 'rgba(255, 251, 247, 0.10)',
+  },
+  badgeNameLocked: {
+    color: colors.textMuted,
+  },
+  badgeTierPillLocked: {
+    backgroundColor: 'rgba(255, 251, 247, 0.06)',
+    borderColor: 'rgba(255, 251, 247, 0.12)',
+  },
+  badgeTierPillTextLocked: {
+    color: colors.textMuted,
+  },
+  lockPip: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.goldSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
   },
   progressList: {
     gap: spacing.md,

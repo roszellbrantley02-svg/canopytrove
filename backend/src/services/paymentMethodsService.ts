@@ -143,8 +143,18 @@ function deriveGoogleMethods(
 }
 
 async function withTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  // Never let a single source failure cascade: a rejection here used to
+  // propagate through Promise.all and make the whole method pipeline
+  // return null, which meant zero storefronts ever got even the baseline
+  // cash pill. Swallow rejections the same way we swallow timeouts.
+  const safe = promise.catch((err) => {
+    logger.warn('payment source rejected — using fallback', {
+      err: err instanceof Error ? err.message : String(err),
+    });
+    return fallback;
+  });
   return Promise.race<T>([
-    promise,
+    safe,
     new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ENRICHMENT_TIMEOUT_MS)),
   ]);
 }
@@ -292,6 +302,25 @@ function mergeMethods(input: {
 export async function getPaymentMethodsForStorefront(
   summary: StorefrontSummaryApiDocument,
 ): Promise<PaymentMethodsApiDocument | null> {
+  // Always produce a baseline response — even if every source fails. The
+  // "takes cash" badge is the single most common question our users ask
+  // and the one detail cardinal sign a reviewer looks for. The baseline
+  // seed below (cash=accepted, source=google, lowest priority) gets
+  // overridden by owner/community/Google data whenever any of those
+  // resolve successfully.
+  const baselineCash: PaymentMethodRecordApiDocument = {
+    methodId: 'cash',
+    accepted: true,
+    source: 'google',
+  };
+
+  const baselineResponse = (): PaymentMethodsApiDocument => ({
+    storefrontId: summary.id,
+    asOf: new Date().toISOString(),
+    methods: [baselineCash],
+    hasOwnerDeclaration: false,
+  });
+
   try {
     const [owner, community, googleEnrichment] = await Promise.all([
       withTimeout(loadOwnerDeclaration(summary.id), null),
@@ -315,14 +344,10 @@ export async function getPaymentMethodsForStorefront(
     // reports." rather than claiming owner confirmation.
     const hasCashRecord = methods.some((record) => record.methodId === 'cash');
     if (!hasCashRecord) {
-      methods.unshift({
-        methodId: 'cash',
-        accepted: true,
-        source: 'google',
-      });
+      methods.unshift(baselineCash);
     }
 
-    if (!methods.length) return null;
+    if (!methods.length) return baselineResponse();
 
     return {
       storefrontId: summary.id,
@@ -335,7 +360,7 @@ export async function getPaymentMethodsForStorefront(
       err: err instanceof Error ? err.message : String(err),
       storefrontId: summary.id,
     });
-    return null;
+    return baselineResponse();
   }
 }
 

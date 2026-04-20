@@ -722,11 +722,9 @@ function MemberProfileWorkspace() {
             <SectionHeader
               title="Badges"
               count={model.earnedBadges.length}
-              onSeeAll={
-                model.earnedBadges.length > 0
-                  ? () => navigation.navigate('BadgeGallery')
-                  : undefined
-              }
+              // Always allow jumping into the trophy case so new members
+              // see the full trove of milestones, not a dead-end empty state.
+              onSeeAll={() => navigation.navigate('BadgeGallery')}
             />
             <BadgeShowcase
               badges={model.featuredBadges.slice(0, 3)}

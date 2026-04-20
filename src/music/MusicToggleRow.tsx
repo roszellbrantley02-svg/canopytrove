@@ -38,7 +38,7 @@ export function MusicToggleRow() {
   return (
     <SectionCard
       title="Background music"
-      body="On by default. Your choice sticks between sessions."
+      body="Off by default. Your choice sticks between sessions."
       iconName="sparkles-outline"
       badgeLabel="Ambient"
       tone="primary"
