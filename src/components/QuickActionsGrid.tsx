@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import type { AppUiIconName } from '../icons/AppUiIcon';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { HapticPressable } from './HapticPressable';
 import { colors, radii, spacing, textStyles } from '../theme/tokens';
@@ -92,9 +91,7 @@ export function QuickActionsGrid({ actions, columns = 2 }: QuickActionsGridProps
                 pointerEvents="none"
                 style={[styles.topShine, { backgroundColor: `${tone}22` }]}
               />
-              <View
-                style={[styles.iconPuck, { backgroundColor: puckBg, borderColor: puckBorder }]}
-              >
+              <View style={[styles.iconPuck, { backgroundColor: puckBg, borderColor: puckBorder }]}>
                 <AppUiIcon
                   name={isLocked ? 'lock-closed-outline' : action.iconName}
                   size={26}

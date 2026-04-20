@@ -17,7 +17,7 @@
  */
 
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AppUiIcon, type AppUiIconName } from '../icons/AppUiIcon';
@@ -48,7 +48,7 @@ const MENU_ITEMS: ReadonlyArray<VerifyMenuItem> = [
   {
     key: 'scan-shop',
     title: 'Scan shop QR',
-    subtitle: "Scan a dispensary's Google, Weedmaps, Leafly, or website QR.",
+    subtitle: 'Scan a storefront, listing, or website QR.',
     iconName: 'storefront-outline',
     tone: 'cyan',
   },
@@ -107,6 +107,14 @@ function VerifyScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { authSession } = useStorefrontProfileController();
   const isAuthenticated = authSession.status === 'authenticated';
+  const isAndroid = Platform.OS === 'android';
+  const menuItems = React.useMemo(
+    () =>
+      isAndroid
+        ? MENU_ITEMS.filter((item) => item.key === 'scan-shop' || item.key === 'verify-ocm')
+        : MENU_ITEMS,
+    [isAndroid],
+  );
 
   const handleSelect = React.useCallback(
     (item: VerifyMenuItem) => {
@@ -139,12 +147,16 @@ function VerifyScreenInner() {
   return (
     <ScreenShell
       eyebrow="Verify"
-      title="What would you like to do?"
-      subtitle="Scan a product or shop, rate something you've tried, or verify a dispensary's OCM license."
+      title={isAndroid ? 'How would you like to verify?' : 'What would you like to do?'}
+      subtitle={
+        isAndroid
+          ? "Scan a storefront QR or verify a storefront's OCM license."
+          : "Scan a product or shop, rate something you've tried, or verify a dispensary's OCM license."
+      }
     >
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.stack}>
-          {MENU_ITEMS.map((item, index) => (
+          {menuItems.map((item, index) => (
             <MotionInView key={item.key} dense delay={40 + index * 30}>
               <MenuCard
                 item={item}
@@ -154,9 +166,9 @@ function VerifyScreenInner() {
             </MotionInView>
           ))}
 
-          <MotionInView dense delay={40 + MENU_ITEMS.length * 30}>
+          <MotionInView dense delay={40 + menuItems.length * 30}>
             <Text style={styles.footnote}>
-              All scans are anonymous by default. OCM data reflects the New York public dispensary
+              All scans are anonymous by default. OCM data reflects the New York public storefront
               registry, refreshed hourly.
             </Text>
           </MotionInView>

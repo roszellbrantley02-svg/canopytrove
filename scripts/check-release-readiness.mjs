@@ -443,6 +443,12 @@ const iconPath = path.join(projectRoot, appIdentity.icon || './assets/icon.png')
 const splashPath = path.join(projectRoot, appIdentity.splash?.image || './assets/splash-icon.png');
 const hasIconFile = fs.existsSync(iconPath);
 const hasSplashFile = fs.existsSync(splashPath);
+const androidPermissions = Array.isArray(appIdentity.android?.permissions)
+  ? appIdentity.android.permissions
+  : [];
+const androidBlockedPermissions = Array.isArray(appIdentity.android?.blockedPermissions)
+  ? appIdentity.android.blockedPermissions
+  : [];
 
 pushCheck(
   'App icon file exists',
@@ -466,8 +472,11 @@ const buildPropsPlugin = (appIdentity.plugins ?? []).find(
   (entry) =>
     Array.isArray(entry) && entry[0] === 'expo-build-properties' && entry[1]?.ios?.deploymentTarget,
 );
-const iosMinimumOsVersion = buildPropsPlugin?.[1]?.ios?.deploymentTarget;
+const buildPropsConfig = Array.isArray(buildPropsPlugin) ? (buildPropsPlugin[1] ?? {}) : {};
+const iosMinimumOsVersion = buildPropsConfig?.ios?.deploymentTarget;
 const hasValidIosVersion = iosMinimumOsVersion && /^\d+\.\d+/.test(iosMinimumOsVersion);
+const androidTargetSdkVersion = Number(buildPropsConfig?.android?.targetSdkVersion ?? 0);
+const androidCompileSdkVersion = Number(buildPropsConfig?.android?.compileSdkVersion ?? 0);
 
 pushCheck(
   'iOS minimum OS version configured',
@@ -475,6 +484,51 @@ pushCheck(
   hasValidIosVersion
     ? `iOS minimum OS version set to ${iosMinimumOsVersion} via expo-build-properties.`
     : 'Set ios.deploymentTarget via the expo-build-properties plugin in app.json.',
+);
+
+pushCheck(
+  'Android target SDK configured',
+  Number.isFinite(androidTargetSdkVersion) && androidTargetSdkVersion >= 35,
+  Number.isFinite(androidTargetSdkVersion) && androidTargetSdkVersion >= 35
+    ? `Android target SDK set to ${androidTargetSdkVersion} via expo-build-properties.`
+    : 'Set android.targetSdkVersion to 35 or higher via the expo-build-properties plugin in app.json.',
+);
+
+pushCheck(
+  'Android compile SDK configured',
+  Number.isFinite(androidCompileSdkVersion) && androidCompileSdkVersion >= 35,
+  Number.isFinite(androidCompileSdkVersion) && androidCompileSdkVersion >= 35
+    ? `Android compile SDK set to ${androidCompileSdkVersion} via expo-build-properties.`
+    : 'Set android.compileSdkVersion to 35 or higher via the expo-build-properties plugin in app.json.',
+);
+
+pushCheck(
+  'Android broad photo access removed',
+  !androidPermissions.includes('android.permission.READ_MEDIA_IMAGES') &&
+    androidBlockedPermissions.includes('android.permission.READ_MEDIA_IMAGES'),
+  !androidPermissions.includes('android.permission.READ_MEDIA_IMAGES') &&
+    androidBlockedPermissions.includes('android.permission.READ_MEDIA_IMAGES')
+    ? 'READ_MEDIA_IMAGES is not requested and is explicitly blocked for Android builds.'
+    : 'Remove READ_MEDIA_IMAGES from expo.android.permissions and block it via expo.android.blockedPermissions for Play-safe Android builds.',
+);
+
+pushCheck(
+  'Android image picker audio permission blocked',
+  androidBlockedPermissions.includes('android.permission.RECORD_AUDIO'),
+  androidBlockedPermissions.includes('android.permission.RECORD_AUDIO')
+    ? 'RECORD_AUDIO is explicitly blocked for Android builds.'
+    : 'Block RECORD_AUDIO via expo.android.blockedPermissions so the Android build does not inherit unused audio capture access.',
+);
+
+const webDescription = String(appIdentity.web?.description ?? '');
+const hasSalesForwardDescription = /\bhot deals?\b|\bbuy now\b|\bshop now\b/i.test(webDescription);
+pushCheck(
+  'Manifest marketing copy avoids sales-forward phrasing',
+  !hasSalesForwardDescription,
+  !hasSalesForwardDescription
+    ? 'Web/app manifest description avoids sales-forward phrases such as "hot deals" and "buy now".'
+    : 'Remove sales-forward phrases such as "hot deals", "buy now", or "shop now" from app metadata before a Play submission.',
+  'recommended',
 );
 
 let passedRequired = 0;

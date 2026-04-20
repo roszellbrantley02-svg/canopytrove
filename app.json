@@ -35,9 +35,9 @@
       "associatedDomains": ["applinks:canopytrove.com", "applinks:www.canopytrove.com"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Canopy Trove uses your camera to scan product QR codes and dispensary license numbers for on-the-spot verification.",
+        "NSCameraUsageDescription": "Canopy Trove uses your camera to scan QR codes, barcodes, and storefront license identifiers for on-the-spot verification.",
         "NSMicrophoneUsageDescription": "Canopy Trove does not record audio. This entry is required by iOS because the audio playback library we use links the microphone framework for completeness.",
-        "NSLocationWhenInUseUsageDescription": "Canopy Trove uses your location to find nearby dispensaries and let you share how your visit was when you arrive.",
+        "NSLocationWhenInUseUsageDescription": "Canopy Trove uses your location to find nearby licensed storefronts and let you share how your visit was when you arrive.",
         "UIBackgroundModes": ["audio"]
       },
       "googleServicesFile": "./GoogleService-Info.plist"
@@ -74,15 +74,18 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.CAMERA",
-        "android.permission.READ_MEDIA_IMAGES"
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "name": "Canopy Trove",
       "shortName": "Canopy Trove",
-      "description": "Discover licensed dispensaries, hot deals, and real reviews near you.",
+      "description": "Discover verified licensed storefronts and trusted reviews near you.",
       "lang": "en",
       "themeColor": "#121614",
       "backgroundColor": "#121614"
@@ -93,20 +96,21 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Canopy Trove uses your camera to scan product QR codes and dispensary license numbers for on-the-spot verification."
+          "cameraPermission": "Canopy Trove uses your camera to scan QR codes, barcodes, and storefront license identifiers for on-the-spot verification."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Canopy Trove uses your location to find nearby dispensaries and let you share how your visit was when you arrive."
+          "locationWhenInUsePermission": "Canopy Trove uses your location to find nearby licensed storefronts and let you share how your visit was when you arrive."
         }
       ],
       [
         "expo-image-picker",
         {
           "photosPermission": "Canopy Trove uses your photos so you can attach review images that stay private until moderation approves them.",
-          "cameraPermission": "Canopy Trove uses your camera so you can take review photos before they enter the private moderation queue."
+          "cameraPermission": "Canopy Trove uses your camera so you can take review photos before they enter the private moderation queue.",
+          "microphonePermission": false
         }
       ],
       [
@@ -121,6 +125,10 @@
       [
         "expo-build-properties",
         {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35
+          },
           "ios": {
             "deploymentTarget": "15.1"
           }

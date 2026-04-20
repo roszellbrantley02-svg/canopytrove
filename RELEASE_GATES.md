@@ -39,6 +39,10 @@ These will block release if they fail:
 - Support email is configured
 - Privacy policy, terms, and community guidelines URLs are public
 - Expo slug and iOS/Android bundle identifiers match production values
+- iOS deployment target is pinned through `expo-build-properties`
+- Android compile/target SDK are pinned to Play-compliant levels
+- Android does not request broad photo access (`READ_MEDIA_IMAGES`)
+- Android explicitly blocks inherited image-picker audio permission (`RECORD_AUDIO`)
 
 ### App-side checks (recommended, warnings only)
 
@@ -47,6 +51,7 @@ These will block release if they fail:
 - Owner checkout/billing fallback URLs are live (not Stripe test)
 - Owner price labels are set
 - Owner preview mode is disabled for public release
+- App metadata avoids sales-forward phrases like `hot deals`, `buy now`, and `shop now`
 
 ### Backend checks (required)
 
@@ -90,6 +95,16 @@ These fail because the local `.env` file doesn't have production secrets. They w
 ### No code-path blockers
 
 There are currently no release blockers that require code changes. All failures are configuration or infrastructure setup.
+
+## Google Play Caveat
+
+Passing `npm run release:check` does not mean Google Play approval is likely.
+
+Canopy Trove still sits in a restricted category. Google's current Developer Program Policy says it does not allow apps that facilitate the sale of marijuana or marijuana products, including arranging delivery or pickup. The Android build now hardens obvious review risks such as broad media permissions and sales-forward metadata, but Play review will still depend heavily on:
+
+- store listing copy and screenshots
+- whether Android reads as a directory/compliance app instead of a commerce app
+- whether reviewer flows expose cannabis-product or seller-enablement behavior that looks like facilitation
 
 ## When to Run Each Command
 

@@ -57,7 +57,7 @@ const MODE_COPY: Record<'product' | 'shop', { title: string; hint: string }> = {
   },
   shop: {
     title: 'Scan shop QR',
-    hint: "Point at the dispensary's Google, Weedmaps, Leafly, or website QR.",
+    hint: "Point at the storefront's map, listing, or website QR.",
   },
 };
 

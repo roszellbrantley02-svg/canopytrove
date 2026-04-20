@@ -51,9 +51,7 @@ type ExpoLocationModule = NonNullable<typeof Location>;
  * Balanced is ~5-10x faster on Android (cell + wifi trilateration instead
  * of a full GPS lock) and drops battery draw too.
  */
-async function fetchLocationFast(
-  mod: ExpoLocationModule,
-): Promise<Coordinates | null> {
+async function fetchLocationFast(mod: ExpoLocationModule): Promise<Coordinates | null> {
   const deadline = new Promise<null>((resolve) =>
     setTimeout(() => resolve(null), LOCATION_FIX_TIMEOUT_MS),
   );

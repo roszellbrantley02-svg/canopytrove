@@ -513,8 +513,9 @@ export function useWriteReviewScreenModel(input: {
     try {
       // On web, skip the async permission check — browsers auto-grant media library
       // access and the await breaks the synchronous user gesture chain, causing the
-      // programmatic file-input click to be silently blocked.
-      if (Platform.OS !== 'web') {
+      // programmatic file-input click to be silently blocked. On Android, use the
+      // system photo picker instead of requesting broad media-library access.
+      if (Platform.OS !== 'web' && Platform.OS !== 'android') {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
           setReviewPhotoError('Allow photo access to add pictures from your library.');

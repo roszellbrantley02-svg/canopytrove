@@ -15,7 +15,7 @@ export function getStorefrontRouteCardState({
   premiumCardVariant,
   openNow,
   isOperationalStatusPending,
-  hasPublishedHours,
+  hasPublishedHours: _hasPublishedHours,
 }: {
   isSaved: boolean;
   isVisited: boolean;

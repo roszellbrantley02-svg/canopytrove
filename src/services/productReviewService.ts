@@ -149,9 +149,7 @@ function slugifyForCanonicalKey(value: string): string {
  * expect. Use this any time you have a brand NAME from a COA/user input
  * and need to talk to the brand backend.
  */
-export function buildClientBrandSlug(
-  brandName: string | null | undefined,
-): string | null {
+export function buildClientBrandSlug(brandName: string | null | undefined): string | null {
   if (typeof brandName !== 'string') return null;
   const slug = slugifyForCanonicalKey(brandName);
   if (!slug) return null;

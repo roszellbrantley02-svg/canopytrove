@@ -156,9 +156,11 @@ async function pickOwnerMediaImage(source: 'library' | 'camera' = 'library') {
     } satisfies OwnerPortalUploadedFile;
   }
 
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    throw new Error('Media library permission is required to upload storefront images.');
+  if (Platform.OS !== 'android') {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      throw new Error('Media library permission is required to upload storefront images.');
+    }
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({

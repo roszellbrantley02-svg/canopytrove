@@ -6,3 +6,4 @@ build-artifacts/
 android/
 ios/
 *.lock
+google-services.json
