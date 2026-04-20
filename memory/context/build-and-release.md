@@ -145,6 +145,37 @@ Captured here so the same triage runs faster next time:
 1. **expo-doctor schema rejection** — `ios.minimumOSVersion` no longer recognized → migrate to `expo-build-properties` plugin
 2. **Missing peer** — `expo-audio` complains about missing `expo-asset` → add explicit dep
 3. **Version mismatches** — `@shopify/react-native-skia`, `react-native-reanimated`, `react-native-worklets` outside SDK 55 ranges → exact-pin in `package.json`
-4. **Android prebuild** — missing `google-services.json` → wire `android.googleServicesFile` path + commit the file
+4. **Android prebuild** — missing `google-services.json` → wire `android.googleServicesFile` in `app.json`
 
-Three commits shipped the fix: `0fab252` (schema migration), `d46eb0a` (deps), `9e8e4fe` (google-services).
+## Apr 20 2026 — Repo Relocation + EAS CLI Drift
+
+### Repo moved off OneDrive
+
+Canonical repo path is now `D:\src\canopytrove`. The old OneDrive copy at `C:\dev\canopytrove` was renamed to `C:\dev\canopytrove.OLD-2026-04-20` and is safe to delete around May 4 2026 once no regressions surface. Windows Defender exclusions applied to `D:\src\canopytrove`, `git.exe`, and `node.exe` to cut git stat latency.
+
+Secrets stash at `D:\src\_secrets-canopytrove\`: `credentials.json` (277 B EAS Android keystore), plus `package-lock.json.corrupt`, `web-app-guide.skill`, `webappsheet.txt`. Outside repo, outside OneDrive, outside git. `.gitignore` on master (inherited from codex FF) already excludes `credentials/` and `credentials.json` — **never re-commit the EAS keystore**.
+
+Branch state verified Apr 20 2026: both `master` and `codex/workspace-cleanup` at `d415475`, local + origin in sync. Master fast-forwarded cleanly (0 ahead, 99 behind → `git merge --ff-only`).
+
+### EAS CLI flag drift (current CLI)
+
+- `eas device:list` **no longer accepts `--platform`** — devices are iOS-only anyway. Call bare: `eas device:list`. Older memory snippets passing `--platform ios` will error with "Nonexistent flag: --platform".
+- `--non-interactive` is a **boolean switch with no value**. Write it alone: `eas build --platform ios --profile development --non-interactive`. Never write `--non-interactive:$false` (PS forwards the literal `:False` and EAS rejects "Nonexistent flag: --non-interactive:False"). Interactive mode is the default — drop the flag entirely to get prompts.
+
+Dev build kickoff sequence (from `D:\src\canopytrove` on master at `d415475`):
+
+```powershell
+eas whoami                                          # expect: ezell
+eas device:list                                     # confirm test device registered
+eas build --platform ios --profile development      # interactive (default)
+```
+
+Development profile correct per eas.json: `developmentClient: True`, `distribution: internal`, `channel: development`, `NODE_ENV=development`, `SENTRY_DISABLE_AUTO_UPLOAD=true`. `expo-dev-client@55.0.27` installed (matches SDK 55).
+
+### Windows git escape hatches
+
+- **HUSKY=0 bypass for commit-amends** — `git commit --amend` races lint-staged on Windows and the index.lock can hang partway. Set `$env:HUSKY = "0"` before the amend to skip hooks. Use sparingly; only on branches where lint already passed on the original commit.
+- **VS Code SCM config.lock race** — VS Code's git provider grabs `.git/config.lock` during refreshes and collides with shell git. Wait for the SCM panel to settle or close VS Code for big rewrites/merges.
+- **PowerShell paste-safety** — terminal paste can strip leading `$` from variable names, leaving bare `
+
+that PS tries to run as a command. For credential moves, inline literal paths (`"D:\src\_secrets-canopytrove\credentials.json"`) are safer than `$secretStash` variables.

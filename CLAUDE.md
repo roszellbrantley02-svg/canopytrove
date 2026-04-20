@@ -86,6 +86,34 @@ The canonical pipeline above produces a single-mesh sticker. **v3** layers three
 - Rim light placed in front of the camera — must be behind the subject (negative Z) to actually rim-light.
 - Cycles pass for every variant — 2 minutes × 66 is absurd for batch. Only hero heroes get Cycles.
 
+## ★ Repo & Environment (Apr 20 2026)
+
+**Canonical paths (locked):**
+
+- Repo: `D:\src\canopytrove` — moved off `C:\dev\canopytrove` to escape OneDrive sync flakiness. The OneDrive copy was renamed to `C:\dev\canopytrove.OLD-2026-04-20`; safe to delete around May 4 2026 if no regressions surface.
+- Secrets stash: `D:\src\_secrets-canopytrove\` — holds `credentials.json` (EAS Android keystore, 277 bytes), `package-lock.json.corrupt`, `web-app-guide.skill`, `webappsheet.txt`. Outside repo, outside OneDrive, outside git. **Never re-commit `credentials.json`** — codex's `.gitignore` already excludes `credentials/` and `credentials.json` (inherited by master post-FF).
+- Windows Defender exclusions on `D:\src\canopytrove`, `git.exe`, `node.exe`.
+- VS Code: remove `C:\dev\canopytrove` from File → Open Recent so it doesn't re-anchor on the stale OneDrive copy.
+
+**Branch state (verified):** `master` and `codex/workspace-cleanup` both at `d415475`, both local + origin refs aligned. Master was 99 commits strictly behind codex (0 ahead) — fast-forwarded cleanly via `git merge --ff-only codex/workspace-cleanup` (834 files, 1,198,223 insertions, 10,734 deletions). All April work landed: location prompt, OCM verifier, product scan, music default, UI polish, review notes, privacy label doc, Fast checkout removal.
+
+**Dev environment gotchas (locked):**
+
+- **HUSKY=0 bypass for commit-amends** — when `git commit --amend` races lint-staged on Windows the index.lock holds and the commit fails partway. Set `$env:HUSKY = "0"` in the shell before the amend to skip hooks safely. Use sparingly — bypass hooks, not validation; only when re-running on a branch where lint already passed.
+- **EAS CLI flag changes** — `eas device:list` no longer accepts `--platform` (devices are iOS-only anyway, just call `eas device:list` bare). `--non-interactive` is a boolean switch with no value: write `--non-interactive` alone, never `--non-interactive:$false` (PS will pass the literal string and EAS will reject "Nonexistent flag: --non-interactive:False"). Interactive mode is the default — drop the flag entirely if you want prompts.
+- **PowerShell paste-safety** — terminal paste glitches strip leading `$` from variable names, leaving bare `
+
+in the buffer which PS reads as a command and errors. For multi-line credential moves, prefer inline literal paths (`"D:\src\_secrets-canopytrove\credentials.json"`) over `$secretStash` variables.
+
+- **VS Code SCM config.lock race** — VS Code's git provider grabs `.git/config.lock` during refreshes and can collide with shell `git` commands. Wait for the SCM panel to settle before running git from the terminal, or close VS Code for big rewrites/merges.
+
+**EAS dev build pre-flight (verified Apr 20 2026):**
+
+- `eas whoami` → `ezell` (roszellbrantley02@gmail.com)
+- `development` profile correct: `developmentClient: True`, `distribution: internal`, `channel: development`, `NODE_ENV=development`, `SENTRY_DISABLE_AUTO_UPLOAD=true`
+- `expo-dev-client@55.0.27` installed, matches Expo SDK 55
+- Build kickoff command: `eas device:list` then `eas build --platform ios --profile development` from `D:\src\canopytrove` on master at `d415475`.
+
 ## Me
 
 Rozell (rozell), solo founder building Canopy Trove — a licensed dispensary discovery app for iOS (React Native/Expo). Handles frontend, backend, and deployment.
@@ -239,24 +267,24 @@ Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 pub
 
 ## Launch Readiness (Apr 19 2026)
 
-| Item                                                       | Status                                                                                              |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Mailbox active + monitored (`askmehere@canopytrove.com`)   | ✅ confirmed by founder                                                                             |
-| Reviewer credentials ready (customer + owner)              | ✅ confirmed by founder                                                                             |
-| Real-phone QA in active rotation                           | ✅ ongoing                                                                                          |
-| Account deletion end-to-end matches public help page       | ✅ verified Apr 19 2026                                                                             |
-| Public site email normalized to `askmehere@`               | ✅ commit `b79d932`                                                                                 |
-| Privacy nutrition label doc matches reality                | ✅ commit `26765ce`                                                                                 |
-| Apple review notes — OCM placard + pre-launch context      | ✅ commit `d79dfe1`                                                                                 |
-| Apple review notes — Scan shop QR path honest about Safari | ✅ commit `d6a2a66`                                                                                 |
-| D-U-N-S / seller name path ready                           | ✅ confirmed by founder                                                                             |
-| OCM verifier smoke check green                             | ✅ confirmed by founder                                                                             |
-| Cloud Run `/livez` + `/readyz` green                       | ✅ confirmed by founder                                                                             |
-| Production EAS iOS build on top of `a6ee24e`+              | ⏳ blocked on founder — `NSLocationWhenInUseUsageDescription` is a native plist change              |
-| App Store Connect privacy nutrition label entered          | ⏳ blocked on founder — enter verbatim from `docs/APP_STORE_PRIVACY_LABEL.md`                       |
-| 17+ age rating declared via ASC questionnaire              | ⏳ blocked on founder                                                                               |
-| Final screenshots uploaded to ASC                          | ⏳ blocked on founder — Verify + age gate + clean review shot + neutral storefronts; captions ready |
-| "Fast checkout" review tag source removal                  | ✅ removed Apr 20 2026 from `reviewComposerShared.ts`, `API_CONTRACT.md`, `reactionGifCatalog.ts`   |
+| Item                                                       | Status                                                                                                                                                   |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mailbox active + monitored (`askmehere@canopytrove.com`)   | ✅ confirmed by founder                                                                                                                                  |
+| Reviewer credentials ready (customer + owner)              | ✅ confirmed by founder                                                                                                                                  |
+| Real-phone QA in active rotation                           | ✅ ongoing                                                                                                                                               |
+| Account deletion end-to-end matches public help page       | ✅ verified Apr 19 2026                                                                                                                                  |
+| Public site email normalized to `askmehere@`               | ✅ commit `b79d932`                                                                                                                                      |
+| Privacy nutrition label doc matches reality                | ✅ commit `26765ce`                                                                                                                                      |
+| Apple review notes — OCM placard + pre-launch context      | ✅ commit `d79dfe1`                                                                                                                                      |
+| Apple review notes — Scan shop QR path honest about Safari | ✅ commit `d6a2a66`                                                                                                                                      |
+| D-U-N-S / seller name path ready                           | ✅ confirmed by founder                                                                                                                                  |
+| OCM verifier smoke check green                             | ✅ confirmed by founder                                                                                                                                  |
+| Cloud Run `/livez` + `/readyz` green                       | ✅ confirmed by founder                                                                                                                                  |
+| Production EAS iOS build on top of `a6ee24e`+              | ✅ unblocked Apr 20 2026 — master fast-forwarded to `d415475` which includes the native plist change; repo now on `D:\src\canopytrove`, dev build queued |
+| App Store Connect privacy nutrition label entered          | ⏳ blocked on founder — enter verbatim from `docs/APP_STORE_PRIVACY_LABEL.md`                                                                            |
+| 17+ age rating declared via ASC questionnaire              | ⏳ blocked on founder                                                                                                                                    |
+| Final screenshots uploaded to ASC                          | ⏳ blocked on founder — Verify + age gate + clean review shot + neutral storefronts; captions ready                                                      |
+| "Fast checkout" review tag source removal                  | ✅ removed Apr 20 2026 from `reviewComposerShared.ts`, `API_CONTRACT.md`, `reactionGifCatalog.ts`                                                        |
 
 **Approval odds (current posture):** 75–82% first-submit, 90%+ by round 2.
 
@@ -268,6 +296,7 @@ Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 pub
 
 | Commit    | What                                                                                                               |
 | --------- | ------------------------------------------------------------------------------------------------------------------ |
+| `d415475` | chore(compliance): remove "Fast checkout" review tag from source + docs + GIF keyword list (1.4.3 trip wire)       |
 | `d6a2a66` | docs(apple-review): Scan shop QR description matches actual code path (Linking.openURL → Safari for state placard) |
 | `d79dfe1` | docs(apple-review): OCM Scan-to-Verify placard context + pre-launch reviewer framing + scan-logging claim fix      |
 | `26765ce` | docs: privacy nutrition label corrected to match shipped reality (scan-logging toggle planned, not shipped)        |
@@ -278,5 +307,3 @@ Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 pub
 | `a6ee24e` | Add `NSLocationWhenInUseUsageDescription` plist key (native, requires EAS build)                                   |
 | `538ba60` | Payment badges on listing cards — drop batch timeout, `Promise.allSettled` fan-out                                 |
 | `5ae4956` | Music default off + 500ms watchdog for playlist loop reliability                                                   |
-| `5bbd2a5` | Profile hero: glow under primary button, kicker copy raised                                                        |
-| `e45d43c` | Storefront detail hours: prefer resolved open/closed over "See Details" fallback                                   |
