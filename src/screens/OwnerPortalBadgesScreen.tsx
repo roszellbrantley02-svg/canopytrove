@@ -8,6 +8,7 @@ import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
+import { BadgeArtIcon } from '../icons/BadgeArtIcon';
 
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { OWNER_MAX_FEATURED_BADGES } from '../domain/canopyTroveGamification/ownerBadgeDefinitions';
@@ -19,7 +20,6 @@ import {
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 import { useOwnerPortalWorkspace } from './ownerPortal/useOwnerPortalWorkspace';
 import type { GamificationBadgeDefinition } from '../types/storefront';
-import type { AppUiIconName } from '../icons/AppUiIcon';
 import { colors, spacing, textStyles } from '../theme/tokens';
 import { StyleSheet } from 'react-native';
 import { getOwnerTierDefinition } from '../types/ownerTiers';
@@ -287,10 +287,12 @@ function OwnerBadgeToggleRow({
           !isEarned && badgeStyles.badgeIconWrapLocked,
         ]}
       >
-        <AppUiIcon
-          name={badge.icon as AppUiIconName}
-          size={20}
+        <BadgeArtIcon
+          icon={badge.icon}
+          tier={badge.tier}
+          size={30}
           color={isEarned ? badge.color : colors.textMuted}
+          muted={!isEarned}
         />
       </View>
       <View style={badgeStyles.badgeCopy}>

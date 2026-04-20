@@ -2,8 +2,8 @@ import React from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStorefrontRewardsController } from '../context/StorefrontController';
-import type { AppUiIconName } from '../icons/AppUiIcon';
 import { AppUiIcon } from '../icons/AppUiIcon';
+import { BadgeArtIcon } from '../icons/BadgeArtIcon';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 
 const TOAST_LIFETIME_MS = 4200;
@@ -88,9 +88,10 @@ export function GamificationRewardToastHost() {
       >
         <Pressable onPress={clearLastRewardResult} style={styles.pressable}>
           <View style={styles.iconWrap}>
-            <AppUiIcon
-              name={primaryBadge ? (primaryBadge.icon as AppUiIconName) : 'trophy-outline'}
-              size={20}
+            <BadgeArtIcon
+              icon={primaryBadge?.icon ?? 'trophy-outline'}
+              tier={primaryBadge?.tier}
+              size={30}
               color={colors.backgroundDeep}
             />
           </View>

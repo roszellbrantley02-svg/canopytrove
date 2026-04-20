@@ -24,7 +24,8 @@ import { ownerPortalAccessAvailable } from '../config/ownerPortalConfig';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { useOwnerPortalAccessState } from '../hooks/useOwnerPortalAccessState';
 import { MusicToggleRow } from '../music/MusicToggleRow';
-import { AppUiIcon, type AppUiIconName } from '../icons/AppUiIcon';
+import { AppUiIcon } from '../icons/AppUiIcon';
+import { BadgeArtIcon } from '../icons/BadgeArtIcon';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, radii, motion, spacing, textStyles } from '../theme/tokens';
 import {
@@ -782,7 +783,7 @@ export function BadgeShowcase({
   badges,
   previewBadges = [],
 }: {
-  badges: Array<{ icon?: string; name?: string; color?: string }>;
+  badges: Array<{ icon?: string; name?: string; color?: string; tier?: string }>;
   /**
    * Locked badges to preview when the user hasn't earned any yet. Shown in a
    * muted/grayscale style with a lock overlay so the section never appears
@@ -790,7 +791,7 @@ export function BadgeShowcase({
    * preview doubles as a "what's next" teaser.
    */
   previewBadges?: Array<{
-    badge: { id: string; icon?: string; name?: string; color?: string };
+    badge: { id: string; icon?: string; name?: string; color?: string; tier?: string };
     label?: string;
   }>;
 }) {
@@ -812,10 +813,12 @@ export function BadgeShowcase({
           {visiblePreviews.map((item, idx) => (
             <View key={item.badge.id ?? idx} style={internalStyles.badgeItem}>
               <View style={internalStyles.badgePreviewPlaceholder}>
-                <AppUiIcon
-                  name={(item.badge?.icon as AppUiIconName | undefined) ?? 'star-outline'}
-                  size={26}
+                <BadgeArtIcon
+                  icon={item.badge?.icon}
+                  tier={item.badge?.tier}
+                  size={42}
                   color={colors.textMuted}
+                  muted
                 />
                 <View style={internalStyles.badgeLockPip}>
                   <AppUiIcon name="lock-closed-outline" size={11} color={colors.background} />
@@ -848,9 +851,10 @@ export function BadgeShowcase({
       {badges.map((badge, idx) => (
         <View key={idx} style={internalStyles.badgeItem}>
           <View style={internalStyles.badgePlaceholder}>
-            <AppUiIcon
-              name={(badge?.icon as AppUiIconName | undefined) ?? 'star-outline'}
-              size={28}
+            <BadgeArtIcon
+              icon={badge?.icon}
+              tier={badge?.tier}
+              size={44}
               color={badge?.color ?? colors.goldSoft}
             />
           </View>

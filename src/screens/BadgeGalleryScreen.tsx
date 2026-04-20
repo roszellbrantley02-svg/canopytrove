@@ -6,8 +6,8 @@ import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { useStorefrontRewardsController } from '../context/StorefrontController';
 import { useProfileDerivedState } from './profile/useProfileDerivedState';
 import { useStorefrontProfileController } from '../context/StorefrontController';
-import type { AppUiIconName } from '../icons/AppUiIcon';
 import { AppUiIcon } from '../icons/AppUiIcon';
+import { BadgeArtIcon } from '../icons/BadgeArtIcon';
 import { colors, spacing, textStyles, motion, radii } from '../theme/tokens';
 
 function BadgeGalleryScreenInner() {
@@ -50,8 +50,13 @@ function BadgeGalleryScreenInner() {
           { borderColor: `${item.color}55`, backgroundColor: `${item.color}12` },
         ]}
       >
-        <View style={[styles.badgeIcon, { backgroundColor: item.color }]}>
-          <AppUiIcon name={item.icon as AppUiIconName} size={26} color={colors.background} />
+        <View
+          style={[
+            styles.badgeIcon,
+            { backgroundColor: `${item.color}20`, borderColor: `${item.color}66` },
+          ]}
+        >
+          <BadgeArtIcon icon={item.icon} tier={item.tier} size={44} color={item.color} />
         </View>
         <Text style={styles.badgeName} numberOfLines={2}>
           {item.name}
@@ -76,11 +81,20 @@ function BadgeGalleryScreenInner() {
     <MotionInView key={item.badge.id} dense delay={Math.min(index, 8) * 40}>
       <View style={styles.progressCard}>
         <View style={styles.progressHeader}>
-          <View style={[styles.progressBadgeIcon, { backgroundColor: item.badge.color }]}>
-            <AppUiIcon
-              name={item.badge.icon as AppUiIconName}
-              size={18}
-              color={colors.background}
+          <View
+            style={[
+              styles.progressBadgeIcon,
+              {
+                backgroundColor: `${item.badge.color}18`,
+                borderColor: `${item.badge.color}44`,
+              },
+            ]}
+          >
+            <BadgeArtIcon
+              icon={item.badge.icon}
+              tier={item.badge.tier}
+              size={30}
+              color={item.badge.color}
             />
           </View>
           <View style={styles.progressText}>
@@ -116,10 +130,12 @@ function BadgeGalleryScreenInner() {
     <MotionInView key={item.id} dense delay={Math.min(index, 8) * 40}>
       <View style={[styles.badgeCard, styles.badgeCardLocked]}>
         <View style={[styles.badgeIcon, styles.badgeIconLocked]}>
-          <AppUiIcon
-            name={item.icon as AppUiIconName}
-            size={26}
+          <BadgeArtIcon
+            icon={item.icon}
+            tier={item.tier}
+            size={42}
             color={colors.textMuted}
+            muted
           />
           <View style={styles.lockPip}>
             <AppUiIcon name="lock-closed-outline" size={10} color={colors.background} />
@@ -383,6 +399,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    borderWidth: 1,
   },
   progressText: {
     flex: 1,

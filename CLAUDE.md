@@ -121,6 +121,14 @@ in the buffer which PS reads as a command and errors. For multi-line credential 
 - Background music symptom: first bundled track plays, then silence. Current submission-safe fix is native-looping the active `expo-audio` player (`player.loop = true`) while keeping the existing `didJustFinish` + watchdog shuffle path as a fallback. Revisit post-launch if 3-track shuffle still matters more than guaranteed continuity.
 - Payment method badge frontend is not the blocker. `PaymentMethodsBadge`, `apiStorefrontAdapter`, and current backend `paymentMethodsService` all support baseline cash/debit chips. Live `https://api.canopytrove.com` responses on Apr 20 still omit both `paymentMethods` and newer `ocmVerification`, and Cloud Run is on `canopytrove-api-00197-vf5` from Apr 11 (`sha256:09dae82c...`). Conclusion: deploy current backend before expecting badges in production; do not patch the render layer for missing backend fields.
 
+**Production backend deploy follow-up (Apr 20 2026):**
+
+- Deployed Cloud Run revision `canopytrove-api-00198-wlc` at 100% traffic using Artifact Registry image `us-east4-docker.pkg.dev/canopy-trove/canopytrove-api/canopytrove-api:047c8fb`.
+- Deploy blocker found and fixed: backend Docker build installs only `backend/package.json`, but backend routes import `zod`; commit `047c8fb` adds `zod` to backend dependencies.
+- `OWNER_PORTAL_PRELAUNCH_ENABLED=true` is now set on Cloud Run. App-side `EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=true` is committed for preview + production EAS profiles but still requires a fresh iOS/Android build to affect installed apps.
+- Live API verification after deploy: `/health` OK, `/readyz` ready, storefront summaries/details include `paymentMethods`. A 24-card sample showed `cash=true` for all 24. Do not force `credit`; it should only render when Google/owner/community data explicitly says credit is accepted.
+- Runbook correction: build/push target is Artifact Registry (`us-east4-docker.pkg.dev/...`), not stale `gcr.io/...`.
+
 ## Me
 
 Rozell (rozell), solo founder building Canopy Trove — a licensed dispensary discovery app for iOS (React Native/Expo). Handles frontend, backend, and deployment.
@@ -402,3 +410,9 @@ Branch: `codex/gamification-profile-fix` @ `e2b9938`. Commit message: "Fix canon
 Fallback that worked: `Remove-Item -Recurse -Force .git\worktrees\canopytrove-profile-fix` + `git worktree prune -v` + `git branch -D codex/gamification-profile-fix` + `Remove-Item` on the orphan path. Admin-dir removal is the load-bearing step — once the main repo forgets the worktree, everything else is ordinary file/branch deletion.
 
 **New rejected pattern:** assuming `git worktree remove` will clean up orphan worktrees after a main-repo relocation. The orphan's `.git` file carries a hardcoded path to the main repo's `.git` dir and is NOT auto-updated when the main repo moves. After any main-repo move, either fix the reverse-pointer manually on every worktree (`Set-Content <orphan>\.git "gitdir: <new-main>/.git/worktrees/<name>"`) or plan on the admin-dir-removal fallback.
+
+## Custom Badge Art Follow-Up (Apr 20 2026)
+
+The special icon pack is present at `assets/icons-v4c/` (66 PNGs plus manifest files and `_contact_sheet_small.jpg`). Bottom tabs and search already used it through `AppTabIconsV4c` / `ProvidedGlyphIconsV4c`; the missing surfaces were achievement-style badges.
+
+`src/icons/BadgeArtIcon.tsx` now bridges the existing gamification icon IDs to v4c art assets without changing badge IDs or earned-badge data. It is used by `ProfileScreen` trophy previews, `BadgeGalleryScreen`, `OwnerPortalBadgesScreen`, and `GamificationRewardToastHost`. Keep `AppUiIcon` renderers in place for non-badge UI and fallback coverage tests.

@@ -24,6 +24,8 @@ Canopy Trove helps users find licensed dispensaries nearby, navigate to them, re
 
 - Node.js / Express on Cloud Run
 - Service: `canopytrove-api` in `us-east4`
+- Current production revision: `canopytrove-api-00198-wlc` (deployed Apr 20 2026)
+- Current production image: `us-east4-docker.pkg.dev/canopy-trove/canopytrove-api/canopytrove-api:047c8fb`
 - GCP project: `canopy-trove`
 - Firestore named database: `canopytrove`
 - Google Places API enrichment pipeline for storefront discovery
@@ -96,6 +98,24 @@ Canopy Trove helps users find licensed dispensaries nearby, navigate to them, re
 - `FIREBASE_DATABASE_ID=canopytrove` MUST be set (connects to wrong DB otherwise)
 - `GOOGLE_MAPS_API_KEY` and `ADMIN_API_KEY` via Secret Manager
 - `EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED=true` for pre-launch gating
+- `OWNER_PORTAL_PRELAUNCH_ENABLED=true` is set on Cloud Run as of Apr 20 2026.
+- Backend Docker images push to Artifact Registry (`us-east4-docker.pkg.dev/...`), not the old runbook `gcr.io/...` path.
+
+## Production Backend Deploy — Apr 20 2026
+
+- Commit `9e041b0` fixed preview/production owner portal app gating and added a native-loop fallback for bundled background music. Existing Apple/TestFlight builds do not pick this up until a fresh iOS EAS build is created.
+- Commit `047c8fb` added missing backend runtime dependency `zod`; Cloud Build failed without it because Docker installs from `backend/package.json` only.
+- Cloud Run revision `canopytrove-api-00198-wlc` is live at 100% traffic on image `us-east4-docker.pkg.dev/canopy-trove/canopytrove-api/canopytrove-api:047c8fb`.
+- `https://api.canopytrove.com/health` returns `{ "ok": true }`; `https://api.canopytrove.com/readyz` returns `{ "status": "ready" }`.
+- Live storefront summary and detail responses now include `paymentMethods`. A 24-storefront sample returned `cash=true` for all 24, so the Cash badge should render on cards/details.
+- Credit badges are intentionally not blanket-filled. `credit` appears only when Google, owner declarations, or community reports say credit is accepted, because cannabis credit-card acceptance can be legally/payment-network inaccurate.
+
+## Custom Icon/Badge Art — Apr 20 2026
+
+- The special icon pack was not lost. It lives in `assets/icons-v4c/` with 66 PNGs plus `asset_manifest.csv` and `asset_manifest.json`. `assets/icons-v4c/_contact_sheet_small.jpg` is the quick visual index.
+- Bottom tabs and search were already wired to v4c assets through `src/icons/AppTabIconsV4c.tsx`, `src/icons/ProvidedGlyphIconsV4c.tsx`, and `src/components/SearchField.tsx`.
+- The missing visible piece was badge rendering: profile trophy case, badge gallery, owner badge selector, and reward toast were still using generic `AppUiIcon` vector names.
+- New bridge: `src/icons/BadgeArtIcon.tsx` maps existing badge icon IDs (for example `rocket-outline`, `shield-checkmark-outline`, `diamond-outline`) to the v4c trophy/badge PNG assets without changing badge IDs or gamification data.
 
 ## Known Issues (Resolved)
 

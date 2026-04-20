@@ -81,6 +81,10 @@ vi.mock('../icons/AppUiIcon', () => ({
   AppUiIcon: 'AppUiIcon',
 }));
 
+vi.mock('../icons/BadgeArtIcon', () => ({
+  BadgeArtIcon: 'BadgeArtIcon',
+}));
+
 vi.mock('../music/MusicToggleRow', () => ({
   MusicToggleRow: () => null,
 }));
@@ -112,7 +116,7 @@ function renderNode(node: React.ReactElement) {
 }
 
 describe('BadgeShowcase', () => {
-  it('renders badge icons with AppUiIcon instead of showing raw icon ids', () => {
+  it('renders badge art instead of showing raw icon ids', () => {
     const renderer = renderNode(
       <BadgeShowcase
         badges={[
@@ -134,8 +138,8 @@ describe('BadgeShowcase', () => {
     expect(textValues).toContain('Early Adopter');
     expect(textValues).not.toContain('rocket-outline');
 
-    const icon = renderer.root.find((node) => (node.type as unknown) === 'AppUiIcon');
-    expect(icon.props.name).toBe('rocket-outline');
+    const icon = renderer.root.find((node) => (node.type as unknown) === 'BadgeArtIcon');
+    expect(icon.props.icon).toBe('rocket-outline');
     expect(icon.props.color).toBe('#FFD166');
   });
 });
