@@ -307,3 +307,42 @@ Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 pub
 | `a6ee24e` | Add `NSLocationWhenInUseUsageDescription` plist key (native, requires EAS build)                                   |
 | `538ba60` | Payment badges on listing cards — drop batch timeout, `Promise.allSettled` fan-out                                 |
 | `5ae4956` | Music default off + 500ms watchdog for playlist loop reliability                                                   |
+
+## Orphan Worktree Harvest (Apr 20 2026)
+
+Found a linked worktree at `C:/Users/eleve/Documents/New project/canopytrove-profile-fix` orphaned by the Apr 20 repo relocation. Its `.git` pointer referenced `C:/dev/canopytrove/.git/worktrees/canopytrove-profile-fix` — dead after the rename, revived by repointing to `C:/dev/canopytrove.OLD-2026-04-20/.git/worktrees/canopytrove-profile-fix`. Broken pointer backed up at `<wt>/.git.broken-pointer-backup` — leave until harvest complete.
+
+Branch: `codex/gamification-profile-fix` @ `e2b9938`. Commit message: "Fix canonical profile reuse for gamification state." Branch tip is behind current master `2a228ce` by many shipped commits (Apple submission, OCM verifier, product scan, UI polish, Fast checkout removal, etc.). No blind apply — full per-file reconciliation.
+
+**Harvest census:** 31 files modified, 3 new files, ~2,113 insertions / 1,643 deletions. Full patch cached at `D:/src/canopytrove/.harvest-*.diff`.
+
+**Branch intent (prioritize):** profile screen + gamification state models. Everything outside that scope (sitemap, eas.json, storefront detail, hot deals, report, review, saved, post-export script, package-lock, icon renderer, etc.) is scope creep or drift on a stale base; port only if clearly improves shipped state.
+
+**Per-file ritual (translucence-safe):**
+
+1. Read `D:/src/canopytrove/<file>` — current master version
+2. `git -C <wt> diff -- <file>` — worktree delta vs `e2b9938`
+3. Look for region conflicts — did master move the same lines?
+4. Decide: full port / partial port / skip (record reason)
+5. Apply via user-run PowerShell against `D:/src/canopytrove` — never the worktree
+6. `git diff --stat` + visual review
+7. `git commit -m "harvest: <file> — <what>"` scoped and small
+8. Push after each file or small related group
+
+**Ordering (smallest -> largest, rhythm-first):**
+
+- Phase 1: icons + icon test + rewards-model test (additive, low conflict)
+- Phase 2: config + infra (app.json, eas.json, sitemap, assetlinks, splash-observer)
+- Phase 3: controller shared + small screens (HotDeals, Report, Saved, PostVisitPrompt, StorefrontDetailScreen, profileUtils, useProfileScreenModel)
+- Phase 4: profileStyles, profile/rewards models + tests, WriteReview + model, Google Play packet
+- Phase 5: StorefrontDetail Hero / Community sections, storefront detail hooks
+- Phase 6: ProfileScreen (+583), post-export.js (+686), package-lock regen (not port)
+- Phase 7: `git worktree remove --force` + delete worktree directory
+
+**Anti-patterns re-confirmed:**
+
+- `FALLBACK_ICON_NAME` routing unknown icons to `help-buoy-outline` — same shape as the "See more button." Fix renderers at source; don't add silent fallbacks. If harvesting AppUiIcon, drop the fallback and add the real missing renderers (`beaker-outline`, `leaf-outline`) explicitly.
+- Blind `git apply` of the harvest patch — stale base causes conflicts. Per-file only.
+- Committing from inside the orphan worktree — writes would land in the OLD repo's object DB, not `D:/src/canopytrove`.
+
+**Still-missing fix after harvest:** `beaker-outline` and `leaf-outline` renderers. Harvest adds `people`, `diamond-outline`, `chatbubbles-outline`, `brush-outline` but NOT beaker/leaf. Write those fresh in phase 1.
