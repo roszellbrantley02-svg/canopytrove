@@ -70,6 +70,11 @@
               "scheme": "https",
               "host": "www.canopytrove.com",
               "pathPrefix": "/storefronts/"
+            },
+            {
+              "scheme": "https",
+              "host": "app.canopytrove.com",
+              "pathPrefix": "/storefronts/"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
