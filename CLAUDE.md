@@ -106,6 +106,7 @@ The canonical pipeline above produces a single-mesh sticker. **v3** layers three
 in the buffer which PS reads as a command and errors. For multi-line credential moves, prefer inline literal paths (`"D:\src\_secrets-canopytrove\credentials.json"`) over `$secretStash` variables.
 
 - **VS Code SCM config.lock race** — VS Code's git provider grabs `.git/config.lock` during refreshes and can collide with shell `git` commands. Wait for the SCM panel to settle before running git from the terminal, or close VS Code for big rewrites/merges.
+- **Line endings on mixed-origin files** — `app.json` was bare LF on disk despite `core.autocrlf=true` (committed from non-Windows tooling, git left it alone). PowerShell here-strings (`@'...'@`) are CRLF by default, so `.Contains($heredoc)` silently misses on LF files when the anchor spans multiple lines (single-line substring anchors don't hit this). Fix: LF-normalize both sides with `-replace "`r`n", "`n"`before`.Contains`/`.Replace`. After the first commit that rewrites such a file through git's index, `autocrlf=true`converts it to CRLF in the working tree on next checkout — so the quirk is per-file and often self-resolves after one edit. Diagnostic:`Select-Object -ExpandProperty`on`[IO.File]::ReadAllBytes(path)`and scan for`0A`bytes not preceded by`0D`.
 
 **EAS dev build pre-flight (verified Apr 20 2026):**
 
