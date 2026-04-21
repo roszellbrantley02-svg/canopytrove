@@ -97,3 +97,19 @@ test('saveProfileState strips a forged early adopter badge when there is no auth
 
   assert.deepEqual(savedState.gamificationState.badges ?? [], []);
 });
+
+test('saveProfileState strips email-like profile display names', async () => {
+  const { saveProfileState } = loadProfileStateModule();
+
+  const savedState = await saveProfileState('profile-private-name', {
+    profile: {
+      kind: 'authenticated',
+      accountId: 'account-private-name',
+      displayName: 'private@example.com',
+      createdAt: '2026-04-01T11:00:00.000Z',
+      updatedAt: '2026-04-01T11:00:00.000Z',
+    },
+  });
+
+  assert.equal(savedState.profile.displayName, null);
+});

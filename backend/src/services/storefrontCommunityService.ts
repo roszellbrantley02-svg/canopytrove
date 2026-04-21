@@ -15,6 +15,7 @@ import {
 } from './reviewPhotoModerationService';
 import { createPublicCommunityAuthorId } from './publicCommunityIdentityService';
 import { logger } from '../observability/logger';
+import { getSafePublicDisplayName } from '../http/publicIdentity';
 
 type StoredAppReviewRecord = {
   id: string;
@@ -279,7 +280,7 @@ async function mapStoredReviewToAppReview(
   const photoUrls = await resolveReviewPhotoUrls(review);
   return {
     id: review.id,
-    authorName: review.authorName,
+    authorName: getSafePublicDisplayName(review.authorName, 'Canopy Trove member'),
     authorProfileId: createPublicCommunityAuthorId(review.profileId, review.storefrontId),
     rating: review.rating,
     relativeTime: toRelativeTime(review.createdAt),
@@ -606,7 +607,7 @@ export async function submitStorefrontAppReview(
     id: createId('review'),
     storefrontId: input.storefrontId,
     profileId: input.profileId,
-    authorName: input.authorName.trim() || 'Canopy Trove user',
+    authorName: getSafePublicDisplayName(input.authorName, 'Canopy Trove member'),
     rating: normalizeRating(input.rating),
     text: input.text.trim(),
     gifUrl: input.gifUrl?.trim() || null,
@@ -684,7 +685,10 @@ export async function updateStorefrontAppReview(
 
   const nextReview: StoredAppReviewRecord = {
     ...currentReview,
-    authorName: input.authorName.trim() || currentReview.authorName,
+    authorName: getSafePublicDisplayName(
+      input.authorName,
+      getSafePublicDisplayName(currentReview.authorName, 'Canopy Trove member'),
+    ),
     rating: normalizeRating(input.rating),
     text: input.text.trim(),
     gifUrl: input.gifUrl?.trim() || null,
@@ -943,7 +947,10 @@ export async function submitStorefrontReport(input: StorefrontReportSubmissionIn
       reviewRecord.profileId,
       reviewRecord.storefrontId,
     );
-    reportedReviewAuthorName = reviewRecord.authorName;
+    reportedReviewAuthorName = getSafePublicDisplayName(
+      reviewRecord.authorName,
+      'Canopy Trove member',
+    );
     reportedReviewExcerpt = reviewRecord.text.trim().slice(0, 240) || null;
   }
 
@@ -951,7 +958,7 @@ export async function submitStorefrontReport(input: StorefrontReportSubmissionIn
     id: createId('report'),
     storefrontId: input.storefrontId,
     profileId: input.profileId,
-    authorName: input.authorName.trim() || 'Canopy Trove user',
+    authorName: getSafePublicDisplayName(input.authorName, 'Canopy Trove user'),
     reason: input.reason.trim(),
     description: input.description.trim(),
     reportTarget,

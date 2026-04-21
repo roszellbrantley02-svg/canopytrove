@@ -23,6 +23,7 @@ import {
   getApprovedReviewPhotoUrls,
 } from './reviewPhotoModerationService';
 import { logger } from '../observability/logger';
+import { getSafePublicDisplayName } from '../http/publicIdentity';
 
 const PRODUCT_REVIEWS_COLLECTION = 'product_app_reviews';
 const PRODUCT_REVIEW_REPORTS_COLLECTION = 'product_review_reports';
@@ -224,7 +225,7 @@ async function toSummary(
   const photoUrls = await resolveReviewPhotoUrls(record);
   return {
     id: record.id,
-    authorName: record.authorName,
+    authorName: getSafePublicDisplayName(record.authorName, 'Canopy Trove member'),
     rating: record.rating,
     text: record.text,
     effectTags: [...record.effectTags],
@@ -265,7 +266,7 @@ export async function submitProductReview(
     productName: input.productName.slice(0, 200),
     profileId: input.profileId,
     accountId: input.accountId,
-    authorName: input.authorName.slice(0, 60) || 'Canopy Trove member',
+    authorName: getSafePublicDisplayName(input.authorName.slice(0, 60), 'Canopy Trove member'),
     rating: normalizeRating(input.rating),
     text: trimmedText,
     effectTags: normalizeEffectTags(input.effectTags),

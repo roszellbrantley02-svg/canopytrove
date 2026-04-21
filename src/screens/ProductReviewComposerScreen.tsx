@@ -37,6 +37,7 @@ import {
   type ProductReviewEffectTag,
 } from '../services/productReviewService';
 import { colors, radii, spacing, textStyles } from '../theme/tokens';
+import { getSafePublicDisplayName } from '../utils/publicIdentity';
 import type { RootStackParamList } from '../navigation/rootNavigatorConfig';
 
 type ProductReviewComposerScreenProps = NativeStackScreenProps<
@@ -61,7 +62,7 @@ function ProductReviewComposerScreenInner({ route, navigation }: ProductReviewCo
   const { authSession, appProfile } = useStorefrontProfileController();
   const profileId = appProfile?.id ?? null;
   const isAuthenticated = authSession.status === 'authenticated';
-  const authorName = appProfile?.displayName?.trim() || 'Member';
+  const authorName = getSafePublicDisplayName(appProfile?.displayName, 'Canopy Trove member');
 
   const [rating, setRating] = React.useState<number>(0);
   const [text, setText] = React.useState<string>('');

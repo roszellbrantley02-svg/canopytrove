@@ -23,6 +23,7 @@ import {
   type ProductReviewSummary,
 } from '../services/productReviewService';
 import { colors, radii, spacing, textStyles } from '../theme/tokens';
+import { getSafePublicDisplayName } from '../utils/publicIdentity';
 import type { RootStackParamList } from '../navigation/rootNavigatorConfig';
 
 type ProductReviewsDetailScreenProps = NativeStackScreenProps<
@@ -212,10 +213,12 @@ function AggregateCard({ aggregate }: { aggregate: ProductReviewAggregate }) {
 }
 
 function ReviewCard({ review }: { review: ProductReviewSummary }) {
+  const authorName = getSafePublicDisplayName(review.authorName, 'Canopy Trove member');
+
   return (
     <View style={styles.reviewCard}>
       <View style={styles.reviewHeader}>
-        <Text style={styles.reviewAuthor}>{review.authorName}</Text>
+        <Text style={styles.reviewAuthor}>{authorName}</Text>
         <View style={styles.reviewRating}>
           <AppUiIcon name="star" size={12} color={colors.accent ?? colors.primary} />
           <Text style={styles.reviewRatingText}>{review.rating}.0</Text>

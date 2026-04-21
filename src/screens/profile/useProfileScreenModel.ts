@@ -68,7 +68,6 @@ export function useProfileScreenModel(navigation: NativeStackNavigationProp<Root
     appProfile,
     badgeDefinitions,
     backendSeedStatus,
-    email: authSession.email,
     gamificationState,
     levelTitle,
     profileId,

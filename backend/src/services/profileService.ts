@@ -1,5 +1,6 @@
 import { getOptionalFirestoreCollection } from '../firestoreCollections';
 import { AppProfileApiDocument } from '../types';
+import { sanitizePublicDisplayName } from '../http/publicIdentity';
 import { getGamificationState } from './gamificationPersistenceService';
 
 const PROFILE_COLLECTION = 'profiles';
@@ -31,7 +32,7 @@ function normalizeProfile(profile: AppProfileApiDocument): AppProfileApiDocument
     id: profile.id,
     kind: profile.kind === 'authenticated' ? 'authenticated' : 'anonymous',
     accountId: typeof profile.accountId === 'string' ? profile.accountId : null,
-    displayName: typeof profile.displayName === 'string' ? profile.displayName : null,
+    displayName: sanitizePublicDisplayName(profile.displayName),
     createdAt: profile.createdAt,
     updatedAt: profile.updatedAt,
   };

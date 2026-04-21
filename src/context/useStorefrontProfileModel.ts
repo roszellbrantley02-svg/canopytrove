@@ -14,10 +14,16 @@ import {
   startCanopyTroveGuestSession,
   subscribeToCanopyTroveAuthSession,
 } from '../services/canopyTroveAuthService';
+import { isEmailLike } from '../utils/publicIdentity';
 
 type UseStorefrontProfileModelArgs = {
   cachedProfileId?: string | null;
 };
+
+function normalizePublicDisplayName(value: string | null | undefined) {
+  const trimmed = value?.trim() || null;
+  return trimmed && !isEmailLike(trimmed) ? trimmed : null;
+}
 
 export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProfileModelArgs) {
   const cachedAppProfile = getCachedAppProfile();
@@ -48,15 +54,11 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
       session: CanopyTroveAuthSession,
       existingDisplayName: string | null | undefined,
     ): string | null => {
-      const normalizedExistingDisplayName = existingDisplayName?.trim() || null;
-      const isExistingDisplayNameAnEmail =
-        normalizedExistingDisplayName &&
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedExistingDisplayName);
+      const normalizedExistingDisplayName = normalizePublicDisplayName(existingDisplayName);
       const authDisplayName =
-        session.status === 'authenticated' ? session.displayName?.trim() || null : null;
-      const authEmail = session.status === 'authenticated' ? (session.email ?? null) : null;
+        session.status === 'authenticated' ? normalizePublicDisplayName(session.displayName) : null;
 
-      if (normalizedExistingDisplayName && !isExistingDisplayNameAnEmail) {
+      if (normalizedExistingDisplayName) {
         return normalizedExistingDisplayName;
       }
 
@@ -64,11 +66,7 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
         return authDisplayName;
       }
 
-      if (authEmail) {
-        return authEmail;
-      }
-
-      return normalizedExistingDisplayName;
+      return null;
     },
     [],
   );
@@ -296,11 +294,10 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
     }
 
     // Display-name resolution priority:
-    //   1. Keep the user's explicit username if they chose one (non-email).
-    //   2. Use authSession.displayName if the auth provider supplied one.
-    //   3. Fall back to the authenticated email so the
-    //      leaderboard always shows a real name — never "anonymous".
-    //   4. If the user later picks a username it replaces all fallbacks.
+    //   1. Keep the user's explicit username if they chose one.
+    //   2. Use authSession.displayName if the auth provider supplied a non-email value.
+    //   3. Otherwise keep the public name unset so UI fallbacks never expose email.
+    //   4. If the user later picks a username it replaces the fallback.
     const nextProfile: AppProfile = {
       ...appProfile,
       kind: authSession.status === 'authenticated' ? 'authenticated' : 'anonymous',

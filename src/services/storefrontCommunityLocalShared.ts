@@ -1,4 +1,5 @@
 import type { AppReview } from '../types/storefront';
+import { getSafePublicDisplayName } from '../utils/publicIdentity';
 
 export type StoredLocalAppReviewRecord = {
   id: string;
@@ -131,7 +132,7 @@ export function mapStoredReviewToAppReview(
 ): AppReview {
   return {
     id: review.id,
-    authorName: review.authorName,
+    authorName: getSafePublicDisplayName(review.authorName, 'Canopy Trove member'),
     authorProfileId: review.profileId,
     isOwnReview: Boolean(currentProfileId && review.profileId === currentProfileId),
     rating: review.rating,

@@ -38,6 +38,7 @@ import {
   type ProductReviewEffectTag,
 } from '../services/productReviewService';
 import { parseProductSlugParam } from '../services/productSlugService';
+import { getSafePublicDisplayName } from '../http/publicIdentity';
 
 export const productReviewRoutes = Router();
 
@@ -238,7 +239,7 @@ productReviewRoutes.post(
         productName: body.productName,
         profileId: body.profileId,
         accountId,
-        authorName: body.authorName,
+        authorName: getSafePublicDisplayName(body.authorName, 'Canopy Trove member'),
         rating: body.rating,
         text: body.text,
         effectTags: body.effectTags,

@@ -19,6 +19,7 @@ import { trackAnalyticsEvent } from '../services/analyticsService';
 import { submitStorefrontReport } from '../services/storefrontCommunityService';
 import { storefrontSourceMode } from '../config/storefrontSourceConfig';
 import { colors, radii, spacing, typography } from '../theme/tokens';
+import { getSafePublicDisplayName } from '../utils/publicIdentity';
 import type { StorefrontReportEntryMode } from './reportStorefront/ReportStorefrontSections';
 import {
   REPORT_REASONS,
@@ -136,9 +137,10 @@ function ReportStorefrontScreenInner() {
       const response = await submitStorefrontReport({
         storefrontId: storefront.id,
         profileId,
-        authorName:
-          appProfile?.displayName ||
-          (appProfile?.kind === 'authenticated' ? 'Canopy Trove member' : 'Canopy Trove user'),
+        authorName: getSafePublicDisplayName(
+          appProfile?.displayName,
+          appProfile?.kind === 'authenticated' ? 'Canopy Trove member' : 'Canopy Trove user',
+        ),
         reason,
         description: description.trim(),
       });

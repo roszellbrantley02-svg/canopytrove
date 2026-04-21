@@ -1068,6 +1068,51 @@ Follow-up:
 
 - Commit and push the config/assets, then run a real production iOS EAS build with profile `production`.
 
+### 2026-04-21 - Username-First Public Identity Privacy Pass
+
+What changed:
+
+- Added shared frontend and backend public identity helpers that detect email-like strings and replace them with safe public fallbacks.
+- Removed the profile model's authenticated email fallback, so `displayName` is never set from `authSession.email`.
+- Updated profile display-name resolution to use usernames/display names or generated `Canopy Trove <profile suffix>` fallbacks only.
+- Updated storefront reviews, product reviews, owner review inbox, review reporting, and local/offline community flows to sanitize email-like author names before display or persistence.
+- Updated backend profile, storefront-review, product-review, and report persistence so forged or legacy email-like public names are stripped server-side.
+- Added regression tests for frontend identity helpers, profile email fallback removal, backend public identity helpers, profile-state sanitization, storefront review author sanitization, and report author sanitization.
+
+Main files:
+
+- `src/utils/publicIdentity.ts`
+- `src/context/useStorefrontProfileModel.ts`
+- `src/screens/profile/profileUtils.ts`
+- `src/screens/writeReview/useWriteReviewScreenModel.ts`
+- `src/screens/ProductReviewComposerScreen.tsx`
+- `src/screens/storefrontDetail/StorefrontDetailCommunitySections.tsx`
+- `src/screens/OwnerPortalReviewInboxScreen.tsx`
+- `backend/src/http/publicIdentity.ts`
+- `backend/src/services/profileService.ts`
+- `backend/src/services/storefrontCommunityService.ts`
+- `backend/src/services/productReviewService.ts`
+
+Why:
+
+- The owner requested usernames instead of emails for safety. The app still uses email for private sign-in/account operations, but public identity now uses usernames/display names or safe anonymous fallbacks.
+
+Verification:
+
+- `npx vitest run src/utils/publicIdentity.test.ts src/context/useStorefrontProfileModel.test.tsx`
+- `npx tsx --test src/http/publicIdentity.test.ts src/services/storefrontCommunityService.test.ts src/services/profileStateService.test.ts`
+- `npm run typecheck`
+- `npm run lint:strict`
+- `npm run format:check`
+- `npm --prefix backend run check`
+- `npm test` (`77` files, `331` tests)
+- `npm --prefix backend test` (`270` tests)
+
+Follow-up:
+
+- Existing deployed backend data that already contains email-like review/profile display names will render safely after this code ships, but a backend deploy is required for server-side sanitization to apply on future API reads/writes.
+- Existing app installs with an email-like cached `displayName` will self-repair after opening a build containing this change.
+
 ### 2026-04-03 - Agent One Safety Protocol Change Required By User
 
 User instruction: Agent One is now treated as a write-risk until proven otherwise.

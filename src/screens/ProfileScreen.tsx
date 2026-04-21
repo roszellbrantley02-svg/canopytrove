@@ -28,6 +28,7 @@ import { AppUiIcon } from '../icons/AppUiIcon';
 import { BadgeArtIcon } from '../icons/BadgeArtIcon';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, radii, motion, spacing, textStyles } from '../theme/tokens';
+import { getSafePublicDisplayName } from '../utils/publicIdentity';
 import {
   ProfileHeroCard,
   StorefrontCollectionSection,
@@ -236,7 +237,7 @@ function AndroidBusinessNoticeWorkspace() {
             <View style={internalStyles.sessionCopy}>
               <Text style={internalStyles.sessionTitle}>Business account detected</Text>
               <Text style={internalStyles.sessionBody}>
-                {authSession.email ?? authSession.displayName ?? 'Owner account active'}
+                {getSafePublicDisplayName(authSession.displayName, 'Owner account active')}
               </Text>
             </View>
             <View style={internalStyles.ownerChip}>
@@ -382,7 +383,7 @@ function OwnerProfileWorkspace() {
             <View style={internalStyles.sessionCopy}>
               <Text style={internalStyles.sessionTitle}>Signed in as owner</Text>
               <Text style={internalStyles.sessionBody}>
-                {authSession.email ?? authSession.displayName ?? 'Business account active'}
+                {getSafePublicDisplayName(authSession.displayName, 'Business account active')}
               </Text>
             </View>
             <View style={internalStyles.ownerChip}>
@@ -587,9 +588,7 @@ function MemberProfileWorkspace() {
             <View style={internalStyles.sessionLockCard}>
               <View style={internalStyles.sessionCopy}>
                 <Text style={internalStyles.sessionTitle}>Signed in as member</Text>
-                <Text style={internalStyles.sessionBody}>
-                  {model.authSession.email ?? model.displayName}
-                </Text>
+                <Text style={internalStyles.sessionBody}>Username: {model.displayName}</Text>
               </View>
               <Pressable
                 accessibilityRole="button"

@@ -202,6 +202,44 @@ describe('useStorefrontProfileModel', () => {
     );
   });
 
+  it('does not use the auth email as a public display name', async () => {
+    const cachedProfile = createProfile('cached-profile');
+    appProfileMocks.getCachedAppProfile.mockReturnValue(cachedProfile);
+    appProfileMocks.createAppProfileId.mockReturnValue('authenticated-profile');
+
+    act(() => {
+      renderer = create(<HookHarness />);
+    });
+
+    act(() => {
+      authMocks.emit({
+        status: 'authenticated',
+        uid: 'user-123',
+        isAnonymous: false,
+        displayName: null,
+        email: 'private@example.com',
+      });
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+
+    expect(appProfileMocks.saveAppProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'authenticated-profile',
+        kind: 'authenticated',
+        accountId: 'user-123',
+        displayName: null,
+      }),
+    );
+    expect(latestValue?.appProfile?.displayName).not.toBe('private@example.com');
+  });
+
   it('reuses the canonical authenticated profile returned by the backend', async () => {
     const cachedProfile = createProfile('cached-profile');
     const canonicalProfile = createProfile('canonical-profile', {

@@ -19,6 +19,7 @@ import {
 } from './ownerPortal/ownerPortalMetricUtils';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 import { useOwnerPortalWorkspace } from './ownerPortal/useOwnerPortalWorkspace';
+import { getSafePublicDisplayName } from '../utils/publicIdentity';
 
 type OwnerPortalReviewInboxRoute = RouteProp<RootStackParamList, 'OwnerPortalReviewInbox'>;
 
@@ -334,142 +335,149 @@ function OwnerPortalReviewInboxScreenInner() {
         >
           <View style={styles.cardStack}>
             {reviews.length ? (
-              reviews.map((review) => (
-                <View
-                  key={review.id}
-                  style={[styles.actionTile, review.isLowRating ? styles.resultWarning : null]}
-                >
-                  <View style={styles.splitHeaderRow}>
-                    <View style={styles.splitHeaderCopy}>
-                      <Text style={styles.actionTileMeta}>
-                        {review.isLowRating ? 'Low-rating review' : 'Recent review'}
-                      </Text>
-                      <Text style={styles.actionTileTitle}>
-                        {review.authorName} | {review.rating.toFixed(1)} stars
-                      </Text>
-                      <Text style={styles.actionTileBody}>{review.relativeTime}</Text>
-                    </View>
-                    <AppUiIcon
-                      name={review.isLowRating ? 'alert-circle-outline' : 'chatbubble-outline'}
-                      size={20}
-                      color={review.isLowRating ? '#FFB4A8' : '#9CC5B4'}
-                    />
-                  </View>
-                  <Text style={styles.helperText}>{review.text}</Text>
-                  {review.tags.length ? (
-                    <View style={styles.tagRow}>
-                      {review.tags.map((tag) => (
-                        <View key={`${review.id}-${tag}`} style={styles.tag}>
-                          <Text style={styles.tagText}>{tag}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  ) : null}
-                  {review.ownerReply?.text ? (
-                    <View style={styles.fileCard}>
-                      <Text style={styles.resultTitle}>
-                        Reply sent by {review.ownerReply.ownerDisplayName ?? 'Owner'}
-                      </Text>
-                      <Text style={styles.helperText}>{review.ownerReply.text}</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.reviewComposerCard}>
-                      <Text style={styles.fieldLabel}>Reply draft</Text>
-                      <TextInput
-                        value={replyDrafts[review.id] ?? ''}
-                        onChangeText={(value) =>
-                          setReplyDrafts((current) => ({
-                            ...current,
-                            [review.id]: value,
-                          }))
-                        }
-                        placeholder="Write a thoughtful owner reply"
-                        placeholderTextColor={colors.textSoft}
-                        multiline={true}
-                        style={[styles.inputPremium, styles.textAreaPremium]}
+              reviews.map((review) => {
+                const reviewAuthorName = getSafePublicDisplayName(
+                  review.authorName,
+                  'Canopy Trove member',
+                );
+
+                return (
+                  <View
+                    key={review.id}
+                    style={[styles.actionTile, review.isLowRating ? styles.resultWarning : null]}
+                  >
+                    <View style={styles.splitHeaderRow}>
+                      <View style={styles.splitHeaderCopy}>
+                        <Text style={styles.actionTileMeta}>
+                          {review.isLowRating ? 'Low-rating review' : 'Recent review'}
+                        </Text>
+                        <Text style={styles.actionTileTitle}>
+                          {reviewAuthorName} | {review.rating.toFixed(1)} stars
+                        </Text>
+                        <Text style={styles.actionTileBody}>{review.relativeTime}</Text>
+                      </View>
+                      <AppUiIcon
+                        name={review.isLowRating ? 'alert-circle-outline' : 'chatbubble-outline'}
+                        size={20}
+                        color={review.isLowRating ? '#FFB4A8' : '#9CC5B4'}
                       />
-                      <View style={styles.inlineActionRow}>
+                    </View>
+                    <Text style={styles.helperText}>{review.text}</Text>
+                    {review.tags.length ? (
+                      <View style={styles.tagRow}>
+                        {review.tags.map((tag) => (
+                          <View key={`${review.id}-${tag}`} style={styles.tag}>
+                            <Text style={styles.tagText}>{tag}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+                    {review.ownerReply?.text ? (
+                      <View style={styles.fileCard}>
+                        <Text style={styles.resultTitle}>
+                          Reply sent by {review.ownerReply.ownerDisplayName ?? 'Owner'}
+                        </Text>
+                        <Text style={styles.helperText}>{review.ownerReply.text}</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.reviewComposerCard}>
+                        <Text style={styles.fieldLabel}>Reply draft</Text>
+                        <TextInput
+                          value={replyDrafts[review.id] ?? ''}
+                          onChangeText={(value) =>
+                            setReplyDrafts((current) => ({
+                              ...current,
+                              [review.id]: value,
+                            }))
+                          }
+                          placeholder="Write a thoughtful owner reply"
+                          placeholderTextColor={colors.textSoft}
+                          multiline={true}
+                          style={[styles.inputPremium, styles.textAreaPremium]}
+                        />
+                        <View style={styles.inlineActionRow}>
+                          <Pressable
+                            disabled={preview || isAiLoading}
+                            onPress={() => {
+                              void draftReviewReplyWithAi(review.id, {
+                                tone: review.isLowRating ? 'make-it-right' : 'warm',
+                              })
+                                .then((draft) => {
+                                  setReplyDrafts((current) => ({
+                                    ...current,
+                                    [review.id]: draft.text,
+                                  }));
+                                })
+                                .catch((err: unknown) => {
+                                  const message =
+                                    err instanceof Error ? err.message : 'Failed to draft reply.';
+                                  if (typeof alert === 'function') {
+                                    alert(message);
+                                  }
+                                });
+                            }}
+                            style={[
+                              styles.secondaryButton,
+                              styles.inlineButton,
+                              (preview || isAiLoading) && styles.buttonDisabled,
+                            ]}
+                          >
+                            <Text style={styles.secondaryButtonText}>
+                              {preview
+                                ? 'Preview Only'
+                                : isAiLoading
+                                  ? 'Drafting...'
+                                  : 'Draft With AI'}
+                            </Text>
+                          </Pressable>
+                        </View>
                         <Pressable
-                          disabled={preview || isAiLoading}
+                          disabled={
+                            preview ||
+                            isSaving ||
+                            !reviewRepliesEnabled ||
+                            !(replyDrafts[review.id] ?? '').trim()
+                          }
                           onPress={() => {
-                            void draftReviewReplyWithAi(review.id, {
-                              tone: review.isLowRating ? 'make-it-right' : 'warm',
-                            })
-                              .then((draft) => {
+                            void replyToReview(review.id, (replyDrafts[review.id] ?? '').trim())
+                              .then(() => {
                                 setReplyDrafts((current) => ({
                                   ...current,
-                                  [review.id]: draft.text,
+                                  [review.id]: '',
                                 }));
                               })
                               .catch((err: unknown) => {
                                 const message =
-                                  err instanceof Error ? err.message : 'Failed to draft reply.';
+                                  err instanceof Error ? err.message : 'Failed to send reply.';
                                 if (typeof alert === 'function') {
                                   alert(message);
                                 }
                               });
                           }}
                           style={[
-                            styles.secondaryButton,
-                            styles.inlineButton,
-                            (preview || isAiLoading) && styles.buttonDisabled,
+                            styles.primaryButton,
+                            (preview ||
+                              isSaving ||
+                              !reviewRepliesEnabled ||
+                              !(replyDrafts[review.id] ?? '').trim()) &&
+                              styles.buttonDisabled,
                           ]}
                         >
-                          <Text style={styles.secondaryButtonText}>
+                          <Text style={styles.primaryButtonText}>
                             {preview
                               ? 'Preview Only'
-                              : isAiLoading
-                                ? 'Drafting...'
-                                : 'Draft With AI'}
+                              : !reviewRepliesEnabled
+                                ? 'Replies Paused'
+                                : isSaving
+                                  ? 'Saving...'
+                                  : 'Send Reply'}
                           </Text>
                         </Pressable>
                       </View>
-                      <Pressable
-                        disabled={
-                          preview ||
-                          isSaving ||
-                          !reviewRepliesEnabled ||
-                          !(replyDrafts[review.id] ?? '').trim()
-                        }
-                        onPress={() => {
-                          void replyToReview(review.id, (replyDrafts[review.id] ?? '').trim())
-                            .then(() => {
-                              setReplyDrafts((current) => ({
-                                ...current,
-                                [review.id]: '',
-                              }));
-                            })
-                            .catch((err: unknown) => {
-                              const message =
-                                err instanceof Error ? err.message : 'Failed to send reply.';
-                              if (typeof alert === 'function') {
-                                alert(message);
-                              }
-                            });
-                        }}
-                        style={[
-                          styles.primaryButton,
-                          (preview ||
-                            isSaving ||
-                            !reviewRepliesEnabled ||
-                            !(replyDrafts[review.id] ?? '').trim()) &&
-                            styles.buttonDisabled,
-                        ]}
-                      >
-                        <Text style={styles.primaryButtonText}>
-                          {preview
-                            ? 'Preview Only'
-                            : !reviewRepliesEnabled
-                              ? 'Replies Paused'
-                              : isSaving
-                                ? 'Saving...'
-                                : 'Send Reply'}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  )}
-                </View>
-              ))
+                    )}
+                  </View>
+                );
+              })
             ) : (
               <View style={styles.emptyStateCard}>
                 <Text style={styles.emptyStateTitle}>No owner-facing reviews yet</Text>
@@ -490,45 +498,52 @@ function OwnerPortalReviewInboxScreenInner() {
         >
           <View style={styles.cardStack}>
             {reports.length ? (
-              reports.map((report) => (
-                <View
-                  key={report.id}
-                  style={[
-                    styles.actionTile,
-                    report.moderationStatus === 'open' ? styles.resultWarning : null,
-                  ]}
-                >
-                  <View style={styles.splitHeaderRow}>
-                    <View style={styles.splitHeaderCopy}>
-                      <Text style={styles.actionTileMeta}>Moderation report</Text>
-                      <Text style={styles.actionTileTitle}>{report.reason}</Text>
-                      <Text style={styles.actionTileBody}>
-                        {report.authorName} |{' '}
-                        {new Date(report.createdAt).toLocaleString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
-                          hour12: true,
-                        })}
-                      </Text>
+              reports.map((report) => {
+                const reportAuthorName = getSafePublicDisplayName(
+                  report.authorName,
+                  'Canopy Trove member',
+                );
+
+                return (
+                  <View
+                    key={report.id}
+                    style={[
+                      styles.actionTile,
+                      report.moderationStatus === 'open' ? styles.resultWarning : null,
+                    ]}
+                  >
+                    <View style={styles.splitHeaderRow}>
+                      <View style={styles.splitHeaderCopy}>
+                        <Text style={styles.actionTileMeta}>Moderation report</Text>
+                        <Text style={styles.actionTileTitle}>{report.reason}</Text>
+                        <Text style={styles.actionTileBody}>
+                          {reportAuthorName} |{' '}
+                          {new Date(report.createdAt).toLocaleString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}
+                        </Text>
+                      </View>
+                      <AppUiIcon
+                        name={
+                          report.moderationStatus === 'open'
+                            ? 'shield-outline'
+                            : 'checkmark-done-circle-outline'
+                        }
+                        size={20}
+                        color={report.moderationStatus === 'open' ? '#FFB4A8' : '#00F58C'}
+                      />
                     </View>
-                    <AppUiIcon
-                      name={
-                        report.moderationStatus === 'open'
-                          ? 'shield-outline'
-                          : 'checkmark-done-circle-outline'
-                      }
-                      size={20}
-                      color={report.moderationStatus === 'open' ? '#FFB4A8' : '#00F58C'}
-                    />
+                    <Text style={styles.helperText}>{report.description}</Text>
+                    <Text style={styles.resultMeta}>
+                      Status: {report.moderationStatus.replace(/_/g, ' ')}
+                    </Text>
                   </View>
-                  <Text style={styles.helperText}>{report.description}</Text>
-                  <Text style={styles.resultMeta}>
-                    Status: {report.moderationStatus.replace(/_/g, ' ')}
-                  </Text>
-                </View>
-              ))
+                );
+              })
             ) : (
               <View style={styles.emptyStateCard}>
                 <Text style={styles.emptyStateTitle}>No storefront reports waiting</Text>

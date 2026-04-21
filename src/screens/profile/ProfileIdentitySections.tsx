@@ -203,7 +203,7 @@ export function ProfileAccountSection({
       : 'No member account is connected';
   const accountBody =
     isMemberAuthenticated && memberEmail
-      ? `${memberEmail} is connected to this profile.`
+      ? 'A private sign-in email is connected to this profile. It is not shown on reviews.'
       : isGuestSession
         ? 'You are browsing with guest access. Connect a member account to keep your history.'
         : 'Sign in to keep your history, reviews, and saved storefronts together.';
@@ -268,8 +268,8 @@ export function ProfileAccountSection({
 
       {memberEmail ? (
         <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Display name</Text>
-          <Text style={styles.fieldHint}>{memberEmail}</Text>
+          <Text style={styles.fieldLabel}>Private sign-in email</Text>
+          <Text style={styles.fieldHint}>Hidden from your public profile and reviews.</Text>
         </View>
       ) : null}
 

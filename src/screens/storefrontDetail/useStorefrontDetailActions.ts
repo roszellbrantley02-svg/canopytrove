@@ -1,6 +1,7 @@
 import React from 'react';
 import { Linking, Platform } from 'react-native';
 import { crossPlatformAlert } from '../../utils/crossPlatformAlert';
+import { getSafePublicDisplayName } from '../../utils/publicIdentity';
 import { useStorefrontRewardsController } from '../../context/StorefrontController';
 import { getPlatformSafeStorefrontOutboundLinks } from './storefrontDetailHelpers';
 
@@ -50,10 +51,11 @@ type UseStorefrontDetailActionsArgs = {
 
 function buildReviewModerationDescription(review: AppReview) {
   const excerpt = review.text.trim().replace(/\s+/g, ' ').slice(0, 180);
+  const reviewAuthorName = getSafePublicDisplayName(review.authorName, 'Canopy Trove member');
 
   return [
     `Review ${review.id} was flagged from the storefront detail screen.`,
-    `Author: ${review.authorName}.`,
+    `Author: ${reviewAuthorName}.`,
     `Rating: ${review.rating.toFixed(1)}.`,
     excerpt ? `Excerpt: "${excerpt}".` : null,
     'Reason: Possible harassment, spam, illegal claim, or other abusive content.',
@@ -63,11 +65,10 @@ function buildReviewModerationDescription(review: AppReview) {
 }
 
 function getReportAuthorName(appProfile: AppProfile | null) {
-  if (appProfile?.displayName?.trim()) {
-    return appProfile.displayName.trim();
-  }
-
-  return appProfile?.kind === 'authenticated' ? 'Canopy Trove member' : 'Canopy Trove user';
+  return getSafePublicDisplayName(
+    appProfile?.displayName,
+    appProfile?.kind === 'authenticated' ? 'Canopy Trove member' : 'Canopy Trove user',
+  );
 }
 
 function buildSuggestEditDescription(storefront: StorefrontSummary) {
@@ -311,7 +312,10 @@ export function useStorefrontDetailActions({
           description: buildReviewModerationDescription(review),
           reportTarget: 'review',
           reportedReviewId: review.id,
-          reportedReviewAuthorName: review.authorName,
+          reportedReviewAuthorName: getSafePublicDisplayName(
+            review.authorName,
+            'Canopy Trove member',
+          ),
           reportedReviewExcerpt: review.text.trim().replace(/\s+/g, ' ').slice(0, 180),
         });
 

@@ -19,6 +19,7 @@ import {
   normalizeCommunityTags,
   cloneStorefrontCommunityState,
 } from './storefrontCommunityLocalShared';
+import { getSafePublicDisplayName } from '../utils/publicIdentity';
 
 export {
   getCachedStorefrontCommunityState,
@@ -71,7 +72,7 @@ export async function addLocalStorefrontReview(input: StorefrontReviewSubmission
     id: createCommunityLocalId('local-review'),
     storefrontId: input.storefrontId,
     profileId: input.profileId,
-    authorName: input.authorName.trim() || 'Canopy Trove user',
+    authorName: getSafePublicDisplayName(input.authorName, 'Canopy Trove member'),
     rating: normalizeCommunityRating(input.rating),
     text: input.text.trim(),
     gifUrl: input.gifUrl?.trim() || null,
@@ -102,7 +103,10 @@ export async function updateLocalStorefrontReview(input: StorefrontReviewUpdateI
 
   const nextReview = {
     ...existingReview,
-    authorName: input.authorName.trim() || existingReview.authorName,
+    authorName: getSafePublicDisplayName(
+      input.authorName,
+      getSafePublicDisplayName(existingReview.authorName, 'Canopy Trove member'),
+    ),
     rating: normalizeCommunityRating(input.rating),
     text: input.text.trim(),
     gifUrl: input.gifUrl?.trim() || null,
@@ -122,13 +126,15 @@ export async function addLocalStorefrontReport(input: StorefrontReportSubmission
     id: createCommunityLocalId('local-report'),
     storefrontId: input.storefrontId,
     profileId: input.profileId,
-    authorName: input.authorName.trim() || 'Canopy Trove user',
+    authorName: getSafePublicDisplayName(input.authorName, 'Canopy Trove user'),
     reason: input.reason.trim(),
     description: input.description.trim(),
     reportTarget: input.reportTarget ?? 'storefront',
     reportedReviewId: input.reportedReviewId?.trim() || undefined,
     reportedReviewAuthorProfileId: input.reportedReviewAuthorProfileId?.trim() || null,
-    reportedReviewAuthorName: input.reportedReviewAuthorName?.trim() || null,
+    reportedReviewAuthorName: input.reportedReviewAuthorName
+      ? getSafePublicDisplayName(input.reportedReviewAuthorName, 'Canopy Trove member')
+      : null,
     reportedReviewExcerpt: input.reportedReviewExcerpt?.trim() || null,
     createdAt: new Date().toISOString(),
   };

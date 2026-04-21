@@ -20,7 +20,6 @@ type UseProfileDerivedStateArgs = {
   backendSeedStatus: {
     counts: { summaryCount: number; detailCount: number };
   } | null;
-  email?: string | null;
   gamificationState: StorefrontGamificationState;
   levelTitle: string;
   profileId: string;
@@ -31,13 +30,12 @@ export function useProfileDerivedState({
   appProfile,
   badgeDefinitions,
   backendSeedStatus,
-  email,
   gamificationState,
   levelTitle,
   profileId,
   rank,
 }: UseProfileDerivedStateArgs) {
-  const displayName = getProfileDisplayName(appProfile, profileId, email);
+  const displayName = getProfileDisplayName(appProfile, profileId);
   const profileInitials = getProfileInitials(displayName);
   const earnedBadgeIds = React.useMemo(
     () => new Set(gamificationState.badges),

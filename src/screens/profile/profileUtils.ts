@@ -4,6 +4,7 @@ import type {
   StorefrontGamificationState,
 } from '../../types/storefront';
 import { getPointsForLevel } from '../../services/canopyTroveGamificationService';
+import { getProfileFallbackName, getSafePublicDisplayName } from '../../utils/publicIdentity';
 
 export type BadgeProgressItem = {
   badge: GamificationBadgeDefinition;
@@ -17,18 +18,14 @@ export type BadgeProgressItem = {
  *
  * Priority:
  *   1. Explicit display name / username the user chose
- *   2. Email — the default if the user never picked a username
- *   3. Fallback label using the last 6 chars of the profile ID
+ *   2. Fallback label using the last 6 chars of the profile ID
  *
  * The same logic applies everywhere (profile screen, leaderboard,
- * community) — members are never shown as "anonymous".
+ * community) — members are never shown as "anonymous", and email
+ * addresses are never used as public identity.
  */
-export function getProfileDisplayName(
-  appProfile: AppProfile | null,
-  profileId: string,
-  email?: string | null,
-) {
-  return appProfile?.displayName?.trim() || email?.trim() || `Canopy Trove ${profileId.slice(-6)}`;
+export function getProfileDisplayName(appProfile: AppProfile | null, profileId: string) {
+  return getSafePublicDisplayName(appProfile?.displayName, getProfileFallbackName(profileId));
 }
 
 /**
@@ -36,7 +33,7 @@ export function getProfileDisplayName(
  * using only the data present in the leaderboard entry.
  */
 export function getPublicDisplayName(displayName: string | null | undefined, profileId: string) {
-  return displayName?.trim() || `Canopy Trove ${profileId.slice(-6)}`;
+  return getSafePublicDisplayName(displayName, getProfileFallbackName(profileId));
 }
 
 export function getProfileInitials(label: string) {

@@ -13,6 +13,7 @@ import {
 import type { UsernameChangeRequestResponse } from '../../services/storefrontBackendService';
 import { storefrontSourceMode } from '../../config/storefrontSourceConfig';
 import { getOwnerPortalAccessState } from '../../services/ownerPortalService';
+import { isEmailLike } from '../../utils/publicIdentity';
 import type { CanopyTroveAuthSession } from '../../types/identity';
 import type { RootStackParamList } from '../../navigation/RootNavigator';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -129,6 +130,10 @@ export function useProfileActions({
     }
     if (trimmed.length > 30) {
       setProfileActionStatus('Username must be 30 characters or fewer.');
+      return;
+    }
+    if (isEmailLike(trimmed)) {
+      setProfileActionStatus('Use a username, not an email address.');
       return;
     }
 

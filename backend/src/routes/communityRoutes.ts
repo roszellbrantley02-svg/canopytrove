@@ -44,6 +44,7 @@ import {
 import { getStorefrontDetail } from '../storefrontService';
 import { checkContentQuality } from '../http/contentQualityGuard';
 import { checkCommunityVelocity } from '../http/communityVelocityGuard';
+import { getSafePublicDisplayName } from '../http/publicIdentity';
 
 export const communityRoutes = Router();
 const storefrontReportRateLimiter = createRateLimitMiddleware({
@@ -117,7 +118,7 @@ communityRoutes.post(
     const input: StorefrontReviewSubmissionInput = {
       storefrontId,
       profileId: body.profileId,
-      authorName: body.authorName || 'Canopy Trove user',
+      authorName: getSafePublicDisplayName(body.authorName, 'Canopy Trove member'),
       rating: body.rating,
       text: body.text,
       gifUrl: body.gifUrl,
@@ -266,7 +267,7 @@ communityRoutes.put(
     const input: StorefrontReviewSubmissionInput = {
       storefrontId,
       profileId: body.profileId,
-      authorName: body.authorName || 'Canopy Trove user',
+      authorName: getSafePublicDisplayName(body.authorName, 'Canopy Trove member'),
       rating: body.rating,
       text: body.text,
       gifUrl: body.gifUrl,
@@ -471,12 +472,14 @@ communityRoutes.post(
     const input: StorefrontReportSubmissionInput = {
       storefrontId,
       profileId: body.profileId,
-      authorName: body.authorName || 'Canopy Trove user',
+      authorName: getSafePublicDisplayName(body.authorName, 'Canopy Trove user'),
       reason: body.reason,
       description: body.description,
       reportTarget: body.reportTarget,
       reportedReviewId: body.reportedReviewId,
-      reportedReviewAuthorName: body.reportedReviewAuthorName ?? null,
+      reportedReviewAuthorName: body.reportedReviewAuthorName
+        ? getSafePublicDisplayName(body.reportedReviewAuthorName, 'Canopy Trove member')
+        : null,
       reportedReviewExcerpt: body.reportedReviewExcerpt ?? null,
     };
 

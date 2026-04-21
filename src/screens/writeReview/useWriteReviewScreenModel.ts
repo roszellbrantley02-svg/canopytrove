@@ -29,6 +29,7 @@ import {
   uploadPendingReviewPhoto,
 } from '../../services/storefrontReviewPhotoService';
 import { compressImage } from '../../utils/compressImage';
+import { getSafePublicDisplayName } from '../../utils/publicIdentity';
 import type { AppReview, StorefrontSummary } from '../../types/storefront';
 import {
   getReviewSubmitErrorMessage,
@@ -728,9 +729,10 @@ export function useWriteReviewScreenModel(input: {
       const reviewInput = {
         storefrontId: storefront.id,
         profileId,
-        authorName:
-          appProfile?.displayName ||
-          (appProfile?.kind === 'authenticated' ? 'Canopy Trove member' : 'Canopy Trove user'),
+        authorName: getSafePublicDisplayName(
+          appProfile?.displayName,
+          appProfile?.kind === 'authenticated' ? 'Canopy Trove member' : 'Canopy Trove user',
+        ),
         rating,
         text: text.trim(),
         tags: selectedTags,

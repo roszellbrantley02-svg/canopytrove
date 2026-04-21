@@ -6,6 +6,7 @@ import { CustomerStateCard } from '../../components/CustomerStateCard';
 import { SectionCard } from '../../components/SectionCard';
 import { colors } from '../../theme/tokens';
 import type { StorefrontDetails } from '../../types/storefront';
+import { getSafePublicDisplayName } from '../../utils/publicIdentity';
 import { styles } from './storefrontDetailStyles';
 
 export function DetailReviewsSection({
@@ -100,146 +101,153 @@ export function DetailReviewsSection({
           />
         ) : null}
 
-        {appReviews.map((review) => (
-          <View key={review.id} style={styles.reviewCard}>
-            <View style={styles.reviewHeader}>
-              <View style={styles.reviewHeaderMain}>
-                <Text style={styles.reviewAuthor}>{review.authorName}</Text>
-                <Text style={styles.reviewMeta}>{review.relativeTime}</Text>
+        {appReviews.map((review) => {
+          const reviewAuthorName = getSafePublicDisplayName(
+            review.authorName,
+            'Canopy Trove member',
+          );
+
+          return (
+            <View key={review.id} style={styles.reviewCard}>
+              <View style={styles.reviewHeader}>
+                <View style={styles.reviewHeaderMain}>
+                  <Text style={styles.reviewAuthor}>{reviewAuthorName}</Text>
+                  <Text style={styles.reviewMeta}>{review.relativeTime}</Text>
+                </View>
+                <View style={styles.reviewRatingPill}>
+                  <AppUiIcon name="star" size={12} color={colors.gold} />
+                  <Text style={styles.reviewRatingText}>{review.rating.toFixed(1)}</Text>
+                </View>
               </View>
-              <View style={styles.reviewRatingPill}>
-                <AppUiIcon name="star" size={12} color={colors.gold} />
-                <Text style={styles.reviewRatingText}>{review.rating.toFixed(1)}</Text>
-              </View>
-            </View>
 
-            {review.tags.length ? (
-              <View style={styles.reviewTagRow}>
-                {review.tags.map((tag) => (
-                  <View key={tag} style={styles.reviewTag}>
-                    <Text style={styles.reviewTagText}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
+              {review.tags.length ? (
+                <View style={styles.reviewTagRow}>
+                  {review.tags.map((tag) => (
+                    <View key={tag} style={styles.reviewTag}>
+                      <Text style={styles.reviewTagText}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
 
-            <Text style={styles.reviewText}>{review.text}</Text>
+              <Text style={styles.reviewText}>{review.text}</Text>
 
-            {review.gifUrl ? (
-              <Image
-                source={{ uri: review.gifUrl }}
-                style={styles.reviewGif}
-                accessibilityLabel="Reaction GIF from review"
-                cachePolicy="disk"
-                transition={200}
-              />
-            ) : null}
+              {review.gifUrl ? (
+                <Image
+                  source={{ uri: review.gifUrl }}
+                  style={styles.reviewGif}
+                  accessibilityLabel="Reaction GIF from review"
+                  cachePolicy="disk"
+                  transition={200}
+                />
+              ) : null}
 
-            {review.photoUrls?.length ? (
-              <ScrollView
-                horizontal
-                contentContainerStyle={styles.reviewPhotoRow}
-                showsHorizontalScrollIndicator={false}
-              >
-                {review.photoUrls.map((photoUrl, index) => (
-                  <Image
-                    key={`${review.id}-review-photo-${index}`}
-                    source={{ uri: photoUrl }}
-                    style={styles.reviewPhotoCard}
-                    accessibilityLabel={`Review photo ${index + 1}`}
-                    cachePolicy="disk"
-                    transition={200}
-                    recyclingKey={photoUrl}
-                  />
-                ))}
-              </ScrollView>
-            ) : null}
-
-            {review.ownerReply?.text ? (
-              <View style={styles.reviewOwnerReplyCard}>
-                <Text style={styles.reviewOwnerReplyLabel}>Owner response</Text>
-                <Text style={styles.reviewOwnerReplyMeta}>
-                  {(review.ownerReply.ownerDisplayName ?? 'Store owner') +
-                    ' | ' +
-                    new Date(review.ownerReply.respondedAt).toLocaleDateString()}
-                </Text>
-                <Text style={styles.reviewOwnerReplyText}>{review.ownerReply.text}</Text>
-              </View>
-            ) : null}
-
-            <View style={styles.reviewDivider} />
-
-            <View style={styles.reviewActionRow}>
-              <View style={styles.reviewActionMeta}>
-                <AppUiIcon name="thumbs-up-outline" size={12} color={colors.cyan} />
-                <Text style={styles.reviewActionMetaText}>{review.helpfulCount} helpful</Text>
-              </View>
-              <View style={styles.reviewActionButtons}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    review.isOwnReview
-                      ? 'Your own review cannot be marked helpful'
-                      : `Mark review by ${review.authorName} as helpful`
-                  }
-                  accessibilityHint="Adds your helpful vote to this review."
-                  disabled={pendingHelpfulReviewId === review.id || review.isOwnReview}
-                  onPress={() => {
-                    onMarkHelpful(review.id, review.isOwnReview);
-                  }}
-                  style={[
-                    styles.reviewHelpfulButton,
-                    (pendingHelpfulReviewId === review.id || review.isOwnReview) &&
-                      styles.reviewHelpfulButtonDisabled,
-                  ]}
+              {review.photoUrls?.length ? (
+                <ScrollView
+                  horizontal
+                  contentContainerStyle={styles.reviewPhotoRow}
+                  showsHorizontalScrollIndicator={false}
                 >
-                  {pendingHelpfulReviewId === review.id ? (
-                    <ActivityIndicator size="small" color={colors.background} />
-                  ) : (
-                    <>
-                      <AppUiIcon name="thumbs-up-outline" size={14} color={colors.background} />
-                      <Text style={styles.reviewHelpfulButtonText}>
-                        {review.isOwnReview ? 'Your review' : 'Mark helpful'}
-                      </Text>
-                    </>
-                  )}
-                </Pressable>
-                {review.authorProfileId && !review.isOwnReview ? (
+                  {review.photoUrls.map((photoUrl, index) => (
+                    <Image
+                      key={`${review.id}-review-photo-${index}`}
+                      source={{ uri: photoUrl }}
+                      style={styles.reviewPhotoCard}
+                      accessibilityLabel={`Review photo ${index + 1}`}
+                      cachePolicy="disk"
+                      transition={200}
+                      recyclingKey={photoUrl}
+                    />
+                  ))}
+                </ScrollView>
+              ) : null}
+
+              {review.ownerReply?.text ? (
+                <View style={styles.reviewOwnerReplyCard}>
+                  <Text style={styles.reviewOwnerReplyLabel}>Owner response</Text>
+                  <Text style={styles.reviewOwnerReplyMeta}>
+                    {(review.ownerReply.ownerDisplayName ?? 'Store owner') +
+                      ' | ' +
+                      new Date(review.ownerReply.respondedAt).toLocaleDateString()}
+                  </Text>
+                  <Text style={styles.reviewOwnerReplyText}>{review.ownerReply.text}</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.reviewDivider} />
+
+              <View style={styles.reviewActionRow}>
+                <View style={styles.reviewActionMeta}>
+                  <AppUiIcon name="thumbs-up-outline" size={12} color={colors.cyan} />
+                  <Text style={styles.reviewActionMetaText}>{review.helpfulCount} helpful</Text>
+                </View>
+                <View style={styles.reviewActionButtons}>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Report review by ${review.authorName}`}
-                    accessibilityHint="Sends this review to our team for review."
-                    disabled={pendingReviewReportId === review.id}
+                    accessibilityLabel={
+                      review.isOwnReview
+                        ? 'Your own review cannot be marked helpful'
+                        : `Mark review by ${reviewAuthorName} as helpful`
+                    }
+                    accessibilityHint="Adds your helpful vote to this review."
+                    disabled={pendingHelpfulReviewId === review.id || review.isOwnReview}
                     onPress={() => {
-                      onReportReview(review);
+                      onMarkHelpful(review.id, review.isOwnReview);
                     }}
                     style={[
-                      styles.reviewReportButton,
-                      pendingReviewReportId === review.id && styles.reviewHelpfulButtonDisabled,
+                      styles.reviewHelpfulButton,
+                      (pendingHelpfulReviewId === review.id || review.isOwnReview) &&
+                        styles.reviewHelpfulButtonDisabled,
                     ]}
                   >
-                    <Text style={styles.reviewReportButtonText}>
-                      {pendingReviewReportId === review.id ? 'Reporting...' : 'Report'}
-                    </Text>
+                    {pendingHelpfulReviewId === review.id ? (
+                      <ActivityIndicator size="small" color={colors.background} />
+                    ) : (
+                      <>
+                        <AppUiIcon name="thumbs-up-outline" size={14} color={colors.background} />
+                        <Text style={styles.reviewHelpfulButtonText}>
+                          {review.isOwnReview ? 'Your review' : 'Mark helpful'}
+                        </Text>
+                      </>
+                    )}
                   </Pressable>
-                ) : null}
-                {review.authorProfileId && !review.isOwnReview ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Block reviews from ${review.authorName}`}
-                    accessibilityHint="Hides future reviews from this author on this storefront for your account."
-                    onPress={() => {
-                      onBlockAuthor(review.authorProfileId);
-                    }}
-                    style={styles.reviewBlockButton}
-                  >
-                    <Text style={styles.reviewBlockButtonText}>Block</Text>
-                  </Pressable>
-                ) : null}
+                  {review.authorProfileId && !review.isOwnReview ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Report review by ${reviewAuthorName}`}
+                      accessibilityHint="Sends this review to our team for review."
+                      disabled={pendingReviewReportId === review.id}
+                      onPress={() => {
+                        onReportReview(review);
+                      }}
+                      style={[
+                        styles.reviewReportButton,
+                        pendingReviewReportId === review.id && styles.reviewHelpfulButtonDisabled,
+                      ]}
+                    >
+                      <Text style={styles.reviewReportButtonText}>
+                        {pendingReviewReportId === review.id ? 'Reporting...' : 'Report'}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                  {review.authorProfileId && !review.isOwnReview ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Block reviews from ${reviewAuthorName}`}
+                      accessibilityHint="Hides future reviews from this author on this storefront for your account."
+                      onPress={() => {
+                        onBlockAuthor(review.authorProfileId);
+                      }}
+                      style={styles.reviewBlockButton}
+                    >
+                      <Text style={styles.reviewBlockButtonText}>Block</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
     </SectionCard>
   );

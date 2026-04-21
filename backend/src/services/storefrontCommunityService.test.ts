@@ -44,6 +44,22 @@ test('listStorefrontAppReviews returns opaque public author ids and marks the ma
   assert.equal(otherViewerReview.isOwnReview, false);
 });
 
+test('storefront review author names never expose email addresses', async () => {
+  await submitStorefrontAppReview({
+    storefrontId: 'storefront-1',
+    profileId: 'profile-1',
+    authorName: 'private@example.com',
+    rating: 5,
+    text: 'This is a detailed review for the storefront.',
+    tags: ['Helpful'],
+    photoCount: 0,
+  });
+
+  const [review] = await listStorefrontAppReviews('storefront-1', 'profile-2');
+
+  assert.equal(review?.authorName, 'Canopy Trove member');
+});
+
 test('public author ids are scoped to the storefront instead of staying global', async () => {
   await submitStorefrontAppReview({
     storefrontId: 'storefront-1',
@@ -145,6 +161,19 @@ test('submitStorefrontReport derives review context from the stored review inste
   );
   assert.equal(report.reportedReviewAuthorName, 'Trusted Reviewer');
   assert.match(report.reportedReviewExcerpt ?? '', /Actual stored review text/);
+});
+
+test('storefront reports never store email addresses as public author names', async () => {
+  const report = await submitStorefrontReport({
+    storefrontId: 'storefront-1',
+    profileId: 'reporter-1',
+    authorName: 'reporter@example.com',
+    reason: 'Storefront issue',
+    description: 'Flagging this storefront for moderation.',
+    reportTarget: 'storefront',
+  });
+
+  assert.equal(report.authorName, 'Canopy Trove user');
 });
 
 test('submitStorefrontReport rejects review reports for missing reviews', async () => {
