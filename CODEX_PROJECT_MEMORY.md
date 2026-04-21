@@ -1037,6 +1037,37 @@ Follow-up:
 
 - If future UX passes convert more raw `Pressable` controls, prefer `HapticPressable` for deliberate navigations, toggles, confirmations, and card opens. Avoid adding haptics to passive scroll/list interactions.
 
+### 2026-04-21 - iOS Icon Recenter and Phone-Only Production Build Config
+
+What changed:
+
+- Recentered and resized the launcher artwork in `assets/ios-icon-v2.png` so the map-pin mark no longer sits low or touches the bottom edge.
+- Mirrored the same centered artwork into `assets/icon-v2.png` so Expo's root icon and iOS-specific icon stay visually aligned.
+- Set `ios.supportsTablet` to `false` in `app.json` so the production iOS build is phone-only.
+
+Main files:
+
+- `app.json`
+- `assets/ios-icon-v2.png`
+- `assets/icon-v2.png`
+
+Why:
+
+- The owner reported the displayed app icon was visibly off-center.
+- The upcoming real production iOS rebuild should target iPhone only, not iPad/tablet support.
+
+Verification:
+
+- Confirmed both icon PNGs are `1024x1024`.
+- Confirmed non-white artwork margins are balanced vertically after recentering: top `102px`, bottom `102px`.
+- `npm run precheck:strict`
+- `node ./scripts/check-release-readiness.mjs --production`
+- `npm test` (`76` files, `327` tests)
+
+Follow-up:
+
+- Commit and push the config/assets, then run a real production iOS EAS build with profile `production`.
+
 ### 2026-04-03 - Agent One Safety Protocol Change Required By User
 
 User instruction: Agent One is now treated as a write-risk until proven otherwise.

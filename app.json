@@ -13,7 +13,7 @@
       "backgroundColor": "#121614"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "icon": "./assets/ios-icon-v2.png",
       "bundleIdentifier": "com.rezell.canopytrove",
       "privacyManifests": {
