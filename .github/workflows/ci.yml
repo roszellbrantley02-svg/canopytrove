@@ -13,6 +13,7 @@ concurrency:
 
 env:
   NODE_VERSION: '22'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -227,13 +228,23 @@ jobs:
       BACKEND_RELEASE_CHECK_GCP_PROJECT: canopy-trove
       BACKEND_RELEASE_CHECK_CLOUD_RUN_SERVICE: canopytrove-api
       BACKEND_RELEASE_CHECK_CLOUD_RUN_REGION: us-east4
+      GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Verify Google Cloud credentials secret
+        run: |
+          if [ -z "$GCP_SERVICE_ACCOUNT_KEY" ]; then
+            echo "::error::Missing GitHub repository secret GCP_SERVICE_ACCOUNT_KEY. Add the Google service account JSON as a repository Actions secret, or switch this workflow to workload identity."
+            exit 1
+          fi
+
+          node -e "JSON.parse(process.env.GCP_SERVICE_ACCOUNT_KEY); console.log('GCP_SERVICE_ACCOUNT_KEY is present and valid JSON.')"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          credentials_json: ${{ env.GCP_SERVICE_ACCOUNT_KEY }}
           project_id: canopy-trove
 
       - name: Set up gcloud

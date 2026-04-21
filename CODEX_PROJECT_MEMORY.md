@@ -871,6 +871,41 @@ Agent Two's overall assessment:
 
 — Agent Two
 
+### 2026-04-21 - GitHub Release Check Auth Preflight
+
+What changed:
+
+- Hardened `.github/workflows/ci.yml` after GitHub Actions reported:
+  - `google-github-actions/auth failed with: the GitHub Action workflow must specify exactly one of "workload_identity_provider" or "credentials_json"!`
+  - Node.js 20 action-runtime deprecation warnings across checkout/setup/auth actions.
+- Added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` at workflow env scope so Actions runs JavaScript actions on Node 24 now instead of waiting for GitHub's forced migration.
+- Added `GCP_SERVICE_ACCOUNT_KEY` to the release-check job env from `secrets.GCP_SERVICE_ACCOUNT_KEY`.
+- Added a preflight step before `google-github-actions/auth@v2` that:
+  - fails with a clear `::error::Missing GitHub repository secret GCP_SERVICE_ACCOUNT_KEY...` message if the secret is unavailable,
+  - parses the secret as JSON before the auth action runs,
+  - prevents the vague "exactly one of workload_identity_provider or credentials_json" failure.
+- Changed the auth action to read `credentials_json` from the job env so the same value is validated and then used.
+
+Why:
+
+- The release readiness job was failing before app/backend checks could run because the auth action received an empty credential input. This usually means the repository secret is missing, misnamed, empty, or unavailable for the trigger.
+- The Node 20 warnings were not the immediate failure, but opting into Node 24 now keeps CI aligned with GitHub's 2026 runtime migration.
+
+Main files:
+
+- `.github/workflows/ci.yml`
+- `CODEX_PROJECT_MEMORY.md`
+
+Verification:
+
+- Pending in GitHub Actions after commit/push.
+- Local follow-up should run `npm run format:check` because the workflow is YAML plus memory only.
+
+Follow-up:
+
+- If the release job now fails at the new preflight step, re-add the repository Actions secret named exactly `GCP_SERVICE_ACCOUNT_KEY` with the full Google service account JSON as the value.
+- If the preflight passes but Google auth fails, regenerate the service account JSON and confirm the service account still has the required IAM roles.
+
 ### 2026-04-20 - Enterprise Audit Sprint 1 Safety Fixes
 
 What changed:
