@@ -296,10 +296,11 @@ Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 pub
 | OCM verifier smoke check green                             | ✅ confirmed by founder                                                                                                                                  |
 | Cloud Run `/livez` + `/readyz` green                       | ✅ confirmed by founder                                                                                                                                  |
 | Production EAS iOS build on top of `a6ee24e`+              | ✅ unblocked Apr 20 2026 — master fast-forwarded to `d415475` which includes the native plist change; repo now on `D:\src\canopytrove`, dev build queued |
-| App Store Connect privacy nutrition label entered          | ⏳ blocked on founder — enter verbatim from `docs/APP_STORE_PRIVACY_LABEL.md`                                                                            |
-| 17+ age rating declared via ASC questionnaire              | ⏳ blocked on founder                                                                                                                                    |
-| Final screenshots uploaded to ASC                          | ⏳ blocked on founder — Verify + age gate + clean review shot + neutral storefronts; captions ready                                                      |
+| App Store Connect privacy nutrition label entered          | ✅ 11 data types entered Apr 20 2026 — all non-tracking, matches `docs/APP_STORE_PRIVACY_LABEL.md`                                                       |
+| Age rating declared via ASC questionnaire                  | ✅ 18+ calculated Apr 20 2026 — "Frequent/Intense" drug references + unrestricted web (Apple retired 17+ for 18+ in 2025 banding)                        |
+| Final screenshots uploaded to ASC                          | ✅ 6 PNGs at 1290×2796 uploaded Apr 20 2026 (ASC auto-generated smaller size representations)                                                            |
 | "Fast checkout" review tag source removal                  | ✅ removed Apr 20 2026 from `reviewComposerShared.ts`, `API_CONTRACT.md`, `reactionGifCatalog.ts`                                                        |
+| Apple submission (Version 1.0.2 build 8)                   | ✅ submitted Apr 20 2026 at 10:11 PM — Submission ID `1efc7ff8-322e-4b88-afee-2bde26da621b`, Waiting for Review                                          |
 
 **Approval odds (current posture):** 75–82% first-submit, 90%+ by round 2.
 
@@ -311,6 +312,9 @@ Canonical support address: **askmehere@canopytrove.com** (in-app config + 15 pub
 
 | Commit    | What                                                                                                               |
 | --------- | ------------------------------------------------------------------------------------------------------------------ |
+| `b199ccc` | build: recenter ios icon and disable tablet support — unblocked Apr 20 2026 submission (supportsTablet=false)      |
+| `6cc974b` | test: Sprint 2 coverage restoration (327/327 passing on top of b199ccc)                                            |
+| `5e13314` | fix: audit safety fixes pre-submission                                                                             |
 | `d415475` | chore(compliance): remove "Fast checkout" review tag from source + docs + GIF keyword list (1.4.3 trip wire)       |
 | `d6a2a66` | docs(apple-review): Scan shop QR description matches actual code path (Linking.openURL → Safari for state placard) |
 | `d79dfe1` | docs(apple-review): OCM Scan-to-Verify placard context + pre-launch reviewer framing + scan-logging claim fix      |
@@ -416,3 +420,58 @@ Fallback that worked: `Remove-Item -Recurse -Force .git\worktrees\canopytrove-pr
 The special icon pack is present at `assets/icons-v4c/` (66 PNGs plus manifest files and `_contact_sheet_small.jpg`). Bottom tabs and search already used it through `AppTabIconsV4c` / `ProvidedGlyphIconsV4c`; the missing surfaces were achievement-style badges.
 
 `src/icons/BadgeArtIcon.tsx` now bridges the existing gamification icon IDs to v4c art assets without changing badge IDs or earned-badge data. It is used by `ProfileScreen` trophy previews, `BadgeGalleryScreen`, `OwnerPortalBadgesScreen`, and `GamificationRewardToastHost`. Keep `AppUiIcon` renderers in place for non-badge UI and fallback coverage tests.
+
+## ★ Apple Submission — Round 1 (Apr 20 2026, Waiting for Review)
+
+**Shipped to App Review.** Version 1.0.2, build 8, commit `b199ccc`. Submitted Apr 20 2026 at 10:11 PM ET. Submission ID `1efc7ff8-322e-4b88-afee-2bde26da621b`. Manual release selected — post-approval click "Release to App Store" to go live. Expected review window: queue 12–24h → active review 30min–4h → total 24–72h typical for a round-1 submission.
+
+**Approval odds at submission (from memory):** 75–82% first-submit, 90%+ by round 2. Most likely round-2 vector remains 1.4.3 geo-restriction — mitigated today by setting ASC availability to US only, but still exposed to "why available in states where cannabis is illegal?" Second-most-likely vector (privacy label mismatch) closed by entering all 11 data types verbatim from `docs/APP_STORE_PRIVACY_LABEL.md`.
+
+### ASC configuration locked in (reusable for round 2 / v1.0.3)
+
+- **Name:** Canopy Trove
+- **Subtitle:** Find licensed NY dispensaries
+- **Primary category:** Lifestyle · **Secondary:** Reference
+- **Age rating:** 18+ (calculated from "Frequent/Intense" drug references + Unrestricted Web Access = Yes)
+- **Pricing:** Free, no IAP
+- **Availability:** US only (deliberate 1.4.3 hedge — do NOT expand without a geo-gate shipping first)
+- **App Encryption:** `ITSAppUsesNonExemptEncryption: false` in `app.json:41` — exemption auto-declared, no annual self-classification needed
+- **DSA status:** Not a trader / not distributing in EU — avoids publishing founder personal contact info on the public App Store listing
+- **Privacy policy URL:** `https://canopytrove.com/privacy`
+- **Support URL:** `https://canopytrove.com/support` (NOT `/help` — `/help` returned 404 on live Firebase Hosting Apr 20; `/support` returns 200 with and without trailing slash)
+- **Privacy label:** 11 data types entered — Name, Email, Precise Location, Coarse Location, Photos or Videos, Other User Content, User ID, Device ID, Product Interaction, Crash Data, Performance Data. All set to **Not Used for Tracking**. Coarse Location purpose: App Functionality only. Product Interaction purposes: App Functionality + Analytics. Rest: App Functionality.
+- **Reviewer notes:** Condensed ~3700-char version of `docs/APPLE_APP_REVIEW_NOTES.md` (full doc is 7773 chars, exceeds ASC 4000-char limit). Kept: positioning, camera/scan privacy, OCM verification (1.4.3), two Verify paths with Safari-handoff prime, pre-launch empty-data context, public URLs. Dropped: Reviewer Handoff Checklist + What To Avoid (internal-facing).
+- **Reviewer credentials:** Customer test account provided in reviewer notes. Owner test account held back unless Apple asks.
+- **Manual release:** Selected — gives time to queue social + Product Hunt before flipping live.
+
+### Rejected patterns (newly locked in)
+
+- **`supportsTablet: true` in `app.json` on an iPhone-first app.** Triggers mandatory 13" iPad screenshot slot (2064×2752) in ASC. Attempting "Add for Review" surfaces: _"Unable to Add for Review · You must upload a screenshot for 13-inch iPad displays."_ Two paths: (A) pad iPhone screenshots to iPad canvas — looks amateur, risks 1.4.3 scrutiny on sloppy presentation; (B) set `ios.supportsTablet: false` pre-build, rebuild EAS production, resubmit. **Always pick B.** For Canopy Trove this cost ~40 min (rebuild #8 + icon recenter in same commit `b199ccc`) vs indefinite review risk.
+- **Treating "17+" as the ceiling for cannabis-adjacent apps.** Apple retired 17+ in 2025 in favor of 4+/9+/13+/16+/18+ bands. Cannabis apps with "Frequent/Intense" drug references + "Unrestricted Web Access: Yes" derive **18+** automatically from the questionnaire. Do NOT dial down answers to chase 16+; it's trivially detectable and reads as evasion. 18+ is the honest answer and is also better 1.4.3 posture.
+- **Pasting `docs/APPLE_APP_REVIEW_NOTES.md` verbatim into ASC Notes.** That doc is 7773 characters; ASC Notes field caps at 4000. Keep a trimmed submission-ready version alongside the full internal doc — strip "Reviewer Handoff Checklist" and "What To Avoid" (internal guidance), keep the 1.4.3 positioning + camera/scan privacy + Safari-handoff reviewer prime + pre-launch empty-data context.
+- **Assuming `https://canopytrove.com/help` is live because `public-release-pages/help.html` exists.** Firebase Hosting may not have the latest `public-release-pages` deployed. Before pasting any public URL into ASC, `Invoke-WebRequest` it — `/help` 404'd on Apr 20; `/support` returned 200. Same caveat applies to `/privacy`, `/terms`, `/community-guidelines`, `/account-deletion` — smoke-test each before submission.
+- **Treating DSA "trader" as the default honest answer.** For a solo founder not selling/marketing in EU, "not a trader / not distributing in EU" is both accurate AND avoids publishing personal name/address/phone on the public App Store listing. Trader status is only required if the app is commercially distributed in the EU — tie the DSA toggle to ASC availability first, then answer accordingly.
+- **Uploading 3 screenshots because the label says "you may upload up to 10."** 10 is the maximum, not a target. 6 compliance-forward screenshots > 10 diluted ones. First 3 are the ones Apple surfaces on the install sheet, so front-load: Discovery → Confidence (OCM) → Detail.
+- **Uploading a separate 6.3" iPhone screenshot.** ASC auto-generates smaller size representations from the largest uploaded set. If 6.9" (1290×2796) is uploaded, 6.7"/6.5"/6.3"/6.1"/5.5" slots all get served from the 6.9" source. Only generate resized sets if ASC specifically refuses the upload for a legacy slot.
+
+### Screenshot artifacts (reusable for v1.0.3+)
+
+- **Canonical source:** `public-release-pages/store-screenshots/app-store-iphone-6.9/` — 6 PNGs at 1290×2796, slot order `01-discovery → 02-confidence → 03-detail → 04-profile → 05-review → 06-owner`. Captions are baked into the PNGs, no ASC caption entry needed.
+- **Resized variants** (for hypothetical legacy ASC slots): `/sessions/youthful-inspiring-bell/mnt/canopy/apple-screenshots/` has `iphone-6.9-inch_1290x2796/`, `iphone-6.7-inch_1284x2778/`, `iphone-6.5-inch_1242x2688/`. Generator script at `resize.py` uses PIL LANCZOS. ZIP deliverable at `/sessions/youthful-inspiring-bell/mnt/canopy/apple-screenshots.zip` (20.8MB, 18 PNGs × 3 sizes + README).
+- **Compliance language audit (baked into captions):** no "$", no "buy", no "order", no "cart", no "delivery", no "Fast checkout", no specific cannabis product names, no "Verified Purchase" phrasing. Licensed / verified / OCM framing throughout.
+
+### During-review operating rules (24–72h window)
+
+- **Do not deploy Cloud Run.** Backend frozen at revision `canopytrove-api-00198-wlc`. A mid-review deploy that regresses a Verify flow = automatic rejection.
+- **Do not push to `public-release-pages` live host.** Privacy/terms/support/account-deletion/community-guidelines URLs were smoke-tested at submission — a change during review could break a reviewer's click-through and cost a round.
+- **Do not edit ASC metadata.** Any edit to an "In Review" version pushes it back to the queue (often silently).
+- **Mailbox watch:** `askmehere@canopytrove.com` — Apple reviewer clarifying questions land here, reply within 24h or risk metadata rejection on timeout.
+- **Post-approval, before release:** flip `APP_CHECK_ENFORCEMENT=enforce` on Cloud Run only after watching 24h of token-success logs from production build traffic; close `routeStartsPerHour` orphan field in Firestore.
+
+### Round-1 rejection playbook (if it comes)
+
+- **If 1.4.3 geo question:** reply citing US-only availability + in-app 21+ age gate + OCM backend cross-reference. Offer to ship a state-level geo-gate in v1.0.3 if reviewer wants a hard block.
+- **If "cannabis marketplace" framing:** reply with positioning statement from review notes verbatim — "licensed dispensary discovery only, no in-app cannabis ordering or checkout." Do not argue; re-paste the positioning.
+- **If privacy label mismatch:** re-verify the 11 data types against `docs/APP_STORE_PRIVACY_LABEL.md`, correct whichever side drifted, resubmit.
+- **If reviewer flags Safari handoff on Scan shop QR as a "scan failure":** point to the review notes Safari-handoff prime paragraph verbatim.
+- **If metadata rejection for missing reviewer credentials:** add credentials, resubmit — do NOT build a new binary for a metadata-only rejection.
