@@ -8,6 +8,7 @@ import { supportsStorefrontPromotionUi } from '../config/playStorePolicy';
 import { HapticPressable } from './HapticPressable';
 import { colors, fontFamilies, motion, radii, spacing, textStyles } from '../theme/tokens';
 import type { RootTabParamList } from '../navigation/RootNavigator';
+import { useAdaptiveMotion } from '../hooks/useAdaptiveMotion';
 
 const TAB_LABELS: Record<keyof RootTabParamList, string> = {
   Nearby: 'Nearby',
@@ -78,7 +79,7 @@ function TabBarItem({
       accessibilityRole="button"
       accessibilityState={focused ? { selected: true } : {}}
       accessibilityLabel={accessibilityLabel}
-      hapticType={focused ? undefined : 'selection'}
+      hapticType="selection"
       testID={testID}
       onLongPress={onLongPress}
       onPress={onPress}
@@ -210,11 +211,12 @@ export function CanopyTroveTabBar({ state, descriptors, navigation }: BottomTabB
   const bottomOffset = Math.max(insets.bottom + spacing.xs, spacing.lg);
   const barProgress = React.useRef(new Animated.Value(0)).current;
   const isWeb = Platform.OS === 'web';
+  const adaptiveMotion = useAdaptiveMotion();
 
   React.useEffect(() => {
     const animation = Animated.timing(barProgress, {
       toValue: 1,
-      duration: motion.standard,
+      duration: adaptiveMotion.duration(motion.standard),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: Platform.OS !== 'web',
     });
@@ -224,7 +226,7 @@ export function CanopyTroveTabBar({ state, descriptors, navigation }: BottomTabB
     return () => {
       animation.stop();
     };
-  }, [barProgress]);
+  }, [adaptiveMotion, barProgress]);
 
   return (
     <View pointerEvents="box-none" style={styles.shell}>

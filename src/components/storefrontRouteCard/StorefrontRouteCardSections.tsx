@@ -1,5 +1,6 @@
 import React from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
+import { HapticPressable } from '../HapticPressable';
 import { MapGridPreview } from '../MapGridPreview';
 import type { PreviewStatusTone } from '../mapGridPreview/mapGridPreviewTones';
 import { LicensedBadge } from '../LicensedBadge';
@@ -291,10 +292,12 @@ export function StorefrontRouteCardBody({
 
         <View style={styles.actionRow}>
           {secondaryActionLabel && onSecondaryActionPress ? (
-            <Pressable
+            <HapticPressable
               accessibilityRole="button"
               accessibilityLabel={`${secondaryActionLabel} for ${storefront.displayName}`}
               accessibilityHint="Runs the secondary storefront card action."
+              hapticType="selection"
+              enableScale={false}
               onPressIn={(event) => {
                 if (Platform.OS !== 'web') event.stopPropagation();
                 (onSecondaryActionPressIn ?? onPressIn)?.();
@@ -307,13 +310,15 @@ export function StorefrontRouteCardBody({
             >
               <AppUiIcon name="eye-outline" size={14} color={colors.text} />
               <Text style={styles.secondaryCtaText}>{secondaryActionLabel}</Text>
-            </Pressable>
+            </HapticPressable>
           ) : null}
 
-          <Pressable
+          <HapticPressable
             accessibilityRole="button"
             accessibilityLabel={`${primaryActionLabel} for ${storefront.displayName}`}
             accessibilityHint="Runs the primary storefront card action."
+            hapticType="impact"
+            enableScale={false}
             onPressIn={(event) => {
               if (Platform.OS !== 'web') event.stopPropagation();
               (onPrimaryActionPressIn ?? onPressIn)?.();
@@ -329,7 +334,7 @@ export function StorefrontRouteCardBody({
           >
             <AppUiIcon name="arrow-forward" size={14} color={colors.backgroundDeep} />
             <Text style={styles.primaryCtaText}>{primaryActionLabel}</Text>
-          </Pressable>
+          </HapticPressable>
         </View>
       </View>
     </>

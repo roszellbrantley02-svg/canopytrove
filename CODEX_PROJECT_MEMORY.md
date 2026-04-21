@@ -992,6 +992,51 @@ Follow-up:
 
 - None for default behavior. Users can still opt in manually from Profile -> Background music.
 
+### 2026-04-20 - Haptics and Adaptive Motion Pass
+
+What changed:
+
+- Added `expo-haptics` so `HapticPressable` now uses native iOS/Android haptics instead of Android-only vibration.
+- Kept Android `Vibration` as a fallback when the haptics module rejects.
+- Made every bottom tab press emit selection feedback, including re-tapping the active tab.
+- Added haptics to the background music row and the native `Switch` toggle path.
+- Added haptics to storefront card opens and the primary/secondary storefront card actions.
+- Added haptics to the search clear button.
+- Added `displayPerformanceService` and `useAdaptiveMotion` to estimate active display frame timing with `requestAnimationFrame`.
+- Wired adaptive motion through the central reveal wrapper, screen shell ambient animation, tab bar intro animation, and root navigator fade duration.
+- Added tests for native haptic routing and adaptive refresh-rate motion scaling.
+
+Main files:
+
+- `src/components/HapticPressable.tsx`
+- `src/components/CanopyTroveTabBar.tsx`
+- `src/music/MusicToggleRow.tsx`
+- `src/components/StorefrontRouteCard.tsx`
+- `src/components/storefrontRouteCard/StorefrontRouteCardSections.tsx`
+- `src/components/SearchField.tsx`
+- `src/services/displayPerformanceService.ts`
+- `src/hooks/useAdaptiveMotion.ts`
+- `package.json`
+- `package-lock.json`
+
+Why:
+
+- The owner requested tactile feedback on tab/tool icons, the music button, storefront opens, and other obvious high-intent controls.
+- React Native/Expo does not provide a single reliable cross-platform "screen refresh rate" field, so the safe implementation estimates frame timing at runtime and adapts shared app motion from that measurement.
+
+Verification:
+
+- `npx vitest run src/components/HapticPressable.test.tsx src/components/SearchField.test.tsx src/components/MotionInView.test.tsx src/services/displayPerformanceService.test.ts src/music/musicPlayerService.test.ts`
+- `npm run test:frontend-core`
+- `npm test`
+- `npm run typecheck`
+- `npm run lint:strict`
+- `npm run format:check`
+
+Follow-up:
+
+- If future UX passes convert more raw `Pressable` controls, prefer `HapticPressable` for deliberate navigations, toggles, confirmations, and card opens. Avoid adding haptics to passive scroll/list interactions.
+
 ### 2026-04-03 - Agent One Safety Protocol Change Required By User
 
 User instruction: Agent One is now treated as a write-risk until proven otherwise.

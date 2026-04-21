@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
+import { HapticPressable, triggerHapticFeedback } from '../components/HapticPressable';
 import { SectionCard } from '../components/SectionCard';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { colors, radii, spacing, textStyles } from '../theme/tokens';
@@ -35,6 +36,17 @@ export function MusicToggleRow() {
     setMusicEnabled(!isMusicEnabled);
   }, [isSuppressed, isMusicEnabled, setMusicEnabled]);
 
+  const handleSwitchToggle = React.useCallback(
+    (enabled: boolean) => {
+      if (isSuppressed) {
+        return;
+      }
+      triggerHapticFeedback('selection');
+      setMusicEnabled(enabled);
+    },
+    [isSuppressed, setMusicEnabled],
+  );
+
   return (
     <SectionCard
       title="Background music"
@@ -49,9 +61,11 @@ export function MusicToggleRow() {
         accessibilityLabel="Background music"
         accessibilityState={{ checked: switchValue, disabled: isSuppressed }}
       >
-        <Pressable
+        <HapticPressable
+          hapticType="selection"
           onPress={handleToggle}
           disabled={isSuppressed}
+          enableScale={false}
           style={({ pressed }) => [styles.copyPress, pressed && !isSuppressed && styles.pressed]}
         >
           <View style={styles.iconChip}>
@@ -65,11 +79,11 @@ export function MusicToggleRow() {
             <Text style={styles.title}>{isMusicEnabled ? 'Music on' : 'Music off'}</Text>
             <Text style={styles.body}>{description}</Text>
           </View>
-        </Pressable>
+        </HapticPressable>
         <Switch
           value={switchValue}
           disabled={isSuppressed}
-          onValueChange={setMusicEnabled}
+          onValueChange={handleSwitchToggle}
           trackColor={{ false: colors.surfaceElevated, true: colors.primaryDeep }}
           thumbColor={switchValue ? colors.accent : colors.textSoft}
           ios_backgroundColor={colors.surfaceElevated}

@@ -7,6 +7,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   vibrate: vi.fn(),
   cancel: vi.fn(),
+  selectionAsync: vi.fn(async () => undefined),
+  impactAsync: vi.fn(async () => undefined),
+  notificationAsync: vi.fn(async () => undefined),
   springStart: vi.fn(),
   springStop: vi.fn(),
 }));
@@ -46,7 +49,24 @@ vi.mock('react-native', () => ({
   },
 }));
 
+vi.mock('expo-haptics', () => ({
+  selectionAsync: mocks.selectionAsync,
+  impactAsync: mocks.impactAsync,
+  notificationAsync: mocks.notificationAsync,
+  ImpactFeedbackStyle: {
+    Light: 'Light',
+    Medium: 'Medium',
+    Heavy: 'Heavy',
+  },
+  NotificationFeedbackType: {
+    Success: 'Success',
+    Warning: 'Warning',
+    Error: 'Error',
+  },
+}));
+
 import { Pressable, Vibration } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { HapticPressable } from './HapticPressable';
 
 // Mirror the render-helper pattern used by SearchField and ShimmerBlock tests.
@@ -100,7 +120,8 @@ describe('HapticPressable', () => {
 
     rendered.pressable.props.onPressIn({ nativeEvent: {} });
 
-    expect(Vibration.vibrate).toHaveBeenCalledWith(12);
+    expect(Haptics.impactAsync).toHaveBeenCalledWith(Haptics.ImpactFeedbackStyle.Medium);
+    expect(Vibration.vibrate).not.toHaveBeenCalled();
     expect(onPressIn).toHaveBeenCalledTimes(1);
   });
 
@@ -110,7 +131,8 @@ describe('HapticPressable', () => {
 
     rendered.pressable.props.onPressIn({ nativeEvent: {} });
 
-    expect(Vibration.vibrate).toHaveBeenCalledWith(8);
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+    expect(Vibration.vibrate).not.toHaveBeenCalled();
   });
 
   it('triggers haptic feedback when hapticType is notification', () => {
@@ -119,7 +141,10 @@ describe('HapticPressable', () => {
 
     rendered.pressable.props.onPressIn({ nativeEvent: {} });
 
-    expect(Vibration.vibrate).toHaveBeenCalledWith(18);
+    expect(Haptics.notificationAsync).toHaveBeenCalledWith(
+      Haptics.NotificationFeedbackType.Success,
+    );
+    expect(Vibration.vibrate).not.toHaveBeenCalled();
   });
 
   it('does not trigger haptic when disabled', () => {
@@ -129,6 +154,7 @@ describe('HapticPressable', () => {
 
     rendered.pressable.props.onPressIn({ nativeEvent: {} });
 
+    expect(Haptics.impactAsync).not.toHaveBeenCalled();
     expect(Vibration.vibrate).not.toHaveBeenCalled();
     expect(onPressIn).toHaveBeenCalledTimes(1);
   });
@@ -139,6 +165,9 @@ describe('HapticPressable', () => {
 
     rendered.pressable.props.onPressIn({ nativeEvent: {} });
 
+    expect(Haptics.selectionAsync).not.toHaveBeenCalled();
+    expect(Haptics.impactAsync).not.toHaveBeenCalled();
+    expect(Haptics.notificationAsync).not.toHaveBeenCalled();
     expect(Vibration.vibrate).not.toHaveBeenCalled();
   });
 

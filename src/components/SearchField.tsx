@@ -1,5 +1,6 @@
 import React from 'react';
-import { Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Keyboard, StyleSheet, TextInput, View } from 'react-native';
+import { HapticPressable } from './HapticPressable';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { SearchGlyphIconV4c as SearchGlyphIcon } from '../icons/ProvidedGlyphIconsV4c';
 import { colors, spacing, typography } from '../theme/tokens';
@@ -46,7 +47,8 @@ function SearchFieldComponent({
         accessibilityHint={`Enter search term, ${placeholder.toLowerCase()}`}
       />
       {value.trim() ? (
-        <Pressable
+        <HapticPressable
+          hapticType="selection"
           onPress={() => onChangeText('')}
           style={styles.clearButton}
           accessibilityRole="button"
@@ -55,7 +57,7 @@ function SearchFieldComponent({
           hitSlop={{ top: 9, bottom: 9, left: 9, right: 9 }}
         >
           <AppUiIcon name="close" size={14} color={colors.text} />
-        </Pressable>
+        </HapticPressable>
       ) : null}
     </View>
   );

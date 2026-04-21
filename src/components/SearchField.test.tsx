@@ -4,11 +4,30 @@ import { act, create } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-native', () => ({
+  Animated: {
+    Value: class {
+      constructor(public _value: number) {}
+      interpolate() {
+        return this;
+      }
+    },
+    View: 'Animated.View',
+    spring: () => ({
+      start: (cb?: () => void) => cb?.(),
+      stop: vi.fn(),
+    }),
+  },
   Keyboard: {
     dismiss: vi.fn(),
   },
+  Platform: {
+    OS: 'ios' as const,
+  },
   Pressable: 'Pressable',
   TextInput: 'TextInput',
+  Vibration: {
+    vibrate: vi.fn(),
+  },
   View: 'View',
   StyleSheet: {
     create: <T,>(styles: T) => styles,

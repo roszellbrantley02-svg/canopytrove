@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { GestureResponderEvent, PressableProps, ViewStyle } from 'react-native';
 import { Animated, Platform, Pressable, Vibration } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 const isWeb = Platform.OS === 'web';
 
@@ -15,12 +16,34 @@ const HAPTIC_VIBRATION_MS: Record<NonNullable<HapticPressableProps['hapticType']
   notification: 18,
 };
 
-function triggerHaptic(type?: HapticPressableProps['hapticType']) {
-  if (!type || Platform.OS !== 'android') {
+function triggerAndroidFallback(type: NonNullable<HapticPressableProps['hapticType']>) {
+  if (Platform.OS === 'android') {
+    Vibration.vibrate(HAPTIC_VIBRATION_MS[type]);
+  }
+}
+
+export function triggerHapticFeedback(type?: HapticPressableProps['hapticType']) {
+  if (!type || Platform.OS === 'web') {
     return;
   }
 
-  Vibration.vibrate(HAPTIC_VIBRATION_MS[type]);
+  const runHaptic = async () => {
+    try {
+      if (type === 'selection') {
+        await Haptics.selectionAsync();
+        return;
+      }
+      if (type === 'impact') {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        return;
+      }
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      triggerAndroidFallback(type);
+    }
+  };
+
+  void runHaptic();
 }
 
 export function HapticPressable({
@@ -37,7 +60,7 @@ export function HapticPressable({
   const handlePressIn = useCallback(
     (event: GestureResponderEvent) => {
       if (!props.disabled) {
-        triggerHaptic(hapticType);
+        triggerHapticFeedback(hapticType);
       }
       if (enableScale) {
         if (currentAnimationRef.current) {

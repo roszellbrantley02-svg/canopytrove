@@ -24,6 +24,7 @@ const FavoriteDealNotificationBridge =
 import { trackScreenView } from '../services/analyticsService';
 import { navigationTheme } from '../theme/navigationTheme';
 import { motion } from '../theme/tokens';
+import { useAdaptiveMotion } from '../hooks/useAdaptiveMotion';
 import type { RootStackParamList } from './rootNavigatorConfig';
 import {
   Stack,
@@ -115,6 +116,7 @@ export function RootNavigator() {
   const navigationRef = React.useRef<NavigationContainerRef<RootStackParamList>>(null);
   const routeNameRef = React.useRef<string | null>(null);
   const [navigationReady, setNavigationReady] = React.useState(false);
+  const adaptiveMotion = useAdaptiveMotion();
 
   // Reset routeNameRef on mount/unmount to prevent duplicate analytics events
   React.useEffect(() => {
@@ -163,7 +165,7 @@ export function RootNavigator() {
             component={TabsNavigator}
             options={{
               animation: 'fade',
-              animationDuration: motion.quick,
+              animationDuration: adaptiveMotion.duration(motion.quick),
             }}
           />
           {stackScreens

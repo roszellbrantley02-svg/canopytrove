@@ -20,6 +20,7 @@ import { HapticPressable } from './HapticPressable';
 import { MotionInView } from './MotionInView';
 import { buildWebBackResetState, getWebBackLabel } from './screenShellNavigation';
 import { colors, fontFamilies, motion, radii, spacing, textStyles } from '../theme/tokens';
+import { useAdaptiveMotion } from '../hooks/useAdaptiveMotion';
 
 type ScreenShellProps = PropsWithChildren<{
   eyebrow: string;
@@ -53,6 +54,7 @@ export function ScreenShell({
   const shellProgress = React.useRef(new Animated.Value(0)).current;
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const adaptiveMotion = useAdaptiveMotion();
   const isAndroid = Platform.OS === 'android';
   const compactHeader = width < 412;
   const compactHero = width < 390 || height < 780;
@@ -114,7 +116,7 @@ export function ScreenShell({
     shellProgress.setValue(0);
     const animation = Animated.timing(shellProgress, {
       toValue: 1,
-      duration: motion.ambient,
+      duration: adaptiveMotion.duration(motion.ambient),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     });
@@ -124,7 +126,7 @@ export function ScreenShell({
     return () => {
       animation.stop();
     };
-  }, [isWeb, shellProgress]);
+  }, [adaptiveMotion, isWeb, shellProgress]);
 
   return (
     <LinearGradient

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Pressable } from 'react-native';
 import { supportsStorefrontPromotionUi } from '../config/playStorePolicy';
 import type { StorefrontSummary } from '../types/storefront';
 import { useStorefrontOperationalStatus } from '../hooks/useStorefrontOperationalStatus';
@@ -17,6 +16,7 @@ import { styles } from './storefrontRouteCard/storefrontRouteCardStyles';
 import type { StorefrontCardVisualLane } from './storefrontRouteCard/storefrontRouteCardVisualState';
 import { hasStorefrontPromotion } from '../utils/storefrontPromotions';
 import { featureFlags } from '../config/featureFlags';
+import { HapticPressable } from './HapticPressable';
 
 const cardToneStyleMap: Record<StorefrontCardVisualLane, typeof styles.cardHotDeal | null> = {
   hotDeal: styles.cardHotDeal,
@@ -96,10 +96,12 @@ function StorefrontRouteCardComponent({
   const accessibilityLabel = `${storefront.displayName}, ${storefront.city}, ${storefront.state}. ${previewStatusLabel}. ${promotionAvailabilityLabel}`;
 
   return (
-    <Pressable
+    <HapticPressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint="Opens the storefront detail screen."
+      hapticType="selection"
+      enableScale={false}
       onPress={onPress}
       onPressIn={onPressIn}
       style={({ pressed }) => [
@@ -128,7 +130,7 @@ function StorefrontRouteCardComponent({
         imagePriority={imagePriority}
       />
       {featureFlags.cardSkiaEnabled ? <StorefrontRouteCardSkiaOverlay /> : null}
-    </Pressable>
+    </HapticPressable>
   );
 }
 
