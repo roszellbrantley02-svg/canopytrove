@@ -42,8 +42,7 @@
         "NSCameraUsageDescription": "Canopy Trove uses your camera to scan QR codes, barcodes, and storefront license identifiers for on-the-spot verification.",
         "NSMicrophoneUsageDescription": "Canopy Trove does not record audio. This entry is required by iOS because the audio playback library we use links the microphone framework for completeness.",
         "NSPhotoLibraryUsageDescription": "Canopy Trove uses your photo library only when you choose review photos to attach before they enter the private moderation queue.",
-        "NSLocationWhenInUseUsageDescription": "Canopy Trove uses your location to find nearby licensed storefronts and let you share how your visit was when you arrive.",
-        "UIBackgroundModes": ["audio"]
+        "NSLocationWhenInUseUsageDescription": "Canopy Trove uses your location to find nearby licensed storefronts and let you share how your visit was when you arrive."
       },
       "googleServicesFile": "./GoogleService-Info.plist"
     },

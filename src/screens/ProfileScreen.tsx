@@ -168,8 +168,33 @@ function ProfileEntryWorkspace() {
         <MusicToggleRow />
       </MotionInView>
 
+      <MotionInView delay={110}>
+        <SectionCard
+          title="App settings"
+          body="Open support, legal links, privacy information, and app preferences without signing in."
+          iconName="options-outline"
+          badgeLabel="Settings"
+          tone="neutral"
+        >
+          <View style={internalStyles.actionStack}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open settings"
+              accessibilityHint="Opens app settings, support, legal links, and privacy information."
+              onPress={() => navigation.navigate('Settings')}
+              style={({ pressed }) => [
+                internalStyles.secondaryButton,
+                pressed && internalStyles.buttonPressed,
+              ]}
+            >
+              <Text style={internalStyles.secondaryButtonText}>Open Settings</Text>
+            </Pressable>
+          </View>
+        </SectionCard>
+      </MotionInView>
+
       {ownerPortalUiAvailable ? (
-        <MotionInView delay={120}>
+        <MotionInView delay={150}>
           <SectionCard
             title="Owner access"
             body="Use the owner side for storefront photos, profile updates, reviews, offers, and billing."
@@ -415,21 +440,36 @@ function OwnerProfileWorkspace() {
       <MotionInView delay={120 + (ownerWorkspaceCards.length + 1) * 50}>
         <SectionCard
           title="Switch account"
-          body="Sign out to return to the profile chooser and switch back to a member account."
+          body="Sign out to return to the profile chooser, or start account deletion from this device."
         >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Sign out"
-            onPress={() => {
-              void signOutSession();
-            }}
-            style={({ pressed }) => [
-              internalStyles.secondaryButton,
-              pressed && internalStyles.buttonPressed,
-            ]}
-          >
-            <Text style={internalStyles.secondaryButtonText}>Sign Out</Text>
-          </Pressable>
+          <View style={internalStyles.actionStack}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Sign out"
+              onPress={() => {
+                void signOutSession();
+              }}
+              style={({ pressed }) => [
+                internalStyles.secondaryButton,
+                pressed && internalStyles.buttonPressed,
+              ]}
+            >
+              <Text style={internalStyles.secondaryButtonText}>Sign Out</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Delete account"
+              accessibilityHint="Opens the permanent account deletion flow."
+              onPress={() => navigation.navigate('DeleteAccount')}
+              style={({ pressed }) => [
+                internalStyles.secondaryButton,
+                internalStyles.dangerSecondaryButton,
+                pressed && internalStyles.buttonPressed,
+              ]}
+            >
+              <Text style={internalStyles.dangerSecondaryButtonText}>Delete Account</Text>
+            </Pressable>
+          </View>
         </SectionCard>
       </MotionInView>
     </ScreenShell>
@@ -590,17 +630,32 @@ function MemberProfileWorkspace() {
                 <Text style={internalStyles.sessionTitle}>Signed in as member</Text>
                 <Text style={internalStyles.sessionBody}>Username: {model.displayName}</Text>
               </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Sign out"
-                onPress={model.signOut}
-                style={({ pressed }) => [
-                  internalStyles.inlineButton,
-                  pressed && internalStyles.buttonPressed,
-                ]}
-              >
-                <Text style={internalStyles.inlineButtonText}>Sign Out</Text>
-              </Pressable>
+              <View style={internalStyles.sessionActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Sign out"
+                  onPress={model.signOut}
+                  style={({ pressed }) => [
+                    internalStyles.inlineButton,
+                    pressed && internalStyles.buttonPressed,
+                  ]}
+                >
+                  <Text style={internalStyles.inlineButtonText}>Sign Out</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete account"
+                  accessibilityHint="Opens the permanent account deletion flow."
+                  onPress={() => navigation.navigate('DeleteAccount')}
+                  style={({ pressed }) => [
+                    internalStyles.inlineButton,
+                    internalStyles.dangerInlineButton,
+                    pressed && internalStyles.buttonPressed,
+                  ]}
+                >
+                  <Text style={internalStyles.dangerInlineButtonText}>Delete Account</Text>
+                </Pressable>
+              </View>
             </View>
           </SectionCard>
         </MotionInView>
@@ -969,6 +1024,15 @@ const internalStyles = StyleSheet.create({
     color: colors.text,
     textAlign: 'center',
   },
+  dangerSecondaryButton: {
+    borderColor: `${colors.danger}66`,
+    backgroundColor: `${colors.danger}14`,
+  },
+  dangerSecondaryButtonText: {
+    ...textStyles.bodyStrong,
+    color: colors.danger,
+    textAlign: 'center',
+  },
   inlineButton: {
     minHeight: 40,
     borderRadius: radii.md,
@@ -985,6 +1049,15 @@ const internalStyles = StyleSheet.create({
     color: colors.text,
     fontSize: 13,
   },
+  dangerInlineButton: {
+    borderColor: `${colors.danger}66`,
+    backgroundColor: `${colors.danger}14`,
+  },
+  dangerInlineButtonText: {
+    ...textStyles.bodyStrong,
+    color: colors.danger,
+    fontSize: 13,
+  },
   buttonPressed: {
     opacity: 0.82,
   },
@@ -997,6 +1070,10 @@ const internalStyles = StyleSheet.create({
   sessionCopy: {
     flex: 1,
     gap: 3,
+  },
+  sessionActions: {
+    alignItems: 'stretch',
+    gap: spacing.sm,
   },
   sessionTitle: {
     ...textStyles.bodyStrong,

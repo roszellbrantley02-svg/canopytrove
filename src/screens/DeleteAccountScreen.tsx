@@ -28,6 +28,8 @@ export function DeleteAccountScreen({
   } | null>(null);
   const matchesConfirmation = confirmationText.trim().toUpperCase() === DELETE_CONFIRMATION_PHRASE;
   const isMemberAccount = authSession.status === 'authenticated';
+  const deletionSucceeded = statusState?.tone === 'success';
+  const isDeleteDisabled = !matchesConfirmation || isSubmitting || deletionSucceeded;
   const openSupportEmail = React.useCallback(() => {
     if (Platform.OS === 'web') {
       window.open(legalConfig.supportEmailUrl, '_blank', 'noopener,noreferrer');
@@ -49,12 +51,6 @@ export function DeleteAccountScreen({
         text: result.message,
         tone: result.ok ? 'success' : 'error',
       });
-      if (result.ok) {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Tabs' }],
-        });
-      }
     } catch {
       // Defensive: deleteAccount() is expected to resolve with a result
       // object even on partial failure, but an unexpected throw (e.g.,
@@ -67,7 +63,7 @@ export function DeleteAccountScreen({
     } finally {
       setIsSubmitting(false);
     }
-  }, [deleteAccount, isSubmitting, matchesConfirmation, navigation]);
+  }, [deleteAccount, isSubmitting, matchesConfirmation]);
 
   return (
     <ScreenShell
@@ -133,14 +129,14 @@ export function DeleteAccountScreen({
               />
             ) : null}
             <HapticPressable
-              disabled={!matchesConfirmation || isSubmitting}
+              disabled={isDeleteDisabled}
               onPress={() => {
                 void handleDelete();
               }}
               style={[
                 styles.primaryButton,
                 styles.primaryButtonDanger,
-                (!matchesConfirmation || isSubmitting) && styles.buttonDisabled,
+                isDeleteDisabled && styles.buttonDisabled,
               ]}
               accessibilityRole="button"
               accessibilityLabel={isMemberAccount ? 'Delete account' : 'Reset profile'}
@@ -151,11 +147,29 @@ export function DeleteAccountScreen({
               <Text style={styles.primaryButtonText}>
                 {isSubmitting
                   ? 'Deleting...'
-                  : isMemberAccount
-                    ? 'Delete Canopy Trove Account'
-                    : 'Reset Canopy Trove Profile'}
+                  : deletionSucceeded
+                    ? 'Account Deleted'
+                    : isMemberAccount
+                      ? 'Delete Canopy Trove Account'
+                      : 'Reset Canopy Trove Profile'}
               </Text>
             </HapticPressable>
+            {deletionSucceeded ? (
+              <HapticPressable
+                onPress={() =>
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Tabs', params: { screen: 'Profile' } }],
+                  })
+                }
+                style={styles.secondaryButton}
+                accessibilityRole="button"
+                accessibilityLabel="Return to profile"
+                accessibilityHint="Returns to the profile tab after account deletion is complete."
+              >
+                <Text style={styles.secondaryButtonText}>Return to Profile</Text>
+              </HapticPressable>
+            ) : null}
           </View>
         </SectionCard>
       </MotionInView>

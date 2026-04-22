@@ -248,8 +248,19 @@ function SettingsScreenInner() {
             }
             isDanger={isAuthenticated}
             tone={colors.accent}
-            isLast
+            isLast={!isAuthenticated}
           />
+
+          {isAuthenticated ? (
+            <SettingsRow
+              icon="close-circle-outline"
+              title="Delete account"
+              subtitle="Start permanent account deletion"
+              onPress={() => navigation.navigate('DeleteAccount')}
+              isDanger
+              isLast
+            />
+          ) : null}
         </SectionGroup>
       </MotionInView>
 
@@ -329,6 +340,7 @@ function SettingsScreenInner() {
           <SettingsRow
             icon="close-circle-outline"
             title="Delete account"
+            subtitle="Start permanent account deletion"
             onPress={() => navigation.navigate('DeleteAccount')}
             isDanger
           />

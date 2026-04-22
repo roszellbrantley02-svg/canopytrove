@@ -1148,6 +1148,63 @@ Follow-up:
 - Existing deployed backend data that already contains email-like review/profile display names will render safely after this code ships, but a backend deploy is required for server-side sanitization to apply on future API reads/writes.
 - Existing app installs with an email-like cached `displayName` will self-repair after opening a build containing this change.
 
+### 2026-04-21 - Cannabis Tales Source Library Started
+
+Created `docs/CANNABIS_TALES_SOURCE_LIBRARY.md` as the source/citation backbone for the planned **Cannabis Tales** feature. The library is intentionally rights-clean first: Library of Congress Chronicling America, LOC free-to-use materials, National Archives guidance, Smithsonian Open Access, Project Gutenberg, Wikimedia Commons with item-level license checks, U.S. court/government records, OJP, BJS, USSC, WHO/UNODC, CRS, and NY OCM/Senate sources.
+
+Editorial guardrails recorded in the doc:
+
+- Write original Canopy Trove story text; do not copy modern articles.
+- Prefer public-domain, U.S. government, CC0, CC-BY, or archive sources with clear rights notes.
+- Cite every story with source links.
+- Use short quotes only when needed.
+- Keep stories educational/adult-rated; no dosage, growing, buying, medical advice, or product recommendations.
+- Label uncertain claims and verify dates/names before publishing.
+
+Initial story categories covered: scary, funny, sad, prison/jail, court, NY history, global policy, propaganda, hemp/war, medical-history-as-history, and justice data. Working seeds include `The Tax Stamp That Became a Crime Machine`, `Two Joints and Four Years`, `Hemp for Victory`, `The Mayor Who Asked Doctors Instead of Headlines`, `Nixon's Commission That Said "Misunderstanding"`, and `New York's Legalization With a Repair Mission`.
+
+Follow-up source pass added the current Chronicling America migration/API guidance, a starter queue of 10 `loc.gov/resource/...` newspaper-page candidates for scary/general and prison/jail story lanes, an LOC Topic Guide article queue covering 1887-1922 period newspaper items, and a justice/prison evidence queue for arrest, sentencing, court, and NY/global policy sources. Important implementation note: use the current `https://www.loc.gov/search/?fo=json&q={term}&fa=partof:chronicling+america&c=10` API pattern, not retired legacy page-search URLs.
+
+Next agent should extend the doc rather than restart: pull 25 candidate Chronicling America article URLs, capture title/date/page/OCR/image/rights notes, tag tone, and reject anything that depends on copying modern copyrighted commentary.
+
+### 2026-04-22 - Apple App Review Fixes For First Submission
+
+Apple reviewed submission `1efc7ff8-322e-4b88-afee-2bde26da621b` for iOS app `1.0`, build `1.0.2 (8)`, on an iPad Air 11-inch (M3). Review found three fixable issues:
+
+- Guideline 2.3.6: Age Rating metadata selected `Parental Controls` / in-app controls, but reviewer could not find parental controls or age assurance.
+- Guideline 5.1.1(v): Account creation exists, but reviewer could not find an in-app account deletion flow.
+- Guideline 2.5.4: `UIBackgroundModes` declared `audio`, but reviewer could not play audible content in the background.
+
+Code/config fixes applied:
+
+- Removed `ios.infoPlist.UIBackgroundModes: ["audio"]` from `app.json`. Background music remains a foreground app feature; this avoids claiming persistent background audio support.
+- Made account deletion harder to miss by adding `Delete account` to the top Account section in `SettingsScreen`.
+- Added direct `Delete Account` buttons to member and owner profile states in `ProfileScreen`, so both account types can reach deletion without hunting through Settings.
+- Added an `App settings` card to the signed-out profile chooser, between the music row and owner access, so reviewers/users can open Settings from the same screen as Member Sign In and Owner Sign In.
+- Updated `DeleteAccountScreen` so successful deletion visibly shows the `Deletion complete` confirmation and a `Return to Profile` button instead of immediately resetting away from the confirmation state.
+
+Files changed:
+
+- `app.json`
+- `src/screens/SettingsScreen.tsx`
+- `src/screens/ProfileScreen.tsx`
+- `src/screens/DeleteAccountScreen.tsx`
+
+Verification:
+
+- `npm run typecheck`
+- `npm run lint:strict`
+- `npm run format:check`
+- `npx vitest run src/screens/ProfileScreen.test.tsx src/services/accountDeletionSummary.test.ts`
+- `node ./scripts/check-release-readiness.mjs --production`
+
+Manual App Store Connect follow-up required:
+
+- On App Information > Age Rating, set `Parental Controls` / in-app controls to `None` unless Apple changes the questionnaire wording. The app has an age gate, but it does not provide Apple's parental-control feature category.
+- Rebuild and submit a new production iOS binary because `app.json` changed.
+- In App Review notes, include a physical-device screen recording showing: sign in or create account, Profile tab, `Delete Account`, type `DELETE`, tap deletion button, and the visible `Deletion complete` confirmation.
+- Reply to App Review explaining that the app now exposes deletion from Profile and Settings, background audio entitlement was removed, and age rating metadata was corrected.
+
 ### 2026-04-03 - Agent One Safety Protocol Change Required By User
 
 User instruction: Agent One is now treated as a write-risk until proven otherwise.
