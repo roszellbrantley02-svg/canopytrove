@@ -122,6 +122,7 @@ export function useStorefrontControllerProviderModel() {
       return {
         ok: false,
         partial: false,
+        reason: 'unknown' as const,
         message: 'No Canopy Trove profile is loaded right now.',
       };
     }
@@ -133,20 +134,23 @@ export function useStorefrontControllerProviderModel() {
       shouldDeleteBackendProfile: storefrontSourceMode === 'api',
     });
 
-    setAppProfile(result.nextProfile);
-    setProfileId(result.nextProfile.id);
-    markLocalSavedStorefrontMutation();
-    setSavedStorefrontIds([]);
-    setRecentStorefrontIds([]);
-    markLocalGamificationMutation();
-    setGamificationState(
-      normalizeGamificationState(result.nextProfile.id, undefined, result.nextProfile.createdAt),
-    );
-    clearStorefrontRepositoryCache();
+    if ((result.ok || result.partial) && result.nextProfile) {
+      setAppProfile(result.nextProfile);
+      setProfileId(result.nextProfile.id);
+      markLocalSavedStorefrontMutation();
+      setSavedStorefrontIds([]);
+      setRecentStorefrontIds([]);
+      markLocalGamificationMutation();
+      setGamificationState(
+        normalizeGamificationState(result.nextProfile.id, undefined, result.nextProfile.createdAt),
+      );
+      clearStorefrontRepositoryCache();
+    }
 
     return {
       ok: result.ok,
       partial: result.partial,
+      reason: result.reason,
       message: result.message,
     };
   }, [

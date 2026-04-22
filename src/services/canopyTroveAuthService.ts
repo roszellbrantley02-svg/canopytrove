@@ -20,6 +20,8 @@ export type CanopyTroveAuthDeletionResult = {
   message: string | null;
 };
 
+export const CANOPY_TROVE_RECENT_LOGIN_MAX_AGE_SECONDS = 5 * 60;
+
 function createDisabledSession(): CanopyTroveAuthSession {
   return {
     status: 'disabled',
@@ -160,6 +162,27 @@ export async function getCanopyTroveAuthIdTokenResult(options?: { forceRefresh?:
   } catch {
     return null;
   }
+}
+
+export async function getCanopyTroveAuthSessionAgeSeconds(nowMs = Date.now()) {
+  const tokenResult = await getCanopyTroveAuthIdTokenResult({ forceRefresh: true });
+  if (!tokenResult) {
+    return null;
+  }
+
+  const authTimeMs = Date.parse(tokenResult.authTime);
+  if (!Number.isFinite(authTimeMs)) {
+    return null;
+  }
+
+  return Math.max(0, Math.floor((nowMs - authTimeMs) / 1000));
+}
+
+export async function hasRecentCanopyTroveAuthSession(
+  maxAgeSeconds = CANOPY_TROVE_RECENT_LOGIN_MAX_AGE_SECONDS,
+) {
+  const sessionAgeSeconds = await getCanopyTroveAuthSessionAgeSeconds();
+  return sessionAgeSeconds !== null && sessionAgeSeconds <= maxAgeSeconds;
 }
 
 function getCanopyTroveSessionRole(claims: Record<string, unknown> | undefined) {

@@ -6,14 +6,19 @@ import { deleteStorefrontBackendProfile } from './storefrontBackendService';
 import { createFreshAppProfile } from './appProfileService';
 import { buildCanopyTroveAccountDeletionSummary } from './accountDeletionSummary';
 import type { CanopyTroveAuthDeletionResult } from './canopyTroveAuthService';
-import { deleteCanopyTroveAuthAccount, signOutCanopyTroveSession } from './canopyTroveAuthService';
+import {
+  CANOPY_TROVE_RECENT_LOGIN_MAX_AGE_SECONDS,
+  deleteCanopyTroveAuthAccount,
+  hasRecentCanopyTroveAuthSession,
+  signOutCanopyTroveSession,
+} from './canopyTroveAuthService';
 import { replaceCommunitySafetyState } from './communitySafetyService';
 
 export type CanopyTroveAccountDeletionResult = {
   ok: boolean;
   partial: boolean;
   reason: CanopyTroveAuthDeletionResult['reason'];
-  nextProfile: Awaited<ReturnType<typeof createFreshAppProfile>>;
+  nextProfile?: Awaited<ReturnType<typeof createFreshAppProfile>>;
   message: string;
 };
 
@@ -68,6 +73,23 @@ export async function deleteCanopyTroveAccount(options: {
   isAuthenticatedAccount: boolean;
   shouldDeleteBackendProfile: boolean;
 }) {
+  if (options.isAuthenticatedAccount) {
+    const hasRecentSession = await hasRecentCanopyTroveAuthSession(
+      CANOPY_TROVE_RECENT_LOGIN_MAX_AGE_SECONDS,
+    );
+
+    if (!hasRecentSession) {
+      await signOutCanopyTroveSession().catch(() => false);
+      return {
+        ok: false,
+        partial: false,
+        reason: 'requires-recent-login',
+        message:
+          'For account safety, sign in again before deleting. No account data was removed yet. After signing in, return to Delete account and retry.',
+      } satisfies CanopyTroveAccountDeletionResult;
+    }
+  }
+
   if (options.shouldDeleteBackendProfile) {
     try {
       await deleteStorefrontBackendProfile(options.profileId);

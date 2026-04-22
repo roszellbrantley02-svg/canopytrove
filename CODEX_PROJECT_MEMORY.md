@@ -1205,6 +1205,42 @@ Manual App Store Connect follow-up required:
 - In App Review notes, include a physical-device screen recording showing: sign in or create account, Profile tab, `Delete Account`, type `DELETE`, tap deletion button, and the visible `Deletion complete` confirmation.
 - Reply to App Review explaining that the app now exposes deletion from Profile and Settings, background audio entitlement was removed, and age rating metadata was corrected.
 
+### 2026-04-22 - Account Deletion Recent-Login Hardening
+
+User reported the old build could say Canopy Trove could not delete the account and still let the user sign back in. Root cause: Firebase Auth requires a recent login for `deleteUser()`. The prior deletion flow cleared backend/local data before attempting Firebase Auth deletion, so a stale session could leave a half-deleted state where the login still existed.
+
+Fix applied:
+
+- Added recent-login preflight via `hasRecentCanopyTroveAuthSession()` before destructive account cleanup.
+- If the session is stale, the app signs the user out, returns `requires-recent-login`, and does **not** clear backend data, local data, community state, or create a fresh profile.
+- The profile controller only resets local app state when deletion actually succeeded or a real partial cleanup happened.
+- `DeleteAccountScreen` now disables the delete button after a recent-login block and shows a direct `Sign In Again` action.
+- Added `accountDeletionService.test.ts` coverage for stale-session blocking and recent-session deletion.
+
+Files changed:
+
+- `src/services/canopyTroveAuthService.ts`
+- `src/services/accountDeletionService.ts`
+- `src/services/accountDeletionService.test.ts`
+- `src/context/storefrontControllerShared.ts`
+- `src/context/useStorefrontControllerProviderModel.ts`
+- `src/screens/DeleteAccountScreen.tsx`
+
+Verification:
+
+- `npx vitest run src/services/accountDeletionService.test.ts src/services/accountDeletionSummary.test.ts`
+- `npm run typecheck`
+- `npm run lint:strict`
+- `npm run format:check`
+- `npx vitest run src/services/accountDeletionService.test.ts src/services/accountDeletionSummary.test.ts src/screens/ProfileScreen.test.tsx`
+- `npm test` — 78 files / 333 tests passed
+
+Release follow-up:
+
+- Do **not** submit production iOS build `1.0.2 (9)` to Apple; it predates this hardening.
+- Commit/push this fix, then create a new production iOS build (expected next build number: `1.0.2 (10)`).
+- For the App Review screen recording, use a freshly created or freshly signed-in account so Firebase Auth deletion is recent and completes in one pass.
+
 ### 2026-04-03 - Agent One Safety Protocol Change Required By User
 
 User instruction: Agent One is now treated as a write-risk until proven otherwise.

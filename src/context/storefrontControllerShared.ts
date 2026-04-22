@@ -10,6 +10,7 @@ import type {
   StorefrontListQuery,
 } from '../types/storefront';
 import type { CanopyTroveAuthSession } from '../types/identity';
+import type { CanopyTroveAuthDeletionResult } from '../services/canopyTroveAuthService';
 
 export type StorefrontQueryControllerValue = {
   availableAreas: MarketArea[];
@@ -52,7 +53,12 @@ export type StorefrontProfileControllerValue = {
   startGuestSession: () => Promise<boolean>;
   signOutSession: () => Promise<boolean>;
   repairProfileForCurrentSession: () => Promise<AppProfile | null>;
-  deleteAccount: () => Promise<{ ok: boolean; partial: boolean; message: string }>;
+  deleteAccount: () => Promise<{
+    ok: boolean;
+    partial: boolean;
+    reason: CanopyTroveAuthDeletionResult['reason'];
+    message: string;
+  }>;
   updateDisplayName: (value: string) => Promise<boolean>;
   clearDisplayName: () => Promise<boolean>;
 };

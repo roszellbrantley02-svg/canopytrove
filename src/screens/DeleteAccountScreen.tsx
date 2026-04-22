@@ -25,11 +25,14 @@ export function DeleteAccountScreen({
   const [statusState, setStatusState] = React.useState<{
     text: string;
     tone: 'success' | 'error';
+    reason: 'no-user' | 'requires-recent-login' | 'unknown' | null;
   } | null>(null);
   const matchesConfirmation = confirmationText.trim().toUpperCase() === DELETE_CONFIRMATION_PHRASE;
   const isMemberAccount = authSession.status === 'authenticated';
   const deletionSucceeded = statusState?.tone === 'success';
-  const isDeleteDisabled = !matchesConfirmation || isSubmitting || deletionSucceeded;
+  const needsRecentSignIn = statusState?.reason === 'requires-recent-login';
+  const isDeleteDisabled =
+    !matchesConfirmation || isSubmitting || deletionSucceeded || needsRecentSignIn;
   const openSupportEmail = React.useCallback(() => {
     if (Platform.OS === 'web') {
       window.open(legalConfig.supportEmailUrl, '_blank', 'noopener,noreferrer');
@@ -50,6 +53,7 @@ export function DeleteAccountScreen({
       setStatusState({
         text: result.message,
         tone: result.ok ? 'success' : 'error',
+        reason: result.reason,
       });
     } catch {
       // Defensive: deleteAccount() is expected to resolve with a result
@@ -59,6 +63,7 @@ export function DeleteAccountScreen({
       setStatusState({
         text: 'Something went wrong while clearing your data. Please try again, or email support if this keeps happening.',
         tone: 'error',
+        reason: 'unknown',
       });
     } finally {
       setIsSubmitting(false);
@@ -168,6 +173,17 @@ export function DeleteAccountScreen({
                 accessibilityHint="Returns to the profile tab after account deletion is complete."
               >
                 <Text style={styles.secondaryButtonText}>Return to Profile</Text>
+              </HapticPressable>
+            ) : null}
+            {needsRecentSignIn ? (
+              <HapticPressable
+                onPress={() => navigation.replace('CanopyTroveSignIn')}
+                style={styles.secondaryButton}
+                accessibilityRole="button"
+                accessibilityLabel="Sign in again"
+                accessibilityHint="Opens sign in so you can refresh the account session before deleting."
+              >
+                <Text style={styles.secondaryButtonText}>Sign In Again</Text>
               </HapticPressable>
             ) : null}
           </View>
