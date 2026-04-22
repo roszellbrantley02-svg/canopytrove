@@ -81,6 +81,7 @@ export function MusicToggleRow() {
           </View>
         </HapticPressable>
         <Switch
+          style={styles.switchControl}
           value={switchValue}
           disabled={isSuppressed}
           onValueChange={handleSwitchToggle}
@@ -99,9 +100,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.sm,
+    width: '100%',
   },
   copyPress: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -120,6 +124,8 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     gap: 3,
   },
   title: {
@@ -130,5 +136,8 @@ const styles = StyleSheet.create({
     ...textStyles.caption,
     color: colors.textMuted,
     lineHeight: 18,
+  },
+  switchControl: {
+    flexShrink: 0,
   },
 });

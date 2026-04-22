@@ -1241,6 +1241,31 @@ Release follow-up:
 - Commit/push this fix, then create a new production iOS build (expected next build number: `1.0.2 (10)`).
 - For the App Review screen recording, use a freshly created or freshly signed-in account so Firebase Auth deletion is recent and completes in one pass.
 
+### 2026-04-22 - Profile Music Toggle Small-Screen Layout Fix
+
+User reported the background music toggle was off-screen on the Profile page. Root cause: the toggle row used a horizontal layout where the long copy could push the native `Switch` outside the card on narrow screens.
+
+Fix applied:
+
+- `MusicToggleRow` now gives the row `width: '100%'`.
+- The text/touchable side has `flexShrink: 1` and `minWidth: 0` so long copy wraps instead of expanding the row.
+- The native `Switch` has `flexShrink: 0` so it stays pinned inside the card.
+
+Files changed:
+
+- `src/music/MusicToggleRow.tsx`
+
+Verification:
+
+- `npm run typecheck`
+- `npx vitest run src/music/musicPlayerService.test.ts src/screens/ProfileScreen.test.tsx`
+- `npm run lint:strict`
+- `npm run format:check`
+
+Release follow-up:
+
+- If this fix is needed for Apple review, it requires a new commit and a new production iOS build after build `1.0.2 (10)`.
+
 ### 2026-04-03 - Agent One Safety Protocol Change Required By User
 
 User instruction: Agent One is now treated as a write-risk until proven otherwise.
