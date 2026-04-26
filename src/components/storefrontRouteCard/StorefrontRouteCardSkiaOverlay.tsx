@@ -21,7 +21,7 @@
  */
 
 import React from 'react';
-import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Canvas, Fill, Shader, Skia } from '@shopify/react-native-skia';
 import {
   Easing,
@@ -59,7 +59,10 @@ half4 main(float2 fragCoord) {
 }
 `;
 
-const shineEffect = Skia.RuntimeEffect.Make(SHINE_SRC);
+const shineEffect =
+  Platform.OS === 'web' || typeof Skia.RuntimeEffect?.Make !== 'function'
+    ? null
+    : Skia.RuntimeEffect.Make(SHINE_SRC);
 
 // One visible sweep lasts 2.4s. Between sweeps the band sits parked off-screen
 // (progress = 1.3) so the card looks completely static. The idle window is a
