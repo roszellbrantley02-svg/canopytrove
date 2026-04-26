@@ -871,6 +871,240 @@ Agent Two's overall assessment:
 
 — Agent Two
 
+## 2026-04-23 — SEO Indexing Cleanup: account deletion + app sitemap narrowing
+
+### Main-site legal page cleanup
+
+- `public-release-pages/account-deletion/index.html` now includes:
+  - `<meta name="robots" content="noindex, follow" />`
+  - `<meta name="googlebot" content="noindex, follow" />`
+- `firebase.json` (`hosting:legal`) now sends `X-Robots-Tag: noindex, follow` for:
+  - `/account-deletion`
+  - `/account-deletion/**`
+- `public-release-pages/robots.txt` no longer blocks `/account-deletion/`
+- `public-release-pages/sitemap.xml` no longer includes `https://canopytrove.com/account-deletion/`
+
+### Why this change
+
+- Apple / users still need the deletion page live and reachable.
+- Google should **not** treat it as SEO content.
+- Blocking it in `robots.txt` while also listing it in the sitemap was a mixed signal.
+- Final posture is now: **reachable + crawlable + explicitly noindex + not in sitemap**.
+
+### Web app sitemap / canonical cleanup
+
+- Root cause for Search Console redirect/indexing noise: `scripts/post-export.js` was generating `dist/sitemap.xml` with **631 URLs**, including all 627 storefront detail pages.
+- Those app-domain sitemap URLs used no-slash forms like `/nearby` and `/storefronts/<id>`, but Firebase Hosting redirects them to trailing-slash forms like `/nearby/`, which created redirect churn.
+
+### Fix applied
+
+- `scripts/post-export.js`
+  - canonical builder now emits trailing-slash URLs for non-root pages
+  - added `/verify/` as an indexable route + sitemap entry
+  - storefront detail pages are **still generated** as static SEO shells, but are **excluded from the sitemap** until they have stronger unique-content/index signals
+- `src/navigation/webRouteMetadata.ts`
+  - canonical URLs now use trailing-slash form on the web app
+- `backend/src/routes/sitemapRoutes.ts`
+  - aligned to trailing-slash canonicals
+  - sitemap narrowed to strong landing pages only
+  - robots output simplified to match the allow-all webapp posture
+- `public/sitemap.xml`
+  - added `/verify/`
+
+### Result after rebuild + deploy
+
+- Ran `npm run web:build`
+- Rebuilt `dist/sitemap.xml` now contains **5 URLs** instead of 631:
+  - `/`
+  - `/nearby/`
+  - `/browse/`
+  - `/hot-deals/`
+  - `/verify/`
+- Deployed live:
+  - `firebase deploy --only hosting:webapp --project canopy-trove --non-interactive`
+
+### Live verification
+
+- `https://app.canopytrove.com/sitemap.xml`
+  - live sitemap now shows only 5 URLs
+- `https://app.canopytrove.com/nearby/`
+  - returns `200`
+  - canonical is `https://app.canopytrove.com/nearby/`
+- `https://app.canopytrove.com/nearby`
+  - still returns `301` to slash form, which is now expected and no longer reinforced by the sitemap
+- `https://canopytrove.com/account-deletion/`
+  - returns `200`
+  - header includes `X-Robots-Tag: noindex, follow`
+  - `https://canopytrove.com/sitemap.xml` no longer contains account deletion
+
+### Expected Search Console impact
+
+- `Page with redirect` should decline because sitemap URLs now match the live slash format.
+- The giant `Discovered - currently not indexed` bucket should stop being fed by the app sitemap.
+- Search Console will lag; expect Google to reflect this over days/weeks, not instantly.
+
+## 2026-04-24 — Apple Rejection Follow-up: remove background audio entitlement, keep foreground music
+
+### Apple review finding
+
+- Apple reviewed build `1.0 (10)` on **April 24, 2026** and rejected again under **Guideline 2.5.4**.
+- Exact issue: the app still declared `UIBackgroundModes` with `audio`, but reviewers could not play audible content while the app was backgrounded.
+
+### Important product decision
+
+- Music can remain in the app.
+- The problem is **not** “music exists.”
+- The problem is the iOS binary claimed **background audio playback support**.
+- For Canopy Trove, the correct posture is: **music is foreground-only**. No background audio entitlement.
+
+### Fix applied
+
+- `app.json`
+  - removed manual `NSMicrophoneUsageDescription` from `ios.infoPlist`
+  - changed `expo-audio` from bare string plugin usage to explicit options:
+    - `microphonePermission: false`
+    - `recordAudioAndroid: false`
+    - `enableBackgroundRecording: false`
+    - `enableBackgroundPlayback: false`
+- `app.config.js`
+  - now auto-adds `./plugins/withIosRemoveBackgroundAudio`
+- new plugin: `plugins/withIosRemoveBackgroundAudio.js`
+  - final defensive pass that removes `'audio'` from `UIBackgroundModes`
+  - deletes the key entirely if nothing remains
+
+### Verification
+
+- Ran `npx expo config --type prebuild --json`
+- Confirmed resolved `ios.infoPlist` now has:
+  - **no** `UIBackgroundModes`
+  - **no** `NSMicrophoneUsageDescription`
+- This means the next iOS build should no longer advertise background audio to Apple.
+
+### Build attempt
+
+- Started new production iOS build:
+  - `npx eas build --platform ios --profile production --non-interactive`
+- EAS incremented build number from **10** to **11**
+- Build URL:
+  - `https://expo.dev/accounts/rezell/projects/canopytrove/builds/3cfb4af2-966b-4286-a287-346bd2bfc3b3`
+- Result:
+  - build was **canceled** before completion, so a fresh production iOS build still needs to be started
+
+### Expo doctor follow-up after next build attempt
+
+- User later surfaced EAS output showing:
+  - `1 check failed`
+  - `Command "expo doctor" failed`
+- Reproduced locally with `npx expo-doctor`
+- Root cause was **not** the music/background-audio fix.
+- Root cause was Expo SDK 55 dependency drift: 12 packages were behind the currently expected patch versions.
+
+### Dependency alignment applied
+
+- Updated package versions to the Expo SDK 55 doctor baseline:
+  - `expo` → `~55.0.17`
+  - `expo-asset` → `~55.0.16`
+  - `expo-audio` → `~55.0.14`
+  - `expo-camera` → `~55.0.16`
+  - `expo-dev-client` → `~55.0.28`
+  - `expo-image` → `~55.0.9`
+  - `expo-image-picker` → `~55.0.19`
+  - `expo-notifications` → `~55.0.20`
+  - `expo-task-manager` → `~55.0.15`
+  - `expo-updates` → `~55.0.21`
+  - `react-native` → `0.83.6`
+  - `react-native-worklets` → `0.7.4`
+- `package-lock.json` updated accordingly.
+
+### Validation after upgrade
+
+- `npx expo-doctor` → **18/18 checks passed**
+- `npm run typecheck` → passed
+- `npm test` → **78/78 files passed, 333/333 tests passed**
+
+### Important interpretation
+
+- The build log user pasted showed pods progressing normally; the doctor failure was a dependency-alignment warning/failure at the Expo validation step, not evidence that the iOS background-audio entitlement fix was wrong.
+- Music remains in the app; only the background-audio declaration was removed.
+
+## 2026-04-24 — Production web app boot crash fixed
+
+### Symptom
+
+- `https://app.canopytrove.com/` was returning `200 OK` but appeared broken to users.
+- Browser-level verification showed the site was stuck on the static splash/age-gate shell and never handed off to React.
+
+### Root cause
+
+- A production browser exception was reproduced via headless Edge DevTools:
+  - `TypeError: Cannot read properties of undefined (reading 'RuntimeEffect')`
+- Source traced to `src/components/storefrontRouteCard/StorefrontRouteCardSkiaOverlay.tsx`.
+- The file eagerly called `Skia.RuntimeEffect.Make(...)` at module load time.
+- On the deployed web runtime, `Skia.RuntimeEffect` was undefined, which crashed the app before React could mount.
+
+### Fix applied
+
+- Updated `src/components/storefrontRouteCard/StorefrontRouteCardSkiaOverlay.tsx` to fail closed on web:
+  - if `Platform.OS === 'web'`
+  - or `Skia.RuntimeEffect?.Make` is unavailable
+  - then `shineEffect` is `null` and the overlay does not mount
+- This preserves mobile behavior while preventing the web bundle from crashing during boot.
+
+### Validation
+
+- `npm run typecheck` — passed
+- `npm run web:build` — passed
+- Local static-server verification on `http://127.0.0.1:4173/` showed no browser exception after the patch.
+- Deployed fixed web bundle with:
+  - `npx firebase-tools deploy --only hosting:webapp`
+- Post-deploy production verification:
+  - `https://app.canopytrove.com/` still returns `200`
+  - no more `RuntimeEffect` boot exception in headless Edge DevTools
+  - DOM check confirmed:
+    - `#root` has children
+    - splash element removed
+    - body text includes the interactive age-gate buttons (`YES, I AM 21 OR OLDER`)
+
+### Remaining noise observed
+
+- `https://api.canopytrove.com/v1/web-vitals` logs `ERR_BLOCKED_BY_RESPONSE.NotSameOrigin` in browser checks.
+- Font decoding warnings also appeared for the preloaded Google font files.
+- Neither of those was the root cause of the user-visible outage; the blocking issue was the Skia `RuntimeEffect` crash.
+
+---
+
+### 2026-04-22 - Cannabis Tales Website Page Started
+
+What changed:
+
+- Added the first website-only Cannabis Tales page at `public-release-pages/cannabis-tales/index.html`.
+- Added page-specific styling at `public-release-pages/cannabis-tales/styles.css`.
+- Linked Cannabis Tales from the public homepage navigation, public information card grid, and footer.
+- Added `https://canopytrove.com/cannabis-tales/` to `public-release-pages/sitemap.xml`.
+
+Content scope:
+
+- The page contains short editorial summaries only, not copied full stories.
+- Each tale links out to source material or archive records for the reader to continue:
+  - USDA National Agricultural Library `Hemp for Victory`
+  - National Library of Medicine / LaGuardia Committee report
+  - Wellcome Collection and National Library of Scotland Indian Hemp Drugs Commission records
+  - Public Domain Review / Internet Archive `Reefer Madness`
+  - San Francisco Public Library `Brownie Mary Collection`
+  - Wikisource/Revue des Deux Mondes `Le Club des Hachichins`
+- The page is explicitly educational history only, adults 21+ where lawful, and not ordering, sales, legal advice, or medical advice.
+
+Verification:
+
+- `git diff --check` passed.
+- `npm run lint:strict` passed.
+- Local static link inspection was rerun after an initial PowerShell quoting error and confirmed the new page references existing site paths/assets.
+
+Follow-up:
+
+- This is website-only and does not require a new mobile app build.
+- To publish live, deploy the `legal` Firebase Hosting target for `public-release-pages`.
+
 ### 2026-04-21 - GitHub Release Check Auth Preflight
 
 What changed:
