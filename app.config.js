@@ -24,12 +24,20 @@ module.exports = ({ config }) => {
     plugins.push('expo-image');
   }
 
+  if (!hasPlugin(plugins, 'expo-iap')) {
+    plugins.push('expo-iap');
+  }
+
   if (!hasPlugin(plugins, './plugins/withAndroidAdiRegistration')) {
     plugins.push('./plugins/withAndroidAdiRegistration');
   }
 
   if (!hasPlugin(plugins, './plugins/withIosUseModularHeaders')) {
     plugins.push('./plugins/withIosUseModularHeaders');
+  }
+
+  if (!hasPlugin(plugins, './plugins/withIosRemoveBackgroundAudio')) {
+    plugins.push('./plugins/withIosRemoveBackgroundAudio');
   }
 
   if (sentryOrganization && sentryProject && !hasPlugin(plugins, '@sentry/react-native/expo')) {
