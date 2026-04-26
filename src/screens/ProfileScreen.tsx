@@ -311,7 +311,9 @@ function AndroidBusinessNoticeWorkspace() {
 
 function OwnerProfileWorkspace() {
   const isAndroid = Platform.OS === 'android';
-  const showBillingCenter = Platform.OS === 'web';
+  // Show on iOS (subscription screen is the IAP entry point) and on web
+  // (Stripe customer portal). Android hides billing per Play policy.
+  const showBillingCenter = Platform.OS !== 'android';
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { authSession, signOutSession } = useStorefrontProfileController();
   const promotionsLabel = isAndroid ? 'Updates' : 'Offers';
