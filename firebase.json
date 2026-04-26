@@ -77,6 +77,24 @@
               "value": "application/json"
             }
           ]
+        },
+        {
+          "source": "/account-deletion",
+          "headers": [
+            {
+              "key": "X-Robots-Tag",
+              "value": "noindex, follow"
+            }
+          ]
+        },
+        {
+          "source": "/account-deletion/**",
+          "headers": [
+            {
+              "key": "X-Robots-Tag",
+              "value": "noindex, follow"
+            }
+          ]
         }
       ]
     },

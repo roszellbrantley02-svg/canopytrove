@@ -40,16 +40,31 @@ const INDEXABLE_WEB_ROUTES = [
     headline: 'See live dispensary deals across New York',
     body: 'Track current offers from licensed dispensaries, compare savings, and decide where to shop before you head out.',
   },
+  {
+    routePath: '/verify',
+    filePath: path.join(DIST, 'verify', 'index.html'),
+    title: 'Verify a New York Dispensary License | Canopy Trove',
+    description:
+      'Check whether a New York dispensary is licensed by verifying its name, address, or license number against the OCM public registry.',
+    robots: 'index, follow',
+    headline: 'Verify a New York dispensary license',
+    body: 'Cross-check dispensary details against the New York OCM public registry before you go.',
+  },
 ];
 const STATIC_ROUTE_LINKS = [
   { href: '/', label: 'Home' },
-  { href: '/nearby', label: 'Nearby dispensaries' },
-  { href: '/browse', label: 'Browse dispensaries' },
-  { href: '/hot-deals', label: 'Hot deals' },
+  { href: '/nearby/', label: 'Nearby dispensaries' },
+  { href: '/browse/', label: 'Browse dispensaries' },
+  { href: '/hot-deals/', label: 'Hot deals' },
+  { href: '/verify/', label: 'Verify a license' },
 ];
 
 function buildCanonicalUrl(routePath) {
-  return routePath === '/' ? `${APP_ORIGIN}/` : `${APP_ORIGIN}${routePath}`;
+  if (routePath === '/') {
+    return `${APP_ORIGIN}/`;
+  }
+
+  return `${APP_ORIGIN}${routePath.endsWith('/') ? routePath : `${routePath}/`}`;
 }
 
 function escapeHtml(value) {
@@ -515,13 +530,10 @@ if (fs.existsSync(distIndex)) {
     const storefrontFilePath = path.join(DIST, 'storefronts', record.id, 'index.html');
     fs.mkdirSync(path.dirname(storefrontFilePath), { recursive: true });
     fs.writeFileSync(storefrontFilePath, storefrontHtml, 'utf-8');
-    sitemapEntries.push({
-      loc: buildCanonicalUrl(routePath),
-      changefreq: 'weekly',
-      priority: 0.7,
-    });
   }
-  console.log(`Generated ${storefrontRecords.length} storefront SEO pages`);
+  console.log(
+    `Generated ${storefrontRecords.length} storefront SEO pages (excluded from sitemap until indexing quality improves)`,
+  );
 
   fs.writeFileSync(path.join(DIST, 'sitemap.xml'), generateSitemapXml(sitemapEntries), 'utf-8');
   console.log(`Generated dist/sitemap.xml with ${sitemapEntries.length} URLs`);

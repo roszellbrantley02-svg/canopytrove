@@ -74,7 +74,11 @@ function normalizePath(path?: string | null): string {
 }
 
 function buildCanonicalUrl(path: string): string {
-  return path === '/' ? `${APP_ORIGIN}/` : `${APP_ORIGIN}${path}`;
+  if (path === '/') {
+    return `${APP_ORIGIN}/`;
+  }
+
+  return `${APP_ORIGIN}${path.endsWith('/') ? path : `${path}/`}`;
 }
 
 function buildNoindexMetadata(path: string): WebRouteMetadata {

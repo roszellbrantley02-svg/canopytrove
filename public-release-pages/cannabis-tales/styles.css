@@ -1,0 +1,153 @@
+.tales-hero-card {
+  background:
+    radial-gradient(circle at top right, rgba(241, 203, 114, 0.14), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(114, 221, 178, 0.1), transparent 30%),
+    linear-gradient(180deg, rgba(20, 29, 20, 0.96), rgba(14, 22, 15, 0.94));
+}
+
+.tales-hero-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tale-disclaimer {
+  max-width: 680px;
+  padding: 14px 16px;
+  border: 1px solid rgba(245, 200, 106, 0.2);
+  border-radius: var(--radius-md);
+  background: rgba(245, 200, 106, 0.07);
+  font-size: 0.95rem;
+}
+
+.tales-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.tale-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, rgba(23, 33, 22, 0.95), rgba(15, 23, 15, 0.94));
+  box-shadow: var(--shadow);
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.tale-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(245, 200, 106, 0.9),
+    rgba(114, 221, 178, 0.7),
+    rgba(55, 183, 201, 0.5)
+  );
+}
+
+.tale-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-hover);
+}
+
+.tale-card h2 {
+  margin: 0;
+  font-family: Fraunces, serif;
+  font-size: clamp(1.45rem, 3vw, 2.05rem);
+  line-height: 1.08;
+}
+
+.tale-card p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.97rem;
+  line-height: 1.76;
+}
+
+.tale-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tale-meta span {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 0 11px;
+  border: 1px solid rgba(245, 200, 106, 0.18);
+  border-radius: 999px;
+  background: rgba(245, 200, 106, 0.07);
+  color: var(--gold-strong);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tale-source-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.tale-source-list a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(114, 221, 178, 0.2);
+  border-radius: 999px;
+  background: rgba(114, 221, 178, 0.07);
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    transform var(--transition-base),
+    border-color var(--transition-base),
+    background var(--transition-base);
+}
+
+.tale-source-list a:hover,
+.tale-source-list a:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(114, 221, 178, 0.4);
+  background: rgba(114, 221, 178, 0.12);
+}
+
+.tales-next-card {
+  background:
+    radial-gradient(circle at top right, rgba(245, 200, 106, 0.09), transparent 30%),
+    var(--panel);
+}
+
+@media (max-width: 1080px) {
+  .tales-hero-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 920px) {
+  .tales-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .tale-card {
+    padding: 22px;
+  }
+}

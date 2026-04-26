@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { backendStorefrontSource } from '../sources';
 import { logger } from '../observability/logger';
 
 const APP_ORIGIN = 'https://app.canopytrove.com';
@@ -14,6 +13,7 @@ const STATIC_PAGES: Array<{ path: string; changefreq: string; priority: string }
   { path: '/browse', changefreq: 'daily', priority: '0.8' },
   { path: '/nearby', changefreq: 'daily', priority: '0.8' },
   { path: '/hot-deals', changefreq: 'daily', priority: '0.8' },
+  { path: '/verify', changefreq: 'daily', priority: '0.8' },
 ];
 
 function escapeXml(value: string): string {
@@ -29,46 +29,39 @@ function todayDateString(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+function buildCanonicalUrl(path: string): string {
+  if (path === '/') {
+    return `${APP_ORIGIN}/`;
+  }
+
+  return `${APP_ORIGIN}${path.endsWith('/') ? path : `${path}/`}`;
+}
+
 export const sitemapRoutes = Router();
 
 /**
  * GET /sitemap.xml
  *
- * Generates a dynamic XML sitemap containing:
- * 1. Static web app pages (home, browse, nearby, hot-deals)
- * 2. All published storefront pages from Firestore
+ * Generates a dynamic XML sitemap containing only the strongest public
+ * landing pages. Individual storefront URLs remain crawlable, but are
+ * intentionally excluded from the sitemap until they earn stronger,
+ * more unique index signals.
  *
- * Cached with a 1-hour public cache header to avoid hammering
- * Firestore on every crawl request.
+ * Cached with a 1-hour public cache header.
  */
 sitemapRoutes.get('/sitemap.xml', async (_request, response) => {
   try {
-    const allSummaries = await backendStorefrontSource.getAllSummaries();
     const today = todayDateString();
 
     const urlEntries: string[] = [];
 
-    // Static pages
     for (const page of STATIC_PAGES) {
       urlEntries.push(
         `  <url>`,
-        `    <loc>${escapeXml(`${APP_ORIGIN}${page.path}`)}</loc>`,
+        `    <loc>${escapeXml(buildCanonicalUrl(page.path))}</loc>`,
         `    <lastmod>${today}</lastmod>`,
         `    <changefreq>${page.changefreq}</changefreq>`,
         `    <priority>${page.priority}</priority>`,
-        `  </url>`,
-      );
-    }
-
-    // Storefront pages
-    for (const storefront of allSummaries) {
-      const storefrontUrl = `${APP_ORIGIN}/storefronts/${escapeXml(storefront.id)}/`;
-      urlEntries.push(
-        `  <url>`,
-        `    <loc>${storefrontUrl}</loc>`,
-        `    <lastmod>${today}</lastmod>`,
-        `    <changefreq>weekly</changefreq>`,
-        `    <priority>0.6</priority>`,
         `  </url>`,
       );
     }
@@ -86,8 +79,8 @@ sitemapRoutes.get('/sitemap.xml', async (_request, response) => {
 
     logger.info('[sitemap] Served sitemap.xml', {
       staticPages: STATIC_PAGES.length,
-      storefrontPages: allSummaries.length,
-      totalUrls: STATIC_PAGES.length + allSummaries.length,
+      storefrontPages: 0,
+      totalUrls: STATIC_PAGES.length,
     });
   } catch (error) {
     logger.error('[sitemap] Failed to generate sitemap', {
@@ -107,11 +100,6 @@ sitemapRoutes.get('/robots.txt', (_request, response) => {
   const robotsTxt = [
     'User-agent: *',
     'Allow: /',
-    '',
-    'Disallow: /owner-portal/',
-    'Disallow: /profile',
-    'Disallow: /account-deletion',
-    'Disallow: /legal',
     '',
     `Sitemap: ${APP_ORIGIN}/sitemap.xml`,
     '',
