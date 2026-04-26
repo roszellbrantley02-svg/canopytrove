@@ -27,6 +27,19 @@ function normalizeEmail(email: string | null | undefined) {
   return email?.trim().toLowerCase() || null;
 }
 
+function isOwnerPortalPrelaunchEnabled() {
+  const rawValue =
+    process.env.OWNER_PORTAL_PRELAUNCH_ENABLED ??
+    process.env.EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED;
+
+  if (rawValue == null) {
+    return serverConfig.ownerPortalPrelaunchEnabled;
+  }
+
+  const normalizedValue = rawValue.trim().toLowerCase();
+  return normalizedValue === 'true' || normalizedValue === '1';
+}
+
 function hasAdminClaim(claims: Record<string, unknown> | undefined) {
   return claims?.admin === true || claims?.role === 'admin';
 }
@@ -37,8 +50,10 @@ export function isOwnerPortalEmailAllowlisted(email: string | null | undefined) 
     return false;
   }
 
-  // Always enforce the allowlist — prelaunch mode only controls UI gating,
-  // not the security boundary for who can become an owner.
+  if (!isOwnerPortalPrelaunchEnabled()) {
+    return true;
+  }
+
   return serverConfig.ownerPortalAllowlist.includes(normalizedEmail);
 }
 

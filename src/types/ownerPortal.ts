@@ -149,7 +149,7 @@ export type OwnerPortalIdentityVerificationDocument = {
 export type OwnerPortalSubscriptionDocument = {
   ownerUid: string;
   dispensaryId: string;
-  provider: 'internal_prelaunch' | 'stripe';
+  provider: 'internal_prelaunch' | 'stripe' | 'apple_iap';
   externalCustomerId?: string | null;
   externalSubscriptionId: string | null;
   planId: string;

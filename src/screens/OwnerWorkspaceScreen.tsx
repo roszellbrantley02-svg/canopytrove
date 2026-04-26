@@ -49,12 +49,6 @@ function OwnerWorkspaceScreenInner() {
         iconName: 'megaphone-outline',
         onPress: () => navigation.navigate('OwnerPortalPromotions'),
       },
-      {
-        key: 'billing',
-        label: 'Billing',
-        iconName: 'pricetag-outline',
-        onPress: () => navigation.navigate('OwnerPortalSubscription'),
-      },
     ],
     [isAndroid, navigation],
   );

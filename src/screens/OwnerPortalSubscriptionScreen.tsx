@@ -1,11 +1,30 @@
 import React from 'react';
 import type { RouteProp } from '@react-navigation/native';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
+import {
+  deepLinkToSubscriptions,
+  endConnection as endAppleBillingConnection,
+  fetchProducts as fetchAppleProducts,
+  finishTransaction as finishAppleTransaction,
+  getAvailablePurchases as getAvailableApplePurchases,
+  initConnection as initAppleBillingConnection,
+  purchaseErrorListener,
+  purchaseUpdatedListener,
+  requestPurchase as requestApplePurchase,
+  restorePurchases as restoreApplePurchases,
+  type ProductSubscription,
+  type Purchase,
+  type PurchaseIOS,
+} from 'expo-iap';
 import { Linking, Platform, Pressable, Text, View } from 'react-native';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import {
+  getAppleOwnerIapProductIds,
+  hasConfiguredAppleOwnerBillingProducts,
+} from '../config/ownerBilling';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import { useSavedSummaries } from '../hooks/useStorefrontSummaryData';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -15,6 +34,11 @@ import {
   createOwnerBillingPortalSession,
   hasConfiguredOwnerBillingFlow,
 } from '../services/ownerPortalBillingService';
+import {
+  getOwnerApplePurchaseTier,
+  isOwnerAppleSubscriptionPurchase,
+  syncOwnerAppleSubscriptionPurchase,
+} from '../services/ownerPortalAppleBillingService';
 import { getOwnerProfile, getOwnerSubscription } from '../services/ownerPortalService';
 import { getRuntimeOpsStatus } from '../services/runtimeOpsService';
 import type { OwnerProfileDocument, OwnerPortalSubscriptionDocument } from '../types/ownerPortal';
@@ -35,10 +59,25 @@ import {
 
 type OwnerPortalSubscriptionRoute = RouteProp<RootStackParamList, 'OwnerPortalSubscription'>;
 
+function isIosPurchase(purchase: Purchase): purchase is PurchaseIOS {
+  return purchase.platform === 'ios';
+}
+
+function getIosPurchaseExpirationMs(purchase: Purchase) {
+  if (!isIosPurchase(purchase)) {
+    return purchase.transactionDate;
+  }
+
+  return purchase.expirationDateIOS ?? purchase.transactionDate;
+}
+
 function OwnerPortalSubscriptionScreenInner() {
   const route = useRoute<OwnerPortalSubscriptionRoute>();
   const { authSession } = useStorefrontProfileController();
   const isAndroid = Platform.OS === 'android';
+  const isWeb = Platform.OS === 'web';
+  const isAppleNative = Platform.OS === 'ios';
+  const appleOwnerProductIds = React.useMemo(() => getAppleOwnerIapProductIds(), []);
   const preview = route.params?.preview ?? false;
   const [ownerProfile, setOwnerProfile] = React.useState<OwnerProfileDocument | null>(null);
   const [subscription, setSubscription] = React.useState<OwnerPortalSubscriptionDocument | null>(
@@ -51,6 +90,11 @@ function OwnerPortalSubscriptionScreenInner() {
   );
   const [statusText, setStatusText] = React.useState<string | null>(null);
   const [billingCycle, setBillingCycle] = React.useState<OwnerTierBillingCycle>('monthly');
+  const [appleStoreReady, setAppleStoreReady] = React.useState(false);
+  const [appleProductsByTier, setAppleProductsByTier] = React.useState<
+    Partial<Record<OwnerSubscriptionTier, ProductSubscription>>
+  >({});
+  const syncedAppleTransactionIdsRef = React.useRef(new Set<string>());
 
   const loadBillingState = React.useCallback(async () => {
     if (preview) {
@@ -102,10 +146,136 @@ function OwnerPortalSubscriptionScreenInner() {
     isVerifiedStatus(ownerProfile?.businessVerificationStatus) &&
     isVerifiedStatus(ownerProfile?.identityVerificationStatus);
   const billingConfigured = hasConfiguredOwnerBillingFlow();
-  const billingEnabledInThisBuild = billingConfigured && !isAndroid;
+  const appleBillingConfigured = hasConfiguredAppleOwnerBillingProducts();
+  const billingEnabledInThisBuild =
+    (billingConfigured && isWeb) || (appleBillingConfigured && isAppleNative && appleStoreReady);
   const billingTemporarilyPaused =
     runtimeStatus?.policy.safeModeEnabled === true ||
     runtimeStatus?.policy.ownerPortalWritesEnabled === false;
+
+  const syncApplePurchaseToOwnerPlan = React.useCallback(
+    async (purchase: Purchase, options?: { finishTransactionAfterSync?: boolean }) => {
+      if (!isOwnerAppleSubscriptionPurchase(purchase)) {
+        return false;
+      }
+
+      const transactionId = purchase.transactionId ?? purchase.id;
+
+      if (syncedAppleTransactionIdsRef.current.has(transactionId)) {
+        return true;
+      }
+
+      const nextTier = getOwnerApplePurchaseTier(purchase);
+      if (!nextTier) {
+        throw new Error('The purchased Apple plan does not map to an owner tier.');
+      }
+
+      setIsSubmitting(nextTier);
+      setStatusText('Syncing your Apple owner plan...');
+
+      await syncOwnerAppleSubscriptionPurchase(purchase);
+      syncedAppleTransactionIdsRef.current.add(transactionId);
+
+      if (options?.finishTransactionAfterSync !== false) {
+        await finishAppleTransaction({
+          purchase: {
+            id: purchase.id,
+            ids: purchase.ids ?? undefined,
+            isAutoRenewing: purchase.isAutoRenewing,
+            platform: purchase.platform,
+            productId: purchase.productId,
+            purchaseState: purchase.purchaseState,
+            purchaseToken: purchase.purchaseToken ?? null,
+            quantity: purchase.quantity,
+            store: purchase.store,
+            transactionDate: purchase.transactionDate,
+            transactionId,
+          },
+          isConsumable: false,
+        });
+      }
+
+      await loadBillingState();
+      setStatusText('Apple subscription synced. Your owner plan is active.');
+      setIsSubmitting(null);
+      return true;
+    },
+    [loadBillingState],
+  );
+
+  const refreshAppleProducts = React.useCallback(async () => {
+    if (!isAppleNative || preview) {
+      return;
+    }
+
+    const connected = await initAppleBillingConnection();
+    setAppleStoreReady(Boolean(connected));
+    if (!connected) {
+      throw new Error('Apple billing is not available on this device yet.');
+    }
+
+    const storeSubscriptions = (await fetchAppleProducts({
+      skus: appleOwnerProductIds,
+      type: 'subs',
+    })) as ProductSubscription[] | null;
+
+    const nextProductsByTier: Partial<Record<OwnerSubscriptionTier, ProductSubscription>> = {};
+    (storeSubscriptions ?? []).forEach((product) => {
+      const tier = getOwnerApplePurchaseTier({
+        productId: product.id,
+        currentPlanId: product.id,
+      });
+      if (tier) {
+        nextProductsByTier[tier] = product;
+      }
+    });
+
+    setAppleProductsByTier(nextProductsByTier);
+
+    const availablePurchases = await getAvailableApplePurchases({
+      onlyIncludeActiveItemsIOS: true,
+      alsoPublishToEventListenerIOS: false,
+    });
+    const matchingPurchase = availablePurchases
+      .filter(isOwnerAppleSubscriptionPurchase)
+      .sort((left, right) => {
+        const leftExpires = getIosPurchaseExpirationMs(left);
+        const rightExpires = getIosPurchaseExpirationMs(right);
+        return rightExpires - leftExpires;
+      })[0];
+
+    if (matchingPurchase) {
+      await syncApplePurchaseToOwnerPlan(matchingPurchase, {
+        finishTransactionAfterSync: false,
+      });
+    }
+  }, [appleOwnerProductIds, isAppleNative, preview, syncApplePurchaseToOwnerPlan]);
+
+  React.useEffect(() => {
+    if (!isAppleNative || preview) {
+      return;
+    }
+
+    const purchaseUpdateSubscription = purchaseUpdatedListener((purchase) => {
+      void syncApplePurchaseToOwnerPlan(purchase);
+    });
+    const purchaseErrorSubscription = purchaseErrorListener((error) => {
+      setIsSubmitting(null);
+      setStatusText(error.message || 'Apple purchase was not completed.');
+    });
+
+    void refreshAppleProducts().catch((error: unknown) => {
+      setAppleStoreReady(false);
+      setStatusText(error instanceof Error ? error.message : 'Unable to load Apple billing.');
+    });
+
+    return () => {
+      purchaseUpdateSubscription.remove();
+      purchaseErrorSubscription.remove();
+      void endAppleBillingConnection();
+    };
+  }, [isAppleNative, preview, refreshAppleProducts, syncApplePurchaseToOwnerPlan]);
+
   const billingReadinessItems = [
     {
       label: 'Claimed storefront linked',
@@ -134,16 +304,25 @@ function OwnerPortalSubscriptionScreenInner() {
     },
     {
       label: 'Billing backend configured',
-      body: isAndroid
-        ? 'Android shows billing status only. Checkout and billing management stay outside the Android app.'
-        : billingConfigured
+      body: isWeb
+        ? billingConfigured
           ? 'This build can open the configured billing path.'
-          : 'Billing env or fallback checkout links are still incomplete for this build.',
-      tone: isAndroid
-        ? ('complete' as const)
-        : billingConfigured
-          ? ('complete' as const)
-          : ('attention' as const),
+          : 'Billing env or fallback checkout links are still incomplete for this build.'
+        : isAppleNative
+          ? appleBillingConfigured
+            ? 'Apple owner plans are loaded from App Store Connect and synced back into the owner workspace.'
+            : 'Apple owner product IDs are missing for this build.'
+          : billingConfigured
+            ? 'Android shows billing status only. Checkout and billing management stay outside the Android app.'
+            : 'Billing env or fallback checkout links are still incomplete for this build.',
+      tone:
+        isAppleNative && !appleBillingConfigured
+          ? ('attention' as const)
+          : !isWeb
+            ? ('complete' as const)
+            : billingConfigured
+              ? ('complete' as const)
+              : ('attention' as const),
     },
     {
       label: 'Billing safety',
@@ -156,9 +335,46 @@ function OwnerPortalSubscriptionScreenInner() {
   ];
 
   const handleOpenCheckout = async (tier: OwnerSubscriptionTier) => {
-    if (isAndroid) {
+    if (isAppleNative) {
+      const product = appleProductsByTier[tier];
+      if (!product) {
+        setStatusText('That Apple owner plan is not available yet. Refresh and try again.');
+        return;
+      }
+      if (!isBillingEligible) {
+        setStatusText('Sign in, claim your storefront, and finish verification first.');
+        return;
+      }
+      if (isSubmitting || billingTemporarilyPaused) {
+        return;
+      }
+
+      setIsSubmitting(tier);
+      setStatusText('Opening Apple purchase...');
+      try {
+        await requestApplePurchase({
+          request: {
+            apple: {
+              sku: product.id,
+              quantity: 1,
+            },
+          },
+          type: 'subs',
+        });
+      } catch (error) {
+        setIsSubmitting(null);
+        setStatusText(
+          error instanceof Error ? error.message : 'Unable to open Apple purchase flow.',
+        );
+      }
+      return;
+    }
+
+    if (!isWeb) {
       setStatusText(
-        'Android shows owner plan status only. Checkout stays outside the Android app.',
+        isAppleNative
+          ? 'Owner plan purchases stay on the web in the iPhone and iPad builds.'
+          : 'Android shows owner plan status only. Checkout stays outside the Android app.',
       );
       return;
     }
@@ -174,7 +390,7 @@ function OwnerPortalSubscriptionScreenInner() {
     setStatusText(null);
     try {
       const session = await createOwnerBillingCheckoutSession(billingCycle, tier);
-      if (Platform.OS === 'web') {
+      if (isWeb) {
         window.open(session.url, '_blank', 'noopener,noreferrer');
       } else {
         await Linking.openURL(session.url);
@@ -190,9 +406,30 @@ function OwnerPortalSubscriptionScreenInner() {
   };
 
   const handleOpenBillingPortal = async () => {
-    if (isAndroid) {
+    if (isAppleNative) {
+      if (billingTemporarilyPaused || isSubmitting) {
+        return;
+      }
+      setIsSubmitting('manage');
+      setStatusText('Opening Apple subscription management...');
+      try {
+        await deepLinkToSubscriptions({});
+        setStatusText('Apple subscription management opened.');
+      } catch (error) {
+        setStatusText(
+          error instanceof Error ? error.message : 'Unable to open Apple subscription management.',
+        );
+      } finally {
+        setIsSubmitting(null);
+      }
+      return;
+    }
+
+    if (!isWeb) {
       setStatusText(
-        'Android keeps billing management outside the app. Use a non-Android channel to manage owner billing.',
+        isAppleNative
+          ? 'Owner billing management stays on the web in the iPhone and iPad builds.'
+          : 'Android keeps billing management outside the app. Use a non-Android channel to manage owner billing.',
       );
       return;
     }
@@ -208,7 +445,7 @@ function OwnerPortalSubscriptionScreenInner() {
     setStatusText(null);
     try {
       const session = await createOwnerBillingPortalSession();
-      if (Platform.OS === 'web') {
+      if (isWeb) {
         window.open(session.url, '_blank', 'noopener,noreferrer');
       } else {
         await Linking.openURL(session.url);
@@ -226,9 +463,11 @@ function OwnerPortalSubscriptionScreenInner() {
       eyebrow="Owner Portal"
       title="Business plan."
       subtitle={
-        isAndroid
-          ? 'Review owner plan status and billing readiness for the Android build.'
-          : 'Choose your plan, complete checkout, and manage billing.'
+        isWeb
+          ? 'Choose your plan, complete checkout, and manage billing.'
+          : isAppleNative
+            ? 'Review owner plan status and billing readiness for Apple builds.'
+            : 'Review owner plan status and billing readiness for the Android build.'
       }
       headerPill="Owner"
     >
@@ -249,7 +488,15 @@ function OwnerPortalSubscriptionScreenInner() {
             </View>
             <View style={styles.portalHeroMetricCard}>
               <Text style={styles.portalHeroMetricValue}>
-                {isAndroid ? 'Outside App' : billingConfigured ? 'Ready' : 'Setup'}
+                {isAppleNative
+                  ? appleBillingConfigured && appleStoreReady
+                    ? 'Ready'
+                    : 'Setup'
+                  : !isWeb
+                    ? 'Outside App'
+                    : billingConfigured
+                      ? 'Ready'
+                      : 'Setup'}
               </Text>
               <Text style={styles.portalHeroMetricLabel}>Billing Flow</Text>
             </View>
@@ -320,23 +567,30 @@ function OwnerPortalSubscriptionScreenInner() {
         <SectionCard
           title="Choose your plan"
           body={
-            isAndroid
-              ? 'Review available tiers and the Android billing posture.'
+            !isWeb
+              ? isAppleNative
+                ? 'Review the live Apple plans and purchase your monthly owner tier in-app.'
+                : 'Review available tiers and the Android billing posture.'
               : 'Select your tier and billing cycle, then proceed to checkout.'
           }
         >
           <View style={styles.sectionStack}>
             {statusText ? <Text style={styles.errorText}>{statusText}</Text> : null}
-            {!billingConfigured && !isAndroid ? (
+            {!billingConfigured && isWeb ? (
               <Text style={styles.errorText}>
                 Billing is not configured for this build yet. Add the hosted backend billing env or
                 the fallback hosted checkout URLs before release.
               </Text>
             ) : null}
-            {isAndroid ? (
+            {!isWeb && !isAppleNative ? (
               <Text style={styles.helperText}>
                 Android keeps owner billing read-only inside the app. Checkout and subscription
                 management are intentionally unavailable in this build.
+              </Text>
+            ) : null}
+            {isAppleNative && !appleStoreReady ? (
+              <Text style={styles.helperText}>
+                Apple billing is still connecting to the App Store on this device.
               </Text>
             ) : null}
             {!isBillingEligible ? (
@@ -366,6 +620,7 @@ function OwnerPortalSubscriptionScreenInner() {
                   : null
               }
               billingTemporarilyPaused={billingTemporarilyPaused}
+              showBillingCycleToggle={!isAppleNative}
               onSelectTier={(tier) => {
                 void handleOpenCheckout(tier);
               }}
@@ -377,19 +632,68 @@ function OwnerPortalSubscriptionScreenInner() {
         </SectionCard>
       </MotionInView>
 
+      {isAppleNative ? (
+        <MotionInView delay={300}>
+          <SectionCard
+            title="Subscription terms"
+            body="Auto-renewable monthly subscription details and policies."
+          >
+            <View style={styles.sectionStack}>
+              <Text style={styles.helperText}>
+                Owner subscriptions on iPhone are auto-renewable monthly subscriptions billed
+                through your Apple ID. Plans available: Verified, Growth, and Pro. Each plan
+                renews monthly at the price shown above until you cancel.
+              </Text>
+              <Text style={styles.helperText}>
+                Payment will be charged to your Apple ID account at confirmation of purchase.
+                Subscriptions automatically renew unless canceled at least 24 hours before the
+                end of the current period. Your account will be charged for renewal within 24
+                hours prior to the end of the current period. You can manage and cancel your
+                subscriptions by going to your Apple ID account settings on the App Store after
+                purchase.
+              </Text>
+              <View style={styles.buttonRow}>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() => {
+                    void Linking.openURL('https://canopytrove.com/terms');
+                  }}
+                  style={styles.secondaryButton}
+                >
+                  <Text style={styles.secondaryButtonText}>Terms of Use (EULA)</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() => {
+                    void Linking.openURL('https://canopytrove.com/privacy');
+                  }}
+                  style={styles.secondaryButton}
+                >
+                  <Text style={styles.secondaryButtonText}>Privacy Policy</Text>
+                </Pressable>
+              </View>
+            </View>
+          </SectionCard>
+        </MotionInView>
+      ) : null}
+
       <MotionInView delay={330}>
         <SectionCard
           title="Manage billing"
           body={
-            isAndroid
-              ? 'Refresh status only. Billing management stays outside the Android build.'
+            !isWeb
+              ? isAppleNative
+                ? 'Refresh your synced owner status, restore purchases, or open Apple subscription management.'
+                : 'Refresh status only. Billing management stays outside the Android build.'
               : 'Refresh status or manage your active subscription.'
           }
         >
           <View style={[styles.ctaPanel, styles.statusPanelSuccess]}>
             <Text style={styles.helperText}>
-              {isAndroid
-                ? 'Refresh to see the latest synced subscription state. Billing management is intentionally unavailable in the Android build.'
+              {!isWeb
+                ? isAppleNative
+                  ? 'Use refresh after purchase, restore if you already subscribed on this Apple ID, or open Apple subscription settings to manage renewal.'
+                  : 'Refresh to see the latest synced subscription state. Billing management is intentionally unavailable in the Android build.'
                 : 'Refresh after checkout if you need the latest synced state, or open billing management once a live customer record exists.'}
             </Text>
             <View style={styles.buttonRow}>
@@ -401,10 +705,56 @@ function OwnerPortalSubscriptionScreenInner() {
               >
                 <Text style={styles.secondaryButtonText}>Refresh Billing Status</Text>
               </Pressable>
+              {isAppleNative ? (
+                <Pressable
+                  disabled={billingTemporarilyPaused || Boolean(isSubmitting)}
+                  onPress={() => {
+                    setStatusText('Restoring Apple purchases...');
+                    void restoreApplePurchases()
+                      .then(async () => {
+                        const availablePurchases = await getAvailableApplePurchases({
+                          onlyIncludeActiveItemsIOS: true,
+                          alsoPublishToEventListenerIOS: false,
+                        });
+                        const matchingPurchase = availablePurchases
+                          .filter(isOwnerAppleSubscriptionPurchase)
+                          .sort((left, right) => {
+                            const leftExpires = getIosPurchaseExpirationMs(left);
+                            const rightExpires = getIosPurchaseExpirationMs(right);
+                            return rightExpires - leftExpires;
+                          })[0];
+
+                        if (!matchingPurchase) {
+                          setStatusText(
+                            'No active Apple owner subscription was found for this Apple ID.',
+                          );
+                          return;
+                        }
+
+                        await syncApplePurchaseToOwnerPlan(matchingPurchase, {
+                          finishTransactionAfterSync: false,
+                        });
+                      })
+                      .catch((error: unknown) => {
+                        setStatusText(
+                          error instanceof Error
+                            ? error.message
+                            : 'Unable to restore Apple purchases.',
+                        );
+                      });
+                  }}
+                  style={[
+                    styles.secondaryButton,
+                    (billingTemporarilyPaused || Boolean(isSubmitting)) && styles.buttonDisabled,
+                  ]}
+                >
+                  <Text style={styles.secondaryButtonText}>Restore Purchases</Text>
+                </Pressable>
+              ) : null}
               <Pressable
                 disabled={
                   isAndroid ||
-                  !subscription?.externalCustomerId ||
+                  (!isAppleNative && (!isWeb || !subscription?.externalCustomerId)) ||
                   billingTemporarilyPaused ||
                   Boolean(isSubmitting)
                 }
@@ -414,20 +764,24 @@ function OwnerPortalSubscriptionScreenInner() {
                 style={[
                   styles.primaryButton,
                   (isAndroid ||
-                    !subscription?.externalCustomerId ||
+                    (!isAppleNative && (!isWeb || !subscription?.externalCustomerId)) ||
                     billingTemporarilyPaused ||
                     Boolean(isSubmitting)) &&
                     styles.buttonDisabled,
                 ]}
               >
                 <Text style={styles.primaryButtonText}>
-                  {isAndroid
+                  {!isWeb && !isAppleNative
                     ? 'Unavailable On Android'
-                    : billingTemporarilyPaused
-                      ? 'Billing Paused'
-                      : isSubmitting === 'manage'
+                    : isAppleNative
+                      ? isSubmitting === 'manage'
                         ? 'Opening...'
-                        : 'Open Billing Management'}
+                        : 'Open Apple Subscriptions'
+                      : billingTemporarilyPaused
+                        ? 'Billing Paused'
+                        : isSubmitting === 'manage'
+                          ? 'Opening...'
+                          : 'Open Billing Management'}
                 </Text>
               </Pressable>
             </View>

@@ -311,6 +311,7 @@ function AndroidBusinessNoticeWorkspace() {
 
 function OwnerProfileWorkspace() {
   const isAndroid = Platform.OS === 'android';
+  const showBillingCenter = Platform.OS === 'web';
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { authSession, signOutSession } = useStorefrontProfileController();
   const promotionsLabel = isAndroid ? 'Updates' : 'Offers';
@@ -325,8 +326,18 @@ function OwnerProfileWorkspace() {
     badgeLabel: string;
     tone: NonNullable<React.ComponentProps<typeof SectionCard>['tone']>;
     onPress: () => void;
-  }> = React.useMemo(
-    () => [
+  }> = React.useMemo(() => {
+    const cards: Array<{
+      key: string;
+      title: string;
+      body: string;
+      buttonLabel: string;
+      accessibilityLabel: string;
+      iconName: React.ComponentProps<typeof SectionCard>['iconName'];
+      badgeLabel: string;
+      tone: NonNullable<React.ComponentProps<typeof SectionCard>['tone']>;
+      onPress: () => void;
+    }> = [
       {
         key: 'storefront',
         title: 'Storefront studio',
@@ -335,7 +346,7 @@ function OwnerProfileWorkspace() {
         accessibilityLabel: 'Open storefront studio',
         iconName: 'storefront-outline',
         badgeLabel: 'Studio',
-        tone: 'gold' as const,
+        tone: 'gold',
         onPress: () => navigation.navigate('OwnerPortalProfileTools'),
       },
       {
@@ -346,7 +357,7 @@ function OwnerProfileWorkspace() {
         accessibilityLabel: 'Open review inbox',
         iconName: 'chatbubble-ellipses-outline',
         badgeLabel: 'Reviews',
-        tone: 'cyan' as const,
+        tone: 'cyan',
         onPress: () => navigation.navigate('OwnerPortalReviewInbox'),
       },
       {
@@ -357,7 +368,7 @@ function OwnerProfileWorkspace() {
         accessibilityLabel: 'Open business dashboard',
         iconName: 'stats-chart-outline',
         badgeLabel: 'Dashboard',
-        tone: 'primary' as const,
+        tone: 'primary',
         onPress: () => navigation.navigate('OwnerPortalHome'),
       },
       {
@@ -370,10 +381,13 @@ function OwnerProfileWorkspace() {
         accessibilityLabel: isAndroid ? 'Open updates workspace' : 'Open offers workspace',
         iconName: 'megaphone-outline',
         badgeLabel: promotionsLabel,
-        tone: 'gold' as const,
+        tone: 'gold',
         onPress: () => navigation.navigate('OwnerPortalPromotions'),
       },
-      {
+    ];
+
+    if (showBillingCenter) {
+      cards.push({
         key: 'billing',
         title: 'Billing center',
         body: 'Review your plan, subscription status, and business billing settings without leaving the owner side.',
@@ -381,12 +395,13 @@ function OwnerProfileWorkspace() {
         accessibilityLabel: 'Open billing center',
         iconName: 'pricetag-outline',
         badgeLabel: 'Billing',
-        tone: 'neutral' as const,
+        tone: 'neutral',
         onPress: () => navigation.navigate('OwnerPortalSubscription'),
-      },
-    ],
-    [isAndroid, navigation, promotionsLabel],
-  );
+      });
+    }
+
+    return cards;
+  }, [isAndroid, navigation, promotionsLabel, showBillingCenter]);
 
   return (
     <ScreenShell

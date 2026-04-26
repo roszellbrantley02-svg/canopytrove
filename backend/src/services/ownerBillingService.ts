@@ -32,7 +32,7 @@ type OwnerProfileRecord = {
 type OwnerSubscriptionRecord = {
   ownerUid: string;
   dispensaryId: string;
-  provider: 'internal_prelaunch' | 'stripe';
+  provider: 'internal_prelaunch' | 'stripe' | 'apple_iap';
   externalCustomerId?: string | null;
   externalSubscriptionId: string | null;
   planId: string;
@@ -100,10 +100,37 @@ type StripeWebhookEvent = {
   };
 };
 
+type OwnerAppleSubscriptionTier = Exclude<OwnerSubscriptionTier, 'free'>;
+
+type OwnerAppleSubscriptionSyncPayload = {
+  productId?: unknown;
+  transactionId?: unknown;
+  originalTransactionId?: unknown;
+  purchaseToken?: unknown;
+  currentPlanId?: unknown;
+  environmentIOS?: unknown;
+  expirationDateMs?: unknown;
+  transactionDateMs?: unknown;
+  isAutoRenewing?: unknown;
+  purchaseState?: unknown;
+  renewalInfoIOS?: unknown;
+};
+
 const OWNER_PROFILES_COLLECTION = 'ownerProfiles';
 const SUBSCRIPTIONS_COLLECTION = 'subscriptions';
 const STRIPE_API_BASE_URL = 'https://api.stripe.com/v1';
 const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
+const APPLE_OWNER_PRODUCT_IDS: Record<OwnerAppleSubscriptionTier, string> = {
+  verified:
+    process.env.APPLE_OWNER_IAP_VERIFIED_PRODUCT_ID?.trim() ||
+    'com.rezell.canopytrove.owner.verified.monthly.v3',
+  growth:
+    process.env.APPLE_OWNER_IAP_GROWTH_PRODUCT_ID?.trim() ||
+    'com.rezell.canopytrove.owner.growth.monthly.v3',
+  pro:
+    process.env.APPLE_OWNER_IAP_PRO_PRODUCT_ID?.trim() ||
+    'com.rezell.canopytrove.owner.pro.monthly.v3',
+};
 
 function getStripeTierPriceId(
   tier: OwnerSubscriptionTier,
@@ -184,6 +211,153 @@ function parseOwnerSubscriptionTier(value: unknown): OwnerSubscriptionTier {
   }
 
   return 'free';
+}
+
+function getAppleTierFromProductId(productId: string): OwnerAppleSubscriptionTier | null {
+  const normalizedProductId = productId.trim();
+  const match = (Object.entries(APPLE_OWNER_PRODUCT_IDS) as Array<
+    [OwnerAppleSubscriptionTier, string]
+  >).find(([, configuredProductId]) => configuredProductId === normalizedProductId);
+  return match?.[0] ?? null;
+}
+
+function parseAppleSubscriptionSyncPayload(
+  payload: OwnerAppleSubscriptionSyncPayload,
+): {
+  productId: string;
+  transactionId: string;
+  originalTransactionId: string | null;
+  purchaseToken: string | null;
+  currentPlanId: string | null;
+  environmentIOS: string | null;
+  expirationDateMs: number | null;
+  transactionDateMs: number;
+  isAutoRenewing: boolean;
+  purchaseState: string;
+  renewalInfoIOS: {
+    pendingUpgradeProductId: string | null;
+    gracePeriodExpirationDateMs: number | null;
+    isInBillingRetry: boolean;
+    expirationReason: string | null;
+  } | null;
+} {
+  const productId = typeof payload.productId === 'string' ? payload.productId.trim() : '';
+  const transactionId =
+    typeof payload.transactionId === 'string' ? payload.transactionId.trim() : '';
+  const transactionDateMs =
+    typeof payload.transactionDateMs === 'number' && Number.isFinite(payload.transactionDateMs)
+      ? payload.transactionDateMs
+      : NaN;
+
+  if (!productId || !transactionId || !Number.isFinite(transactionDateMs)) {
+    throw new OwnerBillingError('Apple subscription sync payload is incomplete.', 400);
+  }
+
+  const originalTransactionId =
+    typeof payload.originalTransactionId === 'string' && payload.originalTransactionId.trim()
+      ? payload.originalTransactionId.trim()
+      : null;
+  const purchaseToken =
+    typeof payload.purchaseToken === 'string' && payload.purchaseToken.trim()
+      ? payload.purchaseToken.trim()
+      : null;
+  const currentPlanId =
+    typeof payload.currentPlanId === 'string' && payload.currentPlanId.trim()
+      ? payload.currentPlanId.trim()
+      : null;
+  const environmentIOS =
+    typeof payload.environmentIOS === 'string' && payload.environmentIOS.trim()
+      ? payload.environmentIOS.trim()
+      : null;
+  const expirationDateMs =
+    typeof payload.expirationDateMs === 'number' && Number.isFinite(payload.expirationDateMs)
+      ? payload.expirationDateMs
+      : null;
+  const purchaseState =
+    typeof payload.purchaseState === 'string' ? payload.purchaseState.trim().toLowerCase() : '';
+
+  let renewalInfoIOS: {
+    pendingUpgradeProductId: string | null;
+    gracePeriodExpirationDateMs: number | null;
+    isInBillingRetry: boolean;
+    expirationReason: string | null;
+  } | null = null;
+
+  if (typeof payload.renewalInfoIOS === 'object' && payload.renewalInfoIOS !== null) {
+    const record = payload.renewalInfoIOS as Record<string, unknown>;
+    renewalInfoIOS = {
+      pendingUpgradeProductId:
+        typeof record.pendingUpgradeProductId === 'string' && record.pendingUpgradeProductId.trim()
+          ? record.pendingUpgradeProductId.trim()
+          : null,
+      gracePeriodExpirationDateMs:
+        typeof record.gracePeriodExpirationDateMs === 'number' &&
+        Number.isFinite(record.gracePeriodExpirationDateMs)
+          ? record.gracePeriodExpirationDateMs
+          : null,
+      isInBillingRetry: record.isInBillingRetry === true,
+      expirationReason:
+        typeof record.expirationReason === 'string' && record.expirationReason.trim()
+          ? record.expirationReason.trim()
+          : null,
+    };
+  }
+
+  return {
+    productId,
+    transactionId,
+    originalTransactionId,
+    purchaseToken,
+    currentPlanId,
+    environmentIOS,
+    expirationDateMs,
+    transactionDateMs,
+    isAutoRenewing: payload.isAutoRenewing === true,
+    purchaseState,
+    renewalInfoIOS,
+  };
+}
+
+function toIsoFromMilliseconds(value: number | null | undefined, fallback: string) {
+  if (!value || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return new Date(value).toISOString();
+}
+
+function mapAppleSubscriptionStatus(input: {
+  purchaseState: string;
+  expirationDateMs: number | null;
+  renewalInfoIOS: {
+    pendingUpgradeProductId: string | null;
+    gracePeriodExpirationDateMs: number | null;
+    isInBillingRetry: boolean;
+    expirationReason: string | null;
+  } | null;
+  isAutoRenewing: boolean;
+}): OwnerSubscriptionStatus {
+  if (input.purchaseState === 'pending') {
+    return 'inactive';
+  }
+
+  const now = Date.now();
+  const effectiveExpirationMs =
+    input.renewalInfoIOS?.gracePeriodExpirationDateMs ?? input.expirationDateMs ?? null;
+
+  if (effectiveExpirationMs && effectiveExpirationMs > now) {
+    return 'active';
+  }
+
+  if (input.renewalInfoIOS?.isInBillingRetry) {
+    return 'past_due';
+  }
+
+  if (!input.isAutoRenewing) {
+    return 'canceled';
+  }
+
+  return 'inactive';
 }
 
 export class OwnerBillingError extends Error {
@@ -875,6 +1049,99 @@ export async function createOwnerBillingPortalSession(request: Request) {
     portalSessionId: session.id,
     url: session.url,
     source: 'backend_stripe',
+  };
+}
+
+export async function syncOwnerAppleSubscription(
+  request: Request,
+  payload: OwnerAppleSubscriptionSyncPayload,
+) {
+  const parsedPayload = parseAppleSubscriptionSyncPayload(payload);
+  const tier =
+    getAppleTierFromProductId(parsedPayload.currentPlanId ?? parsedPayload.productId) ??
+    getAppleTierFromProductId(parsedPayload.productId);
+  if (!tier) {
+    throw new OwnerBillingError('The Apple product does not map to a Canopy Trove owner tier.', 400);
+  }
+
+  const {
+    ownerUid,
+    ownerProfile,
+    storefrontId,
+    businessVerificationStatus,
+    identityVerificationStatus,
+  } = await getVerifiedOwnerContext(request);
+
+  assertOwnerBillingEligibility({
+    storefrontId,
+    businessVerificationStatus,
+    identityVerificationStatus,
+  });
+
+  const existingSubscription = await getOwnerSubscription(ownerUid);
+  const now = createNow();
+  const subscriptionStatus = mapAppleSubscriptionStatus({
+    purchaseState: parsedPayload.purchaseState,
+    expirationDateMs: parsedPayload.expirationDateMs,
+    renewalInfoIOS: parsedPayload.renewalInfoIOS,
+    isAutoRenewing: parsedPayload.isAutoRenewing,
+  });
+
+  const nextSubscription: OwnerSubscriptionRecord = {
+    ownerUid,
+    dispensaryId: storefrontId ?? ownerProfile.dispensaryId ?? '',
+    provider: 'apple_iap',
+    externalCustomerId: existingSubscription?.externalCustomerId ?? null,
+    externalSubscriptionId:
+      parsedPayload.originalTransactionId ??
+      existingSubscription?.externalSubscriptionId ??
+      parsedPayload.transactionId,
+    planId: parsedPayload.currentPlanId ?? parsedPayload.productId,
+    tier,
+    status: subscriptionStatus,
+    billingCycle: 'monthly',
+    currentPeriodStart: toIsoFromMilliseconds(
+      parsedPayload.transactionDateMs,
+      existingSubscription?.currentPeriodStart ?? now,
+    ),
+    currentPeriodEnd: toIsoFromMilliseconds(
+      parsedPayload.expirationDateMs ?? parsedPayload.renewalInfoIOS?.gracePeriodExpirationDateMs,
+      existingSubscription?.currentPeriodEnd ?? now,
+    ),
+    cancelAtPeriodEnd: !parsedPayload.isAutoRenewing,
+    createdAt: existingSubscription?.createdAt ?? now,
+    updatedAt: now,
+    lastCheckoutSessionId: parsedPayload.transactionId,
+    lastCheckoutOpenedAt: now,
+  };
+
+  const db = getOwnerBillingDb();
+  await Promise.all([
+    db.collection(SUBSCRIPTIONS_COLLECTION).doc(ownerUid).set(nextSubscription, { merge: true }),
+    db
+      .collection(OWNER_PROFILES_COLLECTION)
+      .doc(ownerUid)
+      .set(
+        {
+          subscriptionStatus: subscriptionStatus === 'past_due' ? 'active' : subscriptionStatus,
+          onboardingStep:
+            subscriptionStatus === 'active' || subscriptionStatus === 'trial'
+              ? 'completed'
+              : 'subscription',
+          updatedAt: now,
+        },
+        { merge: true },
+      ),
+  ]);
+
+  return {
+    ok: true as const,
+    ownerUid,
+    status: subscriptionStatus,
+    tier,
+    billingCycle: 'monthly' as const,
+    planId: nextSubscription.planId,
+    provider: 'apple_iap' as const,
   };
 }
 

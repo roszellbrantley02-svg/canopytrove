@@ -9,6 +9,7 @@ import {
   createOwnerBillingPortalSession,
   handleOwnerBillingWebhook,
   OwnerBillingError,
+  syncOwnerAppleSubscription,
 } from '../services/ownerBillingService';
 
 export const ownerBillingRoutes = Router();
@@ -57,6 +58,35 @@ function parseCheckoutBody(body: unknown): { billingCycle: unknown; tier: unknow
 
   return { billingCycle, tier };
 }
+
+function parseAppleSubscriptionSyncBody(body: unknown) {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return {};
+  }
+
+  return body as Record<string, unknown>;
+}
+
+ownerBillingRoutes.post(
+  '/owner-billing/apple/subscription-sync',
+  billingRecentAuthGuard,
+  ownerBillingSessionRateLimiter,
+  billingUserRateLimiter,
+  async (request, response) => {
+    try {
+      response.json(
+        await syncOwnerAppleSubscription(request, parseAppleSubscriptionSyncBody(request.body)),
+      );
+    } catch (error) {
+      const statusCode = getErrorStatus(error);
+      const requestId = response.getHeader('X-CanopyTrove-Request-Id');
+      response.status(statusCode).json({
+        ok: false,
+        error: getErrorMessage(error, statusCode, typeof requestId === 'string' ? requestId : null),
+      });
+    }
+  },
+);
 
 ownerBillingRoutes.post(
   '/owner-billing/checkout-session',

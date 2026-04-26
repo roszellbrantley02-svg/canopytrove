@@ -88,6 +88,23 @@ vi.mock('../services/runtimeOpsService', () => ({
   getRuntimeOpsStatus: runtimeServiceMocks.getRuntimeOpsStatus,
 }));
 
+vi.mock('expo-iap', () => ({
+  deepLinkToSubscriptions: vi.fn(),
+  endConnection: vi.fn(),
+  fetchProducts: vi.fn(),
+  finishTransaction: vi.fn(),
+  getAvailablePurchases: vi.fn(),
+  initConnection: vi.fn(async () => false),
+  purchaseErrorListener: vi.fn(() => ({
+    remove: vi.fn(),
+  })),
+  purchaseUpdatedListener: vi.fn(() => ({
+    remove: vi.fn(),
+  })),
+  requestPurchase: vi.fn(),
+  restorePurchases: vi.fn(),
+}));
+
 vi.mock('./ownerPortal/ownerPortalStyles', () => ({
   ownerPortalStyles: new Proxy(
     {},

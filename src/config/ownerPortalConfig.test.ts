@@ -36,7 +36,7 @@ describe('ownerPortalConfig', () => {
 
     const config = await import('./ownerPortalConfig');
 
-    expect(config.ownerPortalAccessAvailable).toBe(false);
+    expect(config.ownerPortalAccessAvailable).toBe(true);
     expect(config.ownerPortalPrelaunchEnabled).toBe(false);
     expect(config.isOwnerPortalEmailAllowlisted('owner@canopytrove.com')).toBe(true);
   });

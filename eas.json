@@ -31,7 +31,7 @@
       "distribution": "store",
       "env": {
         "NODE_ENV": "production",
-        "EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED": "true"
+        "EXPO_PUBLIC_OWNER_PORTAL_PRELAUNCH_ENABLED": "false"
       }
     }
   },

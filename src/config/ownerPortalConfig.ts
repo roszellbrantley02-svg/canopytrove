@@ -5,7 +5,9 @@ const isDeveloperBuild = typeof __DEV__ !== 'undefined' && __DEV__;
 export const ownerPortalPrelaunchEnabled =
   rawEnabled.toLowerCase() === 'true' || rawEnabled === '1';
 
-export const ownerPortalAccessAvailable = ownerPortalPrelaunchEnabled || isDeveloperBuild;
+// Owner access remains available after prelaunch ends; the flag only controls
+// whether access is restricted to an allowlist during the rollout window.
+export const ownerPortalAccessAvailable = true;
 
 export const ownerPortalAllowlist = rawAllowlist
   .split(',')

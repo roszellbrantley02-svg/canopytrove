@@ -401,6 +401,7 @@ export function OwnerPortalTierCards({
   billingTemporarilyPaused,
   onSelectTier,
   onToggleBillingCycle,
+  showBillingCycleToggle = true,
 }: {
   billingCycle: OwnerTierBillingCycle;
   currentTier: OwnerSubscriptionTier | null;
@@ -409,49 +410,52 @@ export function OwnerPortalTierCards({
   billingTemporarilyPaused: boolean;
   onSelectTier: (tier: OwnerSubscriptionTier) => void;
   onToggleBillingCycle: () => void;
+  showBillingCycleToggle?: boolean;
 }) {
   return (
     <View style={styles.sectionStack}>
-      <View style={styles.billingCycleRow}>
-        <Pressable
-          onPress={onToggleBillingCycle}
-          style={[
-            styles.billingCycleTab,
-            billingCycle === 'monthly'
-              ? styles.billingCycleTabActive
-              : styles.billingCycleTabInactive,
-          ]}
-        >
-          <Text
-            style={
+      {showBillingCycleToggle ? (
+        <View style={styles.billingCycleRow}>
+          <Pressable
+            onPress={onToggleBillingCycle}
+            style={[
+              styles.billingCycleTab,
               billingCycle === 'monthly'
-                ? styles.billingCycleTabTextActive
-                : styles.billingCycleTabTextInactive
-            }
+                ? styles.billingCycleTabActive
+                : styles.billingCycleTabInactive,
+            ]}
           >
-            Monthly
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={onToggleBillingCycle}
-          style={[
-            styles.billingCycleTab,
-            billingCycle === 'annual'
-              ? styles.billingCycleTabActive
-              : styles.billingCycleTabInactive,
-          ]}
-        >
-          <Text
-            style={
+            <Text
+              style={
+                billingCycle === 'monthly'
+                  ? styles.billingCycleTabTextActive
+                  : styles.billingCycleTabTextInactive
+              }
+            >
+              Monthly
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={onToggleBillingCycle}
+            style={[
+              styles.billingCycleTab,
               billingCycle === 'annual'
-                ? styles.billingCycleTabTextActive
-                : styles.billingCycleTabTextInactive
-            }
+                ? styles.billingCycleTabActive
+                : styles.billingCycleTabInactive,
+            ]}
           >
-            Annual (save ~17%)
-          </Text>
-        </Pressable>
-      </View>
+            <Text
+              style={
+                billingCycle === 'annual'
+                  ? styles.billingCycleTabTextActive
+                  : styles.billingCycleTabTextInactive
+              }
+            >
+              Annual (save ~17%)
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.planGrid}>
         {OWNER_TIER_ORDER.map((tierKey) => {
