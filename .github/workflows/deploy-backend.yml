@@ -68,9 +68,43 @@ jobs:
       - name: Build and push Docker image to Artifact Registry
         run: |
           set -euo pipefail
-          gcloud builds submit \
+          # --async avoids needing project-wide Viewer permission to stream
+          # logs from Cloud Build's default logs bucket. We poll for completion
+          # below; full logs remain viewable in Cloud Console as always.
+          BUILD_ID=$(gcloud builds submit \
+            --async \
             --tag "${{ env.ARTIFACT_REGISTRY_IMAGE }}:${{ steps.tag.outputs.tag }}" \
-            --project "${{ env.GCP_PROJECT_ID }}"
+            --project "${{ env.GCP_PROJECT_ID }}" \
+            --format="value(id)")
+          echo "Build submitted: $BUILD_ID"
+          echo "Build URL: https://console.cloud.google.com/cloud-build/builds/${BUILD_ID}?project=${{ env.GCP_PROJECT_ID }}"
+
+          # Poll up to 15 minutes for completion (90 attempts × 10s)
+          for attempt in $(seq 1 90); do
+            STATUS=$(gcloud builds describe "$BUILD_ID" \
+              --project "${{ env.GCP_PROJECT_ID }}" \
+              --format="value(status)" 2>/dev/null || echo "PENDING")
+            echo "Attempt $attempt: $STATUS"
+            case "$STATUS" in
+              SUCCESS)
+                echo "Build succeeded."
+                exit 0
+                ;;
+              FAILURE|TIMEOUT|CANCELLED|EXPIRED)
+                echo "Build ended with status $STATUS — see Cloud Build UI for logs."
+                exit 1
+                ;;
+              QUEUED|WORKING|PENDING)
+                sleep 10
+                ;;
+              *)
+                echo "Unknown status $STATUS — continuing to poll."
+                sleep 10
+                ;;
+            esac
+          done
+          echo "Build did not complete within 15 minutes."
+          exit 1
 
       - name: Deploy to Cloud Run
         run: |
