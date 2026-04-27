@@ -21,6 +21,10 @@ COPY backend/package.json backend/package-lock.json ./backend/
 RUN npm --prefix backend ci --omit=dev && npm cache clean --force
 
 COPY --from=build /app/backend/dist ./backend/dist
+# Non-TS asset directories that the compiler doesn't bundle into dist —
+# explicitly copy them into the runtime tree at the same relative path the
+# compiled JS expects via __dirname-based resolution.
+COPY --from=build /app/backend/src/certs ./backend/dist/backend/src/certs
 
 USER node
 
