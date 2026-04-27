@@ -385,7 +385,7 @@ function parseOwnerBillingCycle(value: unknown): OwnerBillingCycle {
   throw new OwnerBillingError('Invalid owner billing cycle.', 400);
 }
 
-function getOwnerBillingDb() {
+export function getOwnerBillingDb() {
   const db = getBackendFirebaseDb();
   if (!db) {
     throw new OwnerBillingError('Backend Firebase admin access is not configured.', 503);
@@ -1176,4 +1176,209 @@ export async function handleOwnerBillingWebhook(
         type: event.type,
       };
   }
+}
+
+// =============================================================================
+// Apple App Store Server Notifications V2 — state mapper
+// =============================================================================
+//
+// Called from appStoreNotificationService after the signed payload has been
+// verified and decoded. This function maps Apple's notification types onto our
+// internal OwnerSubscriptionRecord shape.
+//
+// Returns true when a state change was applied, false when the notification
+// was logged but did not change subscription state (PRICE_INCREASE, TEST,
+// REFUND audit-only types, unmapped notifications).
+
+type AppleNotificationContext = {
+  notificationType: string;
+  subtype: string | null;
+  // From @apple/app-store-server-library — we use loose typing here because
+  // the SignedDataVerifier-decoded shapes use `unknown`-ish fields and we want
+  // ownerBillingService to remain library-agnostic for testing.
+  transactionInfo: {
+    transactionId?: string;
+    originalTransactionId?: string;
+    productId?: string;
+    expiresDate?: number;
+    purchaseDate?: number;
+    isAutoRenewing?: boolean;
+    purchaseDateMs?: number;
+    type?: string;
+  } | null;
+  renewalInfo: {
+    autoRenewStatus?: number;
+    autoRenewProductId?: string;
+    expirationIntent?: number;
+    isInBillingRetryPeriod?: boolean;
+    gracePeriodExpiresDate?: number;
+  } | null;
+};
+
+async function findOwnerSubscriptionByOriginalTransactionId(
+  originalTransactionId: string,
+): Promise<{ ownerUid: string; record: OwnerSubscriptionRecord } | null> {
+  const db = getOwnerBillingDb();
+  const snapshot = await db
+    .collection(SUBSCRIPTIONS_COLLECTION)
+    .where('externalSubscriptionId', '==', originalTransactionId)
+    .limit(1)
+    .get();
+  if (snapshot.empty) {
+    return null;
+  }
+  const doc = snapshot.docs[0];
+  return { ownerUid: doc.id, record: doc.data() as OwnerSubscriptionRecord };
+}
+
+export async function applyAppleNotification(ctx: AppleNotificationContext): Promise<boolean> {
+  if (!ctx.transactionInfo?.originalTransactionId) {
+    return false;
+  }
+
+  const found = await findOwnerSubscriptionByOriginalTransactionId(
+    ctx.transactionInfo.originalTransactionId,
+  );
+  if (!found) {
+    return false;
+  }
+  const { ownerUid, record: existing } = found;
+
+  // Compute the candidate next-state. Defaults to current values; only modified
+  // fields will be persisted via merge.
+  let nextStatus: OwnerSubscriptionStatus = existing.status;
+  let nextCancelAtPeriodEnd = existing.cancelAtPeriodEnd;
+  let nextTier: OwnerSubscriptionTier = existing.tier;
+  let nextPlanId = existing.planId;
+  let nextCurrentPeriodEnd = existing.currentPeriodEnd;
+  let stateChanged = false;
+
+  const expiresIso =
+    ctx.transactionInfo.expiresDate && Number.isFinite(ctx.transactionInfo.expiresDate)
+      ? new Date(ctx.transactionInfo.expiresDate).toISOString()
+      : null;
+  const graceExpiresIso =
+    ctx.renewalInfo?.gracePeriodExpiresDate &&
+    Number.isFinite(ctx.renewalInfo.gracePeriodExpiresDate)
+      ? new Date(ctx.renewalInfo.gracePeriodExpiresDate).toISOString()
+      : null;
+  const productTier =
+    ctx.transactionInfo.productId &&
+    getAppleTierFromProductId(ctx.transactionInfo.productId);
+
+  switch (ctx.notificationType) {
+    case 'SUBSCRIBED':
+    case 'DID_RENEW':
+      nextStatus = 'active';
+      nextCancelAtPeriodEnd = ctx.transactionInfo.isAutoRenewing === false;
+      if (productTier) {
+        nextTier = productTier;
+      }
+      if (ctx.transactionInfo.productId) {
+        nextPlanId = ctx.transactionInfo.productId;
+      }
+      if (expiresIso) {
+        nextCurrentPeriodEnd = expiresIso;
+      }
+      stateChanged = true;
+      break;
+
+    case 'DID_FAIL_TO_RENEW':
+      if (ctx.subtype === 'GRACE_PERIOD') {
+        nextStatus = 'past_due';
+        if (graceExpiresIso) {
+          nextCurrentPeriodEnd = graceExpiresIso;
+        }
+      } else {
+        nextStatus = 'inactive';
+      }
+      stateChanged = true;
+      break;
+
+    case 'GRACE_PERIOD_EXPIRED':
+      nextStatus = 'inactive';
+      stateChanged = true;
+      break;
+
+    case 'EXPIRED':
+      nextStatus = 'canceled';
+      stateChanged = true;
+      break;
+
+    case 'REVOKE':
+      // Family-Sharing revocation — owner loses access immediately.
+      nextStatus = 'canceled';
+      stateChanged = true;
+      break;
+
+    case 'DID_CHANGE_RENEWAL_STATUS':
+      if (ctx.subtype === 'AUTO_RENEW_DISABLED') {
+        nextCancelAtPeriodEnd = true;
+        stateChanged = true;
+      } else if (ctx.subtype === 'AUTO_RENEW_ENABLED') {
+        nextCancelAtPeriodEnd = false;
+        stateChanged = true;
+      }
+      break;
+
+    case 'DID_CHANGE_RENEWAL_PREF':
+      // User scheduled a tier change for next renewal — record the *current*
+      // plan + tier from the active transaction, but the renewal switch is
+      // surfaced via the renewalInfo.autoRenewProductId field which we log.
+      if (productTier) {
+        nextTier = productTier;
+        stateChanged = true;
+      }
+      if (ctx.transactionInfo.productId) {
+        nextPlanId = ctx.transactionInfo.productId;
+      }
+      break;
+
+    case 'PRICE_INCREASE':
+    case 'OFFER_REDEEMED':
+    case 'RENEWAL_EXTENDED':
+    case 'TEST':
+    case 'CONSUMPTION_REQUEST':
+    case 'REFUND':
+    case 'REFUND_DECLINED':
+    case 'REFUND_REVERSED':
+    case 'EXTERNAL_PURCHASE_TOKEN':
+      // Logged by appStoreNotificationService for audit; no state change here.
+      return false;
+
+    default:
+      return false;
+  }
+
+  if (!stateChanged) {
+    return false;
+  }
+
+  const now = createNow();
+  const nextSubscription: OwnerSubscriptionRecord = {
+    ...existing,
+    status: nextStatus,
+    cancelAtPeriodEnd: nextCancelAtPeriodEnd,
+    tier: nextTier,
+    planId: nextPlanId,
+    currentPeriodEnd: nextCurrentPeriodEnd,
+    updatedAt: now,
+  };
+
+  const db = getOwnerBillingDb();
+  await Promise.all([
+    db.collection(SUBSCRIPTIONS_COLLECTION).doc(ownerUid).set(nextSubscription, { merge: true }),
+    db
+      .collection(OWNER_PROFILES_COLLECTION)
+      .doc(ownerUid)
+      .set(
+        {
+          subscriptionStatus: nextStatus === 'past_due' ? 'active' : nextStatus,
+          updatedAt: now,
+        },
+        { merge: true },
+      ),
+  ]);
+
+  return true;
 }

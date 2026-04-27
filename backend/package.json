@@ -17,6 +17,7 @@
     "benchmark": "node ./scripts/benchmark-storefront-api.mjs"
   },
   "dependencies": {
+    "@apple/app-store-server-library": "^1.7.0",
     "@sentry/node": "~10.46.0",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",

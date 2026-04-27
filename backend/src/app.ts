@@ -34,6 +34,7 @@ import { productReviewRoutes } from './routes/productReviewRoutes';
 import { marketAreaRoutes } from './routes/marketAreaRoutes';
 import { memberEmailRoutes } from './routes/memberEmailRoutes';
 import { ownerBillingRoutes, ownerBillingWebhookHandler } from './routes/ownerBillingRoutes';
+import { appStoreNotificationRoutes } from './routes/appStoreNotificationRoutes';
 import { stripeIdentityWebhookHandler } from './routes/stripeIdentityRoutes';
 import { ownerPortalAiRoutes } from './routes/ownerPortalAiRoutes';
 import { ownerWelcomeEmailRoutes } from './routes/ownerWelcomeEmailRoutes';
@@ -363,6 +364,7 @@ export function createApp() {
   app.use('/', marketAreaRoutes);
   app.use('/', memberEmailRoutes);
   app.use('/', ownerBillingRoutes);
+  app.use('/', appStoreNotificationRoutes);
   app.use('/', ownerPortalAiRoutes);
   app.use('/', ownerWelcomeEmailRoutes);
   app.use('/', ownerPortalWorkspaceRoutes);
