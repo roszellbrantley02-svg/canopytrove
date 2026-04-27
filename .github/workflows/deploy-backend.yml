@@ -1,0 +1,138 @@
+name: Deploy Backend Now
+
+# Manual-only workflow. Use this whenever you want to redeploy the backend
+# (build a fresh Docker image from current master, push to Artifact Registry,
+# deploy to Cloud Run, optionally trigger the discovery enrichment sweep)
+# without waiting for the scheduled OCM seed refresh.
+#
+# Common uses:
+# - Smoke-testing the GitHub-Actions-driven deploy after one-time GCP setup
+# - Pushing an out-of-band fix that doesn't ride a seed refresh
+# - Manually catching up after a seed commit landed but AUTO_DEPLOY was off
+
+on:
+  workflow_dispatch:
+    inputs:
+      trigger_sweep:
+        description: 'POST /admin/discovery/sweep after deploy'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      reason:
+        description: 'Free-text reason for this manual deploy (logged in summary)'
+        required: false
+        default: 'manual-test'
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GCP_PROJECT_ID: canopy-trove
+  GCP_REGION: us-east4
+  CLOUD_RUN_SERVICE: canopytrove-api
+  ARTIFACT_REGISTRY_IMAGE: us-east4-docker.pkg.dev/canopy-trove/canopytrove-api/canopytrove-api
+  BACKEND_BASE_URL: https://api.canopytrove.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Compute deploy tag
+        id: tag
+        run: |
+          TAG=$(git rev-parse --short HEAD)
+          echo "Deploy tag: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push Docker image to Artifact Registry
+        run: |
+          set -euo pipefail
+          gcloud builds submit \
+            --tag "${{ env.ARTIFACT_REGISTRY_IMAGE }}:${{ steps.tag.outputs.tag }}" \
+            --project "${{ env.GCP_PROJECT_ID }}"
+
+      - name: Deploy to Cloud Run
+        run: |
+          set -euo pipefail
+          gcloud run deploy "${{ env.CLOUD_RUN_SERVICE }}" \
+            --image "${{ env.ARTIFACT_REGISTRY_IMAGE }}:${{ steps.tag.outputs.tag }}" \
+            --region "${{ env.GCP_REGION }}" \
+            --project "${{ env.GCP_PROJECT_ID }}"
+
+      - name: Wait for /readyz to return 200
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.BACKEND_BASE_URL }}/readyz" || echo "000")
+            echo "Attempt $attempt: /readyz returned $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Backend is ready."
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "Backend did not become ready within 120 seconds."
+          exit 1
+
+      - name: Trigger discovery enrichment sweep
+        if: ${{ github.event.inputs.trigger_sweep == 'true' }}
+        env:
+          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ADMIN_API_KEY}" ]; then
+            echo "ADMIN_API_KEY secret is not set — cannot trigger sweep."
+            exit 1
+          fi
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "x-admin-api-key: ${ADMIN_API_KEY}" \
+            -H "Content-Type: application/json" \
+            "${{ env.BACKEND_BASE_URL }}/admin/discovery/sweep")
+
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          STATUS=$(echo "$RESPONSE" | tail -n1)
+
+          echo "Sweep response status: $STATUS"
+          echo "Sweep response body: $BODY"
+
+          if [ "$STATUS" != "200" ] && [ "$STATUS" != "202" ]; then
+            echo "Sweep request failed with status $STATUS."
+            exit 1
+          fi
+
+          echo "Sweep accepted. Background enrichment is now running."
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Manual Backend Deploy Summary"
+            echo
+            echo "- reason: ${{ github.event.inputs.reason }}"
+            echo "- deploy_tag: ${{ steps.tag.outputs.tag }}"
+            echo "- cloud_run_service: ${{ env.CLOUD_RUN_SERVICE }}"
+            echo "- backend_base_url: ${{ env.BACKEND_BASE_URL }}"
+            echo "- triggered_sweep: ${{ github.event.inputs.trigger_sweep }}"
+          } >> "$GITHUB_STEP_SUMMARY"
