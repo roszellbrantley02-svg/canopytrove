@@ -1089,7 +1089,7 @@ export async function syncOwnerAppleSubscription(
 
   const nextSubscription: OwnerSubscriptionRecord = {
     ownerUid,
-    dispensaryId: storefrontId ?? ownerProfile.dispensaryId ?? '',
+    dispensaryId: storefrontId ?? existingSubscription?.dispensaryId ?? '',
     provider: 'apple_iap',
     externalCustomerId: existingSubscription?.externalCustomerId ?? null,
     externalSubscriptionId:
