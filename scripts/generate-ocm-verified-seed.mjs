@@ -128,16 +128,26 @@ async function fetchVerificationHtmlWithFetch() {
 }
 
 function fetchVerificationHtmlWithCurl() {
-  const text = execFileSync('curl.exe', ['-sS', '-L', '-A', USER_AGENT, OCM_VERIFICATION_URL], {
-    encoding: 'utf8',
-    maxBuffer: 20 * 1024 * 1024,
-  });
+  // Cross-platform: prefer plain `curl` (Linux/macOS), fall back to `curl.exe` (Windows)
+  const candidates = ['curl', 'curl.exe'];
+  let lastError = null;
+  for (const bin of candidates) {
+    try {
+      const text = execFileSync(bin, ['-sS', '-L', '-A', USER_AGENT, OCM_VERIFICATION_URL], {
+        encoding: 'utf8',
+        maxBuffer: 20 * 1024 * 1024,
+      });
 
-  if (!text.includes('<table class="table">')) {
-    throw new Error('curl did not return the OCM verification table.');
+      if (!text.includes('<table class="table">')) {
+        throw new Error(`${bin} did not return the OCM verification table.`);
+      }
+
+      return text;
+    } catch (error) {
+      lastError = error;
+    }
   }
-
-  return text;
+  throw lastError ?? new Error('No curl binary available on PATH.');
 }
 
 async function fetchVerificationHtml() {
