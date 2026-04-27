@@ -53,15 +53,42 @@ appStoreNotificationRoutes.post(
       );
 
       response.status(200).json({ ok: true, ...result });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+    } catch (error: unknown) {
+      // @apple/app-store-server-library throws a VerificationException with
+      // numeric `.status` and an underlying `.cause`; `.message` is often
+      // empty so we have to dig into all available fields to surface a
+      // meaningful error.
+      const errorAny = error as {
+        message?: string;
+        name?: string;
+        status?: number;
+        statusCode?: number;
+        cause?: unknown;
+        stack?: string;
+      };
+      const errorName = errorAny.name || (error instanceof Error ? 'Error' : 'NonError');
+      const baseMessage = errorAny.message || '';
+      const verificationStatus = errorAny.status ?? errorAny.statusCode;
+      const causeMessage =
+        errorAny.cause instanceof Error
+          ? errorAny.cause.message
+          : errorAny.cause != null
+            ? String(errorAny.cause)
+            : '';
 
-      // Signature-verification failures are unrecoverable — return 400 so
-      // Apple stops retrying. Other errors return 500 so Apple does retry.
+      const surfacedMessage =
+        baseMessage ||
+        causeMessage ||
+        (verificationStatus !== undefined
+          ? `${errorName}(status=${verificationStatus})`
+          : errorName);
+
+      const messageBlob = `${baseMessage} ${causeMessage} ${errorName}`.toLowerCase();
       const isSignatureError =
-        errorMessage.toLowerCase().includes('signature') ||
-        errorMessage.toLowerCase().includes('verification') ||
-        errorMessage.toLowerCase().includes('jwt');
+        messageBlob.includes('signature') ||
+        messageBlob.includes('verification') ||
+        messageBlob.includes('jwt') ||
+        messageBlob.includes('certificate');
       const status = isSignatureError ? 400 : 500;
 
       console.error(
@@ -69,12 +96,22 @@ appStoreNotificationRoutes.post(
           level: 'error',
           message: 'apple_notification_failed',
           requestId,
-          error: errorMessage,
+          errorName,
+          errorMessage: baseMessage,
+          causeMessage,
+          verificationStatus,
+          stack: errorAny.stack ?? null,
           status,
         }),
       );
 
-      response.status(status).json({ ok: false, error: errorMessage });
+      response.status(status).json({
+        ok: false,
+        error: surfacedMessage,
+        errorName,
+        verificationStatus,
+        causeMessage: causeMessage || undefined,
+      });
     }
   },
 );
