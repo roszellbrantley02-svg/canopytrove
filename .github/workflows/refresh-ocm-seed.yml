@@ -1,12 +1,14 @@
 name: Refresh OCM Verified Seed
 
 on:
-  # Runs every Monday at 11:00 UTC (07:00 EST / 06:00 EDT). The job checks the
-  # seed file's last commit timestamp and only regenerates if it is older than
-  # ~3 weeks, so the effective cadence is "auto-refresh every 3 weeks" while
-  # being resilient to missed runs and respecting any manual refreshes between.
+  # Runs at 11:00 UTC (07:00 EST / 06:00 EDT) on the first and fourth Monday
+  # of each month — i.e. days 1-7 and 22-28 of the month, intersected with
+  # day-of-week=Monday. Net cadence: ~3 weeks apart, only on Mondays, exactly
+  # 2 runs per month. Combined with the in-job staleness check (skip if seed
+  # is younger than 20 days), this is the cheapest reliable expression of
+  # "every ~3 weeks on a Monday" that GitHub Actions cron allows.
   schedule:
-    - cron: '0 11 * * 1'
+    - cron: '0 11 1-7,22-28 * 1'
   # Allows a maintainer to trigger a refresh on demand from the Actions tab.
   workflow_dispatch:
     inputs:
