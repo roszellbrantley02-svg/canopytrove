@@ -14,6 +14,15 @@ type BatchResult = {
   error?: string;
 };
 
+const DEFAULT_USERS_PER_BATCH = 500;
+const MAX_USERS_PER_BATCH = 1000; // Firebase Admin's listUsers cap.
+
+function parsePositiveIntParam(value: unknown, fallback: number, max: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(max, Math.floor(parsed));
+}
+
 adminBatchWelcomeEmailRoutes.post('/batch-welcome-emails', async (request, response) => {
   if (!hasBackendFirebaseConfig) {
     response.status(503).json({
@@ -35,10 +44,27 @@ adminBatchWelcomeEmailRoutes.post('/batch-welcome-emails', async (request, respo
   const dryRun = request.query.dryRun === 'true';
   const typeFilter =
     typeof request.query.type === 'string' ? request.query.type.trim().toLowerCase() : null;
+  // Single-page-per-request: previously this looped through ALL Firebase
+  // Auth users in one request, which (a) hit the global 30s request
+  // timeout long before completing for any non-trivial user base, (b)
+  // accumulated a result object per user in memory, and (c) had no
+  // resume capability on partial failure. Caller now drives pagination
+  // by passing back the returned nextPageToken until it's null.
+  const usersPerBatch = parsePositiveIntParam(
+    request.query.maxUsers,
+    DEFAULT_USERS_PER_BATCH,
+    MAX_USERS_PER_BATCH,
+  );
+  const incomingPageToken =
+    typeof request.query.pageToken === 'string' && request.query.pageToken.trim()
+      ? request.query.pageToken.trim()
+      : undefined;
   const results: BatchResult[] = [];
   const ownerProfileCollection = getOwnerProfileCollection();
 
-  // Collect all owner UIDs so we know who is an owner vs a regular member
+  // Collect all owner UIDs so we know who is an owner vs a regular member.
+  // Owner profile count is bounded (~hundreds), so a single full read is
+  // fine — unlike the user list which is unbounded.
   const ownerUids = new Set<string>();
   if (ownerProfileCollection) {
     const ownerSnapshots = await ownerProfileCollection.get();
@@ -47,10 +73,11 @@ adminBatchWelcomeEmailRoutes.post('/batch-welcome-emails', async (request, respo
     }
   }
 
-  // Page through all Firebase Auth users
-  let nextPageToken: string | undefined;
-  do {
-    const listResult = await auth.listUsers(1000, nextPageToken);
+  // Process a single page of users. Caller resumes via nextPageToken.
+  let nextPageToken: string | null;
+  {
+    const listResult = await auth.listUsers(usersPerBatch, incomingPageToken);
+    nextPageToken = listResult.pageToken ?? null;
 
     for (const userRecord of listResult.users) {
       const email = userRecord.email?.trim();
@@ -177,9 +204,7 @@ adminBatchWelcomeEmailRoutes.post('/batch-welcome-emails', async (request, respo
         }
       }
     }
-
-    nextPageToken = listResult.pageToken;
-  } while (nextPageToken);
+  }
 
   const sent = results.filter((r) => r.result === 'sent');
   const alreadySent = results.filter((r) => r.result === 'already_sent');
@@ -197,5 +222,7 @@ adminBatchWelcomeEmailRoutes.post('/batch-welcome-emails', async (request, respo
       failed: failed.length,
     },
     results,
+    // null when this was the last page; pass back to resume.
+    nextPageToken,
   });
 });
