@@ -25,7 +25,7 @@
  *   - Content-type check: refuses non-HTML responses.
  */
 
-import { lookup as dnsLookup } from 'node:dns/promises';
+import { lookup as dnsLookup, type LookupAddress } from 'node:dns/promises';
 import { logger } from '../observability/logger';
 import { detectLab, parseCoa } from './productCatalogService';
 import type { ProductCOA } from '../types';
@@ -114,8 +114,11 @@ async function parseSafeUrl(rawUrl: string): Promise<URL | null> {
   // We resolve all addresses and reject if ANY is in a blocked range —
   // an attacker who points a host at both a public IP and a private one
   // shouldn't get to pick which we connect to.
-  let addresses: Awaited<ReturnType<typeof dnsLookup>>;
+  let addresses: LookupAddress[];
   try {
+    // `all: true` selects the array overload of dnsLookup. TypeScript's
+    // overload resolution can't narrow the union return type purely from
+    // the option object, so we annotate the destination explicitly.
     addresses = await dnsLookup(host, { all: true, verbatim: true });
   } catch {
     return null;
