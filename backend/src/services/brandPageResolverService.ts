@@ -25,7 +25,8 @@
  *   - Content-type check: refuses non-HTML responses.
  */
 
-import { lookup as dnsLookup, type LookupAddress } from 'node:dns/promises';
+import { lookup as dnsLookup } from 'node:dns/promises';
+import type { LookupAddress } from 'node:dns';
 import { logger } from '../observability/logger';
 import { detectLab, parseCoa } from './productCatalogService';
 import type { ProductCOA } from '../types';
