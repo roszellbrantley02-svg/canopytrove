@@ -13,6 +13,7 @@
  */
 
 import { Router } from 'express';
+import { createAppCheckStrictMiddleware } from '../http/appCheckGuard';
 import { createRateLimitMiddleware } from '../http/rateLimit';
 import { logger } from '../observability/logger';
 import { lookupOcmLicense } from '../services/ocmLicenseLookupService';
@@ -152,57 +153,69 @@ function shapeCoa(resolution: ScanResolution): ProductCOA | null {
 /**
  * GET /products/resolve?code=...
  *
- * Public endpoint for resolving codes without persisting.
- * Rate limited to 60 req/min per IP.
- * Cached response for links and previews.
+ * Resolves codes without persisting. The waterfall includes
+ * `resolveBrandPage` which performs server-side HTTP fetches against
+ * caller-supplied URLs — so this GET has side effects, and must be App
+ * Check gated like the write endpoints (allowSafeMethods: false). Without
+ * that, anyone on the public internet can use the backend as an SSRF
+ * proxy via attacker-controlled URLs.
+ *
+ * Rate limited to 10 req/min per IP — much tighter than the read-only
+ * default since each request can trigger an outbound HTTP fetch.
  */
+const resolveAppCheck = createAppCheckStrictMiddleware({ allowSafeMethods: false });
 const resolveRateLimiter = createRateLimitMiddleware({
   name: 'product-resolve',
   windowMs: 60_000,
-  max: 60,
+  max: 10,
   methods: ['GET'],
 });
 
-productResolveRoutes.get('/products/resolve', resolveRateLimiter, async (request, response) => {
-  try {
-    const query = request.query as Record<string, unknown>;
-    const code = typeof query.code === 'string' ? query.code.trim() : '';
+productResolveRoutes.get(
+  '/products/resolve',
+  resolveAppCheck,
+  resolveRateLimiter,
+  async (request, response) => {
+    try {
+      const query = request.query as Record<string, unknown>;
+      const code = typeof query.code === 'string' ? query.code.trim() : '';
 
-    if (!code) {
-      response.status(400).json({
-        ok: false,
-        error: 'code query parameter is required',
+      if (!code) {
+        response.status(400).json({
+          ok: false,
+          error: 'code query parameter is required',
+        });
+        return;
+      }
+
+      // Resolve the code (same logic as scanIngestion, but no persistence)
+      const resolution = await resolveCode(code);
+
+      // Shape response
+      const payload = {
+        ok: true,
+        kind: resolution.kind,
+        license: shapeLicense(resolution),
+        coa: shapeCoa(resolution),
+        verificationState: resolution.kind === 'license' ? resolution.verificationState : undefined,
+        catalogState: resolution.kind === 'product' ? resolution.catalogState : undefined,
+        reason: resolution.kind === 'unknown' ? resolution.reason : undefined,
+      };
+
+      response.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+      response.json(payload);
+
+      logger.info('[productResolve] Resolved code', {
+        kind: resolution.kind,
       });
-      return;
+    } catch (error) {
+      logger.error('[productResolve] Unexpected error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      response.status(500).json({
+        ok: false,
+        error: 'Internal server error',
+      });
     }
-
-    // Resolve the code (same logic as scanIngestion, but no persistence)
-    const resolution = await resolveCode(code);
-
-    // Shape response
-    const payload = {
-      ok: true,
-      kind: resolution.kind,
-      license: shapeLicense(resolution),
-      coa: shapeCoa(resolution),
-      verificationState: resolution.kind === 'license' ? resolution.verificationState : undefined,
-      catalogState: resolution.kind === 'product' ? resolution.catalogState : undefined,
-      reason: resolution.kind === 'unknown' ? resolution.reason : undefined,
-    };
-
-    response.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
-    response.json(payload);
-
-    logger.info('[productResolve] Resolved code', {
-      kind: resolution.kind,
-    });
-  } catch (error) {
-    logger.error('[productResolve] Unexpected error', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    response.status(500).json({
-      ok: false,
-      error: 'Internal server error',
-    });
-  }
-});
+  },
+);
