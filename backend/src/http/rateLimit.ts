@@ -123,15 +123,22 @@ async function consumePersistentBucket(bucketKey: string, windowMs: number) {
   });
 }
 
+let lastCapacityWarningAt = 0;
+const CAPACITY_WARNING_INTERVAL_MS = 60_000;
+
 function consumeMemoryBucket(bucketKey: string, windowMs: number) {
   const now = Date.now();
   if (rateLimitBuckets.size > MAX_MEMORY_BUCKETS) {
     sweepExpiredBuckets(now);
   }
 
-  // Log warning when memory buckets reach 80% capacity
+  // Log warning at most once per minute when memory buckets are near
+  // capacity. Without throttling this fires on every bucket-touching
+  // request once we cross 80%, drowning Cloud Logging at the worst
+  // possible moment.
   const bucketCapacityPercent = (rateLimitBuckets.size / MAX_MEMORY_BUCKETS) * 100;
-  if (bucketCapacityPercent >= 80) {
+  if (bucketCapacityPercent >= 80 && now - lastCapacityWarningAt >= CAPACITY_WARNING_INTERVAL_MS) {
+    lastCapacityWarningAt = now;
     logger.warn(`Rate limit memory buckets at ${bucketCapacityPercent.toFixed(1)}% capacity`, {
       current: rateLimitBuckets.size,
       max: MAX_MEMORY_BUCKETS,
