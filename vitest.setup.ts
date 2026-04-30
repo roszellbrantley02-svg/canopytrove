@@ -60,6 +60,19 @@ vi.mock('expo-secure-store', () => ({
   WHEN_UNLOCKED_THIS_DEVICE_ONLY: 6,
 }));
 
+// @react-native-community/netinfo's published source uses Flow `typeof T`
+// syntax that vitest's TS transform can't parse — App.test.tsx pulls it
+// in via App.tsx → OfflineBanner → useOfflineAware. Stub the addEventListener
+// surface so the hook initializes cleanly under test (always-online).
+vi.mock('@react-native-community/netinfo', () => ({
+  default: {
+    addEventListener: () => () => undefined,
+    fetch: async () => ({ isConnected: true, type: 'wifi' }),
+  },
+  addEventListener: () => () => undefined,
+  fetch: async () => ({ isConnected: true, type: 'wifi' }),
+}));
+
 vi.mock('expo-haptics', () => ({
   selectionAsync: vi.fn(async () => undefined),
   impactAsync: vi.fn(async () => undefined),
