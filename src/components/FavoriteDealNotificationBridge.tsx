@@ -99,13 +99,21 @@ export function FavoriteDealNotificationBridge() {
 
   // Defer the initial sync so it doesn't compete with the primary
   // screen data fetch for network connections (this call takes ~1s).
+  //
+  // Initial sync now passes `allowNotifications: true` so the OS prompt
+  // fires the FIRST time a signed-in user has at least one saved
+  // storefront — i.e. at the moment they're most engaged. Previously the
+  // initial sync passed false, meaning the prompt only appeared later
+  // when the user happened to background+resume the app (confusing UX:
+  // "why is this asking me now?"). The 3-second deferral keeps the
+  // prompt from racing the first-paint frame.
   React.useEffect(() => {
     if (!isActive) return;
 
     let cancelled = false;
     const run = () => {
       if (!cancelled) {
-        void syncAlerts(false);
+        void syncAlerts(true);
       }
     };
 

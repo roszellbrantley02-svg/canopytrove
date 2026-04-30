@@ -219,15 +219,28 @@ function ScanCameraScreenInner({ route, navigation }: ScanCameraScreenProps) {
             iconName="camera-outline"
           />
           <Pressable
-            onPress={handleManualEntryTapped}
+            onPress={() => {
+              void Linking.openSettings().catch(() => undefined);
+            }}
             style={({ pressed }) => [
               styles.fallbackButton,
               pressed && styles.fallbackButtonPressed,
             ]}
             accessibilityRole="button"
+            accessibilityLabel="Open device settings to enable camera access"
+          >
+            <Text style={styles.fallbackButtonText}>Open Settings</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleManualEntryTapped}
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              pressed && styles.secondaryButtonPressed,
+            ]}
+            accessibilityRole="button"
             accessibilityLabel="Enter information manually"
           >
-            <Text style={styles.fallbackButtonText}>Enter manually</Text>
+            <Text style={styles.secondaryButtonText}>Enter manually</Text>
           </Pressable>
           <Pressable
             onPress={handleClose}

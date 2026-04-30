@@ -75,6 +75,28 @@ export function isBackendRequestTimeoutError(error: unknown): error is BackendRe
   return error instanceof BackendRequestTimeoutError;
 }
 
+/**
+ * Thrown when the backend's recentAuthGuard rejects a sensitive write
+ * (billing checkout, email change, account deletion) because the user's
+ * Firebase auth token is older than the operation's freshness window
+ * (typically 5 min). Callers should catch this and prompt the user to
+ * sign in again rather than letting it bubble to Sentry as a generic
+ * Error — it's expected user state, not a bug.
+ */
+export class BackendReauthRequiredError extends Error {
+  public readonly code = 'REAUTH_REQUIRED' as const;
+  public readonly maxAuthAgeSeconds: number | null;
+  constructor(message: string, maxAuthAgeSeconds: number | null) {
+    super(message);
+    this.name = 'BackendReauthRequiredError';
+    this.maxAuthAgeSeconds = maxAuthAgeSeconds;
+  }
+}
+
+export function isBackendReauthRequiredError(error: unknown): error is BackendReauthRequiredError {
+  return error instanceof BackendReauthRequiredError;
+}
+
 type CacheEntry<T> = {
   expiresAt: number;
   value: T;
@@ -242,6 +264,7 @@ async function throwBackendError(response: Response): Promise<never> {
       code?: unknown;
       requiredTier?: unknown;
       currentTier?: unknown;
+      maxAuthAgeSeconds?: unknown;
       requestId?: unknown;
     };
 
@@ -256,6 +279,21 @@ async function throwBackendError(response: Response): Promise<never> {
           ? payload.error.trim()
           : 'This feature requires a higher plan.';
       throw new BackendTierAccessError(errorText, payload.requiredTier, payload.currentTier);
+    }
+
+    // Detect re-auth required errors from recentAuthGuard (HTTP 403 with
+    // code: 'reauth_required'). Surfacing as a typed error lets callers
+    // prompt the user to sign in again instead of letting the generic
+    // "Please sign in again before performing this action." propagate to
+    // Sentry as REACT-NATIVE-X (was firing 7+ events from real users).
+    if (payload.code === 'reauth_required') {
+      const errorText =
+        typeof payload.error === 'string' && payload.error.trim()
+          ? payload.error.trim()
+          : 'Please sign in again before performing this action.';
+      const maxAuthAgeSeconds =
+        typeof payload.maxAuthAgeSeconds === 'number' ? payload.maxAuthAgeSeconds : null;
+      throw new BackendReauthRequiredError(errorText, maxAuthAgeSeconds);
     }
 
     const errorText =
@@ -277,6 +315,7 @@ async function throwBackendError(response: Response): Promise<never> {
 
     if (
       parseError instanceof BackendTierAccessError ||
+      parseError instanceof BackendReauthRequiredError ||
       (parseError instanceof Error &&
         parseError.message !== `Backend request failed with ${response.status}`)
     ) {

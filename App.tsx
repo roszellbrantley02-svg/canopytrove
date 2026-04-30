@@ -7,6 +7,7 @@ import { AgeGateScreen } from './src/screens/AgeGateScreen';
 import { AnalyticsBridge } from './src/components/AnalyticsBridge';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 import { GamificationRewardToastHost } from './src/components/GamificationRewardToastHost';
+import { OfflineBanner } from './src/components/OfflineBanner';
 import { AppBootScreen } from './src/components/AppBootScreen';
 import { StorefrontControllerProvider } from './src/context/StorefrontController';
 import { MusicPlayerProvider } from './src/music/MusicPlayerContext';
@@ -180,6 +181,7 @@ function App() {
                   <AnalyticsBridge />
                   <RootNavigator />
                   <GamificationRewardToastHost />
+                  <OfflineBanner />
                 </AppErrorBoundary>
               </MusicPlayerProvider>
             </StorefrontControllerProvider>
