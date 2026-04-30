@@ -43,6 +43,90 @@ export const backgroundTracks: BackgroundTrack[] = [
     mood: 'nocturnal drive',
     source: require('../../assets/music/midnight-highway-rain.mp3'),
   },
+  {
+    id: 'freeminded',
+    title: 'Freeminded',
+    mood: 'open mind',
+    source: require('../../assets/music/freeminded.mp3'),
+  },
+  {
+    id: 'finding-a-deal',
+    title: 'Finding a Deal',
+    mood: 'city wander',
+    source: require('../../assets/music/finding-a-deal.mp3'),
+  },
+  {
+    id: 'skyline',
+    title: 'Skyline',
+    mood: 'elevated calm',
+    source: require('../../assets/music/skyline.mp3'),
+  },
+  {
+    id: 'afterglow',
+    title: 'Afterglow',
+    mood: 'post-sunset',
+    source: require('../../assets/music/afterglow.mp3'),
+  },
+  {
+    id: 'pioneer',
+    title: 'Pioneer',
+    mood: 'open road',
+    source: require('../../assets/music/pioneer.mp3'),
+  },
+  {
+    id: 'serene',
+    title: 'Serene',
+    mood: 'calm focus',
+    source: require('../../assets/music/serene.mp3'),
+  },
+  {
+    id: 'featherweight',
+    title: 'Featherweight',
+    mood: 'light air',
+    source: require('../../assets/music/featherweight.mp3'),
+  },
+  {
+    id: 'classified',
+    title: 'Classified',
+    mood: 'quiet confidence',
+    source: require('../../assets/music/classified.mp3'),
+  },
+  {
+    id: 'stealth',
+    title: 'Stealth',
+    mood: 'low-key',
+    source: require('../../assets/music/stealth.mp3'),
+  },
+  {
+    id: 'lakeside',
+    title: 'Lakeside',
+    mood: 'still water',
+    source: require('../../assets/music/lakeside.mp3'),
+  },
+  {
+    id: 'brightside',
+    title: 'Brightside',
+    mood: 'uplift',
+    source: require('../../assets/music/brightside.mp3'),
+  },
+  {
+    id: 'interface-flow',
+    title: 'Interface Flow',
+    mood: 'tech ambient',
+    source: require('../../assets/music/interface-flow.mp3'),
+  },
+  {
+    id: 'open-highway',
+    title: 'Open Highway',
+    mood: 'drive-time',
+    source: require('../../assets/music/open-highway.mp3'),
+  },
+  {
+    id: 'nice-day',
+    title: 'Nice Day',
+    mood: 'warm afternoon',
+    source: require('../../assets/music/nice-day.mp3'),
+  },
 ];
 
 /** Soft-volume default — heightens the experience without drowning out speech. */

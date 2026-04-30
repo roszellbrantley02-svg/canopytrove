@@ -50,7 +50,15 @@ function loadStorefronts() {
   return vm.runInNewContext(arrayCode);
 }
 
-function renderSharedHead({ title, description, canonical }) {
+function renderSharedHead({ title, description, canonical, appArgument }) {
+  // Smart App Banner: iOS Safari surfaces a native "Get the App" prompt at
+  // the top of the page when this meta tag is present. `app-argument` is
+  // passed to the iOS app via Universal Link, so a Google search → Safari
+  // tap → App install or Open lands the user on the same storefront the
+  // page describes (canopytrove://storefronts/{slug}).
+  const smartBanner = appArgument
+    ? `\n    <meta name="apple-itunes-app" content="app-id=6762499234, app-argument=${escapeHtml(appArgument)}" />`
+    : '';
   return `    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapeHtml(title)}</title>
@@ -68,8 +76,20 @@ function renderSharedHead({ title, description, canonical }) {
     <meta name="twitter:image" content="https://canopytrove.com/media/og-image.png" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.png" type="image/png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />${smartBanner}
     <link rel="stylesheet" href="/styles.css" />`;
+}
+
+function renderIosBar() {
+  // Page-top announcement that Canopy Trove is now on iPhone. Same visual
+  // treatment as the homepage iOS bar so the brand reads consistently.
+  return `      <div class="webapp-bar webapp-bar-ios" role="banner" style="background:linear-gradient(90deg,#0a3a1f,#0f5b32);">
+        <div class="container webapp-bar-inner">
+          <span class="webapp-bar-badge" style="background:#ffd84d;color:#1a1a1a;">NEW</span>
+          <span class="webapp-bar-text">Canopy Trove is now on iPhone &mdash; download free from the App Store</span>
+          <a class="webapp-bar-cta" href="https://apps.apple.com/us/app/canopy-trove/id6762499234">Download on iOS &rarr;</a>
+        </div>
+      </div>`;
 }
 
 function renderSharedHeader() {
@@ -140,15 +160,16 @@ function renderSharedFooter() {
       </footer>`;
 }
 
-function renderShell({ title, description, canonical, body, jsonLd }) {
+function renderShell({ title, description, canonical, body, jsonLd, appArgument }) {
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
-${renderSharedHead({ title, description, canonical })}
+${renderSharedHead({ title, description, canonical, appArgument })}
     <script type="application/ld+json">${jsonLd}</script>
   </head>
   <body>
     <div class="page-shell">
+${renderIosBar()}
 ${renderSharedHeader()}
       <main>
 ${body}
@@ -177,15 +198,52 @@ function buildAddressLine(storefront) {
   return parts.join(', ');
 }
 
+function buildFaqEntries(storefront) {
+  const cityLabel = `${storefront.city}, ${storefront.state}`;
+  const fullAddress = buildAddressLine(storefront);
+  const hoursAnswer =
+    Array.isArray(storefront.hours) && storefront.hours.length > 0
+      ? storefront.hours.join('; ')
+      : 'Hours have not been published yet for this storefront. Check the Open in Web App link for live status.';
+  return [
+    {
+      question: `Is ${storefront.displayName} a licensed cannabis dispensary?`,
+      answer: `Yes. ${storefront.displayName} appears in the New York Office of Cannabis Management (OCM) public dispensary registry under license ID ${storefront.licenseId}. Canopy Trove cross-references the OCM registry hourly to keep verification current.`,
+    },
+    {
+      question: `Where is ${storefront.displayName} located?`,
+      answer: `${storefront.displayName} is located at ${fullAddress}.`,
+    },
+    {
+      question: `What time does ${storefront.displayName} open?`,
+      answer: hoursAnswer,
+    },
+    {
+      question: `How can I verify ${storefront.displayName}'s NY cannabis license?`,
+      answer: `${storefront.displayName} is verified through the New York OCM public dispensary registry. You can confirm the license at cannabis.ny.gov/dispensary-location-verification or use the Verify tab inside the Canopy Trove iOS app to scan the storefront's state-issued QR placard.`,
+    },
+    {
+      question: `Is ${storefront.displayName} open to adults 21 and older?`,
+      answer: `Yes. NY OCM-licensed dispensaries are restricted to adults 21 and older. Bring a valid ID. Canopy Trove is licensed-discovery only and does not sell, deliver, or process payment for cannabis products.`,
+    },
+  ];
+}
+
 function buildSchemaJsonLd(storefront, canonicalUrl) {
-  const data = {
-    '@context': 'https://schema.org',
-    '@type': 'Store',
+  // The page ships TWO JSON-LD blocks merged into a single @graph: a richer
+  // LocalBusiness/Store entity for the dispensary and a FAQPage for the
+  // question/answer block on the page. Keeping them in one @graph means
+  // Google ingests both without us needing two <script> tags.
+  const storeData = {
+    '@type': ['Store', 'LocalBusiness'],
     '@id': canonicalUrl,
     name: storefront.displayName,
     legalName: storefront.legalName ?? undefined,
     url: canonicalUrl,
     image: storefront.thumbnailUrl ?? 'https://canopytrove.com/media/og-image.png',
+    priceRange: '$$',
+    currenciesAccepted: 'USD',
+    paymentAccepted: 'Cash, Debit Card',
     address: {
       '@type': 'PostalAddress',
       streetAddress: storefront.addressLine1 ?? undefined,
@@ -206,6 +264,8 @@ function buildSchemaJsonLd(storefront, canonicalUrl) {
         : undefined,
     telephone: storefront.phone ?? undefined,
     sameAs: storefront.website ? [storefront.website] : undefined,
+    isAccessibleForFree: true,
+    publicAccess: true,
     additionalProperty: [
       {
         '@type': 'PropertyValue',
@@ -217,15 +277,64 @@ function buildSchemaJsonLd(storefront, canonicalUrl) {
         name: 'Verification Source',
         value: 'New York Office of Cannabis Management public dispensary registry',
       },
+      {
+        '@type': 'PropertyValue',
+        name: 'Minimum Age',
+        value: '21',
+      },
     ],
     description:
       storefront.editorialSummary ??
       `${storefront.displayName} is a New York OCM-verified licensed cannabis dispensary in ${storefront.city}, ${storefront.state}.`,
   };
 
+  const faqData = {
+    '@type': 'FAQPage',
+    '@id': `${canonicalUrl}#faq`,
+    mainEntity: buildFaqEntries(storefront).map((entry) => ({
+      '@type': 'Question',
+      name: entry.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: entry.answer,
+      },
+    })),
+  };
+
+  const graph = {
+    '@context': 'https://schema.org',
+    '@graph': [storeData, faqData],
+  };
+
   // Strip undefined values so the JSON-LD is clean.
-  const cleaned = JSON.parse(JSON.stringify(data));
+  const cleaned = JSON.parse(JSON.stringify(graph));
   return JSON.stringify(cleaned);
+}
+
+function renderFaqSection(storefront) {
+  const entries = buildFaqEntries(storefront);
+  const items = entries
+    .map(
+      (entry) => `              <article class="section-card">
+                <h3>${escapeHtml(entry.question)}</h3>
+                <p>${escapeHtml(entry.answer)}</p>
+              </article>`,
+    )
+    .join('\n');
+  return `        <section class="section-block">
+          <div class="container">
+            <div class="section-heading">
+              <p class="eyebrow">Common questions</p>
+              <h2>Frequently asked about ${escapeHtml(storefront.displayName)}.</h2>
+              <p>
+                Quick answers to the things people search for most about NY-licensed dispensaries.
+              </p>
+            </div>
+            <div class="content-stack">
+${items}
+            </div>
+          </div>
+        </section>`;
 }
 
 function renderHoursList(hours) {
@@ -402,7 +511,9 @@ ${renderAmenities(storefront.amenities)}
               </div>
             </aside>
           </div>
-        </section>`;
+        </section>
+
+${renderFaqSection(storefront)}`;
 
   return renderShell({
     title,
@@ -410,6 +521,7 @@ ${renderAmenities(storefront.amenities)}
     canonical,
     body,
     jsonLd: buildSchemaJsonLd(storefront, canonical),
+    appArgument: `canopytrove://storefronts/${slug}`,
   });
 }
 

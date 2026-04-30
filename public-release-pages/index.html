@@ -73,10 +73,21 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Smart App Banner — iOS Safari shows a "Get the App" prompt at the top of the page -->
+    <meta name="apple-itunes-app" content="app-id=6762499234, app-argument=canopytrove://home" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="page-shell">
+
+      <!-- iOS App Store Announcement Bar -->
+      <div class="webapp-bar webapp-bar-ios" role="banner" style="background:linear-gradient(90deg,#0a3a1f,#0f5b32);">
+        <div class="container webapp-bar-inner">
+          <span class="webapp-bar-badge" style="background:#ffd84d;color:#1a1a1a;">NEW</span>
+          <span class="webapp-bar-text">Canopy Trove is now on iPhone &mdash; download free from the App Store</span>
+          <a class="webapp-bar-cta" href="https://apps.apple.com/us/app/canopy-trove/id6762499234">Download on iOS &rarr;</a>
+        </div>
+      </div>
 
       <!-- Web App Announcement Bar -->
       <div class="webapp-bar" role="banner">
