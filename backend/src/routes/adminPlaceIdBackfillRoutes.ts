@@ -251,46 +251,70 @@ router.post('/backfill-hours', async (request: Request, response: Response) => {
       dryRun,
     };
 
-    const writes: Promise<unknown>[] = [];
+    // Previously this loop did `await db.collection(DETAILS).doc(id).get()`
+    // sequentially per storefront. With 627 storefronts × ~50 ms each
+    // that's > 30 s and hits the request timeout. Process detail-fetches
+    // and writes in concurrent batches.
+    const READ_CONCURRENCY = 50;
+    const WRITE_CONCURRENCY = 25;
 
-    for (const summaryDoc of summarySnap.docs) {
-      const summaryData = summaryDoc.data() as { hours?: string[]; openNow?: boolean | null };
+    type PendingWrite = { docId: string; hours: string[]; openNow: boolean | null };
+    const pendingWrites: PendingWrite[] = [];
 
-      // Already populated — skip
+    // Phase 1: figure out which docs need updating, with concurrent reads.
+    const detailFetchesToProcess = summarySnap.docs.filter((summaryDoc) => {
+      const summaryData = summaryDoc.data() as { hours?: string[] };
       if (summaryData.hours && summaryData.hours.length > 0) {
         results.alreadyHasHours++;
-        continue;
+        return false;
       }
+      return true;
+    });
 
-      const detailSnap = await db.collection(DETAILS_COLLECTION).doc(summaryDoc.id).get();
-      if (!detailSnap.exists) {
-        results.noDetailDoc++;
-        continue;
+    for (let i = 0; i < detailFetchesToProcess.length; i += READ_CONCURRENCY) {
+      const batch = detailFetchesToProcess.slice(i, i + READ_CONCURRENCY);
+      const detailSnaps = await Promise.all(
+        batch.map((summaryDoc) => db.collection(DETAILS_COLLECTION).doc(summaryDoc.id).get()),
+      );
+      for (let j = 0; j < batch.length; j++) {
+        const summaryDoc = batch[j];
+        const detailSnap = detailSnaps[j];
+        if (!detailSnap.exists) {
+          results.noDetailDoc++;
+          continue;
+        }
+        const detailData = detailSnap.data() as { hours?: string[] };
+        const hours = detailData.hours ?? [];
+        if (hours.length === 0) {
+          results.noHoursInDetail++;
+          continue;
+        }
+        pendingWrites.push({
+          docId: summaryDoc.id,
+          hours,
+          openNow: computeOpenNowFromHours(hours),
+        });
+        results.updated++;
       }
-
-      const detailData = detailSnap.data() as { hours?: string[] };
-      const hours = detailData.hours ?? [];
-
-      if (hours.length === 0) {
-        results.noHoursInDetail++;
-        continue;
-      }
-
-      const recomputedOpenNow = computeOpenNowFromHours(hours);
-
-      if (!dryRun) {
-        writes.push(
-          summaryDoc.ref.update({
-            hours,
-            ...(recomputedOpenNow !== null ? { openNow: recomputedOpenNow } : {}),
-          }),
-        );
-      }
-
-      results.updated++;
     }
 
-    await Promise.all(writes);
+    // Phase 2: apply writes in concurrent batches.
+    if (!dryRun) {
+      for (let i = 0; i < pendingWrites.length; i += WRITE_CONCURRENCY) {
+        const batch = pendingWrites.slice(i, i + WRITE_CONCURRENCY);
+        await Promise.all(
+          batch.map((pending) =>
+            db
+              .collection(SUMMARY_COLLECTION)
+              .doc(pending.docId)
+              .update({
+                hours: pending.hours,
+                ...(pending.openNow !== null ? { openNow: pending.openNow } : {}),
+              }),
+          ),
+        );
+      }
+    }
 
     logger.info('[hours-backfill] Complete', results as Record<string, unknown>);
     response.json(results);
