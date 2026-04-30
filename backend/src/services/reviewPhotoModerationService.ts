@@ -163,13 +163,28 @@ function normalizeTrimmedString(value: unknown, fallback = '') {
  * Convert image bytes (any sharp-supported format including HEIC/HEIF)
  * to JPEG. Uses dynamic require so the server still starts if sharp is
  * not installed — callers catch and route to manual review.
+ *
+ * limitInputPixels caps the decoded pixel count at 50 megapixels — large
+ * enough for any real phone-camera photo (8000x6250) but rejects
+ * decompression-bomb images that are small on disk (8 MB) but decode to
+ * billions of pixels (would need tens of GB of RAM and OOM the Cloud Run
+ * instance). Sharp's default cap is 268 MP, far too generous for our
+ * threat model. failOn: 'error' rejects truncated/corrupted input
+ * instead of silently producing partial output.
  */
+const SHARP_INPUT_PIXEL_CAP = 50_000_000;
+
 async function convertToJpeg(inputBytes: Buffer): Promise<Buffer> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const sharp = require('sharp') as (input: Buffer) => {
+  const sharp = require('sharp') as (
+    input: Buffer,
+    options?: { limitInputPixels?: number; failOn?: 'none' | 'truncated' | 'warning' | 'error' },
+  ) => {
     jpeg: (options: { quality: number }) => { toBuffer: () => Promise<Buffer> };
   };
-  return sharp(inputBytes).jpeg({ quality: 84 }).toBuffer();
+  return sharp(inputBytes, { limitInputPixels: SHARP_INPUT_PIXEL_CAP, failOn: 'error' })
+    .jpeg({ quality: 84 })
+    .toBuffer();
 }
 
 function normalizeContentType(value: unknown) {
