@@ -27,12 +27,21 @@ if (!isWeb) {
   Constants = require('expo-constants').default;
 }
 
+// SecureStore (expo-secure-store) only accepts keys matching [A-Za-z0-9._-].
+// The previous key `canopytrove:device-push-token:v1` contained `:` chars
+// which triggered ensureValidKey() and failed every push token write/read
+// with "Invalid key provided to SecureStore" — surfacing as a Sentry error.
+// Using `_` as the namespace separator keeps the key human-readable AND
+// SecureStore-valid. The `_v2` suffix avoids any chance of stomping on a
+// pre-existing successfully-written key (none should exist on Android given
+// the historical failure, but iOS may have written one before the validator
+// got stricter).
 const DEVICE_PUSH_TOKEN_KEY = isWeb
   ? ''
   : (() => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { brand } = require('../config/brand');
-      return `${brand.storageNamespace}:device-push-token:v1`;
+      return `${brand.storageNamespace}_device_push_token_v2`;
     })();
 
 const EXPO_PROJECT_ID = isWeb

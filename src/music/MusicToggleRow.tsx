@@ -76,7 +76,9 @@ export function MusicToggleRow() {
             />
           </View>
           <View style={styles.copy}>
-            <Text style={styles.title}>{isMusicEnabled ? 'Music on' : 'Music off'}</Text>
+            <Text style={styles.title}>
+              {isSuppressed ? 'Music paused' : isMusicEnabled ? 'Music on' : 'Music off'}
+            </Text>
             <Text style={styles.body}>{description}</Text>
           </View>
         </HapticPressable>

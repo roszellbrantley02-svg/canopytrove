@@ -57,6 +57,24 @@ export function isBackendTierAccessError(error: unknown): error is BackendTierAc
   return error instanceof BackendTierAccessError;
 }
 
+/**
+ * Thrown when a backend request was aborted by our own timeout. Replaces the
+ * raw fetch AbortError ("Aborted") so callers see a meaningful name in logs
+ * and can choose between surfacing a friendly retry prompt or silently
+ * dropping (e.g. screen unmounted before the request completed).
+ */
+export class BackendRequestTimeoutError extends Error {
+  public readonly code = 'BACKEND_REQUEST_TIMEOUT' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'BackendRequestTimeoutError';
+  }
+}
+
+export function isBackendRequestTimeoutError(error: unknown): error is BackendRequestTimeoutError {
+  return error instanceof BackendRequestTimeoutError;
+}
+
 type CacheEntry<T> = {
   expiresAt: number;
   value: T;
@@ -348,6 +366,16 @@ export async function requestJson<T>(
           );
           continue;
         }
+        // Convert raw fetch AbortError ("Aborted") into a typed timeout
+        // error. Without this, every timed-out backend call appears in
+        // Sentry as a generic AbortError with no actionable info — and
+        // genuine user-cancelled fetches (screen unmounted) are
+        // indistinguishable from real timeouts in logs.
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new BackendRequestTimeoutError(
+            `Backend request timed out after ${effectiveTimeoutMs}ms: ${method} ${pathname}`,
+          );
+        }
         throw error;
       } finally {
         clearTimeout(timeoutId);
@@ -422,6 +450,13 @@ export async function requestRawUpload<T>(
     }
 
     return (await response.json()) as T;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new BackendRequestTimeoutError(
+        `Backend upload timed out after ${effectiveTimeoutMs}ms: ${options.method ?? 'POST'} ${pathname}`,
+      );
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, View, Switch } from 'react-native';
+import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View, Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { MotionInView } from '../components/MotionInView';
@@ -177,6 +177,38 @@ function SettingsScreenInner() {
     void signOutSession();
   }, [signOutSession]);
 
+  // Open a mailto: URL gracefully. On iOS without a configured Mail account
+  // (or Android without any email handler), Linking.openURL throws "Unable
+  // to open URL: mailto:..." — previously bubbled to Sentry as Bug Reports
+  // even though it's a routine "user has no email app" condition. Now we
+  // probe with canOpenURL first and show the support address in an alert
+  // dialog the user can long-press to copy.
+  const openMailtoOrFallback = React.useCallback(
+    async (url: string) => {
+      if (Platform.OS === 'web') {
+        window.location.href = url;
+        return;
+      }
+      try {
+        const canOpen = await Linking.canOpenURL(url);
+        if (canOpen) {
+          await Linking.openURL(url);
+          return;
+        }
+      } catch {
+        // canOpenURL itself can throw on some Android versions if no
+        // handler is registered for the scheme — fall through to the
+        // alert path below.
+      }
+      Alert.alert(
+        'Email app not available',
+        `No email app is configured on this device. You can reach us at:\n\n${supportEmail}\n\nLong-press the address above to copy it.`,
+        [{ text: 'OK' }],
+      );
+    },
+    [supportEmail],
+  );
+
   const handleReportBug = React.useCallback(() => {
     const subject = encodeURIComponent('Bug Report — Canopy Trove');
     const body = encodeURIComponent(
@@ -193,23 +225,13 @@ function SettingsScreenInner() {
         `Date: ${new Date().toISOString()}`,
       ].join('\n'),
     );
-    const url = `mailto:${supportEmail}?subject=${subject}&body=${body}`;
-    if (Platform.OS === 'web') {
-      window.location.href = url;
-    } else {
-      void Linking.openURL(url);
-    }
-  }, [appVersion, isAuthenticated, supportEmail]);
+    void openMailtoOrFallback(`mailto:${supportEmail}?subject=${subject}&body=${body}`);
+  }, [appVersion, isAuthenticated, supportEmail, openMailtoOrFallback]);
 
   const handleContactSupport = React.useCallback(() => {
     const subject = encodeURIComponent('Support Request — Canopy Trove');
-    const url = `mailto:${supportEmail}?subject=${subject}`;
-    if (Platform.OS === 'web') {
-      window.location.href = url;
-    } else {
-      void Linking.openURL(url);
-    }
-  }, [supportEmail]);
+    void openMailtoOrFallback(`mailto:${supportEmail}?subject=${subject}`);
+  }, [supportEmail, openMailtoOrFallback]);
 
   const handleSubscribeEmail = React.useCallback(() => {
     void emailSubscription.subscribe();
