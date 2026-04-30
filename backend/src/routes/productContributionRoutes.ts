@@ -11,11 +11,18 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import { createAppCheckStrictMiddleware } from '../http/appCheckGuard';
 import { createRateLimitMiddleware } from '../http/rateLimit';
 import { logger } from '../observability/logger';
 import { submitProductContribution } from '../services/productContributionService';
 
 export const productContributionRoutes = Router();
+
+// Anonymous-shopper-friendly write surface — accepts installId only, no
+// member auth. App Check is the only confirmation that the request is
+// coming from our actual app rather than a script. The docstring above
+// has always claimed App Check gating; this enforces it.
+const contributeAppCheck = createAppCheckStrictMiddleware();
 
 const ProductContributionRequestSchema = z
   .object({
@@ -45,6 +52,7 @@ const contributeRateLimiter = createRateLimitMiddleware({
 
 productContributionRoutes.post(
   '/products/contribute',
+  contributeAppCheck,
   contributeRateLimiter,
   async (request, response) => {
     try {
