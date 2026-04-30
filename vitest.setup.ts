@@ -13,6 +13,13 @@ globalThis.requestAnimationFrame = (cb: FrameRequestCallback) => {
 };
 globalThis.cancelAnimationFrame = () => {};
 
+// React Native's Metro bundler injects `__DEV__` as a global at build time.
+// Vitest doesn't have it, so any module that reads `__DEV__` (e.g.
+// sentryMonitoringService picking 'development' vs 'production') hits a
+// ReferenceError at import time. Default to true for tests so dev-only
+// branches are exercised.
+(globalThis as typeof globalThis & { __DEV__?: boolean }).__DEV__ = true;
+
 // React 19's react-test-renderer uses concurrent rendering. act() must be
 // available for create()/update() to flush synchronously. This flag tells React
 // that the current environment supports act().

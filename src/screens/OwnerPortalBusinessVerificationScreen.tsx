@@ -7,6 +7,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { AppUiIcon } from '../icons/AppUiIcon';
 
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -442,7 +443,7 @@ function OwnerPortalBusinessVerificationLive() {
   );
 }
 
-export function OwnerPortalBusinessVerificationScreen() {
+function OwnerPortalBusinessVerificationScreenInner() {
   const route = useRoute<BusinessVerificationRoute>();
   const preview = route.params?.preview ?? false;
 
@@ -452,3 +453,8 @@ export function OwnerPortalBusinessVerificationScreen() {
 
   return <OwnerPortalBusinessVerificationLive />;
 }
+
+export const OwnerPortalBusinessVerificationScreen = withScreenErrorBoundary(
+  OwnerPortalBusinessVerificationScreenInner,
+  'owner-portal-business-verification',
+);

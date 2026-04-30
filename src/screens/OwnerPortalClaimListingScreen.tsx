@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import {
   useStorefrontProfileController,
@@ -24,7 +25,7 @@ type ClaimListingRoute = RouteProp<RootStackParamList, 'OwnerPortalClaimListing'
 
 const ONBOARDING_STEPS = ['Account', 'Business Details', 'Claim Listing', 'Verification'];
 
-export function OwnerPortalClaimListingScreen() {
+function OwnerPortalClaimListingScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<ClaimListingRoute>();
   const preview = route.params?.preview ?? false;
@@ -227,3 +228,8 @@ export function OwnerPortalClaimListingScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalClaimListingScreen = withScreenErrorBoundary(
+  OwnerPortalClaimListingScreenInner,
+  'owner-portal-claim-listing',
+);

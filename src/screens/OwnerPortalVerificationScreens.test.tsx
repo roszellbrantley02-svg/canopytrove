@@ -21,6 +21,13 @@ vi.mock('react-native', () => ({
   Text: 'Text',
   TextInput: 'TextInput',
   View: 'View',
+  // AppErrorBoundary (added when the screen was wrapped in
+  // withScreenErrorBoundary) pulls in sentryMonitoringService →
+  // analyticsRuntimeState which references AppState.currentState at
+  // module load. Stub the minimum surface to keep the import chain
+  // happy without bringing real native modules into the test.
+  AppState: { currentState: 'active', addEventListener: () => ({ remove: () => undefined }) },
+  Platform: { OS: 'ios', select: <T,>(spec: { ios?: T; default?: T }) => spec.ios ?? spec.default },
 }));
 
 vi.mock('@react-navigation/native', () => ({
