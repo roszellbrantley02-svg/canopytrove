@@ -7,6 +7,7 @@ import { MotionInView } from '../components/MotionInView';
 import { HapticPressable } from '../components/HapticPressable';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { legalConfig } from '../config/legal';
 import { useStorefrontProfileController } from '../context/StorefrontController';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -14,7 +15,7 @@ import { customerSupportStyles as styles } from './customerSupport/customerSuppo
 
 const DELETE_CONFIRMATION_PHRASE = 'DELETE';
 
-export function DeleteAccountScreen({
+function DeleteAccountScreenInner({
   navigation,
 }: {
   navigation: NativeStackNavigationProp<RootStackParamList>;
@@ -228,3 +229,8 @@ export function DeleteAccountScreen({
     </ScreenShell>
   );
 }
+
+export const DeleteAccountScreen = withScreenErrorBoundary(
+  DeleteAccountScreenInner,
+  'delete-account',
+);

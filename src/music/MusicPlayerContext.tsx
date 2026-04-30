@@ -73,6 +73,13 @@ export function MusicPlayerProvider({
   const [isMusicEnabled, setIsMusicEnabledState] = React.useState<boolean>(MUSIC_ENABLED_DEFAULT);
   const [isReady, setIsReady] = React.useState(false);
 
+  // True the moment the user touches the toggle. If they tap before the
+  // persisted preference has finished loading from AsyncStorage (~50-200ms
+  // window on iOS), we honor the user's intent and skip overwriting their
+  // value with the loaded one. Without this guard the toggle appeared to
+  // "flip back on its own" — manifest as the bug the user flagged.
+  const userOverrideRef = React.useRef(false);
+
   // Load persisted preference once on mount. `active` guards against the rare
   // case where the provider unmounts before AsyncStorage resolves (strict
   // mode, fast-remount, sign-out tree rebuild).
@@ -81,10 +88,16 @@ export function MusicPlayerProvider({
     void (async () => {
       try {
         const stored = await readMusicEnabledPreference();
-        if (active) {
-          setIsMusicEnabledState(stored);
-          setIsReady(true);
+        if (!active) {
+          return;
         }
+        // Only adopt the stored value if the user hasn't already taken
+        // action since mount. Otherwise their flip would be silently
+        // overwritten the moment AsyncStorage resolves.
+        if (!userOverrideRef.current) {
+          setIsMusicEnabledState(stored);
+        }
+        setIsReady(true);
       } catch {
         // Storage failure falls back to default — never block app boot on it.
         if (active) {
@@ -173,6 +186,7 @@ export function MusicPlayerProvider({
   }, []);
 
   const setMusicEnabled = React.useCallback((enabled: boolean) => {
+    userOverrideRef.current = true;
     setIsMusicEnabledState(enabled);
     void writeMusicEnabledPreference(enabled).catch(() => {
       // Preference persistence is best-effort — a write failure just means
@@ -182,6 +196,7 @@ export function MusicPlayerProvider({
   }, []);
 
   const toggleMusic = React.useCallback(() => {
+    userOverrideRef.current = true;
     setIsMusicEnabledState((prev) => {
       const next = !prev;
       void writeMusicEnabledPreference(next).catch(() => {

@@ -57,6 +57,46 @@ export function isBackendTierAccessError(error: unknown): error is BackendTierAc
   return error instanceof BackendTierAccessError;
 }
 
+/**
+ * Thrown when a backend request was aborted by our own timeout. Replaces the
+ * raw fetch AbortError ("Aborted") so callers see a meaningful name in logs
+ * and can choose between surfacing a friendly retry prompt or silently
+ * dropping (e.g. screen unmounted before the request completed).
+ */
+export class BackendRequestTimeoutError extends Error {
+  public readonly code = 'BACKEND_REQUEST_TIMEOUT' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'BackendRequestTimeoutError';
+  }
+}
+
+export function isBackendRequestTimeoutError(error: unknown): error is BackendRequestTimeoutError {
+  return error instanceof BackendRequestTimeoutError;
+}
+
+/**
+ * Thrown when the backend's recentAuthGuard rejects a sensitive write
+ * (billing checkout, email change, account deletion) because the user's
+ * Firebase auth token is older than the operation's freshness window
+ * (typically 5 min). Callers should catch this and prompt the user to
+ * sign in again rather than letting it bubble to Sentry as a generic
+ * Error — it's expected user state, not a bug.
+ */
+export class BackendReauthRequiredError extends Error {
+  public readonly code = 'REAUTH_REQUIRED' as const;
+  public readonly maxAuthAgeSeconds: number | null;
+  constructor(message: string, maxAuthAgeSeconds: number | null) {
+    super(message);
+    this.name = 'BackendReauthRequiredError';
+    this.maxAuthAgeSeconds = maxAuthAgeSeconds;
+  }
+}
+
+export function isBackendReauthRequiredError(error: unknown): error is BackendReauthRequiredError {
+  return error instanceof BackendReauthRequiredError;
+}
+
 type CacheEntry<T> = {
   expiresAt: number;
   value: T;
@@ -224,6 +264,7 @@ async function throwBackendError(response: Response): Promise<never> {
       code?: unknown;
       requiredTier?: unknown;
       currentTier?: unknown;
+      maxAuthAgeSeconds?: unknown;
       requestId?: unknown;
     };
 
@@ -238,6 +279,21 @@ async function throwBackendError(response: Response): Promise<never> {
           ? payload.error.trim()
           : 'This feature requires a higher plan.';
       throw new BackendTierAccessError(errorText, payload.requiredTier, payload.currentTier);
+    }
+
+    // Detect re-auth required errors from recentAuthGuard (HTTP 403 with
+    // code: 'reauth_required'). Surfacing as a typed error lets callers
+    // prompt the user to sign in again instead of letting the generic
+    // "Please sign in again before performing this action." propagate to
+    // Sentry as REACT-NATIVE-X (was firing 7+ events from real users).
+    if (payload.code === 'reauth_required') {
+      const errorText =
+        typeof payload.error === 'string' && payload.error.trim()
+          ? payload.error.trim()
+          : 'Please sign in again before performing this action.';
+      const maxAuthAgeSeconds =
+        typeof payload.maxAuthAgeSeconds === 'number' ? payload.maxAuthAgeSeconds : null;
+      throw new BackendReauthRequiredError(errorText, maxAuthAgeSeconds);
     }
 
     const errorText =
@@ -259,6 +315,7 @@ async function throwBackendError(response: Response): Promise<never> {
 
     if (
       parseError instanceof BackendTierAccessError ||
+      parseError instanceof BackendReauthRequiredError ||
       (parseError instanceof Error &&
         parseError.message !== `Backend request failed with ${response.status}`)
     ) {
@@ -348,6 +405,16 @@ export async function requestJson<T>(
           );
           continue;
         }
+        // Convert raw fetch AbortError ("Aborted") into a typed timeout
+        // error. Without this, every timed-out backend call appears in
+        // Sentry as a generic AbortError with no actionable info — and
+        // genuine user-cancelled fetches (screen unmounted) are
+        // indistinguishable from real timeouts in logs.
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new BackendRequestTimeoutError(
+            `Backend request timed out after ${effectiveTimeoutMs}ms: ${method} ${pathname}`,
+          );
+        }
         throw error;
       } finally {
         clearTimeout(timeoutId);
@@ -422,6 +489,13 @@ export async function requestRawUpload<T>(
     }
 
     return (await response.json()) as T;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new BackendRequestTimeoutError(
+        `Backend upload timed out after ${effectiveTimeoutMs}ms: ${options.method ?? 'POST'} ${pathname}`,
+      );
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }

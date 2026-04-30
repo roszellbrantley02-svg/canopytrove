@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { signUpOwnerPortalAccount } from '../services/ownerPortalService';
@@ -14,7 +15,7 @@ import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 
 const SIGN_UP_STEPS = ['Access', 'Create Account', 'Business Details', 'Claim Listing'];
 
-export function OwnerPortalSignUpScreen() {
+function OwnerPortalSignUpScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [displayName, setDisplayName] = React.useState('');
   const [legalName, setLegalName] = React.useState('');
@@ -217,3 +218,8 @@ export function OwnerPortalSignUpScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalSignUpScreen = withScreenErrorBoundary(
+  OwnerPortalSignUpScreenInner,
+  'owner-portal-sign-up',
+);

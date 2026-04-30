@@ -13,6 +13,16 @@ globalThis.requestAnimationFrame = (cb: FrameRequestCallback) => {
 };
 globalThis.cancelAnimationFrame = () => {};
 
+// React Native's Metro bundler injects `__DEV__` as a global at build time.
+// Vitest doesn't have it, so any module that reads `__DEV__` (e.g.
+// sentryMonitoringService picking 'development' vs 'production') hits a
+// ReferenceError at import time. Default to false to match production
+// semantics — tests should exercise the same code path the shipping
+// build hits. Initial choice was `true` but that broke
+// ownerPortalConfig's "allowlist empty → .com bypass" assertion because
+// it treats `__DEV__` as "this is a dev build, let any email in."
+(globalThis as typeof globalThis & { __DEV__?: boolean }).__DEV__ = false;
+
 // React 19's react-test-renderer uses concurrent rendering. act() must be
 // available for create()/update() to flush synchronously. This flag tells React
 // that the current environment supports act().
@@ -48,6 +58,19 @@ vi.mock('expo-secure-store', () => ({
   WHEN_PASSCODE_SET_THIS_DEVICE_ONLY: 4,
   WHEN_UNLOCKED: 5,
   WHEN_UNLOCKED_THIS_DEVICE_ONLY: 6,
+}));
+
+// @react-native-community/netinfo's published source uses Flow `typeof T`
+// syntax that vitest's TS transform can't parse — App.test.tsx pulls it
+// in via App.tsx → OfflineBanner → useOfflineAware. Stub the addEventListener
+// surface so the hook initializes cleanly under test (always-online).
+vi.mock('@react-native-community/netinfo', () => ({
+  default: {
+    addEventListener: () => () => undefined,
+    fetch: async () => ({ isConnected: true, type: 'wifi' }),
+  },
+  addEventListener: () => () => undefined,
+  fetch: async () => ({ isConnected: true, type: 'wifi' }),
 }));
 
 vi.mock('expo-haptics', () => ({

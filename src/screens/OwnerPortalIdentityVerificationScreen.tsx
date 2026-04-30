@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { AppUiIcon } from '../icons/AppUiIcon';
 
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -310,7 +311,7 @@ const localStyles = StyleSheet.create({
   howItWorksBody: { color: colors.textSoft, fontSize: 14, lineHeight: 20 },
 });
 
-export function OwnerPortalIdentityVerificationScreen() {
+function OwnerPortalIdentityVerificationScreenInner() {
   const route = useRoute<IdentityVerificationRoute>();
   const preview = route.params?.preview ?? false;
 
@@ -320,3 +321,8 @@ export function OwnerPortalIdentityVerificationScreen() {
 
   return <OwnerPortalIdentityVerificationLive />;
 }
+
+export const OwnerPortalIdentityVerificationScreen = withScreenErrorBoundary(
+  OwnerPortalIdentityVerificationScreenInner,
+  'owner-portal-identity-verification',
+);

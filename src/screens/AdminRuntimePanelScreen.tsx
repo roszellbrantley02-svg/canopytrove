@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { colors } from '../theme/tokens';
 import {
@@ -70,7 +71,7 @@ function getIncidentToneStyle(incident: RuntimeIncidentRecord) {
   return sharedStyles.resultSuccess;
 }
 
-export function AdminRuntimePanelScreen() {
+function AdminRuntimePanelScreenInner() {
   const [status, setStatus] = React.useState<RuntimeOpsStatus | null>(null);
   const [monitoringStatus, setMonitoringStatus] = React.useState<RuntimeMonitoringStatus | null>(
     null,
@@ -664,3 +665,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(245, 200, 106, 0.10)',
   },
 });
+
+export const AdminRuntimePanelScreen = withScreenErrorBoundary(
+  AdminRuntimePanelScreenInner,
+  'admin-runtime-panel',
+);

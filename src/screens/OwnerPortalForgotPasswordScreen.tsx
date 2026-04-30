@@ -4,12 +4,13 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
+import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { sendOwnerPortalPasswordReset } from '../services/ownerPortalService';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { OwnerPortalHeroPanel } from './ownerPortal/OwnerPortalHeroPanel';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 
-export function OwnerPortalForgotPasswordScreen() {
+function OwnerPortalForgotPasswordScreenInner() {
   const [email, setEmail] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorText, setErrorText] = React.useState<string | null>(null);
@@ -112,3 +113,8 @@ export function OwnerPortalForgotPasswordScreen() {
     </ScreenShell>
   );
 }
+
+export const OwnerPortalForgotPasswordScreen = withScreenErrorBoundary(
+  OwnerPortalForgotPasswordScreenInner,
+  'owner-portal-forgot-password',
+);
