@@ -23,10 +23,13 @@ const photoUploadRateLimiter = createRateLimitMiddleware({
   methods: ['PUT'],
 });
 
-// Accept raw image bodies up to 12 MB (matches MAX_REVIEW_PHOTO_BYTES).
+// Match the service-layer cap (MAX_REVIEW_PHOTO_BYTES = 8 MB). Larger
+// payloads were previously parsed in full only to be rejected afterwards
+// — wasted bandwidth + memory. The one-shot JSON endpoint keeps a 12 MB
+// limit to allow ~33% base64 overhead on the same 8 MB binary cap.
 const rawImageParser = raw({
   type: ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
-  limit: '12mb',
+  limit: '8mb',
 });
 
 photoUploadBytesRoute.put(

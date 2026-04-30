@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { processResendWebhook } from '../services/resendWebhookService';
+import { processResendWebhook, ResendWebhookError } from '../services/resendWebhookService';
 
 function getRawBody(request: Request) {
   if (typeof request.body === 'string') {
@@ -10,7 +10,7 @@ function getRawBody(request: Request) {
     return request.body.toString('utf8');
   }
 
-  throw new Error('Resend webhook requests must use the raw request body.');
+  throw new ResendWebhookError('Resend webhook requests must use the raw request body.');
 }
 
 function getHeaderMap(request: Request) {
@@ -38,18 +38,16 @@ export async function resendWebhookHandler(request: Request, response: Response)
       matchedId: result.matchedId,
     });
   } catch (error) {
+    // Typed errors carry the right status code. Everything else is an
+    // unexpected infra failure → 500 so Resend (Svix) retries with
+    // backoff. Previously this used substring sniffing on the error
+    // message, which mis-classified transient 5xx failures as 400 and
+    // caused Resend to drop the event permanently.
+    const statusCode = error instanceof ResendWebhookError ? error.statusCode : 500;
     const message = error instanceof Error ? error.message : 'Unknown Resend webhook failure.';
-    const statusCode =
-      /verification|signature|missing resend webhook|missing resend webhook verification|raw request body|required email event fields/i.test(
-        message,
-      )
-        ? 400
-        : /not configured/i.test(message)
-          ? 503
-          : 500;
     response.status(statusCode).json({
       ok: false,
-      error: message,
+      error: statusCode >= 500 ? 'Internal server error' : message,
     });
   }
 }

@@ -15,9 +15,13 @@ import { logSecurityEvent } from './securityEventLogger';
  * - Blocked request:     5 points
  */
 
+interface AbuseEvent {
+  ts: number;
+  points: number;
+}
+
 interface AbuseRecord {
-  score: number;
-  events: number[]; // timestamps
+  events: AbuseEvent[];
   flaggedAt: number | null;
 }
 
@@ -27,11 +31,23 @@ const THRESHOLD = 20;
 const FLAG_DURATION_MS = 30 * 60_000; // 30-minute flag duration
 const MAX_TRACKED_IPS = 4096;
 
+function pruneEvents(record: AbuseRecord, now: number) {
+  const cutoff = now - WINDOW_MS;
+  record.events = record.events.filter((event) => event.ts > cutoff);
+}
+
+function computeScore(record: AbuseRecord) {
+  let total = 0;
+  for (const event of record.events) {
+    total += event.points;
+  }
+  return total;
+}
+
 function sweepExpired(now: number) {
   if (abuseRecords.size <= MAX_TRACKED_IPS) return;
-  const cutoff = now - WINDOW_MS;
   for (const [ip, record] of abuseRecords.entries()) {
-    record.events = record.events.filter((t) => t > cutoff);
+    pruneEvents(record, now);
     if (record.events.length === 0 && (!record.flaggedAt || record.flaggedAt < now)) {
       abuseRecords.delete(ip);
     }
@@ -44,26 +60,29 @@ export function recordAbuseSignal(ip: string, points: number, path: string) {
 
   let record = abuseRecords.get(ip);
   if (!record) {
-    record = { score: 0, events: [], flaggedAt: null };
+    record = { events: [], flaggedAt: null };
     abuseRecords.set(ip, record);
   }
 
-  const cutoff = now - WINDOW_MS;
-  record.events = record.events.filter((t) => t > cutoff);
-  record.events.push(now);
+  pruneEvents(record, now);
+  record.events.push({ ts: now, points });
 
-  // Recalculate score — increment by the points for this event
-  record.score += points;
+  // Score is recomputed from in-window events on every signal — the
+  // sliding window in the comment is now actually a sliding window. Old
+  // implementation accumulated `score += points` monotonically and only
+  // reset on flag-expiry, so an IP could drift to flag from sparse, far-
+  // apart events that the window-pruning logic claimed to forget.
+  const score = computeScore(record);
 
-  if (record.score >= THRESHOLD && !record.flaggedAt) {
+  if (score >= THRESHOLD && !record.flaggedAt) {
     record.flaggedAt = now + FLAG_DURATION_MS;
     logSecurityEvent({
       event: 'abuse_threshold_crossed',
       ip,
       path,
       method: 'N/A',
-      detail: `Abuse score ${record.score} exceeded threshold ${THRESHOLD}`,
-      meta: { score: record.score, eventCount: record.events.length },
+      detail: `Abuse score ${score} exceeded threshold ${THRESHOLD}`,
+      meta: { score, eventCount: record.events.length },
     });
   }
 }
@@ -73,7 +92,6 @@ export function isIpFlagged(ip: string): boolean {
   if (!record?.flaggedAt) return false;
   if (record.flaggedAt < Date.now()) {
     record.flaggedAt = null;
-    record.score = 0;
     record.events = [];
     return false;
   }
@@ -81,7 +99,10 @@ export function isIpFlagged(ip: string): boolean {
 }
 
 export function getAbuseScore(ip: string): number {
-  return abuseRecords.get(ip)?.score ?? 0;
+  const record = abuseRecords.get(ip);
+  if (!record) return 0;
+  pruneEvents(record, Date.now());
+  return computeScore(record);
 }
 
 /** For testing */

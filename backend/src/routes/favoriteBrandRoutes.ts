@@ -3,7 +3,10 @@ import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
 import { parseProfileIdParam } from '../http/validation';
 import { parseAddFavoriteBrandBody, parseBrandIdParam } from '../http/validationFavoriteBrands';
-import { ensureAuthenticatedProfileWriteAccess } from '../services/profileAccessService';
+import {
+  ensureAuthenticatedProfileWriteAccess,
+  ensureProfileReadAccess,
+} from '../services/profileAccessService';
 import {
   addFavoriteBrand,
   removeFavoriteBrand,
@@ -71,8 +74,10 @@ favoriteBrandRoutes.post('/profile/favorite-brands', async (request, response) =
     logger.error('[favoriteBrandRoutes] POST /profile/favorite-brands error', {
       error: error instanceof Error ? error.message : String(error),
     });
-    response.status(error instanceof Error && error.message.includes('Invalid') ? 400 : 500).json({
-      error: error instanceof Error ? error.message : 'Failed to add favorite brand',
+    const isValidationError =
+      error instanceof Error && error.message.toLowerCase().startsWith('invalid');
+    response.status(isValidationError ? 400 : 500).json({
+      error: isValidationError ? error.message : 'Failed to add favorite brand',
     });
   }
 });
@@ -104,8 +109,10 @@ favoriteBrandRoutes.delete('/profile/favorite-brands/:brandId', async (request, 
     logger.error('[favoriteBrandRoutes] DELETE /profile/favorite-brands/:brandId error', {
       error: error instanceof Error ? error.message : String(error),
     });
-    response.status(error instanceof Error && error.message.includes('Invalid') ? 400 : 500).json({
-      error: error instanceof Error ? error.message : 'Failed to remove favorite brand',
+    const isValidationError =
+      error instanceof Error && error.message.toLowerCase().startsWith('invalid');
+    response.status(isValidationError ? 400 : 500).json({
+      error: isValidationError ? error.message : 'Failed to remove favorite brand',
     });
   }
 });
@@ -126,8 +133,11 @@ favoriteBrandRoutes.get('/profile/favorite-brands', async (request, response) =>
 
     const profileId = parseProfileIdParam(profileIdFromHeader);
 
-    // This is a read operation, but still require some auth context
-    // In production, use ensureProfileReadAccess here
+    // Favorite brands are a behavioral fingerprint (which brands the user
+    // saves) — gate on profile read access so anyone with knowledge of a
+    // profileId can't enumerate other users' preferences. Anonymous
+    // profiles are still accessible for guest UX.
+    await ensureProfileReadAccess(request, profileId);
 
     const favoriteEntries = await listFavoriteBrands(profileId);
 
@@ -142,7 +152,7 @@ favoriteBrandRoutes.get('/profile/favorite-brands', async (request, response) =>
       error: error instanceof Error ? error.message : String(error),
     });
     response.status(500).json({
-      error: error instanceof Error ? error.message : 'Failed to list favorite brands',
+      error: 'Failed to list favorite brands',
     });
   }
 });
@@ -165,8 +175,10 @@ favoriteBrandRoutes.get('/brands/:brandId/carriers', async (request, response) =
     logger.error('[favoriteBrandRoutes] GET /brands/:brandId/carriers error', {
       error: error instanceof Error ? error.message : String(error),
     });
-    response.status(error instanceof Error && error.message.includes('Invalid') ? 400 : 500).json({
-      error: error instanceof Error ? error.message : 'Failed to list brand carriers',
+    const isValidationError =
+      error instanceof Error && error.message.toLowerCase().startsWith('invalid');
+    response.status(isValidationError ? 400 : 500).json({
+      error: isValidationError ? error.message : 'Failed to list brand carriers',
     });
   }
 });
@@ -186,8 +198,10 @@ favoriteBrandRoutes.get('/brands/:brandId', async (request, response) => {
     logger.error('[favoriteBrandRoutes] GET /brands/:brandId error', {
       error: error instanceof Error ? error.message : String(error),
     });
-    response.status(error instanceof Error && error.message.includes('Invalid') ? 400 : 500).json({
-      error: error instanceof Error ? error.message : 'Failed to get brand profile',
+    const isValidationError =
+      error instanceof Error && error.message.toLowerCase().startsWith('invalid');
+    response.status(isValidationError ? 400 : 500).json({
+      error: isValidationError ? error.message : 'Failed to get brand profile',
     });
   }
 });
@@ -250,7 +264,7 @@ favoriteBrandRoutes.get('/brands', async (request, response) => {
       error: error instanceof Error ? error.message : String(error),
     });
     response.status(500).json({
-      error: error instanceof Error ? error.message : 'Failed to list brands',
+      error: 'Failed to list brands',
     });
   }
 });

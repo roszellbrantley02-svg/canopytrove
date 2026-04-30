@@ -138,7 +138,10 @@ export async function createStripeIdentitySession(ownerUid: string): Promise<{
   if (existingVerification.exists) {
     const existing = existingVerification.data() as Record<string, unknown>;
     const blockingStatuses = new Set(['verified', 'processing', 'pending']);
-    if (typeof existing?.verificationStatus === 'string' && blockingStatuses.has(existing.verificationStatus)) {
+    if (
+      typeof existing?.verificationStatus === 'string' &&
+      blockingStatuses.has(existing.verificationStatus)
+    ) {
       throw new Error(`Identity verification is already ${existing.verificationStatus}.`);
     }
   }
@@ -203,13 +206,28 @@ export async function createStripeIdentitySession(ownerUid: string): Promise<{
 // Webhook signature verification (matches Stripe's v1 scheme)
 // ---------------------------------------------------------------------------
 
+/**
+ * Thrown for verification / payload-shape failures that the route handler
+ * should turn into 400 (Stripe stops retrying — safe; a malformed
+ * signature won't succeed on retry). Anything else stays as a plain Error
+ * → 500 → Stripe retries with backoff.
+ */
+export class StripeIdentityWebhookError extends Error {
+  readonly statusCode: number;
+  constructor(message: string, statusCode = 400) {
+    super(message);
+    this.name = 'StripeIdentityWebhookError';
+    this.statusCode = statusCode;
+  }
+}
+
 function verifyStripeWebhookSignature(
   payload: Buffer,
   signatureHeader: string | undefined,
   secret: string,
 ): StripeIdentityWebhookEvent {
   if (!signatureHeader) {
-    throw new Error('Missing stripe-signature header.');
+    throw new StripeIdentityWebhookError('Missing stripe-signature header.');
   }
 
   const parts = signatureHeader.split(',').reduce(
@@ -223,14 +241,14 @@ function verifyStripeWebhookSignature(
   );
 
   if (!parts.timestamp || parts.signatures.length === 0) {
-    throw new Error('Invalid stripe-signature format.');
+    throw new StripeIdentityWebhookError('Invalid stripe-signature format.');
   }
 
   const timestampSeconds = Number(parts.timestamp);
   const nowSeconds = Math.floor(Date.now() / 1000);
 
   if (Math.abs(nowSeconds - timestampSeconds) > STRIPE_WEBHOOK_TOLERANCE_SECONDS) {
-    throw new Error('Webhook timestamp is outside tolerance window.');
+    throw new StripeIdentityWebhookError('Webhook timestamp is outside tolerance window.');
   }
 
   const expectedSignature = crypto
@@ -238,15 +256,22 @@ function verifyStripeWebhookSignature(
     .update(`${parts.timestamp}.${payload.toString('utf8')}`)
     .digest('hex');
 
-  const isValid = parts.signatures.some((sig) =>
-    crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expectedSignature, 'hex')),
-  );
+  const isValid = parts.signatures.some((sig) => {
+    const sigBuf = Buffer.from(sig, 'hex');
+    const expectedBuf = Buffer.from(expectedSignature, 'hex');
+    if (sigBuf.length !== expectedBuf.length) return false;
+    return crypto.timingSafeEqual(sigBuf, expectedBuf);
+  });
 
   if (!isValid) {
-    throw new Error('Webhook signature verification failed.');
+    throw new StripeIdentityWebhookError('Webhook signature verification failed.');
   }
 
-  return JSON.parse(payload.toString('utf8')) as StripeIdentityWebhookEvent;
+  try {
+    return JSON.parse(payload.toString('utf8')) as StripeIdentityWebhookEvent;
+  } catch {
+    throw new StripeIdentityWebhookError('Webhook payload is not valid JSON.');
+  }
 }
 
 // ---------------------------------------------------------------------------

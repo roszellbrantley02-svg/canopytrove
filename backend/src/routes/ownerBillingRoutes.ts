@@ -9,6 +9,7 @@ import {
   createOwnerBillingPortalSession,
   handleOwnerBillingWebhook,
   OwnerBillingError,
+  prepareOwnerApplePurchase,
   syncOwnerAppleSubscription,
 } from '../services/ownerBillingService';
 
@@ -77,6 +78,25 @@ ownerBillingRoutes.post(
       response.json(
         await syncOwnerAppleSubscription(request, parseAppleSubscriptionSyncBody(request.body)),
       );
+    } catch (error) {
+      const statusCode = getErrorStatus(error);
+      const requestId = response.getHeader('X-CanopyTrove-Request-Id');
+      response.status(statusCode).json({
+        ok: false,
+        error: getErrorMessage(error, statusCode, typeof requestId === 'string' ? requestId : null),
+      });
+    }
+  },
+);
+
+ownerBillingRoutes.post(
+  '/owner-billing/apple/prepare-purchase',
+  billingRecentAuthGuard,
+  ownerBillingSessionRateLimiter,
+  billingUserRateLimiter,
+  async (request, response) => {
+    try {
+      response.json(await prepareOwnerApplePurchase(request));
     } catch (error) {
       const statusCode = getErrorStatus(error);
       const requestId = response.getHeader('X-CanopyTrove-Request-Id');

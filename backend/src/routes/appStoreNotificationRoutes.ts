@@ -1,5 +1,9 @@
 import { Router, type Request, type Response } from 'express';
-import { processSignedNotification } from '../services/appStoreNotificationService';
+import {
+  processSignedNotification,
+  VerificationException,
+  VerificationStatus,
+} from '../services/appStoreNotificationService';
 
 export const appStoreNotificationRoutes = Router();
 
@@ -54,21 +58,21 @@ appStoreNotificationRoutes.post(
 
       response.status(200).json({ ok: true, ...result });
     } catch (error: unknown) {
-      // @apple/app-store-server-library throws a VerificationException with
-      // numeric `.status` and an underlying `.cause`; `.message` is often
-      // empty so we have to dig into all available fields to surface a
-      // meaningful error.
+      // @apple/app-store-server-library throws VerificationException with a
+      // numeric `.status` (VerificationStatus enum) and an underlying `.cause`.
+      // Permanent verification failures => 400 (Apple won't retry; safe — a
+      // bad signature won't succeed on retry). RETRYABLE_VERIFICATION_FAILURE
+      // signals a transient issue Apple wants us to retry on, so 500.
+      // Anything that isn't a VerificationException is treated as infra
+      // failure (Firestore down, etc.) => 500 so Apple retries.
       const errorAny = error as {
         message?: string;
         name?: string;
-        status?: number;
-        statusCode?: number;
         cause?: unknown;
         stack?: string;
       };
       const errorName = errorAny.name || (error instanceof Error ? 'Error' : 'NonError');
       const baseMessage = errorAny.message || '';
-      const verificationStatus = errorAny.status ?? errorAny.statusCode;
       const causeMessage =
         errorAny.cause instanceof Error
           ? errorAny.cause.message
@@ -76,20 +80,21 @@ appStoreNotificationRoutes.post(
             ? String(errorAny.cause)
             : '';
 
+      let verificationStatus: number | undefined;
+      let status: number;
+      if (error instanceof VerificationException) {
+        verificationStatus = error.status;
+        status = error.status === VerificationStatus.RETRYABLE_VERIFICATION_FAILURE ? 500 : 400;
+      } else {
+        status = 500;
+      }
+
       const surfacedMessage =
         baseMessage ||
         causeMessage ||
         (verificationStatus !== undefined
           ? `${errorName}(status=${verificationStatus})`
           : errorName);
-
-      const messageBlob = `${baseMessage} ${causeMessage} ${errorName}`.toLowerCase();
-      const isSignatureError =
-        messageBlob.includes('signature') ||
-        messageBlob.includes('verification') ||
-        messageBlob.includes('jwt') ||
-        messageBlob.includes('certificate');
-      const status = isSignatureError ? 400 : 500;
 
       console.error(
         JSON.stringify({

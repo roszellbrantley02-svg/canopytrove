@@ -118,6 +118,7 @@ type OwnerAppleSubscriptionSyncPayload = {
 
 const OWNER_PROFILES_COLLECTION = 'ownerProfiles';
 const SUBSCRIPTIONS_COLLECTION = 'subscriptions';
+const APPLE_ACCOUNT_TOKENS_COLLECTION = 'appleAccountTokens';
 const STRIPE_API_BASE_URL = 'https://api.stripe.com/v1';
 const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
 const APPLE_OWNER_PRODUCT_IDS: Record<OwnerAppleSubscriptionTier, string> = {
@@ -215,15 +216,13 @@ function parseOwnerSubscriptionTier(value: unknown): OwnerSubscriptionTier {
 
 function getAppleTierFromProductId(productId: string): OwnerAppleSubscriptionTier | null {
   const normalizedProductId = productId.trim();
-  const match = (Object.entries(APPLE_OWNER_PRODUCT_IDS) as Array<
-    [OwnerAppleSubscriptionTier, string]
-  >).find(([, configuredProductId]) => configuredProductId === normalizedProductId);
+  const match = (
+    Object.entries(APPLE_OWNER_PRODUCT_IDS) as Array<[OwnerAppleSubscriptionTier, string]>
+  ).find(([, configuredProductId]) => configuredProductId === normalizedProductId);
   return match?.[0] ?? null;
 }
 
-function parseAppleSubscriptionSyncPayload(
-  payload: OwnerAppleSubscriptionSyncPayload,
-): {
+function parseAppleSubscriptionSyncPayload(payload: OwnerAppleSubscriptionSyncPayload): {
   productId: string;
   transactionId: string;
   originalTransactionId: string | null;
@@ -1061,7 +1060,10 @@ export async function syncOwnerAppleSubscription(
     getAppleTierFromProductId(parsedPayload.currentPlanId ?? parsedPayload.productId) ??
     getAppleTierFromProductId(parsedPayload.productId);
   if (!tier) {
-    throw new OwnerBillingError('The Apple product does not map to a Canopy Trove owner tier.', 400);
+    throw new OwnerBillingError(
+      'The Apple product does not map to a Canopy Trove owner tier.',
+      400,
+    );
   }
 
   const {
@@ -1145,6 +1147,34 @@ export async function syncOwnerAppleSubscription(
   };
 }
 
+// Generates an appAccountToken (RFC4122 UUID) the frontend stamps onto its
+// StoreKit purchase. The token is persisted with the owner uid so the App
+// Store Server Notification webhook can recover the owner identity even when
+// the frontend's syncOwnerAppleSubscription call never lands (app crash,
+// network drop between StoreKit completion and our backend roundtrip).
+export async function prepareOwnerApplePurchase(request: Request) {
+  const { ownerUid, storefrontId, businessVerificationStatus, identityVerificationStatus } =
+    await getVerifiedOwnerContext(request);
+
+  assertOwnerBillingEligibility({
+    storefrontId,
+    businessVerificationStatus,
+    identityVerificationStatus,
+  });
+
+  const appAccountToken = crypto.randomUUID();
+  await getOwnerBillingDb().collection(APPLE_ACCOUNT_TOKENS_COLLECTION).doc(appAccountToken).set({
+    ownerUid,
+    createdAt: createNow(),
+    consumedAt: null,
+  });
+
+  return {
+    ok: true as const,
+    appAccountToken,
+  };
+}
+
 export async function handleOwnerBillingWebhook(
   payloadBuffer: Buffer,
   signatureHeader: string | null | undefined,
@@ -1202,9 +1232,9 @@ type AppleNotificationContext = {
     productId?: string;
     expiresDate?: number;
     purchaseDate?: number;
-    isAutoRenewing?: boolean;
     purchaseDateMs?: number;
     type?: string;
+    appAccountToken?: string;
   } | null;
   renewalInfo: {
     autoRenewStatus?: number;
@@ -1231,14 +1261,77 @@ async function findOwnerSubscriptionByOriginalTransactionId(
   return { ownerUid: doc.id, record: doc.data() as OwnerSubscriptionRecord };
 }
 
+async function bootstrapSubscriptionFromAppAccountToken(
+  ctx: AppleNotificationContext,
+): Promise<{ ownerUid: string; record: OwnerSubscriptionRecord } | null> {
+  const appAccountToken = ctx.transactionInfo?.appAccountToken;
+  const originalTransactionId = ctx.transactionInfo?.originalTransactionId;
+  if (!appAccountToken || !originalTransactionId) {
+    return null;
+  }
+  const db = getOwnerBillingDb();
+  const tokenSnap = await db.collection(APPLE_ACCOUNT_TOKENS_COLLECTION).doc(appAccountToken).get();
+  if (!tokenSnap.exists) {
+    return null;
+  }
+  const ownerUid = tokenSnap.get('ownerUid');
+  if (typeof ownerUid !== 'string' || !ownerUid) {
+    return null;
+  }
+  const ownerState = await getOwnerAuthorizationState(ownerUid);
+  const productId = ctx.transactionInfo?.productId ?? '';
+  const tier = productId ? getAppleTierFromProductId(productId) : null;
+  if (!tier) {
+    return null;
+  }
+  const now = createNow();
+  const expiresIso =
+    ctx.transactionInfo?.expiresDate && Number.isFinite(ctx.transactionInfo.expiresDate)
+      ? new Date(ctx.transactionInfo.expiresDate).toISOString()
+      : now;
+  const purchaseIso =
+    ctx.transactionInfo?.purchaseDate && Number.isFinite(ctx.transactionInfo.purchaseDate)
+      ? new Date(ctx.transactionInfo.purchaseDate).toISOString()
+      : now;
+  const record: OwnerSubscriptionRecord = {
+    ownerUid,
+    dispensaryId: ownerState.storefrontId ?? '',
+    provider: 'apple_iap',
+    externalCustomerId: null,
+    externalSubscriptionId: originalTransactionId,
+    planId: productId,
+    tier,
+    status: 'active',
+    billingCycle: 'monthly',
+    currentPeriodStart: purchaseIso,
+    currentPeriodEnd: expiresIso,
+    cancelAtPeriodEnd: ctx.renewalInfo?.autoRenewStatus === 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.collection(SUBSCRIPTIONS_COLLECTION).doc(ownerUid).set(record, { merge: true });
+  await db
+    .collection(APPLE_ACCOUNT_TOKENS_COLLECTION)
+    .doc(appAccountToken)
+    .set({ consumedAt: now, originalTransactionId }, { merge: true });
+  return { ownerUid, record };
+}
+
 export async function applyAppleNotification(ctx: AppleNotificationContext): Promise<boolean> {
   if (!ctx.transactionInfo?.originalTransactionId) {
     return false;
   }
 
-  const found = await findOwnerSubscriptionByOriginalTransactionId(
+  let found = await findOwnerSubscriptionByOriginalTransactionId(
     ctx.transactionInfo.originalTransactionId,
   );
+  // Webhook-as-source-of-truth fallback: if the lookup misses on a
+  // SUBSCRIBED notification, the frontend's syncOwnerAppleSubscription
+  // call hasn't landed (or never will). Resolve owner via the
+  // appAccountToken the frontend stamped onto the StoreKit purchase.
+  if (!found && ctx.notificationType === 'SUBSCRIBED') {
+    found = await bootstrapSubscriptionFromAppAccountToken(ctx);
+  }
   if (!found) {
     return false;
   }
@@ -1263,14 +1356,17 @@ export async function applyAppleNotification(ctx: AppleNotificationContext): Pro
       ? new Date(ctx.renewalInfo.gracePeriodExpiresDate).toISOString()
       : null;
   const productTier =
-    ctx.transactionInfo.productId &&
-    getAppleTierFromProductId(ctx.transactionInfo.productId);
+    ctx.transactionInfo.productId && getAppleTierFromProductId(ctx.transactionInfo.productId);
 
   switch (ctx.notificationType) {
     case 'SUBSCRIBED':
     case 'DID_RENEW':
       nextStatus = 'active';
-      nextCancelAtPeriodEnd = ctx.transactionInfo.isAutoRenewing === false;
+      // Apple carries auto-renew on renewalInfo, not transactionInfo.
+      // autoRenewStatus: 0 = off, 1 = on. Treat unknown as "still on" to
+      // avoid flipping cancelAtPeriodEnd for a renewal arriving without
+      // renewalInfo (rare but documented as possible by Apple).
+      nextCancelAtPeriodEnd = ctx.renewalInfo?.autoRenewStatus === 0;
       if (productTier) {
         nextTier = productTier;
       }

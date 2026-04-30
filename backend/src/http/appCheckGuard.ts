@@ -144,10 +144,15 @@ export function createAppCheckGuardMiddleware() {
  * production — local dev without Firebase admin credentials still works,
  * but production can never be silently downgraded.
  *
- * Exempt paths/methods are still respected so health probes and OPTIONS
- * preflights pass through.
+ * Exempt paths are always respected so health probes pass through.
+ *
+ * Options:
+ *   - allowSafeMethods (default true): exempt GET/HEAD/OPTIONS. Set to
+ *     false on GET endpoints that have side effects (e.g. server-side
+ *     HTTP fetches), where "safe method" no longer means "no auth needed".
  */
-export function createAppCheckStrictMiddleware() {
+export function createAppCheckStrictMiddleware(options?: { allowSafeMethods?: boolean }) {
+  const allowSafeMethods = options?.allowSafeMethods !== false;
   return async function appCheckStrict(
     request: Request,
     response: Response,
@@ -160,7 +165,12 @@ export function createAppCheckStrictMiddleware() {
       return;
     }
 
-    if (isExemptPath(request.path) || isSafeMethod(request.method)) {
+    // OPTIONS is always exempt (CORS preflight cannot carry App Check
+    // headers). GET/HEAD only exempt when allowSafeMethods is true.
+    const method = request.method.toUpperCase();
+    const isPreflight = method === 'OPTIONS';
+    const isRead = method === 'GET' || method === 'HEAD';
+    if (isExemptPath(request.path) || isPreflight || (allowSafeMethods && isRead)) {
       next();
       return;
     }

@@ -130,13 +130,29 @@ function getRequiredHeader(headers: Record<string, string | undefined>, names: s
   return null;
 }
 
+/**
+ * Thrown for Resend webhook errors that the route handler should turn
+ * into a specific status code. Without this, the route was sniffing the
+ * error message string to classify status — fragile (a transient 5xx
+ * with the wrong wording would return 400 → Resend stops retrying →
+ * event lost). Uses the same pattern as StripeIdentityWebhookError.
+ */
+export class ResendWebhookError extends Error {
+  readonly statusCode: number;
+  constructor(message: string, statusCode = 400) {
+    super(message);
+    this.name = 'ResendWebhookError';
+    this.statusCode = statusCode;
+  }
+}
+
 function verifyResendWebhook(input: {
   rawBody: string;
   headers: Record<string, string | undefined>;
 }) {
   const resendWebhookSecret = getTransactionalEmailRuntimeConfig().resendWebhookSecret;
   if (!resendWebhookSecret) {
-    throw new Error('Resend webhook signature verification is not configured.');
+    throw new ResendWebhookError('Resend webhook signature verification is not configured.', 503);
   }
 
   const webhookId = getRequiredHeader(input.headers, ['svix-id', 'webhook-id']);
@@ -149,7 +165,7 @@ function verifyResendWebhook(input: {
     'webhook-signature',
   ]);
   if (!webhookId || !webhookTimestamp || !webhookSignature) {
-    throw new Error('Missing Resend webhook verification headers.');
+    throw new ResendWebhookError('Missing Resend webhook verification headers.');
   }
 
   let payload: unknown;
@@ -161,7 +177,7 @@ function verifyResendWebhook(input: {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown Resend signature failure.';
-    throw new Error(`Invalid Resend webhook signature. ${message}`.trim());
+    throw new ResendWebhookError(`Invalid Resend webhook signature. ${message}`.trim());
   }
 
   return {
@@ -172,7 +188,7 @@ function verifyResendWebhook(input: {
 
 function normalizeResendWebhookPayload(payload: unknown): VerifiedResendWebhookEvent {
   if (typeof payload !== 'object' || !payload || Array.isArray(payload)) {
-    throw new Error('Resend webhook payload must be an object.');
+    throw new ResendWebhookError('Resend webhook payload must be an object.');
   }
 
   const record = payload as Record<string, unknown>;
@@ -185,7 +201,7 @@ function normalizeResendWebhookPayload(payload: unknown): VerifiedResendWebhookE
       ? (record.data as Record<string, unknown>)
       : null;
   if (!eventType || !occurredAt || !data) {
-    throw new Error('Resend webhook payload is missing required email event fields.');
+    throw new ResendWebhookError('Resend webhook payload is missing required email event fields.');
   }
 
   const recipientEmail = Array.isArray(data.to)

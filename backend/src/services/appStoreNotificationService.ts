@@ -7,6 +7,7 @@ import {
   type JWSTransactionDecodedPayload,
   type ResponseBodyV2DecodedPayload,
 } from '@apple/app-store-server-library';
+export { VerificationException, VerificationStatus } from '@apple/app-store-server-library';
 import { applyAppleNotification, getOwnerBillingDb } from './ownerBillingService';
 
 const APPLE_BUNDLE_ID = process.env.APPLE_OWNER_IAP_BUNDLE_ID?.trim() || 'com.rezell.canopytrove';
@@ -15,23 +16,28 @@ const APPLE_APP_APPLE_ID = APPLE_APP_APPLE_ID_RAW ? Number.parseInt(APPLE_APP_AP
 
 const APPLE_NOTIFICATIONS_COLLECTION = 'appleNotifications';
 const APPLE_ROOT_CA_DIR = path.resolve(__dirname, '..', 'certs', 'apple-root-cas');
-const APPLE_ROOT_CA_FILES = ['AppleRootCA-G3.cer', 'AppleIncRootCertificate.cer'];
 
 let cachedVerifiers: { production: SignedDataVerifier; sandbox: SignedDataVerifier } | null = null;
 
 async function loadAppleRootCAs(): Promise<Buffer[]> {
-  const certs: Buffer[] = [];
-  for (const fn of APPLE_ROOT_CA_FILES) {
-    try {
-      const data = await fs.readFile(path.join(APPLE_ROOT_CA_DIR, fn));
-      certs.push(data);
-    } catch {
-      // Skip if missing — at least one cert must succeed
-    }
+  // Discover any *.cer files dropped into the cert dir so a future Apple
+  // root rotation only needs the file added — no code change required.
+  let entries: string[];
+  try {
+    entries = await fs.readdir(APPLE_ROOT_CA_DIR);
+  } catch {
+    throw new Error(
+      `Apple Root CA directory missing at ${APPLE_ROOT_CA_DIR}. ` +
+        'Run `node backend/scripts/fetch-apple-root-cas.mjs` before deploying.',
+    );
   }
+  const certFiles = entries.filter((name) => name.toLowerCase().endsWith('.cer'));
+  const certs = await Promise.all(
+    certFiles.map((name) => fs.readFile(path.join(APPLE_ROOT_CA_DIR, name))),
+  );
   if (!certs.length) {
     throw new Error(
-      `No Apple Root CAs found at ${APPLE_ROOT_CA_DIR}. ` +
+      `No .cer files found in ${APPLE_ROOT_CA_DIR}. ` +
         'Run `node backend/scripts/fetch-apple-root-cas.mjs` before deploying.',
     );
   }
@@ -73,7 +79,9 @@ async function getVerifiers(): Promise<{
 
 // Apple's notifications can come from either Sandbox or Production. The
 // signature verifier needs to match the environment. Try production first
-// (most common), fall back to sandbox.
+// (most common), fall back to sandbox. Surface the production failure to
+// logs before falling back so a genuine signature failure isn't masked by
+// the second (also-doomed) sandbox attempt.
 async function verifySignedNotification(signedPayload: string): Promise<{
   decoded: ResponseBodyV2DecodedPayload;
   environment: Environment;
@@ -82,7 +90,16 @@ async function verifySignedNotification(signedPayload: string): Promise<{
   try {
     const decoded = await verifiers.production.verifyAndDecodeNotification(signedPayload);
     return { decoded, environment: Environment.PRODUCTION };
-  } catch {
+  } catch (productionError) {
+    const productionMessage =
+      productionError instanceof Error ? productionError.message : String(productionError);
+    console.warn(
+      JSON.stringify({
+        level: 'warn',
+        message: 'apple_notification_production_verifier_failed',
+        productionError: productionMessage,
+      }),
+    );
     const decoded = await verifiers.sandbox.verifyAndDecodeNotification(signedPayload);
     return { decoded, environment: Environment.SANDBOX };
   }
@@ -112,10 +129,14 @@ export async function processSignedNotification(
   }
 
   // Idempotency check: Apple retries on non-2xx for up to a few days.
+  // Only short-circuit when a prior attempt fully completed (processed=true);
+  // a doc with processed=false means a previous attempt threw mid-flight and
+  // we should re-apply. applyAppleNotification is merge-write idempotent, so
+  // re-applying the same notification is safe.
   const db = getOwnerBillingDb();
   const notifRef = db.collection(APPLE_NOTIFICATIONS_COLLECTION).doc(notificationUUID);
   const existing = await notifRef.get();
-  if (existing.exists) {
+  if (existing.exists && existing.get('processed') === true) {
     return {
       status: 'duplicate',
       notificationUUID,
@@ -126,22 +147,29 @@ export async function processSignedNotification(
 
   // Decode embedded transaction + renewal info using the same env.
   const verifiers = await getVerifiers();
-  const verifier =
-    environment === Environment.SANDBOX ? verifiers.sandbox : verifiers.production;
+  const verifier = environment === Environment.SANDBOX ? verifiers.sandbox : verifiers.production;
 
   let transactionInfo: JWSTransactionDecodedPayload | null = null;
   let renewalInfo: JWSRenewalInfoDecodedPayload | null = null;
 
   if (decoded.data?.signedTransactionInfo) {
-    transactionInfo = await verifier.verifyAndDecodeTransaction(
-      decoded.data.signedTransactionInfo,
-    );
+    transactionInfo = await verifier.verifyAndDecodeTransaction(decoded.data.signedTransactionInfo);
   }
   if (decoded.data?.signedRenewalInfo) {
     renewalInfo = await verifier.verifyAndDecodeRenewalInfo(decoded.data.signedRenewalInfo);
   }
 
-  // Persist for audit trail + idempotency, even if nothing maps to a state change.
+  // Dispatch to ownerBillingService for the actual subscription state mapping.
+  // Persist the audit doc only after this succeeds — otherwise a thrown
+  // applyAppleNotification followed by Apple's retry would hit the
+  // idempotency check and silently drop the state change.
+  const stateChanged = await applyAppleNotification({
+    notificationType: String(notificationType),
+    subtype: subtype ? String(subtype) : null,
+    transactionInfo,
+    renewalInfo,
+  });
+
   await notifRef.set({
     notificationUUID,
     notificationType: String(notificationType),
@@ -155,16 +183,11 @@ export async function processSignedNotification(
     originalTransactionId: transactionInfo?.originalTransactionId ?? null,
     productId: transactionInfo?.productId ?? null,
     expiresDate: transactionInfo?.expiresDate ?? null,
+    appAccountToken: transactionInfo?.appAccountToken ?? null,
     autoRenewStatus: renewalInfo?.autoRenewStatus ?? null,
     autoRenewProductId: renewalInfo?.autoRenewProductId ?? null,
-  });
-
-  // Dispatch to ownerBillingService for the actual subscription state mapping.
-  const stateChanged = await applyAppleNotification({
-    notificationType: String(notificationType),
-    subtype: subtype ? String(subtype) : null,
-    transactionInfo,
-    renewalInfo,
+    processed: true,
+    stateChanged,
   });
 
   return {

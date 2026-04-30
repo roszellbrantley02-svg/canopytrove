@@ -439,9 +439,204 @@ test('syncOwnerAppleSubscription stores Apple-managed owner access in the shared
   assert.ok(storedSubscription);
   assert.equal(storedSubscription?.provider, 'apple_iap');
   assert.equal(storedSubscription?.tier, 'growth');
-  assert.equal(
-    storedSubscription?.planId,
-    'com.rezell.canopytrove.owner.growth.monthly.v3',
-  );
+  assert.equal(storedSubscription?.planId, 'com.rezell.canopytrove.owner.growth.monthly.v3');
   assert.equal(storedSubscription?.externalSubscriptionId, '1000000999999');
+});
+
+test('applyAppleNotification reads auto-renew from renewalInfo, not transactionInfo', async () => {
+  const storedSubscriptions = new Map<string, Record<string, unknown>>([
+    [
+      'owner-1',
+      {
+        ownerUid: 'owner-1',
+        dispensaryId: 'storefront-1',
+        provider: 'apple_iap',
+        externalSubscriptionId: '1000000999999',
+        planId: 'com.rezell.canopytrove.owner.growth.monthly.v3',
+        tier: 'growth',
+        status: 'active',
+        billingCycle: 'monthly',
+        currentPeriodStart: new Date().toISOString(),
+        currentPeriodEnd: new Date().toISOString(),
+        cancelAtPeriodEnd: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+  ]);
+  const storedProfiles = new Map<string, Record<string, unknown>>();
+
+  setCachedModule(firebaseModulePath, {
+    hasBackendFirebaseConfig: true,
+    getBackendFirebaseDb: () => ({
+      collection: (name: string) => {
+        const store = name === 'subscriptions' ? storedSubscriptions : storedProfiles;
+        return {
+          doc: (id: string) => ({
+            get: async () => ({
+              exists: store.has(id),
+              data: () => store.get(id),
+            }),
+            set: async (value: Record<string, unknown>) => {
+              store.set(id, { ...(store.get(id) ?? {}), ...value });
+            },
+          }),
+          where: (_field: string, _op: string, value: string) => ({
+            limit: () => ({
+              get: async () => {
+                const matches = Array.from(store.entries())
+                  .filter(([, record]) => record.externalSubscriptionId === value)
+                  .map(([id, record]) => ({ id, data: () => record }));
+                return { empty: matches.length === 0, docs: matches };
+              },
+            }),
+          }),
+        };
+      },
+    }),
+  });
+
+  setCachedModule(configModulePath, {
+    serverConfig: {},
+    getMissingOwnerBillingBackendEnvVars: () => [],
+  });
+  setCachedModule(ownerPortalAuthorizationServicePath, {
+    getOwnerAuthorizationState: async () => ({}),
+    isVerifiedOwnerStatus: () => true,
+  });
+  setCachedModule(launchProgramServicePath, {
+    resolveOwnerLaunchTrialOffer: async () => ({ trialDays: 0, claim: null }),
+  });
+
+  delete require.cache[ownerBillingServicePath];
+  const { applyAppleNotification } =
+    require('./ownerBillingService') as typeof import('./ownerBillingService');
+
+  // Case 1: SUBSCRIBED with auto-renew DISABLED on Apple's side. The bug had
+  // this reading transactionInfo.isAutoRenewing (undefined), so cancelAtPeriodEnd
+  // would stay false. Correct behavior: read renewalInfo.autoRenewStatus === 0.
+  const changedAutoRenewOff = await applyAppleNotification({
+    notificationType: 'SUBSCRIBED',
+    subtype: 'INITIAL_BUY',
+    transactionInfo: {
+      transactionId: '2000001000001',
+      originalTransactionId: '1000000999999',
+      productId: 'com.rezell.canopytrove.owner.growth.monthly.v3',
+      expiresDate: Date.now() + 30 * 24 * 60 * 60 * 1000,
+    },
+    renewalInfo: { autoRenewStatus: 0 },
+  });
+  assert.equal(changedAutoRenewOff, true);
+  assert.equal(storedSubscriptions.get('owner-1')?.cancelAtPeriodEnd, true);
+
+  // Case 2: DID_RENEW with auto-renew ENABLED. cancelAtPeriodEnd must flip back.
+  const changedAutoRenewOn = await applyAppleNotification({
+    notificationType: 'DID_RENEW',
+    subtype: null,
+    transactionInfo: {
+      transactionId: '2000001000002',
+      originalTransactionId: '1000000999999',
+      productId: 'com.rezell.canopytrove.owner.growth.monthly.v3',
+      expiresDate: Date.now() + 60 * 24 * 60 * 60 * 1000,
+    },
+    renewalInfo: { autoRenewStatus: 1 },
+  });
+  assert.equal(changedAutoRenewOn, true);
+  assert.equal(storedSubscriptions.get('owner-1')?.cancelAtPeriodEnd, false);
+});
+
+test('applyAppleNotification bootstraps subscription from appAccountToken when no record exists', async () => {
+  const storedSubscriptions = new Map<string, Record<string, unknown>>();
+  const storedProfiles = new Map<string, Record<string, unknown>>();
+  const storedAppleAccountTokens = new Map<string, Record<string, unknown>>([
+    [
+      'token-uuid-abc',
+      { ownerUid: 'owner-2', createdAt: new Date().toISOString(), consumedAt: null },
+    ],
+  ]);
+
+  setCachedModule(firebaseModulePath, {
+    hasBackendFirebaseConfig: true,
+    getBackendFirebaseDb: () => ({
+      collection: (name: string) => {
+        const store =
+          name === 'subscriptions'
+            ? storedSubscriptions
+            : name === 'appleAccountTokens'
+              ? storedAppleAccountTokens
+              : storedProfiles;
+        return {
+          doc: (id: string) => ({
+            get: async () => ({
+              exists: store.has(id),
+              data: () => store.get(id),
+              get: (field: string) =>
+                (store.get(id) as Record<string, unknown> | undefined)?.[field],
+            }),
+            set: async (value: Record<string, unknown>) => {
+              store.set(id, { ...(store.get(id) ?? {}), ...value });
+            },
+          }),
+          where: (_field: string, _op: string, value: string) => ({
+            limit: () => ({
+              get: async () => {
+                const matches = Array.from(store.entries())
+                  .filter(([, record]) => record.externalSubscriptionId === value)
+                  .map(([id, record]) => ({ id, data: () => record }));
+                return { empty: matches.length === 0, docs: matches };
+              },
+            }),
+          }),
+        };
+      },
+    }),
+  });
+
+  setCachedModule(configModulePath, {
+    serverConfig: {},
+    getMissingOwnerBillingBackendEnvVars: () => [],
+  });
+  setCachedModule(ownerPortalAuthorizationServicePath, {
+    getOwnerAuthorizationState: async (uid: string) => ({
+      ownerUid: uid,
+      ownerProfile: { uid },
+      storefrontId: 'storefront-2',
+    }),
+    isVerifiedOwnerStatus: () => true,
+  });
+  setCachedModule(launchProgramServicePath, {
+    resolveOwnerLaunchTrialOffer: async () => ({ trialDays: 0, claim: null }),
+  });
+
+  delete require.cache[ownerBillingServicePath];
+  const { applyAppleNotification } =
+    require('./ownerBillingService') as typeof import('./ownerBillingService');
+
+  // No existing subscription doc → lookup by originalTransactionId returns
+  // null. SUBSCRIBED branch must fall back to appAccountToken to recover
+  // ownerUid and create the record from webhook data alone.
+  const stateChanged = await applyAppleNotification({
+    notificationType: 'SUBSCRIBED',
+    subtype: 'INITIAL_BUY',
+    transactionInfo: {
+      transactionId: '2000002000001',
+      originalTransactionId: '1000001999999',
+      productId: 'com.rezell.canopytrove.owner.growth.monthly.v3',
+      expiresDate: Date.now() + 30 * 24 * 60 * 60 * 1000,
+      purchaseDate: Date.now(),
+      appAccountToken: 'token-uuid-abc',
+    },
+    renewalInfo: { autoRenewStatus: 1 },
+  });
+
+  assert.equal(stateChanged, true);
+  const created = storedSubscriptions.get('owner-2');
+  assert.ok(created, 'subscription doc should have been created from webhook');
+  assert.equal(created?.provider, 'apple_iap');
+  assert.equal(created?.tier, 'growth');
+  assert.equal(created?.status, 'active');
+  assert.equal(created?.externalSubscriptionId, '1000001999999');
+  assert.equal(created?.cancelAtPeriodEnd, false);
+  // Token should be marked consumed for traceability.
+  assert.ok(storedAppleAccountTokens.get('token-uuid-abc')?.consumedAt);
 });

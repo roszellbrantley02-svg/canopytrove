@@ -91,7 +91,16 @@ router.post('/send', async (request: Request, response: Response) => {
     let failed = 0;
     const expired: string[] = [];
 
-    const sendPromises = snapshot.docs.map(async (doc) => {
+    // Concurrency-limit fan-out: previously every doc started a
+    // sendNotification simultaneously via Promise.all. With thousands of
+    // subscribers that meant thousands of simultaneous outbound HTTPS
+    // requests, exhausting the Cloud Run instance's network/file-handle
+    // budget and triggering rate-limit pushback from Apple/Google's
+    // push services. Process in waves of 25.
+    const PUSH_CONCURRENCY = 25;
+    const PUSH_TIMEOUT_MS = 10_000;
+
+    const sendOne = async (doc: (typeof snapshot.docs)[number]) => {
       const data = doc.data();
       const subscription = {
         endpoint: data.endpoint,
@@ -101,8 +110,12 @@ router.post('/send', async (request: Request, response: Response) => {
         },
       };
 
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('push send timed out')), PUSH_TIMEOUT_MS),
+      );
+
       try {
-        await webpush.sendNotification(subscription, payload);
+        await Promise.race([webpush.sendNotification(subscription, payload), timeout]);
         sent++;
       } catch (error: unknown) {
         const statusCode = (error as { statusCode?: number })?.statusCode;
@@ -118,9 +131,12 @@ router.post('/send', async (request: Request, response: Response) => {
           error: error instanceof Error ? error.message : String(error),
         });
       }
-    });
+    };
 
-    await Promise.all(sendPromises);
+    for (let i = 0; i < snapshot.docs.length; i += PUSH_CONCURRENCY) {
+      const batch = snapshot.docs.slice(i, i + PUSH_CONCURRENCY);
+      await Promise.all(batch.map(sendOne));
+    }
 
     logger.info('[push] Broadcast complete', { sent, failed, expired: expired.length });
     response.json({
