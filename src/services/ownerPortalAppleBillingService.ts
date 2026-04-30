@@ -93,3 +93,23 @@ export async function syncOwnerAppleSubscriptionPurchase(purchase: Purchase) {
     body: JSON.stringify(toSyncPayload(purchase)),
   });
 }
+
+export type OwnerApplePreparePurchaseResponse = {
+  ok: true;
+  appAccountToken: string;
+};
+
+// Reserve an appAccountToken on the backend before opening the StoreKit
+// purchase. The token is stamped onto the resulting transaction so the
+// App Store Server Notifications V2 webhook can recover the owner identity
+// even if the post-purchase syncOwnerAppleSubscriptionPurchase call never
+// lands (app crash, network drop). Webhook becomes a true source-of-truth
+// for fresh purchases instead of a confirmation channel.
+export async function prepareOwnerApplePurchase() {
+  return requestJson<OwnerApplePreparePurchaseResponse>('/owner-billing/apple/prepare-purchase', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+}

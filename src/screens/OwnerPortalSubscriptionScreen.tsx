@@ -37,6 +37,7 @@ import {
 import {
   getOwnerApplePurchaseTier,
   isOwnerAppleSubscriptionPurchase,
+  prepareOwnerApplePurchase,
   syncOwnerAppleSubscriptionPurchase,
 } from '../services/ownerPortalAppleBillingService';
 import { getOwnerProfile, getOwnerSubscription } from '../services/ownerPortalService';
@@ -352,11 +353,22 @@ function OwnerPortalSubscriptionScreenInner() {
       setIsSubmitting(tier);
       setStatusText('Opening Apple purchase...');
       try {
+        // Reserve a backend-side appAccountToken so the App Store Server
+        // Notifications webhook can recover the owner identity even if the
+        // post-purchase sync never lands (app crash, network drop).
+        let appAccountToken: string | null = null;
+        try {
+          const prepared = await prepareOwnerApplePurchase();
+          appAccountToken = prepared.appAccountToken;
+        } catch {
+          // Non-fatal: fall through with the legacy frontend-sync-only path.
+        }
         await requestApplePurchase({
           request: {
             apple: {
               sku: product.id,
               quantity: 1,
+              ...(appAccountToken ? { appAccountToken } : {}),
             },
           },
           type: 'subs',
@@ -641,16 +653,15 @@ function OwnerPortalSubscriptionScreenInner() {
             <View style={styles.sectionStack}>
               <Text style={styles.helperText}>
                 Owner subscriptions on iPhone are auto-renewable monthly subscriptions billed
-                through your Apple ID. Plans available: Verified, Growth, and Pro. Each plan
-                renews monthly at the price shown above until you cancel.
+                through your Apple ID. Plans available: Verified, Growth, and Pro. Each plan renews
+                monthly at the price shown above until you cancel.
               </Text>
               <Text style={styles.helperText}>
                 Payment will be charged to your Apple ID account at confirmation of purchase.
-                Subscriptions automatically renew unless canceled at least 24 hours before the
-                end of the current period. Your account will be charged for renewal within 24
-                hours prior to the end of the current period. You can manage and cancel your
-                subscriptions by going to your Apple ID account settings on the App Store after
-                purchase.
+                Subscriptions automatically renew unless canceled at least 24 hours before the end
+                of the current period. Your account will be charged for renewal within 24 hours
+                prior to the end of the current period. You can manage and cancel your subscriptions
+                by going to your Apple ID account settings on the App Store after purchase.
               </Text>
               <View style={styles.buttonRow}>
                 <Pressable
