@@ -199,7 +199,6 @@ function buildAddressLine(storefront) {
 }
 
 function buildFaqEntries(storefront) {
-  const cityLabel = `${storefront.city}, ${storefront.state}`;
   const fullAddress = buildAddressLine(storefront);
   const hoursAnswer =
     Array.isArray(storefront.hours) && storefront.hours.length > 0
