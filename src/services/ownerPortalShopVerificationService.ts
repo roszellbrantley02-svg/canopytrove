@@ -1,20 +1,21 @@
 /**
- * Owner Shop Ownership Verification — frontend service for the Twilio
- * Verify backend (backend/src/services/shopOwnershipVerificationService.ts).
+ * Owner Shop Ownership Verification — frontend service for the merged
+ * voice OTP + alert call (backend/src/services/shopOwnershipVerificationService.ts).
  *
- * Optional fast-path verification: owner enters code received on the
- * SHOP'S published phone (from Google Places). On success, claim is
- * marked shopOwnershipVerified=true. Admin review still happens, but
- * with the verification signal already attached.
+ * Single voice call to the shop's published phone delivers BOTH the
+ * 6-digit verification code AND alerts the legitimate operator if a
+ * hijacker is the claimant. Owner enters the code in-app to verify.
  *
- * Plus a separate notify-shop call (shopClaimNotificationService) that
- * sends an out-of-band voice alert to the shop's published phone — fires
- * regardless of whether the owner completes verification themselves. The
- * legitimate operator gets warned even if the claimant can't access the
- * shop phone line.
+ * Cooldown rules (server-enforced):
+ *   - 30 minutes between calls per claim
+ *   - 3 calls per claim per 24 hours
+ *
+ * On cooldown errors, `cooldownEndsAt` (ISO timestamp) is surfaced
+ * through a typed BackendShopVerificationCooldownError so screens can
+ * show a live countdown.
  */
 
-import { requestJson } from './storefrontBackendHttp';
+import { isBackendShopVerificationCooldownError, requestJson } from './storefrontBackendHttp';
 
 export type OwnerShopVerificationErrorCode =
   | 'twilio_not_configured'
@@ -24,6 +25,10 @@ export type OwnerShopVerificationErrorCode =
   | 'claim_not_owned'
   | 'shop_phone_unavailable'
   | 'invalid_verification_code'
+  | 'code_expired'
+  | 'too_many_failed_attempts'
+  | 'cooldown_active'
+  | 'daily_limit_reached'
   | 'rate_limited'
   | 'verification_send_failed'
   | 'verification_check_failed'
@@ -31,10 +36,16 @@ export type OwnerShopVerificationErrorCode =
 
 export class OwnerShopVerificationError extends Error {
   public readonly code: OwnerShopVerificationErrorCode;
-  constructor(code: OwnerShopVerificationErrorCode, message: string) {
+  public readonly cooldownEndsAt: string | null;
+  constructor(
+    code: OwnerShopVerificationErrorCode,
+    message: string,
+    cooldownEndsAt: string | null = null,
+  ) {
     super(message);
     this.name = 'OwnerShopVerificationError';
     this.code = code;
+    this.cooldownEndsAt = cooldownEndsAt;
   }
 }
 
@@ -42,28 +53,27 @@ export function isOwnerShopVerificationError(error: unknown): error is OwnerShop
   return error instanceof OwnerShopVerificationError;
 }
 
-type ShopVerifySendResponse = {
+export type ShopVerifySendResponse = {
   ok: true;
   storefrontId: string;
   phoneSuffix: string;
   shopName: string;
+  callSid: string;
+  cooldownEndsAt: string;
+  callsRemainingToday: number;
 };
 
-type ShopVerifyConfirmResponse = {
+export type ShopVerifyConfirmResponse = {
   ok: true;
   storefrontId: string;
   verifiedAt: string;
 };
 
-type ShopNotificationResponse = {
-  ok: true;
-  alreadyNotified: boolean;
-  callStatus: string;
-  phoneSuffix: string | null;
-};
-
 function classifyError(error: unknown): OwnerShopVerificationError {
   if (error instanceof OwnerShopVerificationError) return error;
+  if (isBackendShopVerificationCooldownError(error)) {
+    return new OwnerShopVerificationError(error.code, error.message, error.cooldownEndsAt);
+  }
   const message = error instanceof Error ? error.message : 'Shop verification failed.';
   const lower = message.toLowerCase();
   if (
@@ -73,10 +83,13 @@ function classifyError(error: unknown): OwnerShopVerificationError {
   ) {
     return new OwnerShopVerificationError('shop_phone_unavailable', message);
   }
-  if (
-    lower.includes('verification code') &&
-    (lower.includes('incorrect') || lower.includes('expired'))
-  ) {
+  if (lower.includes('expired')) {
+    return new OwnerShopVerificationError('code_expired', message);
+  }
+  if (lower.includes('too many incorrect')) {
+    return new OwnerShopVerificationError('too_many_failed_attempts', message);
+  }
+  if (lower.includes('incorrect')) {
     return new OwnerShopVerificationError('invalid_verification_code', message);
   }
   if (lower.includes('too many')) {
@@ -88,6 +101,11 @@ function classifyError(error: unknown): OwnerShopVerificationError {
   return new OwnerShopVerificationError('unknown', message);
 }
 
+/**
+ * Place the merged voice OTP + alert call to the shop's published phone.
+ * Used both for the auto-fire on claim submission and for owner-initiated
+ * "Send another call" retries.
+ */
 export async function sendShopVerificationCode(storefrontId: string) {
   try {
     return await requestJson<ShopVerifySendResponse>(
@@ -103,6 +121,9 @@ export async function sendShopVerificationCode(storefrontId: string) {
   }
 }
 
+/**
+ * Validate the 6-digit code the owner heard on the call.
+ */
 export async function confirmShopVerificationCode(storefrontId: string, code: string) {
   try {
     return await requestJson<ShopVerifyConfirmResponse>(
@@ -119,21 +140,20 @@ export async function confirmShopVerificationCode(storefrontId: string, code: st
 }
 
 /**
- * Trigger the notification voice call to the shop's published phone.
- * Idempotent — repeated calls for the same claim return
- * { alreadyNotified: true } without re-dialing. Fail-soft: a failure
- * here should NOT block claim flow; log and continue.
+ * Auto-fire the merged call on claim submission. Fail-soft: returns
+ * null on any error so a Twilio hiccup never blocks the claim itself
+ * (admin review still catches everything). Cooldown errors are also
+ * silently swallowed here — when the user explicitly hits "Send another
+ * call" later, the typed error surfaces with the countdown.
  */
 export async function notifyShopOfPendingClaim(storefrontId: string) {
   try {
-    return await requestJson<ShopNotificationResponse>('/owner-portal/claims/notify-shop', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ storefrontId }),
-    });
+    return await sendShopVerificationCode(storefrontId);
   } catch {
-    // Don't surface — notification failure is a degraded-but-OK state
-    // for the owner. Admin review still catches everything.
+    // Don't surface — call failure is a degraded-but-OK state for the
+    // owner. Admin review still catches everything. The owner can
+    // still tap "Send another call" from the verification screen and
+    // see any cooldown error there.
     return null;
   }
 }

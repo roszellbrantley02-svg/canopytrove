@@ -1,17 +1,17 @@
 /**
- * Shop Claim Notification route — out-of-band alert to the legitimate
- * operator when an ownership claim is filed.
+ * Shop Claim Notification route — DEPRECATED.
  *
  *   POST /owner-portal/claims/notify-shop
- *     Body: { storefrontId }
  *
- * Frontend calls this immediately after submitting a claim. The endpoint
- * is idempotent (won't double-call the same shop for the same claim) and
- * fail-soft (failures are logged + persisted but don't block the claim).
+ * Replaced by /owner-portal/shop-ownership-verification/send (the merged
+ * voice OTP + alert call). The frontend no longer calls this endpoint.
+ * Left in place as a backward-compat stub for cached EAS updates that
+ * may still be on the old client. Delete entirely in a follow-up release
+ * once OTA traffic confirms no stale clients are hitting it.
  *
- * Tight rate limits because each call dials a real shop's published
- * phone — we never want this to become an SMS-bombing vector for the
- * shop's line.
+ * Original behavior: idempotent + fail-soft alert call, separate from
+ * the OTP. The merged design fires ONE call that does both jobs, so
+ * this is now redundant.
  */
 
 import { Router } from 'express';
