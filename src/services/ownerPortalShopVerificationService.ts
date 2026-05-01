@@ -131,7 +131,7 @@ export async function notifyShopOfPendingClaim(storefrontId: string) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ storefrontId }),
     });
-  } catch (error) {
+  } catch {
     // Don't surface — notification failure is a degraded-but-OK state
     // for the owner. Admin review still catches everything.
     return null;
