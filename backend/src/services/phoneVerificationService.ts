@@ -195,7 +195,7 @@ async function twilioRequest<T>(
     if (twilioCode === 60202 || twilioCode === 60203) {
       throw new PhoneVerificationError(
         'rate_limited',
-        'Too many verification attempts. Please wait and try again later.',
+        'Too many verification attempts. Wait an hour, or email askmehere@canopytrove.com if you keep getting blocked.',
         429,
       );
     }
@@ -207,7 +207,7 @@ async function twilioRequest<T>(
     });
     throw new PhoneVerificationError(
       'verification_send_failed',
-      'Unable to send the verification code. Please try again shortly.',
+      'Unable to send the verification code. Try again shortly, or email askmehere@canopytrove.com if it keeps failing.',
       response.status >= 500 ? 502 : 400,
     );
   }

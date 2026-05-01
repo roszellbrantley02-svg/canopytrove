@@ -175,14 +175,14 @@ async function twilioRequest<T>(
       // routed through a non-SMS service).
       throw new ShopOwnershipVerificationError(
         'shop_phone_unavailable',
-        'The shop’s published phone number isn’t reachable for verification. Contact support to verify ownership manually.',
+        'The shop’s published phone number isn’t reachable for verification. Email askmehere@canopytrove.com and we will verify your ownership by phone — usually within 24 hours.',
         400,
       );
     }
     if (twilioCode === 60202 || twilioCode === 60203) {
       throw new ShopOwnershipVerificationError(
         'rate_limited',
-        'Too many verification attempts on this shop. Please wait and try again later.',
+        'Too many verification attempts on this shop. Wait an hour, or email askmehere@canopytrove.com to verify ownership by phone instead.',
         429,
       );
     }
@@ -194,7 +194,7 @@ async function twilioRequest<T>(
     });
     throw new ShopOwnershipVerificationError(
       'verification_send_failed',
-      'Unable to send the verification code. Please try again shortly.',
+      'Unable to send the verification code. Try again shortly, or email askmehere@canopytrove.com if it keeps failing — we can verify your ownership by phone.',
       response.status >= 500 ? 502 : 400,
     );
   }
@@ -279,7 +279,7 @@ export async function sendShopOwnershipVerificationCode(
   if (!shopPhone) {
     throw new ShopOwnershipVerificationError(
       'shop_phone_unavailable',
-      'No published phone number is on file for this storefront. Contact support to verify ownership manually.',
+      'No published phone number is on file for this storefront. Email askmehere@canopytrove.com and we will verify your ownership by phone — usually within 24 hours.',
       400,
     );
   }
@@ -287,7 +287,7 @@ export async function sendShopOwnershipVerificationCode(
   if (!phoneE164) {
     throw new ShopOwnershipVerificationError(
       'shop_phone_unavailable',
-      'The shop’s published phone number isn’t in a format we can send SMS to. Contact support to verify ownership manually.',
+      'The shop’s published phone number isn’t in a format we can send SMS to. Email askmehere@canopytrove.com and we will verify your ownership by phone — usually within 24 hours.',
       400,
     );
   }

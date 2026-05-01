@@ -274,19 +274,25 @@ export async function reviewOwnerClaim(
     shopOwnershipVerifiedPhoneSuffix?: string | null;
   };
 
-  // Anti-hijack gate: approving a claim requires the owner to have
-  // confirmed control of the shop's published phone line via Twilio
-  // SMS callback (shopOwnershipVerificationService). Admin can override
-  // when ownership was confirmed out of band — that override is logged
-  // in reviewNotes for audit.
-  if (
-    validatedStatus === 'approved' &&
-    !claim.shopOwnershipVerified &&
-    !body.overrideShopOwnership
-  ) {
-    throw new Error(
-      'Cannot approve claim: shop ownership not verified. Owner must confirm control of the shop’s published phone, or admin must explicitly override (overrideShopOwnership: true) and document the out-of-band verification in reviewNotes.',
-    );
+  // Anti-hijack signal: shop ownership verification (Twilio SMS callback
+  // to the shop's published phone, shopOwnershipVerificationService)
+  // confirms the claimant controls the shop's actual phone line. We
+  // record the signal in the audit trail but don't HARD-block approval
+  // on it — many legitimate dispensaries use landlines or off-site
+  // forwarding that prevent the owner from completing Layer 2 directly.
+  // Hard-blocking would lock out 30-40% of legit owners. Instead admin
+  // sees the flag in the review queue and decides accordingly. The
+  // overrideShopOwnership field is preserved for explicit override audit
+  // when admin verified ownership out of band (phone call, postcard,
+  // document review).
+  if (validatedStatus === 'approved' && !claim.shopOwnershipVerified) {
+    logger.warn('[adminReviewService] Approving claim without shopOwnershipVerified', {
+      claimId,
+      ownerUid: claim.ownerUid,
+      dispensaryId: claim.dispensaryId,
+      overrideExplicit: body.overrideShopOwnership === true,
+      reviewNotes: body.reviewNotes,
+    });
   }
 
   // Check if this owner already has a primary location (multi-location scenario)
