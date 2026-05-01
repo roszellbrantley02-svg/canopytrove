@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { disableRequestTimeout } from '../http/requestTimeout';
 import {
+  forceSyncSeedToFirestore,
   getStorefrontDiscoveryCandidates,
   getStorefrontDiscoveryRunById,
   getStorefrontDiscoveryRuns,
@@ -168,6 +169,41 @@ adminDiscoveryRoutes.post('/candidates/:candidateId/publish', async (request, re
     });
   }
 });
+
+/**
+ * POST /admin/discovery/force-seed-sync
+ *
+ * Pushes any seed-file storefront records that are missing from Firestore
+ * into the storefront_summaries + storefront_details collections. Does NOT
+ * overwrite existing docs — owner-edited fields, manual admin updates, or
+ * any drift from the seed are preserved.
+ *
+ * Catches the failure mode where the live discovery sweep silently drops
+ * newly-licensed shops because their geocoding fails (the seed already
+ * has coordinates baked in, so it bypasses the geocode-or-die path).
+ *
+ * Query params:
+ *   ?dryRun=true — preview which IDs would be added without writing
+ *
+ * Response shape:
+ *   { ok, dryRun, totalSeedRecords, alreadyPresent, added, errored,
+ *     addedIds: string[], erroredIds: { id, reason }[] }
+ */
+adminDiscoveryRoutes.post(
+  '/force-seed-sync',
+  disableRequestTimeout(),
+  async (request, response) => {
+    try {
+      const dryRun = request.query.dryRun === 'true';
+      response.json(await forceSyncSeedToFirestore({ dryRun }));
+    } catch (error) {
+      response.status(500).json({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Unknown force-seed-sync failure',
+      });
+    }
+  },
+);
 
 adminDiscoveryRoutes.post('/published/refresh-hours', async (request, response) => {
   try {

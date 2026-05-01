@@ -1,4 +1,5 @@
 import { StorefrontRecord } from '../../../src/types/storefrontRecord';
+import { ocmVerifiedStorefrontRecords } from '../../../src/data/ocmVerifiedStorefrontRecords.generated';
 import { getBackendFirebaseDb } from '../firebase';
 import {
   StorefrontDetailDocument,
@@ -706,6 +707,134 @@ export async function publishStorefrontDiscoveryCandidate(candidateId: string) {
     candidate: nextCandidate,
     summary: publishedSummary,
     detail: publishedDetail,
+  };
+}
+
+/**
+ * Force-sync the curated OCM seed file to Firestore.
+ *
+ * Background: the live discovery sweep silently drops rows whose geocoding
+ * fails (storefrontDiscoverySourceService.ts:453 — `if (!coordinates) continue`).
+ * Newly-licensed shops without a Google Places entry yet are the typical
+ * casualty. Symptom: seed grows over time (627 → 644 → ...) but Firestore
+ * lags behind because each sweep cohort silently drops the new entries.
+ *
+ * The seed file already contains coordinates (baked at seed-generation time
+ * from a stable geocoder run), so it's the authoritative ingestion path
+ * when the live sweep is failing. This function takes the seed as truth
+ * and writes any missing storefront docs to Firestore. It does NOT
+ * overwrite existing docs — owner-edited fields, manual admin updates,
+ * and any drift from the seed are preserved.
+ *
+ * Idempotent. Safe to run repeatedly. Only adds, never modifies.
+ */
+export async function forceSyncSeedToFirestore(input?: { dryRun?: boolean }): Promise<{
+  ok: true;
+  dryRun: boolean;
+  totalSeedRecords: number;
+  alreadyPresent: number;
+  added: number;
+  errored: number;
+  addedIds: string[];
+  erroredIds: Array<{ id: string; reason: string }>;
+}> {
+  const dryRun = Boolean(input?.dryRun);
+  const db = getBackendFirebaseDb();
+  if (!db) {
+    return {
+      ok: true,
+      dryRun,
+      totalSeedRecords: ocmVerifiedStorefrontRecords.length,
+      alreadyPresent: 0,
+      added: 0,
+      errored: 0,
+      addedIds: [],
+      erroredIds: [{ id: '*', reason: 'Backend Firestore is not configured.' }],
+    };
+  }
+
+  const startedAt = new Date().toISOString();
+  let alreadyPresent = 0;
+  const addedIds: string[] = [];
+  const erroredIds: Array<{ id: string; reason: string }> = [];
+
+  // Process records sequentially with bounded concurrency to avoid
+  // hammering Firestore with 644 simultaneous reads. The summaries
+  // collection is the canonical "exists?" check — if a doc exists for
+  // the storefront id, we treat the record as already-present and skip.
+  const READ_CONCURRENCY = 25;
+  const records = ocmVerifiedStorefrontRecords;
+
+  for (let i = 0; i < records.length; i += READ_CONCURRENCY) {
+    const batch = records.slice(i, i + READ_CONCURRENCY);
+    const presence = await Promise.all(
+      batch.map(async (record) => {
+        try {
+          const snap = await db.collection(STOREFRONT_SUMMARIES_COLLECTION).doc(record.id).get();
+          return { record, exists: snap.exists };
+        } catch (error) {
+          return {
+            record,
+            exists: false,
+            readError: error instanceof Error ? error.message : String(error),
+          };
+        }
+      }),
+    );
+
+    for (const entry of presence) {
+      const { record, exists } = entry;
+      const readError = (entry as { readError?: string }).readError;
+      if (readError) {
+        erroredIds.push({ id: record.id, reason: `Firestore read failed: ${readError}` });
+        continue;
+      }
+      if (exists) {
+        alreadyPresent += 1;
+        continue;
+      }
+
+      // Build summary + detail from the seed record alone — no Google
+      // enrichment. Owner-claim flow can re-enrich later.
+      try {
+        const summary: StorefrontSummaryDocument = buildPublishedStorefrontSummaryDocument(
+          record,
+          undefined,
+          null,
+        );
+        const detail: StorefrontDetailDocument = buildPublishedStorefrontDetailDocument(
+          record,
+          null,
+        );
+        if (!dryRun) {
+          await persistPublishedStorefrontDocuments(record.id, summary, detail, startedAt, {
+            refreshCaches: false,
+          });
+        }
+        addedIds.push(record.id);
+      } catch (error) {
+        erroredIds.push({
+          id: record.id,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
+  // Refresh caches once at the end if we actually wrote something.
+  if (!dryRun && addedIds.length > 0) {
+    clearStorefrontBackendCache();
+  }
+
+  return {
+    ok: true,
+    dryRun,
+    totalSeedRecords: records.length,
+    alreadyPresent,
+    added: addedIds.length,
+    errored: erroredIds.length,
+    addedIds,
+    erroredIds,
   };
 }
 
