@@ -5,6 +5,7 @@ import { useStorefrontProfileController } from '../../context/StorefrontControll
 import { useSavedSummaries } from '../../hooks/useStorefrontSummaryData';
 import type { RootStackParamList } from '../../navigation/RootNavigator';
 import { submitBusinessVerification } from '../../services/ownerPortalVerificationService';
+import { isBackendPhoneVerificationRequiredError } from '../../services/storefrontBackendHttp';
 import type { OwnerPortalUploadedFile } from '../../types/ownerPortal';
 import { formatStorefrontAddress, pickVerificationDocument } from './ownerPortalVerificationShared';
 import { useOwnerPortalProfileLoader } from './useOwnerPortalProfileLoader';
@@ -75,6 +76,15 @@ export function useOwnerPortalBusinessVerificationModel() {
       });
       navigation.replace('OwnerPortalIdentityVerification');
     } catch (error) {
+      // Backend gates business verification behind owner phone verification.
+      // Auto-route to the phone-verification screen rather than showing a
+      // raw "Verify your phone first" string the user can't act on.
+      if (isBackendPhoneVerificationRequiredError(error)) {
+        navigation.replace('OwnerPortalPhoneVerification', {
+          nextRoute: 'OwnerPortalBusinessVerification',
+        });
+        return;
+      }
       setStatusText(
         error instanceof Error ? error.message : 'Unable to submit business verification.',
       );

@@ -210,6 +210,14 @@ const OwnerPortalPaymentMethodsScreen = lazyScreen(
   () => import('../screens/OwnerPortalPaymentMethodsScreen'),
   'OwnerPortalPaymentMethodsScreen',
 );
+const OwnerPortalPhoneVerificationScreen = lazyScreen(
+  () => import('../screens/OwnerPortalPhoneVerificationScreen'),
+  'OwnerPortalPhoneVerificationScreen',
+);
+const OwnerPortalShopOwnershipVerificationScreen = lazyScreen(
+  () => import('../screens/OwnerPortalShopOwnershipVerificationScreen'),
+  'OwnerPortalShopOwnershipVerificationScreen',
+);
 
 /* ── Admin screens — lazy ── */
 const AdminRuntimePanelScreen = lazyScreen(
@@ -371,6 +379,19 @@ export type RootStackParamList = {
         preview?: boolean;
       }
     | undefined;
+  OwnerPortalPhoneVerification:
+    | {
+        nextRoute?:
+          | 'OwnerPortalBusinessDetails'
+          | 'OwnerPortalBusinessVerification'
+          | 'OwnerPortalIdentityVerification'
+          | 'OwnerPortalHome';
+      }
+    | undefined;
+  OwnerPortalShopOwnershipVerification: {
+    storefrontId: string;
+    storefrontDisplayName?: string;
+  };
   Settings: undefined;
   SavedStorefronts: undefined;
   BadgeGallery: undefined;
@@ -571,6 +592,19 @@ export const stackScreens = [
   {
     name: 'OwnerPortalPaymentMethods',
     component: gateReviewSurface(OwnerPortalPaymentMethodsScreen, supportsOwnerWorkspaceUi),
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalPhoneVerification',
+    component: gateReviewSurface(OwnerPortalPhoneVerificationScreen, supportsOwnerWorkspaceUi),
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalShopOwnershipVerification',
+    component: gateReviewSurface(
+      OwnerPortalShopOwnershipVerificationScreen,
+      supportsOwnerWorkspaceUi,
+    ),
     options: workspaceFlowScreenOptions,
   },
   {

@@ -85,10 +85,15 @@ function OwnerPortalClaimListingScreenInner() {
         id: storefrontId,
         displayName,
       });
-      setStatusText(
-        'Claim sent. We will review it and connect this business account to the storefront.',
-      );
-      navigation.replace('OwnerPortalHome');
+      // Offer the optional shop-ownership fast-path right after the
+      // claim lands. Owners who can answer the published shop phone get
+      // verified instantly. Skip routes them straight to OwnerPortalHome
+      // and admin review handles the claim — see the screen's own skip
+      // path for that.
+      navigation.replace('OwnerPortalShopOwnershipVerification', {
+        storefrontId,
+        storefrontDisplayName: displayName,
+      });
     } catch (error) {
       setStatusText(error instanceof Error ? error.message : 'Unable to submit claim.');
     } finally {

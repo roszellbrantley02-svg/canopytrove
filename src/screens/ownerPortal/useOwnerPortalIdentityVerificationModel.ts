@@ -4,7 +4,10 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useStorefrontProfileController } from '../../context/StorefrontController';
 import type { RootStackParamList } from '../../navigation/RootNavigator';
-import { requestJson } from '../../services/storefrontBackendHttp';
+import {
+  isBackendPhoneVerificationRequiredError,
+  requestJson,
+} from '../../services/storefrontBackendHttp';
 import type { OwnerPortalIdentityIdType } from '../../types/ownerPortal';
 import { useOwnerPortalProfileLoader } from './useOwnerPortalProfileLoader';
 
@@ -76,13 +79,22 @@ export function useOwnerPortalIdentityVerificationModel() {
         throw new Error('Verification URL not available. Please try again.');
       }
     } catch (error) {
+      // Backend gates identity verification behind owner phone verification.
+      // Auto-route to the phone-verification screen rather than showing a
+      // raw "Verify your phone first" string the user can't act on.
+      if (isBackendPhoneVerificationRequiredError(error)) {
+        navigation.replace('OwnerPortalPhoneVerification', {
+          nextRoute: 'OwnerPortalIdentityVerification',
+        });
+        return;
+      }
       setStatusText(
         error instanceof Error ? error.message : 'Unable to start identity verification.',
       );
     } finally {
       setIsSubmitting(false);
     }
-  }, [ownerUid, isSubmitting, setStatusText]);
+  }, [navigation, ownerUid, isSubmitting, setStatusText]);
 
   const checkStatus = React.useCallback(() => {
     // Navigate home — the profile loader will re-fetch and show current status
