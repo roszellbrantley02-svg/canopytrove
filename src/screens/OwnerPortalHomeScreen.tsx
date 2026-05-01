@@ -338,63 +338,43 @@ function OwnerPortalHomeScreenInner() {
           </MotionInView>
         ) : null}
 
-        {/* 3b. Unlock more — optional verification CTAs.
-             Identity verification + business document upload are NO LONGER
-             required to access the workspace. They unlock specific benefits:
-              - Identity → enables payouts (Stripe Connect requires it)
-              - Business docs → "Verified Business" badge on the public listing
-             We surface them as benefit-first CTAs here so owners opt in when
-             they want the upgrade, not as a friction-first gate at signup. */}
-        {ownerProfile?.dispensaryId &&
-        (ownerProfile?.identityVerificationStatus !== 'verified' ||
-          ownerProfile?.businessVerificationStatus !== 'verified') ? (
+        {/* 3b. Unlock more — optional credibility upgrade.
+             Subscriptions on iOS go through Apple In-App Purchase
+             (StoreKit), so there's no scenario today where money flows
+             FROM us TO an owner. Stripe Identity (the "Enable payouts"
+             card we used to surface here) was groundwork for a payout
+             feature that doesn't exist; tapping it ran owners through a
+             60-second ID scan that unlocked nothing visible. Removed
+             the card to stop misleading owners. The Stripe Identity
+             screen + backend service stay in the codebase as latent
+             infrastructure — easy to re-surface if a payout feature
+             ever ships. */}
+        {ownerProfile?.dispensaryId && ownerProfile?.businessVerificationStatus !== 'verified' ? (
           <MotionInView delay={145}>
             <SectionCard
               title="Unlock more"
-              body="Optional upgrades for when you want them. Skip these to keep using the basic workspace."
+              body="Optional credibility upgrade. Skip to keep using the basic workspace."
             >
               <View style={localStyles.unlockGrid}>
-                {ownerProfile?.identityVerificationStatus !== 'verified' ? (
-                  <View style={localStyles.unlockCard}>
-                    <View style={localStyles.unlockCardHeader}>
-                      <AppUiIcon name="person-circle-outline" size={22} color="#F5C86A" />
-                      <Text style={localStyles.unlockCardKicker}>Get paid</Text>
-                    </View>
-                    <Text style={localStyles.unlockCardTitle}>Enable payouts</Text>
-                    <Text style={localStyles.unlockCardBody}>
-                      Verify your identity through Stripe to receive payouts from paid promotions
-                      and subscriptions. Takes about 60 seconds.
-                    </Text>
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => navigation.navigate('OwnerPortalIdentityVerification', {})}
-                      style={localStyles.unlockCardButton}
-                    >
-                      <Text style={localStyles.unlockCardButtonText}>Verify identity</Text>
-                    </Pressable>
+                <View style={localStyles.unlockCard}>
+                  <View style={localStyles.unlockCardHeader}>
+                    <AppUiIcon name="shield-checkmark-outline" size={22} color="#F5C86A" />
+                    <Text style={localStyles.unlockCardKicker}>For your profile</Text>
                   </View>
-                ) : null}
-
-                {ownerProfile?.businessVerificationStatus !== 'verified' ? (
-                  <View style={localStyles.unlockCard}>
-                    <View style={localStyles.unlockCardHeader}>
-                      <AppUiIcon name="shield-checkmark-outline" size={22} color="#F5C86A" />
-                      <Text style={localStyles.unlockCardKicker}>Stand out</Text>
-                    </View>
-                    <Text style={localStyles.unlockCardTitle}>Get a Verified Business badge</Text>
-                    <Text style={localStyles.unlockCardBody}>
-                      Upload your license + business registration to display the verified-business
-                      checkmark on your storefront listing.
-                    </Text>
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => navigation.navigate('OwnerPortalBusinessVerification', {})}
-                      style={localStyles.unlockCardButton}
-                    >
-                      <Text style={localStyles.unlockCardButtonText}>Upload documents</Text>
-                    </Pressable>
-                  </View>
-                ) : null}
+                  <Text style={localStyles.unlockCardTitle}>Add your business license</Text>
+                  <Text style={localStyles.unlockCardBody}>
+                    Upload your NY OCM license + business registration so we have your paperwork on
+                    file. Helps if a customer ever disputes your listing or you contact support
+                    about a billing issue.
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => navigation.navigate('OwnerPortalBusinessVerification', {})}
+                    style={localStyles.unlockCardButton}
+                  >
+                    <Text style={localStyles.unlockCardButtonText}>Upload documents</Text>
+                  </Pressable>
+                </View>
               </View>
             </SectionCard>
           </MotionInView>
