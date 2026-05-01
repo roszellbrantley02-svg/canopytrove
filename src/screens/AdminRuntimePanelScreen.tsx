@@ -1,5 +1,8 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
@@ -72,6 +75,7 @@ function getIncidentToneStyle(incident: RuntimeIncidentRecord) {
 }
 
 function AdminRuntimePanelScreenInner() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [status, setStatus] = React.useState<RuntimeOpsStatus | null>(null);
   const [monitoringStatus, setMonitoringStatus] = React.useState<RuntimeMonitoringStatus | null>(
     null,
@@ -277,6 +281,13 @@ function AdminRuntimePanelScreenInner() {
             </View>
           ) : null}
           {statusText ? <Text style={sharedStyles.helperText}>{statusText}</Text> : null}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => navigation.navigate('AdminClaimReview')}
+            style={sharedStyles.secondaryButton}
+          >
+            <Text style={sharedStyles.secondaryButtonText}>Open claim review queue</Text>
+          </Pressable>
         </SectionCard>
       </MotionInView>
 

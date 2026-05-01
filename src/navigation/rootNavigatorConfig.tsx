@@ -228,6 +228,10 @@ const AdminRuntimePanelScreen = lazyScreen(
   () => import('../screens/AdminRuntimePanelScreen'),
   'AdminRuntimePanelScreen',
 );
+const AdminClaimReviewScreen = lazyScreen(
+  () => import('../screens/AdminClaimReviewScreen'),
+  'AdminClaimReviewScreen',
+);
 import type {
   AppReview,
   StorefrontReviewReportContext,
@@ -409,6 +413,7 @@ export type RootStackParamList = {
   ProductReviewsDetail: ProductReviewsDetailRouteParams;
   ProductReviewComposer: ProductReviewComposerRouteParams;
   AdminRuntimePanel: undefined;
+  AdminClaimReview: undefined;
 };
 
 export const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -665,6 +670,11 @@ export const stackScreens = [
   {
     name: 'AdminRuntimePanel',
     component: AdminRuntimePanelScreen,
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'AdminClaimReview',
+    component: AdminClaimReviewScreen,
     options: workspaceFlowScreenOptions,
   },
 ] as const;
