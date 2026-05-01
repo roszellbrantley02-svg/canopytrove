@@ -36,6 +36,7 @@ import { memberEmailRoutes } from './routes/memberEmailRoutes';
 import { ownerBillingRoutes, ownerBillingWebhookHandler } from './routes/ownerBillingRoutes';
 import { appStoreNotificationRoutes } from './routes/appStoreNotificationRoutes';
 import { phoneVerificationRoutes } from './routes/phoneVerificationRoutes';
+import { shopOwnershipVerificationRoutes } from './routes/shopOwnershipVerificationRoutes';
 import { stripeIdentityWebhookHandler } from './routes/stripeIdentityRoutes';
 import { ownerPortalAiRoutes } from './routes/ownerPortalAiRoutes';
 import { ownerWelcomeEmailRoutes } from './routes/ownerWelcomeEmailRoutes';
@@ -367,6 +368,7 @@ export function createApp() {
   app.use('/', ownerBillingRoutes);
   app.use('/', appStoreNotificationRoutes);
   app.use('/', phoneVerificationRoutes);
+  app.use('/', shopOwnershipVerificationRoutes);
   app.use('/', ownerPortalAiRoutes);
   app.use('/', ownerWelcomeEmailRoutes);
   app.use('/', ownerPortalWorkspaceRoutes);

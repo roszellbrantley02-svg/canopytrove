@@ -107,6 +107,10 @@ export function parseAdminReviewBody(body: unknown) {
   return {
     status: parseReviewDecision(record.status),
     reviewNotes: parseReviewNotes(record.reviewNotes),
+    // Only relevant for reviewOwnerClaim — the other review actions ignore
+    // it. Bypasses the shop-ownership-verified gate when ownership was
+    // confirmed out of band; admin documents that in reviewNotes.
+    overrideShopOwnership: record.overrideShopOwnership === true,
   };
 }
 
@@ -239,7 +243,18 @@ export async function getAdminReviewPhotoQueue(limitInput?: unknown) {
 
 export async function reviewOwnerClaim(
   claimId: string,
-  body: { status: ReviewDecision; reviewNotes: string | null },
+  body: {
+    status: ReviewDecision;
+    reviewNotes: string | null;
+    /**
+     * When true, admin explicitly bypasses the shop-ownership-verified
+     * gate (e.g. when ownership was confirmed out of band — phone call
+     * to the shop, in-person visit, mailed postcard). The override is
+     * recorded in reviewNotes for audit. Without this flag, claims
+     * lacking shop ownership verification are rejected at the gate.
+     */
+    overrideShopOwnership?: boolean;
+  },
 ) {
   // Validate decision value before database transaction
   const validatedStatus = parseReviewDecision(body.status);
@@ -252,7 +267,27 @@ export async function reviewOwnerClaim(
     throw new Error('Owner claim not found.');
   }
 
-  const claim = claimSnapshot.data() as { ownerUid: string; dispensaryId: string };
+  const claim = claimSnapshot.data() as {
+    ownerUid: string;
+    dispensaryId: string;
+    shopOwnershipVerified?: boolean;
+    shopOwnershipVerifiedPhoneSuffix?: string | null;
+  };
+
+  // Anti-hijack gate: approving a claim requires the owner to have
+  // confirmed control of the shop's published phone line via Twilio
+  // SMS callback (shopOwnershipVerificationService). Admin can override
+  // when ownership was confirmed out of band — that override is logged
+  // in reviewNotes for audit.
+  if (
+    validatedStatus === 'approved' &&
+    !claim.shopOwnershipVerified &&
+    !body.overrideShopOwnership
+  ) {
+    throw new Error(
+      'Cannot approve claim: shop ownership not verified. Owner must confirm control of the shop’s published phone, or admin must explicitly override (overrideShopOwnership: true) and document the out-of-band verification in reviewNotes.',
+    );
+  }
 
   // Check if this owner already has a primary location (multi-location scenario)
   const ownerProfileSnapshot = await db
