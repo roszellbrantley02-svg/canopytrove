@@ -91,15 +91,30 @@ export async function hasOwnerVerifiedPhone(ownerUid: string): Promise<boolean> 
  * phone-verified. Throws PhoneVerificationError('phone_verification_required',
  * 403). The frontend can detect the typed code and route the user to the
  * verification screen instead of showing a generic error.
+ *
+ * SHOP-OWNERSHIP EQUIVALENCE: an owner who's already passed shop-ownership
+ * verification (the merged voice OTP to the shop's published phone) has
+ * already proven they control a real phone — the shop's phone, which is a
+ * STRONGER signal than personal phone verification. Don't ask them to
+ * verify a personal phone again; that's redundant friction. Falls back to
+ * personal phone verification only when the owner hasn't done shop OTP yet
+ * (e.g. they're going through the legacy 4-screen onboarding flow).
  */
 export async function assertOwnerPhoneVerified(ownerUid: string): Promise<void> {
-  if (!(await hasOwnerVerifiedPhone(ownerUid))) {
-    throw new PhoneVerificationError(
-      'phone_verification_required',
-      'Phone verification is required before this action.',
-      403,
-    );
+  if (await hasOwnerVerifiedPhone(ownerUid)) {
+    return;
   }
+  // Lazy import to avoid a circular dep with the shop verification service
+  // (which doesn't import this file but could in the future).
+  const { hasAnyShopOwnershipVerification } = await import('./shopOwnershipVerificationLookups');
+  if (await hasAnyShopOwnershipVerification(ownerUid)) {
+    return;
+  }
+  throw new PhoneVerificationError(
+    'phone_verification_required',
+    'Phone verification is required before this action.',
+    403,
+  );
 }
 
 function getTwilioConfig() {

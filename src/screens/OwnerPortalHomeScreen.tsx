@@ -338,6 +338,68 @@ function OwnerPortalHomeScreenInner() {
           </MotionInView>
         ) : null}
 
+        {/* 3b. Unlock more — optional verification CTAs.
+             Identity verification + business document upload are NO LONGER
+             required to access the workspace. They unlock specific benefits:
+              - Identity → enables payouts (Stripe Connect requires it)
+              - Business docs → "Verified Business" badge on the public listing
+             We surface them as benefit-first CTAs here so owners opt in when
+             they want the upgrade, not as a friction-first gate at signup. */}
+        {ownerProfile?.dispensaryId &&
+        (ownerProfile?.identityVerificationStatus !== 'verified' ||
+          ownerProfile?.businessVerificationStatus !== 'verified') ? (
+          <MotionInView delay={145}>
+            <SectionCard
+              title="Unlock more"
+              body="Optional upgrades for when you want them. Skip these to keep using the basic workspace."
+            >
+              <View style={localStyles.unlockGrid}>
+                {ownerProfile?.identityVerificationStatus !== 'verified' ? (
+                  <View style={localStyles.unlockCard}>
+                    <View style={localStyles.unlockCardHeader}>
+                      <AppUiIcon name="person-circle-outline" size={22} color="#F5C86A" />
+                      <Text style={localStyles.unlockCardKicker}>Get paid</Text>
+                    </View>
+                    <Text style={localStyles.unlockCardTitle}>Enable payouts</Text>
+                    <Text style={localStyles.unlockCardBody}>
+                      Verify your identity through Stripe to receive payouts from paid promotions
+                      and subscriptions. Takes about 60 seconds.
+                    </Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => navigation.navigate('OwnerPortalIdentityVerification', {})}
+                      style={localStyles.unlockCardButton}
+                    >
+                      <Text style={localStyles.unlockCardButtonText}>Verify identity</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+
+                {ownerProfile?.businessVerificationStatus !== 'verified' ? (
+                  <View style={localStyles.unlockCard}>
+                    <View style={localStyles.unlockCardHeader}>
+                      <AppUiIcon name="shield-checkmark-outline" size={22} color="#F5C86A" />
+                      <Text style={localStyles.unlockCardKicker}>Stand out</Text>
+                    </View>
+                    <Text style={localStyles.unlockCardTitle}>Get a Verified Business badge</Text>
+                    <Text style={localStyles.unlockCardBody}>
+                      Upload your license + business registration to display the verified-business
+                      checkmark on your storefront listing.
+                    </Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => navigation.navigate('OwnerPortalBusinessVerification', {})}
+                      style={localStyles.unlockCardButton}
+                    >
+                      <Text style={localStyles.unlockCardButtonText}>Upload documents</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </View>
+            </SectionCard>
+          </MotionInView>
+        ) : null}
+
         {/* 4. Metrics Snapshot */}
         {workspace?.metrics ? (
           <MotionInView delay={160}>
@@ -586,6 +648,55 @@ const localStyles = StyleSheet.create({
   sectionSpaced: {
     gap: 12,
     marginBottom: 24,
+  },
+  unlockGrid: {
+    gap: 12,
+  },
+  unlockCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 200, 106, 0.22)',
+    backgroundColor: 'rgba(245, 200, 106, 0.06)',
+    padding: 16,
+    gap: 8,
+  },
+  unlockCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  unlockCardKicker: {
+    color: '#F5C86A',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  unlockCardTitle: {
+    color: '#FFFBF7',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  unlockCardBody: {
+    color: '#C4B8B0',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  unlockCardButton: {
+    marginTop: 4,
+    minHeight: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 200, 106, 0.4)',
+    backgroundColor: 'rgba(245, 200, 106, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  unlockCardButtonText: {
+    color: '#F5C86A',
+    fontSize: 14,
+    fontWeight: '700',
   },
   metricsGrid: {
     flexDirection: 'row',
