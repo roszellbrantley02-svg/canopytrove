@@ -106,6 +106,11 @@ export const serverConfig = {
   emailFromAddress: transactionalEmailRuntimeConfig.emailFromAddress,
   emailReplyToAddress: transactionalEmailRuntimeConfig.emailReplyToAddress,
   welcomeEmailsEnabled: transactionalEmailRuntimeConfig.welcomeEmailsEnabled,
+  // Twilio Verify — owner phone verification
+  // TWILIO_AUTH_TOKEN should be loaded via Secret Manager in production.
+  twilioAccountSid: readConfiguredValue(process.env.TWILIO_ACCOUNT_SID),
+  twilioAuthToken: readConfiguredValue(process.env.TWILIO_AUTH_TOKEN),
+  twilioVerifyServiceSid: readConfiguredValue(process.env.TWILIO_VERIFY_SERVICE_SID),
   stripeSecretKey: readConfiguredValue(process.env.STRIPE_SECRET_KEY),
   stripeWebhookSecret: readConfiguredValue(process.env.STRIPE_WEBHOOK_SECRET),
   stripeOwnerMonthlyPriceId: readConfiguredValue(process.env.STRIPE_OWNER_MONTHLY_PRICE_ID),

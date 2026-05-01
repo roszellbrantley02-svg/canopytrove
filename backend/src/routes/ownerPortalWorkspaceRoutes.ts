@@ -32,6 +32,7 @@ import {
   updateOwnerPortalPromotion,
 } from '../services/ownerPortalWorkspaceService';
 import { autoVerifyBusinessWithOcm } from '../services/ocmAutoVerificationService';
+import { assertOwnerPhoneVerified } from '../services/phoneVerificationService';
 import { createStripeIdentitySession } from '../services/stripeIdentityService';
 import { assertRuntimePolicyAllowsOwnerAction } from '../services/runtimeOpsService';
 import { requireTierAccess } from '../services/ownerTierGatingService';
@@ -112,16 +113,26 @@ ownerPortalWorkspaceRoutes.post(
 
 ownerPortalWorkspaceRoutes.post(
   '/owner-portal/business-verification/auto-verify',
-  createOwnerPortalJsonRoute('Unknown OCM auto-verification failure', async ({ ownerUid }) =>
-    autoVerifyBusinessWithOcm(ownerUid),
-  ),
+  createOwnerPortalJsonRoute('Unknown OCM auto-verification failure', async ({ ownerUid }) => {
+    // Anti-fraud gate: phone verification is the cheapest fraud signal
+    // we have, and we surface a typed error so the frontend can route
+    // the user to the verification screen instead of showing a generic
+    // failure. assertOwnerPhoneVerified throws
+    // PhoneVerificationError('phone_verification_required', 403).
+    await assertOwnerPhoneVerified(ownerUid);
+    return autoVerifyBusinessWithOcm(ownerUid);
+  }),
 );
 
 ownerPortalWorkspaceRoutes.post(
   '/owner-portal/identity-verification/session',
-  createOwnerPortalJsonRoute('Unknown Stripe Identity session failure', async ({ ownerUid }) =>
-    createStripeIdentitySession(ownerUid),
-  ),
+  createOwnerPortalJsonRoute('Unknown Stripe Identity session failure', async ({ ownerUid }) => {
+    // Same anti-fraud gate as business-verification — both are required
+    // for any owner claim to advance, so gating both effectively gates
+    // the entire claim path on phone verification.
+    await assertOwnerPhoneVerified(ownerUid);
+    return createStripeIdentitySession(ownerUid);
+  }),
 );
 
 ownerPortalWorkspaceRoutes.get(
