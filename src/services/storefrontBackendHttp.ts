@@ -120,6 +120,36 @@ export function isBackendPhoneVerificationRequiredError(
   return error instanceof BackendPhoneVerificationRequiredError;
 }
 
+/**
+ * Thrown when the shop-ownership-verification send endpoint is rate-
+ * limited. Two backend codes share this class:
+ *   - `cooldown_active`: 30-min between-calls cooldown is still ticking
+ *   - `daily_limit_reached`: 3 calls per claim per 24h hard cap hit
+ *
+ * Both carry `cooldownEndsAt` (ISO string) so the frontend can show a
+ * live countdown without polling the backend.
+ */
+export class BackendShopVerificationCooldownError extends Error {
+  public readonly code: 'cooldown_active' | 'daily_limit_reached';
+  public readonly cooldownEndsAt: string | null;
+  constructor(
+    code: 'cooldown_active' | 'daily_limit_reached',
+    message: string,
+    cooldownEndsAt: string | null,
+  ) {
+    super(message);
+    this.name = 'BackendShopVerificationCooldownError';
+    this.code = code;
+    this.cooldownEndsAt = cooldownEndsAt;
+  }
+}
+
+export function isBackendShopVerificationCooldownError(
+  error: unknown,
+): error is BackendShopVerificationCooldownError {
+  return error instanceof BackendShopVerificationCooldownError;
+}
+
 type CacheEntry<T> = {
   expiresAt: number;
   value: T;
@@ -332,6 +362,22 @@ async function throwBackendError(response: Response): Promise<never> {
       throw new BackendPhoneVerificationRequiredError(errorText);
     }
 
+    // Detect shop-verification cooldown errors so the frontend can show
+    // a live countdown instead of just an error message. Both
+    // `cooldown_active` (30-min between calls) and `daily_limit_reached`
+    // (3 calls per claim per 24h) carry an ISO `cooldownEndsAt` field.
+    if (payload.code === 'cooldown_active' || payload.code === 'daily_limit_reached') {
+      const errorText =
+        typeof payload.error === 'string' && payload.error.trim()
+          ? payload.error.trim()
+          : 'Please wait before requesting another verification call.';
+      const cooldownEndsAt =
+        typeof (payload as { cooldownEndsAt?: unknown }).cooldownEndsAt === 'string'
+          ? ((payload as { cooldownEndsAt: string }).cooldownEndsAt as string)
+          : null;
+      throw new BackendShopVerificationCooldownError(payload.code, errorText, cooldownEndsAt);
+    }
+
     const errorText =
       typeof payload.error === 'string' && payload.error.trim()
         ? payload.error.trim()
@@ -353,6 +399,7 @@ async function throwBackendError(response: Response): Promise<never> {
       parseError instanceof BackendTierAccessError ||
       parseError instanceof BackendReauthRequiredError ||
       parseError instanceof BackendPhoneVerificationRequiredError ||
+      parseError instanceof BackendShopVerificationCooldownError ||
       (parseError instanceof Error &&
         parseError.message !== `Backend request failed with ${response.status}`)
     ) {

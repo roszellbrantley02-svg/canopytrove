@@ -29,7 +29,26 @@ const SUPPORT_EMAIL = 'askmehere@canopytrove.com';
 
 type ShopOwnershipRoute = RouteProp<RootStackParamList, 'OwnerPortalShopOwnershipVerification'>;
 
-type Stage = 'intro' | 'enter_code' | 'unavailable';
+// Stage flow:
+//  - enter_code:  default — call has already fired automatically when the
+//                 claim was submitted. Owner enters the 6-digit code they
+//                 heard on the shop's phone.
+//  - cooldown:    "Send another call" was tapped while still in the 30-min
+//                 between-calls window. Live countdown until next call is
+//                 allowed; user can keep entering the existing code.
+//  - daily_limit: 3 calls per claim per 24h hit. No more calls today,
+//                 admin review fallback only.
+//  - unavailable: shop has no published phone or call couldn't reach it.
+//                 Manual review fallback.
+type Stage = 'enter_code' | 'cooldown' | 'daily_limit' | 'unavailable';
+
+function formatCountdown(msRemaining: number): string {
+  if (msRemaining <= 0) return '0:00';
+  const totalSeconds = Math.ceil(msRemaining / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
 
 function OwnerPortalShopOwnershipVerificationScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -37,31 +56,68 @@ function OwnerPortalShopOwnershipVerificationScreenInner() {
   const storefrontId = route.params?.storefrontId ?? '';
   const storefrontDisplayName = route.params?.storefrontDisplayName ?? null;
 
-  const [stage, setStage] = React.useState<Stage>('intro');
+  const [stage, setStage] = React.useState<Stage>('enter_code');
   const [code, setCode] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorText, setErrorText] = React.useState<string | null>(null);
   const [shopName, setShopName] = React.useState<string | null>(storefrontDisplayName);
   const [phoneSuffix, setPhoneSuffix] = React.useState<string | null>(null);
+  const [callsRemainingToday, setCallsRemainingToday] = React.useState<number | null>(null);
+  const [cooldownEndsAtMs, setCooldownEndsAtMs] = React.useState<number | null>(null);
+  const [now, setNow] = React.useState<number>(() => Date.now());
 
-  const canSendCode = !isSubmitting && Boolean(storefrontId);
-  const canConfirmCode = !isSubmitting && code.trim().length >= 4;
+  const canConfirmCode = !isSubmitting && /^\d{6}$/.test(code.trim());
 
-  const handleSendCode = async () => {
-    if (!canSendCode) return;
+  // Live ticker for the countdown — only runs while we have an active
+  // cooldown to display. One-second resolution is plenty for a 30-min
+  // window and avoids unnecessary re-renders.
+  React.useEffect(() => {
+    if (cooldownEndsAtMs === null) return;
+    const interval = setInterval(() => {
+      const next = Date.now();
+      setNow(next);
+      if (next >= cooldownEndsAtMs) {
+        // Cooldown elapsed — let user request another call again.
+        setCooldownEndsAtMs(null);
+        setStage('enter_code');
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownEndsAtMs]);
+
+  const handleSendAnotherCall = async () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     setErrorText(null);
     try {
       const result = await sendShopVerificationCode(storefrontId);
       setShopName(result.shopName);
       setPhoneSuffix(result.phoneSuffix);
+      setCallsRemainingToday(result.callsRemainingToday);
+      setCooldownEndsAtMs(new Date(result.cooldownEndsAt).getTime());
       setStage('enter_code');
+      setCode('');
     } catch (error) {
-      if (isOwnerShopVerificationError(error) && error.code === 'shop_phone_unavailable') {
+      if (!isOwnerShopVerificationError(error)) {
+        setErrorText(error instanceof Error ? error.message : 'Unable to place the call.');
+        setIsSubmitting(false);
+        return;
+      }
+      if (error.code === 'cooldown_active') {
+        const endsAtMs = error.cooldownEndsAt
+          ? new Date(error.cooldownEndsAt).getTime()
+          : Date.now() + 30 * 60_000;
+        setCooldownEndsAtMs(endsAtMs);
+        setStage('cooldown');
+        setErrorText(error.message);
+      } else if (error.code === 'daily_limit_reached') {
+        setStage('daily_limit');
+        setErrorText(error.message);
+      } else if (error.code === 'shop_phone_unavailable') {
         setStage('unavailable');
         setErrorText(error.message);
       } else {
-        setErrorText(error instanceof Error ? error.message : 'Unable to send verification call.');
+        setErrorText(error.message);
       }
     } finally {
       setIsSubmitting(false);
@@ -73,11 +129,23 @@ function OwnerPortalShopOwnershipVerificationScreenInner() {
     setIsSubmitting(true);
     setErrorText(null);
     try {
-      await confirmShopVerificationCode(storefrontId, code);
+      await confirmShopVerificationCode(storefrontId, code.trim());
       navigation.replace('OwnerPortalHome');
     } catch (error) {
-      if (isOwnerShopVerificationError(error) && error.code === 'invalid_verification_code') {
-        setErrorText('That code is incorrect or expired. Tap "Send another call" to try again.');
+      if (isOwnerShopVerificationError(error)) {
+        if (error.code === 'invalid_verification_code') {
+          setErrorText(
+            'That code is incorrect. Double-check and try again, or tap "Send another call".',
+          );
+        } else if (error.code === 'code_expired') {
+          setErrorText('That code has expired. Tap "Send another call" to receive a new one.');
+        } else if (error.code === 'too_many_failed_attempts') {
+          setErrorText(
+            'Too many incorrect attempts on this code. Tap "Send another call" to receive a new one.',
+          );
+        } else {
+          setErrorText(error.message);
+        }
       } else {
         setErrorText(error instanceof Error ? error.message : 'Unable to verify the code.');
       }
@@ -86,17 +154,12 @@ function OwnerPortalShopOwnershipVerificationScreenInner() {
     }
   };
 
-  const handleResendCode = async () => {
-    setStage('intro');
-    setCode('');
-    setErrorText(null);
-  };
-
   const handleSkip = () => {
     // Optional layer — owners who can't access the shop's published phone
     // (landlines, off-site management, multi-shop operators) can skip
-    // straight to admin review. We've already filed the claim and fired
-    // the out-of-band notification call when the claim was submitted.
+    // straight to admin review. The merged call already fired when the
+    // claim was submitted, so the legitimate operator was alerted no
+    // matter what.
     navigation.replace('OwnerPortalHome');
   };
 
@@ -111,25 +174,36 @@ function OwnerPortalShopOwnershipVerificationScreenInner() {
   };
 
   const heroSubtitle = shopName
-    ? `Confirm you control the published phone for ${shopName}. This is optional — claims are also reviewed by our team.`
-    : 'Confirm you control the published phone for the storefront you claimed. This is optional — claims are also reviewed by our team.';
+    ? `We just called ${shopName}'s published phone with a 6-digit code. Enter the code below to confirm you control the shop.`
+    : "We just called the storefront's published phone with a 6-digit code. Enter the code below to confirm you control the shop.";
+
+  const cooldownMsRemaining = cooldownEndsAtMs ? Math.max(0, cooldownEndsAtMs - now) : 0;
+  const cooldownLabel = cooldownEndsAtMs ? formatCountdown(cooldownMsRemaining) : '';
+  const callsRemainingLabel =
+    callsRemainingToday !== null
+      ? `${callsRemainingToday} ${callsRemainingToday === 1 ? 'call' : 'calls'} remaining today`
+      : '';
 
   return (
     <ScreenShell
       eyebrow="Owner Portal"
       title="Verify shop ownership"
       subtitle={heroSubtitle}
-      headerPill="Optional"
+      headerPill="Verification"
     >
       <MotionInView delay={70}>
         <OwnerPortalHeroPanel
-          kicker="Optional fast-path"
-          title="Speed up review by verifying the shop's listed phone."
-          body="We'll place a short voice call to the phone number on the storefront's public listing. Pick up and read back the code."
+          kicker="Listen for the code"
+          title="Answer the shop's phone and enter the code we read out."
+          body="The call repeats your 6-digit code three times. Take your time — you can stay on the line while you type it in."
           metrics={[
             { value: 'Voice', label: 'Delivery', body: '' },
-            { value: '~60 sec', label: 'Total time', body: '' },
-            { value: 'Optional', label: 'Status', body: '' },
+            { value: '~60 sec', label: 'Call length', body: '' },
+            {
+              value: callsRemainingToday !== null ? String(callsRemainingToday) : '3',
+              label: 'Calls left today',
+              body: '',
+            },
           ]}
           steps={ONBOARDING_STEPS}
           activeStepIndex={3}
@@ -139,58 +213,28 @@ function OwnerPortalShopOwnershipVerificationScreenInner() {
       <MotionInView delay={120}>
         <SectionCard
           title={
-            stage === 'intro'
-              ? 'How fast-path verification works'
-              : stage === 'enter_code'
-                ? 'Enter the code from the call'
-                : "Can't reach the shop phone"
+            stage === 'enter_code'
+              ? 'Enter the 6-digit code'
+              : stage === 'cooldown'
+                ? 'Another call is on the way'
+                : stage === 'daily_limit'
+                  ? 'Maximum calls reached for today'
+                  : "Can't reach the shop phone"
           }
           body={
-            stage === 'intro'
-              ? "We'll call the storefront's published phone (the one shown in directory listings) and read out a 6-digit code."
-              : stage === 'enter_code'
-                ? phoneSuffix
-                  ? `We just called the storefront line ending in ${phoneSuffix}. Enter the code our voice call read out.`
-                  : 'Enter the code our voice call read out.'
-                : "Looks like we can't reach the shop's published phone right now. You can still finish your claim — our team reviews every submission."
+            stage === 'enter_code'
+              ? phoneSuffix
+                ? `We called the storefront line ending in ${phoneSuffix}. Enter the 6-digit code our voice call read out.`
+                : 'Enter the 6-digit code our voice call read out.'
+              : stage === 'cooldown'
+                ? "We can't call the same shop again right away — that would harass the line. Wait for the timer below, then try again."
+                : stage === 'daily_limit'
+                  ? "We've called this shop's phone the maximum number of times today. Email support so we can verify your ownership another way."
+                  : "Looks like we can't reach the shop's published phone right now. You can still finish your claim — our team reviews every submission."
           }
         >
           <View style={styles.sectionStack}>
-            {stage === 'intro' ? (
-              <View style={styles.plannerPanel}>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>What happens next</Text>
-                  <Text style={styles.fieldHint}>
-                    1. Tap "Call shop now" — we place a short voice call to the published phone.
-                    {'\n'}2. Pick up and listen for a 6-digit code.
-                    {'\n'}3. Enter the code on the next screen.
-                  </Text>
-                </View>
-                {errorText ? (
-                  <Text
-                    style={styles.errorText}
-                    accessibilityLiveRegion="polite"
-                    accessibilityRole="alert"
-                  >
-                    {errorText}
-                  </Text>
-                ) : null}
-                <Pressable
-                  disabled={!canSendCode}
-                  onPress={() => {
-                    void handleSendCode();
-                  }}
-                  style={[styles.primaryButton, !canSendCode && styles.buttonDisabled]}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    {isSubmitting ? 'Calling...' : 'Call Shop Now'}
-                  </Text>
-                </Pressable>
-                <Pressable onPress={handleSkip} style={styles.secondaryButton}>
-                  <Text style={styles.secondaryButtonText}>Skip and request manual review</Text>
-                </Pressable>
-              </View>
-            ) : stage === 'enter_code' ? (
+            {stage === 'enter_code' ? (
               <View style={styles.plannerPanel}>
                 <View style={styles.fieldGroup}>
                   <Text style={styles.fieldLabel}>6-digit code</Text>
@@ -203,7 +247,69 @@ function OwnerPortalShopOwnershipVerificationScreenInner() {
                     style={styles.inputPremium}
                     accessibilityLabel="Shop verification code"
                     autoComplete="one-time-code"
-                    maxLength={10}
+                    maxLength={6}
+                  />
+                  {callsRemainingLabel ? (
+                    <Text style={styles.fieldHint}>{callsRemainingLabel}</Text>
+                  ) : null}
+                </View>
+                {errorText ? (
+                  <Text
+                    style={styles.errorText}
+                    accessibilityLiveRegion="polite"
+                    accessibilityRole="alert"
+                  >
+                    {errorText}
+                  </Text>
+                ) : null}
+                <Pressable
+                  disabled={!canConfirmCode}
+                  onPress={() => {
+                    void handleConfirmCode();
+                  }}
+                  style={[styles.primaryButton, !canConfirmCode && styles.buttonDisabled]}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {isSubmitting ? 'Verifying...' : 'Verify Shop Ownership'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  disabled={isSubmitting}
+                  onPress={() => {
+                    void handleSendAnotherCall();
+                  }}
+                  style={[styles.secondaryButton, isSubmitting && styles.buttonDisabled]}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    {isSubmitting ? 'Calling...' : 'Send another call'}
+                  </Text>
+                </Pressable>
+                <Pressable onPress={handleSkip} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryButtonText}>Skip and request manual review</Text>
+                </Pressable>
+              </View>
+            ) : stage === 'cooldown' ? (
+              <View style={styles.plannerPanel}>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>You can request another call in</Text>
+                  <Text style={styles.portalHeroTitle}>{cooldownLabel}</Text>
+                  <Text style={styles.fieldHint}>
+                    The 6-digit code from the previous call is still valid. Try entering it below if
+                    you have it.
+                  </Text>
+                </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>6-digit code</Text>
+                  <TextInput
+                    value={code}
+                    onChangeText={setCode}
+                    placeholder="123456"
+                    keyboardType="number-pad"
+                    placeholderTextColor={colors.textSoft}
+                    style={styles.inputPremium}
+                    accessibilityLabel="Shop verification code"
+                    autoComplete="one-time-code"
+                    maxLength={6}
                   />
                 </View>
                 {errorText ? (
@@ -226,11 +332,33 @@ function OwnerPortalShopOwnershipVerificationScreenInner() {
                     {isSubmitting ? 'Verifying...' : 'Verify Shop Ownership'}
                   </Text>
                 </Pressable>
-                <Pressable onPress={handleResendCode} style={styles.secondaryButton}>
-                  <Text style={styles.secondaryButtonText}>Send another call</Text>
-                </Pressable>
                 <Pressable onPress={handleSkip} style={styles.secondaryButton}>
                   <Text style={styles.secondaryButtonText}>Skip and request manual review</Text>
+                </Pressable>
+              </View>
+            ) : stage === 'daily_limit' ? (
+              <View style={styles.plannerPanel}>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>What to do next</Text>
+                  <Text style={styles.fieldHint}>
+                    Email askmehere@canopytrove.com and we will verify your ownership another way.
+                    Most manual reviews finish within 24 hours.
+                  </Text>
+                </View>
+                {errorText ? (
+                  <Text
+                    style={styles.errorText}
+                    accessibilityLiveRegion="polite"
+                    accessibilityRole="alert"
+                  >
+                    {errorText}
+                  </Text>
+                ) : null}
+                <Pressable onPress={handleEmailSupport} style={styles.primaryButton}>
+                  <Text style={styles.primaryButtonText}>Email Support</Text>
+                </Pressable>
+                <Pressable onPress={handleSkip} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryButtonText}>Continue to manual review</Text>
                 </Pressable>
               </View>
             ) : (
