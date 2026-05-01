@@ -1,29 +1,44 @@
 /**
- * Shop Ownership Verification — second layer of anti-hijack defense.
+ * Shop Ownership Verification — single voice call that delivers the
+ * verification code AND warns the legitimate operator if a hijacker is
+ * the claimant.
  *
- * Where personal phone verification (phoneVerificationService) confirms
- * "this person controls a real phone," shop ownership verification confirms
- * "this person controls THIS specific dispensary's published phone line."
+ * Replaces the old two-call design (notification call + separate Twilio
+ * Verify SMS OTP) with a single Polly TTS call to the shop's published
+ * phone that:
  *
- * The shop's phone number comes from Google Places (already integrated;
- * stored on storefront_details.phone). At claim time, we send a 6-digit
- * code via Twilio Verify to the SHOP'S phone. The owner enters the code
- * in-app within the verification window. Code matches → claim is marked
- * shopOwnershipVerified, which the admin review gate requires before
- * approving.
+ *   1. Identifies as Canopy Trove
+ *   2. Says "someone is trying to claim ownership of [Shop Name]"
+ *   3. Reads a 6-digit code three times (slow, digit-by-digit, with
+ *      pauses) so the recipient can hear it, write it down, and type
+ *      it into the app while still on the call
+ *   4. Tells the recipient to email askmehere@canopytrove.com if they
+ *      did not authorize the claim
  *
- * Why this is the strongest single fraud signal:
- * A bad actor can steal someone's identity (defeats Stripe Identity).
- * A bad actor can verify with their own phone (defeats personal phone
- * verification). But they cannot easily intercept SMS to the published
- * business number on the shop's wall, on Google Maps, on the OCM
- * registry. Defeating this layer requires physical access to the shop
- * (or hijacking the published phone line itself — a separate felony).
+ * Why one call instead of two:
+ * The legit owner who's the claimant gets verified instantly. The legit
+ * owner who is NOT the claimant hears the alert and emails support.
+ * The bad actor claimant has the call ring at a shop they don't control
+ * and hears nothing — same physical-presence moat as before, half the
+ * phone calls to the shop.
+ *
+ * Cooldown rules (server-enforced so the app can't bypass by reloading):
+ *   - 30 minutes between calls per claim
+ *   - 3 calls per claim per 24 hours
+ *
+ * The cooldown protects the shop's published phone from being weaponized
+ * as a harassment tool by bad actors mashing "Send another call."
+ *
+ * Why we generate the code ourselves instead of using Twilio Verify:
+ * Twilio Verify's voice channel uses a fixed TTS template ("Your X
+ * verification code is ...") that doesn't include the alert wording for
+ * the not-the-claimant case. Custom TwiML lets us own the script.
  *
  * Pattern matches phoneVerificationService.ts: typed errors, narrow
  * status codes, never throws plain Error objects.
  */
 
+import crypto from 'crypto';
 import { Request } from 'express';
 import { serverConfig } from '../config';
 import { getBackendFirebaseDb } from '../firebase';
@@ -33,7 +48,13 @@ import { resolveVerifiedRequestAccountId } from './profileAccessService';
 
 const STOREFRONT_DETAILS_COLLECTION = 'storefront_details';
 const DISPENSARY_CLAIMS_COLLECTION = 'dispensaryClaims';
-const TWILIO_VERIFY_API_BASE = 'https://verify.twilio.com/v2';
+const SHOP_VERIFICATION_CODES_COLLECTION = 'shopVerificationCodes';
+const TWILIO_API_BASE = 'https://api.twilio.com/2010-04-01';
+
+const CODE_TTL_MS = 15 * 60 * 1000; // 15 min — code expires this long after the call fires
+const COOLDOWN_BETWEEN_CALLS_MS = 30 * 60 * 1000; // 30 min between calls
+const MAX_CALLS_PER_24H = 3;
+const MAX_FAILED_ATTEMPTS = 5; // After 5 wrong code entries, force re-call
 
 export type ShopOwnershipVerificationErrorCode =
   | 'twilio_not_configured'
@@ -43,7 +64,10 @@ export type ShopOwnershipVerificationErrorCode =
   | 'claim_not_owned'
   | 'shop_phone_unavailable'
   | 'invalid_verification_code'
-  | 'rate_limited'
+  | 'code_expired'
+  | 'cooldown_active'
+  | 'daily_limit_reached'
+  | 'too_many_failed_attempts'
   | 'verification_send_failed'
   | 'verification_check_failed'
   | 'shop_ownership_required';
@@ -51,12 +75,19 @@ export type ShopOwnershipVerificationErrorCode =
 export class ShopOwnershipVerificationError extends Error {
   public readonly statusCode: number;
   public readonly code: ShopOwnershipVerificationErrorCode;
+  public readonly cooldownEndsAt: string | null;
 
-  constructor(code: ShopOwnershipVerificationErrorCode, message: string, statusCode: number) {
+  constructor(
+    code: ShopOwnershipVerificationErrorCode,
+    message: string,
+    statusCode: number,
+    cooldownEndsAt: string | null = null,
+  ) {
     super(message);
     this.name = 'ShopOwnershipVerificationError';
     this.code = code;
     this.statusCode = statusCode;
+    this.cooldownEndsAt = cooldownEndsAt;
   }
 }
 
@@ -80,33 +111,69 @@ type DispensaryClaimRecord = {
   shopOwnershipVerifiedPhoneSuffix?: string | null;
 };
 
+type CallHistoryEntry = {
+  at: string;
+  sid: string;
+  status: string;
+};
+
+type ShopVerificationCodeRecord = {
+  ownerUid: string;
+  storefrontId: string;
+  codeHash: string;
+  codeIssuedAt: string;
+  codeExpiresAt: string;
+  failedAttempts: number;
+  lastCallAt: string;
+  callHistory: CallHistoryEntry[];
+};
+
 function getTwilioConfig() {
   const accountSid = serverConfig.twilioAccountSid;
   const authToken = serverConfig.twilioAuthToken;
-  const verifyServiceSid = serverConfig.twilioVerifyServiceSid;
-  if (!accountSid || !authToken || !verifyServiceSid) {
+  if (!accountSid || !authToken) {
     throw new ShopOwnershipVerificationError(
       'twilio_not_configured',
       'Phone verification is not configured on the backend.',
       503,
     );
   }
-  return { accountSid, authToken, verifyServiceSid };
+  return { accountSid, authToken };
 }
 
-/**
- * Build the dispensary-claim document id used everywhere else in the
- * system. Mirrors the frontend convention (createOwnerDispensaryClaimId)
- * so we can read/write the same docs from either side.
- */
 function buildClaimId(ownerUid: string, dispensaryId: string): string {
   return `${ownerUid}__${dispensaryId}`;
 }
 
 /**
- * Read the shop's published phone from the storefront_details document.
- * Returns null if not set or storefront doesn't exist.
+ * Generate a random 6-digit numeric code. Uses crypto.randomInt for
+ * cryptographic randomness — not Math.random, which is predictable.
  */
+function generateCode(): string {
+  return crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+}
+
+/**
+ * Hash the code before storing in Firestore so even a Firestore breach
+ * doesn't expose live verification codes. SHA-256 is overkill for a
+ * 6-digit code but trivial to compute.
+ */
+function hashCode(code: string): string {
+  return crypto.createHash('sha256').update(code).digest('hex');
+}
+
+/**
+ * Constant-time comparison for code validation. Prevents timing attacks
+ * (which won't work over HTTP latency anyway, but defense-in-depth).
+ */
+function codesMatch(submittedCode: string, storedHash: string): boolean {
+  const submittedHash = hashCode(submittedCode);
+  const a = Buffer.from(submittedHash, 'hex');
+  const b = Buffer.from(storedHash, 'hex');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 async function getShopPublishedPhone(
   storefrontId: string,
 ): Promise<{ phone: string; displayName: string } | null> {
@@ -123,10 +190,7 @@ async function getShopPublishedPhone(
 }
 
 /**
- * Normalize a phone string Google Places returns ("(518) 555-1234",
- * "518-555-1234", "+1 518 555 1234") into E.164 for Twilio. Mirrors
- * normalizePhoneToE164 in phoneVerificationService but kept local so
- * the two services don't accidentally diverge if requirements change.
+ * Normalize a phone string Google Places returns into E.164 for Twilio.
  */
 function shopPhoneToE164(input: string): string | null {
   const trimmed = input.trim();
@@ -143,13 +207,73 @@ function shopPhoneToE164(input: string): string | null {
   return null;
 }
 
-async function twilioRequest<T>(
-  path: string,
-  body: URLSearchParams,
-  config: ReturnType<typeof getTwilioConfig>,
-): Promise<T> {
-  const url = `${TWILIO_VERIFY_API_BASE}${path}`;
+/**
+ * Escape a shop name so it can't break the TwiML XML. Strips angle
+ * brackets, quotes, ampersands, and caps length so a malicious storefront
+ * name (extremely unlikely — this comes from our own Firestore — but
+ * defense in depth) can't inject SSML or oversized payloads.
+ */
+function safeShopName(input: string): string {
+  return (
+    input
+      .replace(/[<>&"']/g, ' ')
+      .slice(0, 100)
+      .trim() || 'this storefront'
+  );
+}
+
+/**
+ * Build the merged TwiML: identifies Canopy Trove, names the shop, reads
+ * the code three times slowly (digit-by-digit) with pauses between
+ * repetitions for typing, and ends with the alert + support email.
+ *
+ * Wording approved by the user — do not change without re-running a test
+ * call to confirm it still sounds clear (60-65 second total runtime).
+ */
+function buildShopVerificationTwiml(shopName: string, code: string): string {
+  const safeName = safeShopName(shopName);
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<Response>',
+    '  <Pause length="1"/>',
+    '  <Say voice="Polly.Joanna">Hello. This is Canopy Trove.</Say>',
+    '  <Pause length="1"/>',
+    `  <Say voice="Polly.Joanna">Someone is trying to claim ownership of ${safeName} on the Canopy Trove app.</Say>`,
+    '  <Pause length="1"/>',
+    '  <Say voice="Polly.Joanna">If this is you, your six-digit verification code is:</Say>',
+    '  <Pause length="1"/>',
+    `  <Say voice="Polly.Joanna"><prosody rate="slow"><say-as interpret-as="digits">${code}</say-as></prosody></Say>`,
+    '  <Pause length="4"/>',
+    '  <Say voice="Polly.Joanna">I will say that again.</Say>',
+    '  <Pause length="1"/>',
+    `  <Say voice="Polly.Joanna"><prosody rate="slow"><say-as interpret-as="digits">${code}</say-as></prosody></Say>`,
+    '  <Pause length="6"/>',
+    '  <Say voice="Polly.Joanna">One more time:</Say>',
+    '  <Pause length="1"/>',
+    `  <Say voice="Polly.Joanna"><prosody rate="slow"><say-as interpret-as="digits">${code}</say-as></prosody></Say>`,
+    '  <Pause length="6"/>',
+    '  <Say voice="Polly.Joanna">Take your time entering the code in the Canopy Trove app.</Say>',
+    '  <Pause length="3"/>',
+    '  <Say voice="Polly.Joanna">If you did not authorize this claim, please email us right away at <break time="500ms"/> ask me here at canopy trove dot com so we can stop it.</Say>',
+    '  <Pause length="1"/>',
+    '  <Say voice="Polly.Joanna">Thank you. Goodbye.</Say>',
+    '</Response>',
+  ].join('\n');
+}
+
+async function placeTwilioVoiceCall(
+  to: string,
+  from: string,
+  twiml: string,
+  config: { accountSid: string; authToken: string },
+): Promise<{ sid: string; status: string }> {
   const auth = Buffer.from(`${config.accountSid}:${config.authToken}`).toString('base64');
+  const url = `${TWILIO_API_BASE}/Accounts/${config.accountSid}/Calls.json`;
+  const body = new URLSearchParams({
+    To: to,
+    From: from,
+    Twiml: twiml,
+  });
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -168,49 +292,84 @@ async function twilioRequest<T>(
   if (!response.ok) {
     const errorRecord = payload as { code?: number; message?: string };
     const twilioCode = errorRecord?.code;
-    if (twilioCode === 60200) {
-      // The shop's published phone failed Twilio's validity check —
-      // typically means the number on Google Places isn't a real
-      // SMS-deliverable number (could be a published vanity number
-      // routed through a non-SMS service).
+    logger.error('[shopOwnershipVerification] Twilio voice call failed', {
+      to,
+      status: response.status,
+      twilioCode,
+      twilioMessage: errorRecord?.message,
+    });
+    if (twilioCode === 21211 || twilioCode === 21214) {
       throw new ShopOwnershipVerificationError(
         'shop_phone_unavailable',
         'The shop’s published phone number isn’t reachable for verification. Email askmehere@canopytrove.com and we will verify your ownership by phone — usually within 24 hours.',
         400,
       );
     }
-    if (twilioCode === 60202 || twilioCode === 60203) {
-      throw new ShopOwnershipVerificationError(
-        'rate_limited',
-        'Too many verification attempts on this shop. Wait an hour, or email askmehere@canopytrove.com to verify ownership by phone instead.',
-        429,
-      );
-    }
-    logger.error('[shopOwnershipVerification] Twilio request failed', {
-      url,
-      status: response.status,
-      twilioCode,
-      twilioMessage: errorRecord?.message,
-    });
     throw new ShopOwnershipVerificationError(
       'verification_send_failed',
-      'Unable to send the verification code. Try again shortly, or email askmehere@canopytrove.com if it keeps failing — we can verify your ownership by phone.',
+      'Unable to place the verification call. Try again shortly, or email askmehere@canopytrove.com if it keeps failing.',
       response.status >= 500 ? 502 : 400,
     );
   }
-  return payload as T;
+  const result = payload as { sid?: string; status?: string };
+  return {
+    sid: result.sid ?? '',
+    status: result.status ?? 'unknown',
+  };
 }
 
 /**
- * Send a 6-digit code via SMS to the shop's PUBLISHED phone number
- * (from Google Places). The owner must have access to that phone line
- * to receive the code.
+ * Cooldown enforcement. Reads the existing verification record (if any)
+ * and decides whether the caller is allowed to trigger another call.
  *
- * Returns the last 4 digits of the shop phone so the frontend can show
- * "We just sent a code to +1 *** *** 1234" — the owner needs to know
- * which phone to expect the SMS on (it's the SHOP's number, not theirs).
+ * Returns null if a new call is allowed; throws a typed error otherwise.
  */
-export async function sendShopOwnershipVerificationCode(
+function enforceCallCooldown(record: ShopVerificationCodeRecord | null, now: number): void {
+  if (!record) return;
+  // 30-min between-calls cooldown
+  const lastCallMs = new Date(record.lastCallAt).getTime();
+  if (Number.isFinite(lastCallMs)) {
+    const cooldownEndsMs = lastCallMs + COOLDOWN_BETWEEN_CALLS_MS;
+    if (now < cooldownEndsMs) {
+      throw new ShopOwnershipVerificationError(
+        'cooldown_active',
+        'Please wait before requesting another verification call. The shop’s phone shouldn’t be called too often.',
+        429,
+        new Date(cooldownEndsMs).toISOString(),
+      );
+    }
+  }
+  // 3 calls per 24h hard cap
+  const last24hMs = now - 24 * 60 * 60 * 1000;
+  const recentCalls = record.callHistory.filter((entry) => {
+    const t = new Date(entry.at).getTime();
+    return Number.isFinite(t) && t >= last24hMs;
+  });
+  if (recentCalls.length >= MAX_CALLS_PER_24H) {
+    // Oldest of the 3 recent calls + 24h = when one drops off
+    const oldestRecent = recentCalls
+      .map((entry) => new Date(entry.at).getTime())
+      .sort((a, b) => a - b)[0];
+    const cooldownEndsMs = (oldestRecent ?? now) + 24 * 60 * 60 * 1000;
+    throw new ShopOwnershipVerificationError(
+      'daily_limit_reached',
+      'This claim has reached the maximum verification calls for today. Email askmehere@canopytrove.com so we can verify your ownership by phone.',
+      429,
+      new Date(cooldownEndsMs).toISOString(),
+    );
+  }
+}
+
+/**
+ * Send the merged shop-verification voice call. This is BOTH the OTP
+ * delivery AND the alert call to the legitimate operator. One call,
+ * two purposes.
+ *
+ * Auto-fires on claim submission (called server-side by
+ * submitOwnerDispensaryClaim) and can be re-triggered by the owner via
+ * the "Send another call" button, subject to cooldown enforcement.
+ */
+export async function sendShopOwnershipVerificationCall(
   request: Request,
   input: { storefrontId: unknown },
 ): Promise<{
@@ -218,6 +377,9 @@ export async function sendShopOwnershipVerificationCode(
   storefrontId: string;
   phoneSuffix: string;
   shopName: string;
+  callSid: string;
+  cooldownEndsAt: string;
+  callsRemainingToday: number;
 }> {
   const ownerUid = await resolveVerifiedRequestAccountId(request);
   if (!ownerUid) {
@@ -237,10 +399,36 @@ export async function sendShopOwnershipVerificationCode(
     );
   }
 
-  // Confirm the owner actually filed a claim for this storefront. Without
-  // this check, a signed-in owner could spam SMS to any shop's published
-  // phone — turning Canopy Trove into an SMS abuse vector. Claim must
-  // exist + belong to this owner.
+  return sendShopOwnershipVerificationCallInternal({
+    ownerUid,
+    storefrontId,
+    requestIp: request.ip || 'unknown',
+    requestPath: request.originalUrl,
+    requestMethod: request.method,
+  });
+}
+
+/**
+ * Internal entry point used by submitOwnerDispensaryClaim to auto-fire
+ * the call on claim submission, bypassing the request-auth wrapper
+ * (the caller has already established ownerUid via session middleware).
+ */
+export async function sendShopOwnershipVerificationCallInternal(params: {
+  ownerUid: string;
+  storefrontId: string;
+  requestIp?: string;
+  requestPath?: string;
+  requestMethod?: string;
+}): Promise<{
+  ok: true;
+  storefrontId: string;
+  phoneSuffix: string;
+  shopName: string;
+  callSid: string;
+  cooldownEndsAt: string;
+  callsRemainingToday: number;
+}> {
+  const { ownerUid, storefrontId } = params;
   const db = getBackendFirebaseDb();
   if (!db) {
     throw new ShopOwnershipVerificationError(
@@ -249,8 +437,10 @@ export async function sendShopOwnershipVerificationCode(
       503,
     );
   }
+
   const claimId = buildClaimId(ownerUid, storefrontId);
-  const claimSnap = await db.collection(DISPENSARY_CLAIMS_COLLECTION).doc(claimId).get();
+  const claimRef = db.collection(DISPENSARY_CLAIMS_COLLECTION).doc(claimId);
+  const claimSnap = await claimRef.get();
   if (!claimSnap.exists) {
     throw new ShopOwnershipVerificationError(
       'claim_not_found',
@@ -260,14 +450,16 @@ export async function sendShopOwnershipVerificationCode(
   }
   const claim = claimSnap.data() as DispensaryClaimRecord | undefined;
   if (claim?.ownerUid !== ownerUid) {
-    logSecurityEvent({
-      event: 'suspicious_payload',
-      ip: request.ip || 'unknown',
-      path: request.originalUrl,
-      method: request.method,
-      userId: ownerUid,
-      detail: `BOLA: shop ownership verify attempt on claim ${claimId} by ${ownerUid}`,
-    });
+    if (params.requestIp) {
+      logSecurityEvent({
+        event: 'suspicious_payload',
+        ip: params.requestIp,
+        path: params.requestPath || '',
+        method: params.requestMethod || '',
+        userId: ownerUid,
+        detail: `BOLA: shop ownership verify attempt on claim ${claimId} by ${ownerUid}`,
+      });
+    }
     throw new ShopOwnershipVerificationError(
       'claim_not_owned',
       'This claim does not belong to your account.',
@@ -287,38 +479,109 @@ export async function sendShopOwnershipVerificationCode(
   if (!phoneE164) {
     throw new ShopOwnershipVerificationError(
       'shop_phone_unavailable',
-      'The shop’s published phone number isn’t in a format we can send SMS to. Email askmehere@canopytrove.com and we will verify your ownership by phone — usually within 24 hours.',
+      'The shop’s published phone number isn’t in a format we can call. Email askmehere@canopytrove.com and we will verify your ownership by phone.',
       400,
     );
   }
 
+  const codeRef = db.collection(SHOP_VERIFICATION_CODES_COLLECTION).doc(claimId);
+  const codeSnap = await codeRef.get();
+  const existing = codeSnap.exists
+    ? (codeSnap.data() as ShopVerificationCodeRecord | undefined)
+    : null;
+  const now = Date.now();
+
+  // Enforce cooldown rules before placing the call. Throws if the caller
+  // is rate-limited; the typed error carries cooldownEndsAt for the
+  // frontend to display the countdown.
+  enforceCallCooldown(existing ?? null, now);
+
+  const twilioFromNumber = process.env.TWILIO_VOICE_FROM_NUMBER?.trim();
+  if (!twilioFromNumber) {
+    logger.warn(
+      '[shopOwnershipVerification] TWILIO_VOICE_FROM_NUMBER not set — cannot place shop verification call',
+      { ownerUid, storefrontId },
+    );
+    throw new ShopOwnershipVerificationError(
+      'twilio_not_configured',
+      'The verification system is not yet configured. Email askmehere@canopytrove.com and we will verify your ownership manually.',
+      503,
+    );
+  }
+
+  const code = generateCode();
+  const codeHash = hashCode(code);
+  const issuedAt = new Date(now).toISOString();
+  const expiresAt = new Date(now + CODE_TTL_MS).toISOString();
+  const twiml = buildShopVerificationTwiml(shopPhone.displayName, code);
+
   const config = getTwilioConfig();
-  const body = new URLSearchParams({
-    To: phoneE164,
-    Channel: 'sms',
-  });
+  const callResult = await placeTwilioVoiceCall(phoneE164, twilioFromNumber, twiml, config);
 
-  await twilioRequest(`/Services/${config.verifyServiceSid}/Verifications`, body, config);
-
-  const phoneSuffix = phoneE164.slice(-4);
-  logger.info('[shopOwnershipVerification] Verification code sent to shop phone', {
+  const newCallEntry: CallHistoryEntry = {
+    at: issuedAt,
+    sid: callResult.sid,
+    status: callResult.status,
+  };
+  const updatedHistory = [...(existing?.callHistory ?? []), newCallEntry].slice(-10);
+  const updatedRecord: ShopVerificationCodeRecord = {
     ownerUid,
     storefrontId,
-    phoneSuffix,
+    codeHash,
+    codeIssuedAt: issuedAt,
+    codeExpiresAt: expiresAt,
+    failedAttempts: 0, // reset failed-attempt counter on every fresh call
+    lastCallAt: issuedAt,
+    callHistory: updatedHistory,
+  };
+  await codeRef.set(updatedRecord, { merge: false });
+
+  // Mirror notification status onto the claim so admin review can see
+  // that the merged call fired (replaces the old shopClaimNotificationSentAt).
+  await claimRef.set(
+    {
+      shopClaimNotificationSentAt: issuedAt,
+      shopClaimNotificationStatus: callResult.status,
+      updatedAt: issuedAt,
+    },
+    { merge: true },
+  );
+
+  const last24hMs = now - 24 * 60 * 60 * 1000;
+  const callsInLast24h = updatedHistory.filter((entry) => {
+    const t = new Date(entry.at).getTime();
+    return Number.isFinite(t) && t >= last24hMs;
+  }).length;
+  const callsRemainingToday = Math.max(0, MAX_CALLS_PER_24H - callsInLast24h);
+  const cooldownEndsAt = new Date(now + COOLDOWN_BETWEEN_CALLS_MS).toISOString();
+
+  logger.info('[shopOwnershipVerification] Verification call placed', {
+    ownerUid,
+    storefrontId,
+    phoneSuffix: phoneE164.slice(-4),
+    callSid: callResult.sid,
+    callsRemainingToday,
   });
 
   return {
     ok: true,
     storefrontId,
-    phoneSuffix,
+    phoneSuffix: phoneE164.slice(-4),
     shopName: shopPhone.displayName,
+    callSid: callResult.sid,
+    cooldownEndsAt,
+    callsRemainingToday,
   };
 }
 
 /**
- * Verify the OTP code the owner received on the shop's phone. On success,
- * marks the claim as shopOwnershipVerified — this is the field the admin
- * review gate checks before approving.
+ * Validate the OTP code the owner heard on the call. On success, marks
+ * the claim as shopOwnershipVerified — this is the field the admin
+ * review gate checks.
+ *
+ * Failed-attempt tracking: after MAX_FAILED_ATTEMPTS wrong codes, the
+ * stored code is invalidated and the owner must trigger a new call. This
+ * stops bad-actor brute-forcing of the 6-digit code space (1M attempts).
  */
 export async function confirmShopOwnershipVerificationCode(
   request: Request,
@@ -343,10 +606,10 @@ export async function confirmShopOwnershipVerificationCode(
   }
 
   const code = typeof input.code === 'string' ? input.code.trim() : '';
-  if (!code || !/^\d{4,10}$/.test(code)) {
+  if (!code || !/^\d{6}$/.test(code)) {
     throw new ShopOwnershipVerificationError(
       'invalid_verification_code',
-      'Enter the verification code we sent to the shop phone.',
+      'Enter the six-digit verification code we read out on the call.',
       400,
     );
   }
@@ -378,54 +641,64 @@ export async function confirmShopOwnershipVerificationCode(
     );
   }
 
-  const shopPhone = await getShopPublishedPhone(storefrontId);
-  if (!shopPhone) {
+  const codeRef = db.collection(SHOP_VERIFICATION_CODES_COLLECTION).doc(claimId);
+  const codeSnap = await codeRef.get();
+  if (!codeSnap.exists) {
     throw new ShopOwnershipVerificationError(
-      'shop_phone_unavailable',
-      'No published phone number is on file for this storefront.',
+      'invalid_verification_code',
+      'No active verification code. Tap "Send another call" to receive a new one.',
       400,
     );
   }
-  const phoneE164 = shopPhoneToE164(shopPhone.phone);
-  if (!phoneE164) {
+  const record = codeSnap.data() as ShopVerificationCodeRecord;
+
+  const now = Date.now();
+  const expiresAtMs = new Date(record.codeExpiresAt).getTime();
+  if (!Number.isFinite(expiresAtMs) || now > expiresAtMs) {
     throw new ShopOwnershipVerificationError(
-      'shop_phone_unavailable',
-      'The shop’s published phone number isn’t in a format we can send SMS to.',
+      'code_expired',
+      'That code has expired. Tap "Send another call" to receive a new one.',
       400,
     );
   }
 
-  const config = getTwilioConfig();
-  const body = new URLSearchParams({
-    To: phoneE164,
-    Code: code,
-  });
+  if ((record.failedAttempts ?? 0) >= MAX_FAILED_ATTEMPTS) {
+    throw new ShopOwnershipVerificationError(
+      'too_many_failed_attempts',
+      'Too many incorrect attempts on this code. Tap "Send another call" to receive a new one.',
+      400,
+    );
+  }
 
-  type CheckResponse = { status?: string; valid?: boolean };
-  const result = await twilioRequest<CheckResponse>(
-    `/Services/${config.verifyServiceSid}/VerificationCheck`,
-    body,
-    config,
-  );
-
-  if (result.status !== 'approved') {
+  if (!codesMatch(code, record.codeHash)) {
+    await codeRef.set(
+      {
+        failedAttempts: (record.failedAttempts ?? 0) + 1,
+      },
+      { merge: true },
+    );
     logSecurityEvent({
       event: 'auth_failure',
       ip: request.ip || 'unknown',
       path: request.originalUrl,
       method: request.method,
       userId: ownerUid,
-      detail: `Shop ownership code rejected by Twilio for storefront ${storefrontId}`,
+      detail: `Shop ownership code rejected for storefront ${storefrontId} (attempt ${(record.failedAttempts ?? 0) + 1})`,
     });
     throw new ShopOwnershipVerificationError(
       'invalid_verification_code',
-      'That code is incorrect or expired. Request a new one and try again.',
+      'That code is incorrect. Double-check and try again, or tap "Send another call".',
       400,
     );
   }
 
-  const verifiedAt = new Date().toISOString();
-  const phoneSuffix = phoneE164.slice(-4);
+  // Code matched. Persist the verified state and clean up the code doc
+  // so it can't be reused.
+  const verifiedAt = new Date(now).toISOString();
+  const shopPhone = await getShopPublishedPhone(storefrontId);
+  const phoneE164 = shopPhone ? shopPhoneToE164(shopPhone.phone) : null;
+  const phoneSuffix = phoneE164 ? phoneE164.slice(-4) : null;
+
   await db.collection(DISPENSARY_CLAIMS_COLLECTION).doc(claimId).set(
     {
       shopOwnershipVerified: true,
@@ -435,6 +708,8 @@ export async function confirmShopOwnershipVerificationCode(
     },
     { merge: true },
   );
+  // Delete the live code so a stale code can't be replayed.
+  await codeRef.delete().catch(() => undefined);
 
   logger.info('[shopOwnershipVerification] Shop ownership verified', {
     ownerUid,
@@ -467,3 +742,7 @@ export async function hasShopOwnershipVerification(
     return false;
   }
 }
+
+// Keep the old export name as an alias so existing routes don't break
+// during the merge. Routes can update to the new name on their next pass.
+export const sendShopOwnershipVerificationCode = sendShopOwnershipVerificationCall;

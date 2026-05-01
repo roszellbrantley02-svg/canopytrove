@@ -49,11 +49,15 @@ export async function submitOwnerDispensaryClaim(
   );
   await setDoc(claimRef, claimDocument, { merge: true });
 
-  // Out-of-band alert to the shop's published phone — fires regardless of
-  // whether the owner completes Layer 2 verification themselves. The
-  // legitimate operator gets warned even when the claimant can't access
-  // the shop phone line. Fail-soft (notifyShopOfPendingClaim swallows
-  // errors) so a failed alert never blocks claim creation.
+  // Auto-fire the merged voice call to the shop's published phone. ONE
+  // call delivers BOTH the verification code (so a legit-claimant owner
+  // standing at the shop can verify instantly) AND the alert ("someone
+  // is trying to claim your shop, email us if not you"). Fires regardless
+  // of whether the owner completes verification themselves — the legit
+  // operator gets warned no matter what. Fail-soft (the helper swallows
+  // errors and cooldown rejections) so a Twilio hiccup never blocks
+  // claim creation. The user can always tap "Send another call" from the
+  // verification screen to retry with a typed cooldown error.
   void notifyShopOfPendingClaim(storefront.id);
 
   return claimDocument;
