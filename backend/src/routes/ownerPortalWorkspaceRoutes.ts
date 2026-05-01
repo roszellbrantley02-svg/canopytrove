@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
+import { withMutationCooldown } from '../http/mutationCooldownMiddleware';
+import { registerCooldownReplay } from '../services/ownerMutationCooldownService';
 import {
   parseOwnerPortalAlertSyncBody,
   parseOwnerPortalBrandsBody,
@@ -146,6 +148,7 @@ ownerPortalWorkspaceRoutes.get(
 ownerPortalWorkspaceRoutes.put(
   '/owner-portal/license-compliance',
   ownerComplianceRateLimiter,
+  withMutationCooldown('free', { summary: 'Update license compliance information' }),
   createOwnerPortalJsonRoute(
     'Unknown owner license compliance failure',
     async ({ ownerUid, request }) => {
@@ -162,9 +165,22 @@ ownerPortalWorkspaceRoutes.put(
   ),
 );
 
+registerCooldownReplay('PUT:/owner-portal/license-compliance', async (ownerUid, body) => {
+  const locationId =
+    typeof (body as { locationId?: unknown }).locationId === 'string'
+      ? (body as { locationId: string }).locationId.trim() || null
+      : null;
+  await saveOwnerPortalLicenseCompliance(
+    ownerUid,
+    parseOwnerPortalLicenseComplianceBody(body),
+    locationId,
+  );
+});
+
 ownerPortalWorkspaceRoutes.put(
   '/owner-portal/profile-tools',
   ownerProfileToolsRateLimiter,
+  withMutationCooldown('free', { summary: 'Update profile tools (hours, photos, contact info)' }),
   createOwnerPortalJsonRoute(
     'Unknown owner profile tools failure',
     async ({ ownerUid, request }) => {
@@ -181,6 +197,17 @@ ownerPortalWorkspaceRoutes.put(
     },
   ),
 );
+
+// Replay handler used when admin releases a queued profile-tools mutation.
+// Re-runs the same persistence logic the live route executes, minus the
+// runtime policy check (admin release implies override).
+registerCooldownReplay('PUT:/owner-portal/profile-tools', async (ownerUid, body) => {
+  const locationId =
+    typeof (body as { locationId?: unknown }).locationId === 'string'
+      ? (body as { locationId: string }).locationId.trim() || null
+      : null;
+  await saveOwnerPortalProfileTools(ownerUid, parseOwnerPortalProfileToolsBody(body), locationId);
+});
 
 ownerPortalWorkspaceRoutes.post(
   '/owner-portal/promotions',
@@ -287,6 +314,7 @@ ownerPortalWorkspaceRoutes.get(
 ownerPortalWorkspaceRoutes.put(
   '/owner-portal/brands',
   ownerBrandsRateLimiter,
+  withMutationCooldown('free', { summary: 'Update brand roster' }),
   createOwnerPortalJsonRoute(
     'Unknown owner brand roster save failure',
     async ({ ownerUid, request }) => {
@@ -299,6 +327,14 @@ ownerPortalWorkspaceRoutes.put(
     },
   ),
 );
+
+registerCooldownReplay('PUT:/owner-portal/brands', async (ownerUid, body) => {
+  const locationId =
+    typeof (body as { locationId?: unknown }).locationId === 'string'
+      ? (body as { locationId: string }).locationId.trim() || null
+      : null;
+  await saveOwnerPortalBrands(ownerUid, parseOwnerPortalBrandsBody(body), locationId);
+});
 
 ownerPortalWorkspaceRoutes.get(
   '/owner-portal/brand-activity',

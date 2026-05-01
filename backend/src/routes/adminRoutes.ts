@@ -16,6 +16,7 @@ import {
 import { clearBackendStorefrontSourceCaches, warmBackendStorefrontSource } from '../sources';
 import { adminBatchWelcomeEmailRoutes } from './adminBatchWelcomeEmailRoutes';
 import { adminDiscoveryRoutes } from './adminDiscoveryRoutes';
+import { adminOwnerMutationCooldownRoutes } from './adminOwnerMutationCooldownRoutes';
 import { adminPlaceIdBackfillRoutes } from './adminPlaceIdBackfillRoutes';
 import { adminPushNotificationRoutes } from './adminPushNotificationRoutes';
 import {
@@ -206,6 +207,7 @@ adminRoutes.use('/admin', adminBatchWelcomeEmailRoutes);
 adminRoutes.use('/admin/discovery', adminDiscoveryRoutes);
 adminRoutes.use('/admin/place-ids', adminPlaceIdBackfillRoutes);
 adminRoutes.use('/admin/push', adminPushNotificationRoutes);
+adminRoutes.use('/', adminOwnerMutationCooldownRoutes);
 
 adminRoutes.get('/admin/reviews/queue', async (request, response) => {
   try {
