@@ -123,19 +123,37 @@ function OwnerPortalAccessScreenInner() {
 
       <MotionInView delay={180}>
         <SectionCard
-          title="How to get in"
-          body="Sign in with your business email to manage your storefront."
+          title="Claim your shop"
+          body="The fastest way in: find your shop, set up an account, and we'll call the shop's listed phone with a code to verify."
         >
           <View style={styles.actionGrid}>
+            <View style={[styles.ctaPanel, styles.onboardingInfoCardSuccess]}>
+              <View style={styles.splitHeaderRow}>
+                <View style={styles.splitHeaderCopy}>
+                  <Text style={styles.sectionEyebrow}>Quick claim — about 60 seconds</Text>
+                  <Text style={styles.splitHeaderTitle}>
+                    Find your shop and verify in one screen
+                  </Text>
+                </View>
+                <AppUiIcon name="storefront-outline" size={20} color="#00F58C" />
+              </View>
+              <Pressable
+                onPress={() => navigation.navigate('OwnerPortalQuickClaim')}
+                style={styles.primaryButton}
+              >
+                <Text style={styles.primaryButtonText}>Claim My Shop</Text>
+              </Pressable>
+              <Text style={styles.helperText}>
+                We'll call the phone Google has listed for your shop. Pick up, hear a 6-digit code,
+                type it in. Done.
+              </Text>
+            </View>
+
             <View style={styles.ctaPanel}>
               <View style={styles.splitHeaderRow}>
                 <View style={styles.splitHeaderCopy}>
-                  <Text style={styles.sectionEyebrow}>Business sign in</Text>
-                  <Text style={styles.splitHeaderTitle}>
-                    {accessState.enabled
-                      ? 'Use your approved business email'
-                      : 'Use your business email'}
-                  </Text>
+                  <Text style={styles.sectionEyebrow}>Already have an account</Text>
+                  <Text style={styles.splitHeaderTitle}>Sign in to your business workspace</Text>
                 </View>
                 <AppUiIcon name="lock-closed-outline" size={20} color="#F5C86A" />
               </View>
@@ -149,10 +167,11 @@ function OwnerPortalAccessScreenInner() {
                 onPress={() => navigation.navigate('OwnerPortalSignUp')}
                 style={styles.secondaryButton}
               >
-                <Text style={styles.secondaryButtonText}>Create Owner Account</Text>
+                <Text style={styles.secondaryButtonText}>More signup options</Text>
               </Pressable>
               <Text style={styles.helperText}>
-                Once you sign in, we can confirm access and help connect the right storefront.
+                Sign-up flow with separate business-detail and verification steps for multi-location
+                operators.
               </Text>
             </View>
           </View>
