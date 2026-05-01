@@ -97,6 +97,29 @@ export function isBackendReauthRequiredError(error: unknown): error is BackendRe
   return error instanceof BackendReauthRequiredError;
 }
 
+/**
+ * Thrown when the backend gates an owner-portal write behind phone
+ * verification (HTTP 403 with `code: 'phone_verification_required'`).
+ * Owner sign-up + business-detail save no longer require phone, but
+ * downstream writes (auto-verify business, start identity session, etc.)
+ * do — surfacing as a typed error lets calling screens auto-route the
+ * owner into the phone-verification flow with a `nextRoute` param so
+ * we resume them where they were when verification completes.
+ */
+export class BackendPhoneVerificationRequiredError extends Error {
+  public readonly code = 'phone_verification_required' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'BackendPhoneVerificationRequiredError';
+  }
+}
+
+export function isBackendPhoneVerificationRequiredError(
+  error: unknown,
+): error is BackendPhoneVerificationRequiredError {
+  return error instanceof BackendPhoneVerificationRequiredError;
+}
+
 type CacheEntry<T> = {
   expiresAt: number;
   value: T;
@@ -296,6 +319,19 @@ async function throwBackendError(response: Response): Promise<never> {
       throw new BackendReauthRequiredError(errorText, maxAuthAgeSeconds);
     }
 
+    // Detect phone-verification-required errors thrown by
+    // assertOwnerPhoneVerified() on the backend (HTTP 403 with
+    // code: 'phone_verification_required'). Lets owner-portal screens
+    // route the user into the phone-verification flow rather than
+    // showing a raw "Verify your phone first" string.
+    if (payload.code === 'phone_verification_required') {
+      const errorText =
+        typeof payload.error === 'string' && payload.error.trim()
+          ? payload.error.trim()
+          : 'Verify your phone number before continuing.';
+      throw new BackendPhoneVerificationRequiredError(errorText);
+    }
+
     const errorText =
       typeof payload.error === 'string' && payload.error.trim()
         ? payload.error.trim()
@@ -316,6 +352,7 @@ async function throwBackendError(response: Response): Promise<never> {
     if (
       parseError instanceof BackendTierAccessError ||
       parseError instanceof BackendReauthRequiredError ||
+      parseError instanceof BackendPhoneVerificationRequiredError ||
       (parseError instanceof Error &&
         parseError.message !== `Backend request failed with ${response.status}`)
     ) {
