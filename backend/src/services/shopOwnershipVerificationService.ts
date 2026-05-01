@@ -717,6 +717,27 @@ export async function confirmShopOwnershipVerificationCode(
     phoneSuffix,
   });
 
+  // Fire-and-forget auto-approval attempt. The legit-owner case where
+  // shop-phone OTP succeeds + OCM cross-reference matches is the bulk of
+  // claims and shouldn't sit in the admin queue waiting for a human
+  // rubber-stamp. Lazy import keeps the cold-start surface narrow and
+  // avoids a circular dep with adminReviewService.
+  void (async () => {
+    try {
+      const { tryAutoApproveClaim } = await import('./claimAutoApprovalService');
+      await tryAutoApproveClaim({ ownerUid, dispensaryId: storefrontId });
+    } catch (error) {
+      // Auto-approval is opportunistic — never let its failures bubble
+      // up to the OTP-confirm response. The claim stays pending for
+      // manual review either way.
+      logger.warn('[shopOwnershipVerification] Auto-approval attempt threw', {
+        ownerUid,
+        storefrontId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  })();
+
   return { ok: true, storefrontId, verifiedAt };
 }
 
