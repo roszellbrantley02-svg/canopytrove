@@ -23,6 +23,26 @@ const DAILY_DEAL_METRICS_COLLECTION = 'analytics_daily_deal_metrics';
 const DAILY_SEARCH_METRICS_COLLECTION = 'analytics_daily_search_metrics';
 const DAILY_SIGNUP_METRICS_COLLECTION = 'analytics_daily_signup_metrics';
 const DAILY_QUERY_METRICS_COLLECTION = 'analytics_daily_query_metrics';
+const HOURLY_STOREFRONT_ROUTES_COLLECTION = 'analytics_hourly_storefront_routes';
+
+/**
+ * Build the YYYYMMDDHH key from an ISO timestamp. Used to bucket
+ * route-start events into clock-hour windows for the heat-glow metric.
+ * Always interprets the timestamp as UTC — keeps the bucket aligned
+ * across servers regardless of local time zone.
+ */
+export function createHourBucketKey(occurredAt: string): string {
+  // ISO format: 2026-05-02T18:34:21.523Z → 2026050218
+  const yyyy = occurredAt.slice(0, 4);
+  const mm = occurredAt.slice(5, 7);
+  const dd = occurredAt.slice(8, 10);
+  const hh = occurredAt.slice(11, 13);
+  return `${yyyy}${mm}${dd}${hh}`;
+}
+
+export function createHourlyStorefrontRouteId(storefrontId: string, hourBucketKey: string): string {
+  return `${storefrontId}__${hourBucketKey}`;
+}
 
 const memoryAnalyticsEvents: AnalyticsEventDocument[] = [];
 
@@ -213,6 +233,36 @@ function applyDailyStorefrontMetrics(writeBatch: WriteBatch, event: AnalyticsEve
   setMerged(writeBatch, documentRef, payload);
 }
 
+/**
+ * Per-storefront-per-hour route-start counter — drives the heat-glow
+ * visual on storefront cards (storefrontRouteHeatService reads these
+ * docs).
+ *
+ * Only fires for `go_now_tapped` events with a storefrontId. Doc id
+ * is `{storefrontId}__{YYYYMMDDHH}` (UTC bucket key). Field shape:
+ *
+ *   { storefrontId, hourBucketKey, routeStartCount, updatedAt }
+ *
+ * Bucket docs are append-mostly — we never read inside this function,
+ * just FieldValue.increment(1) the counter. The reader side
+ * (storefrontRouteHeatService) is responsible for fetching them.
+ */
+function applyHourlyRouteStartMetric(writeBatch: WriteBatch, event: AnalyticsEventDocument) {
+  if (event.eventType !== 'go_now_tapped' || !event.storefrontId) {
+    return;
+  }
+  const hourBucketKey = createHourBucketKey(event.receivedAt);
+  const documentRef = getBackendFirebaseDb()!
+    .collection(HOURLY_STOREFRONT_ROUTES_COLLECTION)
+    .doc(createHourlyStorefrontRouteId(event.storefrontId, hourBucketKey));
+  setMerged(writeBatch, documentRef, {
+    storefrontId: event.storefrontId,
+    hourBucketKey,
+    routeStartCount: FieldValue.increment(1),
+    updatedAt: event.receivedAt,
+  });
+}
+
 function applyDailyDealMetrics(writeBatch: WriteBatch, event: AnalyticsEventDocument) {
   if (!event.dealId) {
     return;
@@ -346,6 +396,7 @@ export async function recordAnalyticsEvents(
     applyDailyAppMetrics(writeBatch, document);
     applyDailySearchMetrics(writeBatch, document);
     applyDailyStorefrontMetrics(writeBatch, document);
+    applyHourlyRouteStartMetric(writeBatch, document);
     applyDailyDealMetrics(writeBatch, document);
     applyDailySignupMetrics(writeBatch, document);
   });
