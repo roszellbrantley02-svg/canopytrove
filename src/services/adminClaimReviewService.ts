@@ -80,6 +80,13 @@ export type AdminPendingClaim = {
   shopOwnershipVerifiedPhoneSuffix?: string | null;
   shopClaimNotificationSentAt?: string | null;
   shopClaimNotificationStatus?: string | null;
+  /**
+   * Phase 2 multi-location feature — groups sibling claims that were
+   * submitted as a cluster. When present, the admin queue UI groups by
+   * this field and offers a one-click "Approve all in batch" action.
+   */
+  bulkClaimBatchId?: string | null;
+  bulkClaimRole?: 'primary' | 'sibling' | null;
 };
 
 export type AdminReviewQueueResponse = {
@@ -127,4 +134,33 @@ export async function submitAdminClaimReview(claimId: string, body: AdminClaimRe
       body: JSON.stringify(body),
     },
   );
+}
+
+export type AdminBatchClaimReviewBody = {
+  claimIds: string[];
+  status: 'approved' | 'rejected' | 'changes_requested';
+  reviewNotes?: string | null;
+  overrideShopOwnership?: boolean;
+};
+
+export type AdminBatchClaimReviewResponse = {
+  ok: boolean;
+  ownerUid: string | null;
+  approvedCount: number;
+  rejectedCount: number;
+  failedCount: number;
+  results: Record<string, { ok: true; status: string } | { ok: false; error: string }>;
+};
+
+/**
+ * Approve / reject a set of claim IDs in one request. Backend calls
+ * `reviewOwnerClaim` per claim sequentially, so partial success is
+ * preserved — if 4 of 5 succeed and 1 fails, the 4 stay decided and
+ * the 1 stays pending for retry. Cap is 25 per request server-side.
+ */
+export async function submitAdminBatchClaimReview(body: AdminBatchClaimReviewBody) {
+  return adminRequest<AdminBatchClaimReviewResponse>('/admin/reviews/claims/batch', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }

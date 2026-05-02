@@ -215,6 +215,33 @@ export const serverConfig = {
   ownerAiDailyRequestLimit: parsePositiveInteger(process.env.OWNER_AI_DAILY_REQUEST_LIMIT, 120),
   ownerAiMaxCompletionTokens: parsePositiveInteger(process.env.OWNER_AI_MAX_COMPLETION_TOKENS, 350),
   ownerAiInputModerationEnabled: parseBoolean(process.env.OWNER_AI_INPUT_MODERATION_ENABLED, true),
+  // Multi-location claim feature flags (Phase 2 of the cluster-claim work).
+  // All three default OFF so the feature ships dark — existing single-claim
+  // path is unaffected until the flags flip in production.
+  //
+  //   verificationChainEnabled — refactors claimAutoApprovalService into a
+  //     pluggable verification chain (shop-OTP + ocm-confidence today,
+  //     extensible to entity_name match + dual-OTP for clusters).
+  //   bulkClaimEnabled — exposes POST /owner-portal/claims/bulk to the
+  //     frontend. When false the route 404s.
+  //   bulkClaimDualOtpThreshold — cluster size at which we require a SECOND
+  //     OTP to a different sibling shop. Default 3 (security bar scales
+  //     with cluster size; 1-2 shop adds skip the dual-OTP gate).
+  verificationChainEnabled: parseBoolean(process.env.VERIFICATION_CHAIN_ENABLED, false),
+  bulkClaimEnabled: parseBoolean(process.env.BULK_CLAIM_ENABLED, false),
+  bulkClaimDualOtpThreshold: parsePositiveInteger(process.env.BULK_CLAIM_DUAL_OTP_THRESHOLD, 3),
+  // Tax-ID verification (Phase 2.5 — additive verified-owner badge, NOT a
+  // gating check). Owner enters their NY business taxpayer ID; we match
+  // against the public NYS Tax & Finance "Registered Retail Dealers"
+  // dataset (gttd-5u6y) and tag the owner profile with a verified badge.
+  // Defaults off; flip to true after the dataset cache has been smoke-
+  // tested in production.
+  taxIdVerificationEnabled: parseBoolean(process.env.TAX_ID_VERIFICATION_ENABLED, false),
+  // Required when taxIdVerificationEnabled=true. Used as the salt for
+  // hashing entered TPIDs before they're persisted to Firestore. Never
+  // store a raw TPID — the dataset is public but the TPID itself is
+  // business-sensitive (NY tax IDs are ~similar in posture to EINs).
+  taxIdHashSalt: readConfiguredValue(process.env.TAX_ID_HASH_SALT),
   opsAlertWebhookUrl: readConfiguredValue(process.env.OPS_ALERT_WEBHOOK_URL),
   opsAlertCooldownMinutes: parsePositiveInteger(process.env.OPS_ALERT_COOLDOWN_MINUTES, 30),
   readRateLimitPerMinute: parsePositiveInteger(process.env.READ_RATE_LIMIT_PER_MINUTE, 600),

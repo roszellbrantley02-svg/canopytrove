@@ -15,8 +15,11 @@ import {
 } from '../context/StorefrontController';
 
 import { useBrowseSummaries } from '../hooks/useStorefrontSummaryData';
+import { BULK_CLAIM_MAX_SLOTS, useBulkClaimSubmission } from '../hooks/useBulkClaimSubmission';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { submitOwnerDispensaryClaim } from '../services/ownerPortalService';
+import { ownerPortalBulkClaimQueueEnabled } from '../config/ownerPortalConfig';
+import { BulkClaimQueueChips } from './ownerPortal/BulkClaimQueueChips';
 import { OwnerPortalHeroPanel } from './ownerPortal/OwnerPortalHeroPanel';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 import { ownerPortalPreviewSearchResults } from './ownerPortal/ownerPortalPreviewData';
@@ -35,6 +38,8 @@ function OwnerPortalClaimListingScreenInner() {
   const [submittedQuery, setSubmittedQuery] = React.useState('');
   const [isSubmittingClaimId, setIsSubmittingClaimId] = React.useState<string | null>(null);
   const [statusText, setStatusText] = React.useState<string | null>(null);
+  const bulkQueue = useBulkClaimSubmission();
+  const bulkModeAvailable = ownerPortalBulkClaimQueueEnabled && !preview;
   const { data, isLoading } = useBrowseSummaries(
     {
       areaId: '',
@@ -66,6 +71,12 @@ function OwnerPortalClaimListingScreenInner() {
   const handleSubmitSearch = () => {
     setStatusText(null);
     setSubmittedQuery(draftQuery.trim());
+  };
+
+  const handleSubmitBulk = async () => {
+    if (!authSession.uid) return;
+    setStatusText(null);
+    await bulkQueue.submitAll(authSession.uid);
   };
 
   const handleClaim = async (storefrontId: string, displayName: string) => {
@@ -192,44 +203,122 @@ function OwnerPortalClaimListingScreenInner() {
             </View>
           ) : (
             <View style={styles.actionGrid}>
-              {results.map((storefront) => (
-                <View key={storefront.id} style={styles.actionTile}>
-                  <View style={styles.splitHeaderRow}>
-                    <View style={styles.splitHeaderCopy}>
-                      <Text style={styles.actionTileMeta}>Claim candidate</Text>
-                      <Text style={styles.actionTileTitle}>{storefront.displayName}</Text>
-                      <Text style={styles.actionTileBody}>{storefront.addressLine1}</Text>
-                      <Text style={styles.actionTileBody}>
-                        {storefront.city}, {storefront.state} {storefront.zip}
-                      </Text>
+              {results.map((storefront) => {
+                const isInQueue = bulkQueue.selectedIds.includes(storefront.id);
+                const queueDisabled = bulkModeAvailable && !isInQueue && bulkQueue.isAtCapacity;
+                return (
+                  <View key={storefront.id} style={styles.actionTile}>
+                    <View style={styles.splitHeaderRow}>
+                      <View style={styles.splitHeaderCopy}>
+                        <Text style={styles.actionTileMeta}>Claim candidate</Text>
+                        <Text style={styles.actionTileTitle}>{storefront.displayName}</Text>
+                        <Text style={styles.actionTileBody}>{storefront.addressLine1}</Text>
+                        <Text style={styles.actionTileBody}>
+                          {storefront.city}, {storefront.state} {storefront.zip}
+                        </Text>
+                      </View>
+                      <AppUiIcon
+                        name={
+                          bulkModeAvailable && isInQueue ? 'checkmark-circle' : 'storefront-outline'
+                        }
+                        size={20}
+                        color={bulkModeAvailable && isInQueue ? '#2ECC71' : '#F5C86A'}
+                      />
                     </View>
-                    <AppUiIcon name="storefront-outline" size={20} color="#F5C86A" />
+                    {bulkModeAvailable ? (
+                      <Pressable
+                        disabled={queueDisabled}
+                        onPress={() =>
+                          bulkQueue.toggleSelection({
+                            id: storefront.id,
+                            displayName: storefront.displayName,
+                          })
+                        }
+                        style={[styles.secondaryButton, queueDisabled && styles.buttonDisabled]}
+                      >
+                        <Text style={styles.secondaryButtonText}>
+                          {isInQueue
+                            ? 'Remove from queue'
+                            : queueDisabled
+                              ? `Queue full (${BULK_CLAIM_MAX_SLOTS} max)`
+                              : 'Add to queue'}
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <Pressable
+                        disabled={!preview && isSubmittingClaimId === storefront.id}
+                        onPress={() => {
+                          if (isSubmittingClaimId) return;
+                          void handleClaim(storefront.id, storefront.displayName);
+                        }}
+                        style={[
+                          styles.secondaryButton,
+                          !preview &&
+                            isSubmittingClaimId === storefront.id &&
+                            styles.buttonDisabled,
+                        ]}
+                      >
+                        <Text style={styles.secondaryButtonText}>
+                          {preview
+                            ? 'Continue With This Listing'
+                            : isSubmittingClaimId === storefront.id
+                              ? 'Submitting...'
+                              : 'Claim Listing'}
+                        </Text>
+                      </Pressable>
+                    )}
                   </View>
-                  <Pressable
-                    disabled={!preview && isSubmittingClaimId === storefront.id}
-                    onPress={() => {
-                      if (isSubmittingClaimId) return;
-                      void handleClaim(storefront.id, storefront.displayName);
-                    }}
-                    style={[
-                      styles.secondaryButton,
-                      !preview && isSubmittingClaimId === storefront.id && styles.buttonDisabled,
-                    ]}
-                  >
-                    <Text style={styles.secondaryButtonText}>
-                      {preview
-                        ? 'Continue With This Listing'
-                        : isSubmittingClaimId === storefront.id
-                          ? 'Submitting...'
-                          : 'Claim Listing'}
-                    </Text>
-                  </Pressable>
-                </View>
-              ))}
+                );
+              })}
             </View>
           )}
         </SectionCard>
       </MotionInView>
+
+      {bulkModeAvailable && bulkQueue.slots.length > 0 ? (
+        <MotionInView delay={210}>
+          <SectionCard
+            title="Verification queue"
+            body="Each shop's phone rings independently. Enter the codes as you hear them."
+          >
+            <View style={styles.sectionStack}>
+              {bulkQueue.slots.some((slot) => slot.phase === 'idle') ? (
+                <Pressable
+                  disabled={bulkQueue.hasInFlightWork || !authSession.uid}
+                  onPress={() => {
+                    void handleSubmitBulk();
+                  }}
+                  style={[
+                    styles.primaryButton,
+                    (bulkQueue.hasInFlightWork || !authSession.uid) && styles.buttonDisabled,
+                  ]}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {`Submit ${bulkQueue.slots.filter((s) => s.phase === 'idle').length} ${
+                      bulkQueue.slots.filter((s) => s.phase === 'idle').length === 1
+                        ? 'claim'
+                        : 'claims'
+                    }`}
+                  </Text>
+                </Pressable>
+              ) : null}
+              <BulkClaimQueueChips
+                slots={bulkQueue.slots}
+                onSubmitCode={bulkQueue.submitCodeFor}
+                onResetSlot={bulkQueue.resetSlot}
+              />
+              {bulkQueue.slots.every((slot) => slot.phase === 'verified') ? (
+                <Pressable
+                  onPress={() => navigation.replace('OwnerPortalHome')}
+                  style={styles.primaryButton}
+                >
+                  <Text style={styles.primaryButtonText}>Continue to Owner Home</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </SectionCard>
+        </MotionInView>
+      ) : null}
     </ScreenShell>
   );
 }

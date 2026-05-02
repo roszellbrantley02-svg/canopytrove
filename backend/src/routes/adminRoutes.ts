@@ -28,6 +28,7 @@ import {
   reviewBusinessVerification,
   reviewIdentityVerification,
   reviewOwnerClaim,
+  reviewOwnerClaimsBatch,
   reviewStorefrontPhoto,
   reviewStorefrontReport,
 } from '../services/adminReviewService';
@@ -267,6 +268,58 @@ adminRoutes.post('/admin/reviews/claims/:claimId', async (request, response) => 
     response.status(400).json({
       ok: false,
       error: error instanceof Error ? error.message : 'Unknown claim review failure',
+    });
+  }
+});
+
+/**
+ * Phase 3 — admin batch claim review. Body shape:
+ *
+ *   {
+ *     claimIds: string[],            // 1-25 claim IDs
+ *     status: 'approved' | 'rejected' | 'needs_resubmission',
+ *     reviewNotes?: string,
+ *     overrideShopOwnership?: boolean,
+ *   }
+ *
+ * Response includes per-claim outcomes — partial success is preserved
+ * (see adminReviewService.reviewOwnerClaimsBatch).
+ */
+adminRoutes.post('/admin/reviews/claims/batch', async (request, response) => {
+  try {
+    const body = (typeof request.body === 'object' && request.body ? request.body : {}) as Record<
+      string,
+      unknown
+    >;
+    const claimIds = Array.isArray(body.claimIds)
+      ? (body.claimIds as unknown[]).filter(
+          (value): value is string => typeof value === 'string' && value.length > 0,
+        )
+      : [];
+    const outcome = await reviewOwnerClaimsBatch({
+      claimIds,
+      body: parseAdminReviewBody(body),
+    });
+    // Map → object for JSON serialization.
+    const resultsAsObject: Record<
+      string,
+      { ok: true; status: string } | { ok: false; error: string }
+    > = {};
+    outcome.results.forEach((value, key) => {
+      resultsAsObject[key] = value;
+    });
+    response.json({
+      ok: true,
+      ownerUid: outcome.ownerUid,
+      approvedCount: outcome.approvedCount,
+      rejectedCount: outcome.rejectedCount,
+      failedCount: outcome.failedCount,
+      results: resultsAsObject,
+    });
+  } catch (error) {
+    response.status(400).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown batch claim review failure',
     });
   }
 });

@@ -19,6 +19,7 @@ import { AppUiIcon } from '../icons/AppUiIcon';
 import { colors } from '../theme/tokens';
 import {
   fetchAdminClaimQueue,
+  submitAdminBatchClaimReview,
   submitAdminClaimReview,
   type AdminPendingClaim,
 } from '../services/adminClaimReviewService';
@@ -28,6 +29,46 @@ type PendingActionState = {
   claimId: string;
   action: 'approve' | 'reject';
 };
+
+type PendingBatchActionState = {
+  batchId: string;
+  action: 'approve';
+};
+
+/**
+ * Partition claims into batch groups + ungrouped singletons, preserving the
+ * server-returned ordering inside each group. Phase 2 multi-location feature
+ * stamps `bulkClaimBatchId` on every claim that came in as a cluster — we
+ * use that to surface a single "Approve all in batch" action per group.
+ */
+function groupClaimsByBatch(claims: AdminPendingClaim[]): {
+  batches: Array<{ batchId: string; claims: AdminPendingClaim[] }>;
+  singletons: AdminPendingClaim[];
+} {
+  const batchMap = new Map<string, AdminPendingClaim[]>();
+  const singletons: AdminPendingClaim[] = [];
+  for (const claim of claims) {
+    const batchId = claim.bulkClaimBatchId;
+    if (typeof batchId === 'string' && batchId.length > 0) {
+      const list = batchMap.get(batchId) ?? [];
+      list.push(claim);
+      batchMap.set(batchId, list);
+    } else {
+      singletons.push(claim);
+    }
+  }
+  // Drop any "batch" with only one claim back to singletons — no point
+  // showing a one-click action for a batch of one.
+  const batches: Array<{ batchId: string; claims: AdminPendingClaim[] }> = [];
+  batchMap.forEach((batchClaims, batchId) => {
+    if (batchClaims.length <= 1) {
+      singletons.push(...batchClaims);
+    } else {
+      batches.push({ batchId, claims: batchClaims });
+    }
+  });
+  return { batches, singletons };
+}
 
 function formatTimestamp(value: string | null | undefined): string {
   if (!value) return '—';
@@ -57,12 +98,114 @@ function describeShopVerification(claim: AdminPendingClaim): {
   return { label: 'No shop-phone signal — manual review', tone: 'danger' };
 }
 
+type RenderClaimCardCtx = {
+  reviewNotesByClaim: Record<string, string>;
+  setReviewNotesByClaim: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  pendingAction: PendingActionState | null;
+  pendingBatchAction: PendingBatchActionState | null;
+  handleReview: (claim: AdminPendingClaim, action: 'approve' | 'reject') => void | Promise<void>;
+  isApproving: (claimId: string) => boolean;
+  isRejecting: (claimId: string) => boolean;
+};
+
+function renderClaimCard(claim: AdminPendingClaim, ctx: RenderClaimCardCtx): React.ReactNode {
+  const verification = describeShopVerification(claim);
+  const verificationToneStyle =
+    verification.tone === 'success'
+      ? sharedStyles.statusPanelSuccess
+      : verification.tone === 'warning'
+        ? sharedStyles.statusPanelWarm
+        : sharedStyles.statusPanelDanger;
+  const notes = ctx.reviewNotesByClaim[claim.id] ?? '';
+  const isAnyActionPending = Boolean(ctx.pendingAction || ctx.pendingBatchAction);
+  return (
+    <View style={localStyles.claimStack} key={claim.id}>
+      <View style={[sharedStyles.statusPanel, verificationToneStyle]}>
+        <View style={sharedStyles.statusRow}>
+          <Text style={sharedStyles.statusLabel}>Claim</Text>
+          <Text style={sharedStyles.statusValue}>{claim.id}</Text>
+        </View>
+        <View style={sharedStyles.statusRow}>
+          <Text style={sharedStyles.statusLabel}>Verification</Text>
+          <Text style={sharedStyles.statusValue}>{verification.label}</Text>
+        </View>
+        <View style={sharedStyles.statusRow}>
+          <Text style={sharedStyles.statusLabel}>Owner UID</Text>
+          <Text style={sharedStyles.statusValue}>{claim.ownerUid ?? '—'}</Text>
+        </View>
+        <View style={sharedStyles.statusRow}>
+          <Text style={sharedStyles.statusLabel}>Storefront</Text>
+          <Text style={sharedStyles.statusValue}>{claim.dispensaryId ?? '—'}</Text>
+        </View>
+        <View style={sharedStyles.statusRow}>
+          <Text style={sharedStyles.statusLabel}>Notification call</Text>
+          <Text style={sharedStyles.statusValue}>
+            {formatTimestamp(claim.shopClaimNotificationSentAt)}
+          </Text>
+        </View>
+        {claim.bulkClaimRole ? (
+          <View style={sharedStyles.statusRow}>
+            <Text style={sharedStyles.statusLabel}>Cluster role</Text>
+            <Text style={sharedStyles.statusValue}>{claim.bulkClaimRole}</Text>
+          </View>
+        ) : null}
+        {claim.reviewNotes ? (
+          <Text style={sharedStyles.helperText}>Existing notes: {claim.reviewNotes}</Text>
+        ) : null}
+      </View>
+
+      <View style={sharedStyles.fieldGroup}>
+        <Text style={sharedStyles.fieldLabel}>Per-claim notes (optional)</Text>
+        <TextInput
+          value={notes}
+          onChangeText={(value) =>
+            ctx.setReviewNotesByClaim((current) => ({ ...current, [claim.id]: value }))
+          }
+          placeholder="Why approving / rejecting this specific claim"
+          placeholderTextColor={colors.textSoft}
+          style={[sharedStyles.inputPremium, sharedStyles.textAreaPremium]}
+          multiline={true}
+          numberOfLines={3}
+        />
+      </View>
+
+      <View style={localStyles.actionRow}>
+        <Pressable
+          disabled={isAnyActionPending}
+          onPress={() => void ctx.handleReview(claim, 'approve')}
+          style={[localStyles.approveButton, isAnyActionPending && sharedStyles.buttonDisabled]}
+        >
+          <AppUiIcon name="checkmark-circle-outline" size={18} color="#08110D" />
+          <Text style={localStyles.approveButtonText}>
+            {ctx.isApproving(claim.id) ? 'Approving…' : 'Approve'}
+          </Text>
+        </Pressable>
+        <Pressable
+          disabled={isAnyActionPending}
+          onPress={() => void ctx.handleReview(claim, 'reject')}
+          style={[localStyles.rejectButton, isAnyActionPending && sharedStyles.buttonDisabled]}
+        >
+          <AppUiIcon name="close-circle-outline" size={18} color="#FFC0C0" />
+          <Text style={localStyles.rejectButtonText}>
+            {ctx.isRejecting(claim.id) ? 'Rejecting…' : 'Reject'}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 function AdminClaimReviewScreenInner() {
   const [claims, setClaims] = React.useState<AdminPendingClaim[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [statusText, setStatusText] = React.useState<string | null>(null);
   const [pendingAction, setPendingAction] = React.useState<PendingActionState | null>(null);
+  const [pendingBatchAction, setPendingBatchAction] =
+    React.useState<PendingBatchActionState | null>(null);
   const [reviewNotesByClaim, setReviewNotesByClaim] = React.useState<Record<string, string>>({});
+  const [reviewNotesByBatch, setReviewNotesByBatch] = React.useState<Record<string, string>>({});
+
+  const { batches, singletons } = React.useMemo(() => groupClaimsByBatch(claims), [claims]);
 
   const refresh = React.useCallback(async () => {
     setIsLoading(true);
@@ -115,6 +258,40 @@ function AdminClaimReviewScreenInner() {
     pendingAction?.claimId === claimId && pendingAction.action === 'approve';
   const isRejecting = (claimId: string) =>
     pendingAction?.claimId === claimId && pendingAction.action === 'reject';
+  const isBatchApproving = (batchId: string) =>
+    pendingBatchAction?.batchId === batchId && pendingBatchAction.action === 'approve';
+
+  const handleBatchApprove = async (batchId: string, batchClaims: AdminPendingClaim[]) => {
+    if (pendingBatchAction || pendingAction) return;
+    setPendingBatchAction({ batchId, action: 'approve' });
+    setStatusText(null);
+    try {
+      const trimmedNotes = (reviewNotesByBatch[batchId] ?? '').trim();
+      // Override shop-ownership when ANY sibling lacks the OTP signal —
+      // the admin is taking responsibility for the whole cluster decision.
+      const needsOverride = batchClaims.some((c) => c.shopOwnershipVerified !== true);
+      const result = await submitAdminBatchClaimReview({
+        claimIds: batchClaims.map((c) => c.id),
+        status: 'approved',
+        reviewNotes: trimmedNotes ? trimmedNotes : null,
+        overrideShopOwnership: needsOverride ? true : undefined,
+      });
+      const succeededIds = Object.entries(result.results)
+        .filter(([, outcome]) => outcome.ok)
+        .map(([id]) => id);
+      setStatusText(
+        result.failedCount > 0
+          ? `Approved ${result.approvedCount} of ${batchClaims.length} in batch ${batchId}. ${result.failedCount} failed — refresh and retry.`
+          : `Approved all ${result.approvedCount} claims in batch ${batchId}.`,
+      );
+      setClaims((current) => current.filter((c) => !succeededIds.includes(c.id)));
+      void refresh();
+    } catch (error) {
+      setStatusText(error instanceof Error ? error.message : `Could not approve batch ${batchId}.`);
+    } finally {
+      setPendingBatchAction(null);
+    }
+  };
 
   return (
     <ScreenShell
@@ -157,56 +334,30 @@ function AdminClaimReviewScreenInner() {
           </SectionCard>
         </MotionInView>
 
-        {claims.map((claim, index) => {
-          const verification = describeShopVerification(claim);
-          const verificationToneStyle =
-            verification.tone === 'success'
-              ? sharedStyles.statusPanelSuccess
-              : verification.tone === 'warning'
-                ? sharedStyles.statusPanelWarm
-                : sharedStyles.statusPanelDanger;
-          const notes = reviewNotesByClaim[claim.id] ?? '';
+        {batches.map((batch, batchIndex) => {
+          const batchNotes = reviewNotesByBatch[batch.batchId] ?? '';
+          const batchOwnerUid = batch.claims[0]?.ownerUid ?? '—';
+          const verifiedCount = batch.claims.filter((c) => c.shopOwnershipVerified === true).length;
           return (
-            <MotionInView delay={120 + index * 40} key={claim.id}>
+            <MotionInView delay={120 + batchIndex * 40} key={`batch-${batch.batchId}`}>
               <SectionCard
-                title={claim.id}
-                body={`Submitted ${formatTimestamp(claim.submittedAt)}`}
+                title={`Cluster claim — ${batch.claims.length} sibling locations`}
+                body={`Batch ${batch.batchId} · Owner ${batchOwnerUid} · ${verifiedCount} of ${batch.claims.length} have shop-OTP signal.`}
               >
                 <View style={localStyles.claimStack}>
-                  <View style={[sharedStyles.statusPanel, verificationToneStyle]}>
-                    <View style={sharedStyles.statusRow}>
-                      <Text style={sharedStyles.statusLabel}>Verification</Text>
-                      <Text style={sharedStyles.statusValue}>{verification.label}</Text>
-                    </View>
-                    <View style={sharedStyles.statusRow}>
-                      <Text style={sharedStyles.statusLabel}>Owner UID</Text>
-                      <Text style={sharedStyles.statusValue}>{claim.ownerUid ?? '—'}</Text>
-                    </View>
-                    <View style={sharedStyles.statusRow}>
-                      <Text style={sharedStyles.statusLabel}>Storefront</Text>
-                      <Text style={sharedStyles.statusValue}>{claim.dispensaryId ?? '—'}</Text>
-                    </View>
-                    <View style={sharedStyles.statusRow}>
-                      <Text style={sharedStyles.statusLabel}>Notification call</Text>
-                      <Text style={sharedStyles.statusValue}>
-                        {formatTimestamp(claim.shopClaimNotificationSentAt)}
-                      </Text>
-                    </View>
-                    {claim.reviewNotes ? (
-                      <Text style={sharedStyles.helperText}>
-                        Existing notes: {claim.reviewNotes}
-                      </Text>
-                    ) : null}
-                  </View>
-
                   <View style={sharedStyles.fieldGroup}>
-                    <Text style={sharedStyles.fieldLabel}>Review notes (optional)</Text>
+                    <Text style={sharedStyles.fieldLabel}>
+                      Batch review notes (applied to every claim in cluster)
+                    </Text>
                     <TextInput
-                      value={notes}
+                      value={batchNotes}
                       onChangeText={(value) =>
-                        setReviewNotesByClaim((current) => ({ ...current, [claim.id]: value }))
+                        setReviewNotesByBatch((current) => ({
+                          ...current,
+                          [batch.batchId]: value,
+                        }))
                       }
-                      placeholder="Why approving / rejecting (visible in audit trail)"
+                      placeholder="Why approving the whole cluster (audit trail)"
                       placeholderTextColor={colors.textSoft}
                       style={[sharedStyles.inputPremium, sharedStyles.textAreaPremium]}
                       multiline={true}
@@ -214,39 +365,56 @@ function AdminClaimReviewScreenInner() {
                     />
                   </View>
 
-                  <View style={localStyles.actionRow}>
-                    <Pressable
-                      disabled={Boolean(pendingAction)}
-                      onPress={() => void handleReview(claim, 'approve')}
-                      style={[
-                        localStyles.approveButton,
-                        Boolean(pendingAction) && sharedStyles.buttonDisabled,
-                      ]}
-                    >
-                      <AppUiIcon name="checkmark-circle-outline" size={18} color="#08110D" />
-                      <Text style={localStyles.approveButtonText}>
-                        {isApproving(claim.id) ? 'Approving…' : 'Approve'}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      disabled={Boolean(pendingAction)}
-                      onPress={() => void handleReview(claim, 'reject')}
-                      style={[
-                        localStyles.rejectButton,
-                        Boolean(pendingAction) && sharedStyles.buttonDisabled,
-                      ]}
-                    >
-                      <AppUiIcon name="close-circle-outline" size={18} color="#FFC0C0" />
-                      <Text style={localStyles.rejectButtonText}>
-                        {isRejecting(claim.id) ? 'Rejecting…' : 'Reject'}
-                      </Text>
-                    </Pressable>
-                  </View>
+                  <Pressable
+                    disabled={Boolean(pendingAction || pendingBatchAction)}
+                    onPress={() => void handleBatchApprove(batch.batchId, batch.claims)}
+                    style={[
+                      localStyles.approveButton,
+                      Boolean(pendingAction || pendingBatchAction) && sharedStyles.buttonDisabled,
+                    ]}
+                  >
+                    <AppUiIcon name="checkmark-circle-outline" size={18} color="#08110D" />
+                    <Text style={localStyles.approveButtonText}>
+                      {isBatchApproving(batch.batchId)
+                        ? 'Approving cluster…'
+                        : `Approve all ${batch.claims.length} in batch`}
+                    </Text>
+                  </Pressable>
+                  <Text style={sharedStyles.helperText}>
+                    Or review each sibling individually below.
+                  </Text>
+                  {batch.claims.map((claim) =>
+                    renderClaimCard(claim, {
+                      reviewNotesByClaim,
+                      setReviewNotesByClaim,
+                      pendingAction,
+                      pendingBatchAction,
+                      handleReview,
+                      isApproving,
+                      isRejecting,
+                    }),
+                  )}
                 </View>
               </SectionCard>
             </MotionInView>
           );
         })}
+
+        {singletons.map((claim, index) => (
+          <MotionInView delay={120 + (batches.length + index) * 40} key={claim.id}>
+            <SectionCard title={claim.id} body={`Submitted ${formatTimestamp(claim.submittedAt)}`}>
+              {renderClaimCard(claim, {
+                reviewNotesByClaim,
+                setReviewNotesByClaim,
+                pendingAction,
+                pendingBatchAction,
+                handleReview,
+                isApproving,
+                isRejecting,
+              })}
+            </SectionCard>
+          </MotionInView>
+        ))}
 
         {!isLoading && claims.length === 0 ? (
           <MotionInView delay={120}>

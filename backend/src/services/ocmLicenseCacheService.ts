@@ -48,8 +48,35 @@ type CacheEntry = {
   byLicenseNumber: Map<string, OcmLicenseRecord>;
   byNormalizedAddress: Map<string, OcmLicenseRecord[]>;
   byNormalizedName: Map<string, OcmLicenseRecord[]>;
+  /**
+   * Index keyed on uppercased+trimmed licensee_name (the OCM legal-entity
+   * field, populated from SODA's `entity_name`). Used by sibling-location
+   * discovery (siblingLocationDiscoveryService) — given the licensee_name
+   * of one storefront, return every other licensed retail record held by
+   * the same legal entity.
+   *
+   * Empirical findings (May 2 2026) confirmed `entity_name` is consistent
+   * within a cluster (e.g., "Twisted Cannabis FLX LLC" is byte-identical
+   * across all 3 of its retail licenses), so exact match after uppercase
+   * is safe. Cross-dataset joining (e.g., to gttd-5u6y tax records) needs
+   * additional normalization (strip punctuation) — handled separately by
+   * Phase 2.5 tax verification, NOT here.
+   */
+  byNormalizedLicenseeName: Map<string, OcmLicenseRecord[]>;
   fetchedAt: number;
 };
+
+/**
+ * Normalize a raw licensee_name into the cluster-rollup key. Uppercase +
+ * trim, no punctuation strip. Used by the byNormalizedLicenseeName index
+ * AND by sibling-discovery callers — both sides MUST normalize identically
+ * or the lookup misses.
+ */
+export function normalizeLicenseeNameKey(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const cleaned = value.trim().toUpperCase();
+  return cleaned || null;
+}
 
 type CacheState = {
   entry: CacheEntry | null;
@@ -197,6 +224,7 @@ async function fetchAndIndex(): Promise<CacheEntry> {
   const byLicenseNumber = new Map<string, OcmLicenseRecord>();
   const byNormalizedAddress = new Map<string, OcmLicenseRecord[]>();
   const byNormalizedName = new Map<string, OcmLicenseRecord[]>();
+  const byNormalizedLicenseeName = new Map<string, OcmLicenseRecord[]>();
 
   for (const record of records) {
     if (!isConsumerFacingRetailType(record.license_type)) continue;
@@ -216,6 +244,16 @@ async function fetchAndIndex(): Promise<CacheEntry> {
       list.push(record);
       byNormalizedName.set(nameKey, list);
     }
+    // Cluster-rollup index — group every retail record under its OCM
+    // legal entity for sibling-location discovery. Only indexes records
+    // that already passed isConsumerFacingRetailType, so cultivators /
+    // processors never appear in cluster results.
+    const licenseeKey = normalizeLicenseeNameKey(record.licensee_name);
+    if (licenseeKey) {
+      const list = byNormalizedLicenseeName.get(licenseeKey) ?? [];
+      list.push(record);
+      byNormalizedLicenseeName.set(licenseeKey, list);
+    }
   }
 
   logger.info('OCM license cache refreshed', {
@@ -223,6 +261,7 @@ async function fetchAndIndex(): Promise<CacheEntry> {
     retailIndexed: byLicenseNumber.size,
     uniqueAddresses: byNormalizedAddress.size,
     uniqueNames: byNormalizedName.size,
+    uniqueLicensees: byNormalizedLicenseeName.size,
   });
 
   return {
@@ -230,8 +269,35 @@ async function fetchAndIndex(): Promise<CacheEntry> {
     byLicenseNumber,
     byNormalizedAddress,
     byNormalizedName,
+    byNormalizedLicenseeName,
     fetchedAt: Date.now(),
   };
+}
+
+/**
+ * Cluster-rollup helper for sibling-location discovery. Returns every
+ * cached retail OCM record held by the same legal entity (`entity_name`
+ * in SODA, `licensee_name` in our normalized shape). Only includes records
+ * that pass isConsumerFacingRetailType — cultivators / processors are
+ * never returned even if held by the same entity.
+ *
+ * Returns `[]` when:
+ *   - cache is empty / first refresh in flight
+ *   - input licensee name is empty
+ *   - no sibling licenses exist (entity is single-location)
+ *
+ * Caller must filter by `isActiveStatus` if they want only currently-valid
+ * licenses; this helper returns ALL records (active + expired) so callers
+ * can render history if needed.
+ */
+export async function findOcmRecordsByLicenseeName(
+  licenseeName: string,
+): Promise<OcmLicenseRecord[]> {
+  const key = normalizeLicenseeNameKey(licenseeName);
+  if (!key) return [];
+  const snapshot = await getOcmCacheSnapshot();
+  if (!snapshot) return [];
+  return snapshot.byNormalizedLicenseeName.get(key) ?? [];
 }
 
 export async function verifyAgainstCache(input: VerifyInput): Promise<VerificationMatch> {
@@ -324,6 +390,10 @@ function isConsumerFacingRetailType(raw: string | undefined): boolean {
   if (lowered.includes('dispensing')) return true;
   if (lowered.includes('microbusiness')) return true;
   return false;
+}
+
+export function isActiveOcmLicenseStatus(status: string | undefined): boolean {
+  return isActiveStatus(status);
 }
 
 function isActiveStatus(status: string | undefined): boolean {
