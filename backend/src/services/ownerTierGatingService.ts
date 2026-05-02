@@ -161,9 +161,13 @@ export function assertTierAccess(
   featureLabel: string,
 ): void {
   if (!hasTierAccess(currentTier, requiredTier)) {
+    // Pro is in launch-promo through 2026-11-02: $249.99/mo for 12 months,
+    // then converts to the $499.99 regular rate. Frontend shows the
+    // strikethrough; here we just reference the current charging price
+    // so the error message matches what they'd see at checkout.
     const tierLabel =
       requiredTier === 'pro'
-        ? 'Pro ($249/mo)'
+        ? 'Pro ($249.99/mo launch — regular $499.99)'
         : requiredTier === 'growth'
           ? 'Growth ($149/mo)'
           : requiredTier === 'verified'
