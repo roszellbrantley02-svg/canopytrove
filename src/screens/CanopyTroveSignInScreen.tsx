@@ -1,6 +1,6 @@
 import React from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
@@ -41,7 +41,11 @@ function withSignInTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
 
 function CanopyTroveSignInScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [email, setEmail] = React.useState('');
+  const route = useRoute<RouteProp<RootStackParamList, 'CanopyTroveSignIn'>>();
+  // If we got here via the signup-recovery path (user tried to create
+  // an account with an email that already existed), the email is
+  // pre-filled so they don't have to re-type it. Empty otherwise.
+  const [email, setEmail] = React.useState(route.params?.prefilledEmail?.trim() ?? '');
   const [password, setPassword] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorText, setErrorText] = React.useState<string | null>(null);

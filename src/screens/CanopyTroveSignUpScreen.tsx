@@ -11,6 +11,10 @@ import { AppUiIcon } from '../icons/AppUiIcon';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { trackAnalyticsEvent } from '../services/analyticsService';
 import { signUpCanopyTroveEmailPassword } from '../services/canopyTroveAuthService';
+import {
+  mapFirebaseAuthError,
+  type FirebaseAuthErrorRecoveryAction,
+} from '../services/firebaseAuthErrorMapper';
 import { syncMemberEmailSubscription } from '../services/memberEmailSubscriptionService';
 import { reportRuntimeError } from '../services/runtimeReportingService';
 import { colors } from '../theme/tokens';
@@ -25,6 +29,12 @@ function CanopyTroveSignUpScreenInner() {
   const [wantsEmailUpdates, setWantsEmailUpdates] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorText, setErrorText] = React.useState<string | null>(null);
+  // Recovery action surfaced in the UI when the friendly-error mapper
+  // identifies a specific next step (e.g. "Sign in instead" with the
+  // attempted email pre-filled). Cleared on every new submit attempt.
+  const [errorRecovery, setErrorRecovery] = React.useState<FirebaseAuthErrorRecoveryAction | null>(
+    null,
+  );
   const passwordTooShort = password.length > 0 && password.length < minimumPasswordLength;
   const canSubmit =
     email.trim().length > 0 &&
@@ -48,6 +58,7 @@ function CanopyTroveSignUpScreenInner() {
 
     setIsSubmitting(true);
     setErrorText(null);
+    setErrorRecovery(null);
     trackAnalyticsEvent('signup_started', {
       role: 'customer',
       source: 'profile',
@@ -80,11 +91,52 @@ function CanopyTroveSignUpScreenInner() {
 
       navigation.replace('Tabs', { screen: 'Profile' });
     } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Unable to create account.');
+      // Translate the raw Firebase error into a friendly message
+      // with a concrete recovery action. This is the load-bearing
+      // fix for the May 2 2026 platform-three-reports finding that
+      // 14 signup_started → 6 signup_completed (43% rate). Most of
+      // the lost 8 were users hitting auth/email-already-in-use and
+      // bailing because the raw error message was "Firebase: ..."
+      // gibberish with no path forward.
+      const friendly = mapFirebaseAuthError(error, email);
+      setErrorText(friendly.message);
+      setErrorRecovery(friendly.recoveryAction);
+
+      // Emit a structured signup_failed event so future analytics
+      // pulls can break down the WHY of failures, not just the count.
+      // Without this we only know "8 people failed"; with it we'll
+      // know "5 hit email-in-use, 2 hit network, 1 hit unknown".
+      trackAnalyticsEvent('signup_failed', {
+        role: 'customer',
+        source: 'profile',
+        errorCode: friendly.code,
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Renders the recovery affordance below the error message when the
+  // mapper identified a specific next step. For email-already-in-use
+  // we route to sign-in with the email pre-filled; for wrong-password
+  // patterns (which would only fire on the sign-in screen, not here)
+  // we'd route to forgot-password. For everything else we don't show
+  // a CTA — the friendly message itself is the guidance.
+  const handleRecoveryAction = React.useCallback(() => {
+    if (!errorRecovery) return;
+    if (errorRecovery.kind === 'try_signin') {
+      navigation.replace('CanopyTroveSignIn', {
+        prefilledEmail: errorRecovery.prefilledEmail,
+      });
+      return;
+    }
+    if (errorRecovery.kind === 'reset_password') {
+      navigation.navigate('CanopyTroveForgotPassword');
+      return;
+    }
+    // 'retry' and 'none' have no navigation — the user just retries
+    // the form in place.
+  }, [errorRecovery, navigation]);
 
   return (
     <ScreenShell
@@ -243,6 +295,26 @@ function CanopyTroveSignUpScreenInner() {
                           Create account issue
                         </Text>
                         <Text style={styles.helperBody}>{errorText}</Text>
+                        {errorRecovery?.kind === 'try_signin' ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Sign in instead with this email"
+                            onPress={handleRecoveryAction}
+                            style={[styles.primaryButton, styles.recoveryActionSpacer]}
+                          >
+                            <Text style={styles.primaryButtonText}>Sign in instead</Text>
+                          </Pressable>
+                        ) : null}
+                        {errorRecovery?.kind === 'reset_password' ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Reset your password"
+                            onPress={handleRecoveryAction}
+                            style={[styles.primaryButton, styles.recoveryActionSpacer]}
+                          >
+                            <Text style={styles.primaryButtonText}>Reset password</Text>
+                          </Pressable>
+                        ) : null}
                       </View>
                     ) : (
                       <View style={[styles.helperCard, styles.helperCardWarm]}>

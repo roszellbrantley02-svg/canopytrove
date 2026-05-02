@@ -249,6 +249,12 @@ export const customerEntryStyles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
+  // Used to push the recovery-action button (e.g. "Sign in instead")
+  // a small distance below the friendly-error message body in the
+  // signup screen.
+  recoveryActionSpacer: {
+    marginTop: spacing.sm,
+  },
   primaryButtonText: {
     color: colors.backgroundDeep,
     fontSize: typography.body,
