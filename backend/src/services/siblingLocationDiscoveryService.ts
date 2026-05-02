@@ -14,16 +14,11 @@
  *    sibling licenses haven't registered for tax collection yet, so
  *    tax-ID match is NOT the cluster rollup. `entity_name` is.
  *
- * This service is dead code in PR-A — nothing calls it yet. PR-D wires
- * it into the bulk-claim endpoint. The verification chain (PR-B) is
- * the next consumer. Pure read; never writes.
- *
- * Known limitation (deferred to PR-D): `dispensaryId` resolution. We can
- * find the OCM records cleanly, but mapping each sibling OCM license back
- * to a `dispensaries/{id}` doc requires either a Firestore query on
- * `licenseNumber` (no index today) or scanning all storefronts. Returning
- * `dispensaryId: null` keeps PR-A's surface minimal; PR-D adds the lookup
- * once we know which sibling licenses we actually need to resolve.
+ * Resolves OCM siblings to storefront IDs via an in-memory reverse index
+ * (built from getAllSummaries, cached 5 min) keyed on normalized address+zip.
+ * Siblings whose OCM record has no matching storefront in our directory
+ * surface as `dispensaryId: null` — the frontend hero card hides those
+ * candidates so we never offer to claim a shop we can't actually load.
  */
 
 import { logger } from '../observability/logger';
@@ -34,6 +29,7 @@ import {
 } from './ocmLicenseCacheService';
 import type { OcmLicenseRecord } from './ocmLicenseLookupService';
 import { backendStorefrontSource } from '../sources';
+import type { StorefrontSummaryApiDocument } from '../types';
 
 export type SiblingCandidate = {
   /** The full OCM record for the sibling location. */
@@ -77,6 +73,117 @@ const EMPTY_RESULT = (
   siblings: [],
   reason,
 });
+
+// ============================================================================
+// Storefront reverse-index — maps OCM (address, zip) → storefrontId. Built
+// once from getAllSummaries(), cached for STOREFRONT_INDEX_TTL_MS.
+// ============================================================================
+
+const STOREFRONT_INDEX_TTL_MS = 5 * 60 * 1000; // 5 min
+
+type StorefrontIndex = {
+  byAddressZip: Map<string, string>;
+  builtAt: number;
+};
+
+let storefrontIndexState: StorefrontIndex | null = null;
+let storefrontIndexInFlight: Promise<StorefrontIndex | null> | null = null;
+
+/**
+ * Normalize an address + zip into a stable lookup key. Mirrors the
+ * normalizeAddressKey used by ocmLicenseCacheService so OCM records and
+ * our directory storefronts hash to the same key when they're the same
+ * physical location.
+ */
+function normalizeAddressZipKey(
+  address: string | null | undefined,
+  zip: string | null | undefined,
+): string | null {
+  if (!address || !zip) return null;
+  const normalizedAddress = address
+    .toLowerCase()
+    .trim()
+    .replace(/[.,]/g, '')
+    .replace(/\bstreet\b/g, 'st')
+    .replace(/\bavenue\b/g, 'ave')
+    .replace(/\broad\b/g, 'rd')
+    .replace(/\bboulevard\b/g, 'blvd')
+    .replace(/\bdrive\b/g, 'dr')
+    .replace(/\blane\b/g, 'ln')
+    .replace(/\bcourt\b/g, 'ct')
+    .replace(/\bplace\b/g, 'pl')
+    .replace(/\broute\b/g, 'rt')
+    .replace(/\s+/g, ' ');
+  const normalizedZip = zip.trim().slice(0, 5);
+  if (!normalizedAddress || !/^\d{5}$/.test(normalizedZip)) return null;
+  return `${normalizedAddress}|${normalizedZip}`;
+}
+
+async function buildStorefrontIndex(): Promise<StorefrontIndex | null> {
+  let summaries: StorefrontSummaryApiDocument[];
+  try {
+    summaries = await backendStorefrontSource.getAllSummaries();
+  } catch (err) {
+    logger.warn('siblingLocationDiscovery: getAllSummaries failed for resolver index', {
+      err: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+
+  const byAddressZip = new Map<string, string>();
+  for (const summary of summaries) {
+    const key = normalizeAddressZipKey(summary.addressLine1, summary.zip);
+    if (key) {
+      byAddressZip.set(key, summary.id);
+    }
+  }
+  logger.info('siblingLocationDiscovery: storefront index built', {
+    summaryCount: summaries.length,
+    indexedAddresses: byAddressZip.size,
+  });
+  return { byAddressZip, builtAt: Date.now() };
+}
+
+async function getStorefrontIndex(): Promise<StorefrontIndex | null> {
+  const existing = storefrontIndexState;
+  const now = Date.now();
+  if (existing && now - existing.builtAt < STOREFRONT_INDEX_TTL_MS) {
+    return existing;
+  }
+  if (storefrontIndexInFlight) return storefrontIndexInFlight;
+  storefrontIndexInFlight = (async () => {
+    try {
+      const built = await buildStorefrontIndex();
+      if (built) storefrontIndexState = built;
+      return built ?? existing ?? null;
+    } finally {
+      storefrontIndexInFlight = null;
+    }
+  })();
+  return storefrontIndexInFlight;
+}
+
+/**
+ * Map an OCM record back to a storefrontId in our `dispensaries` collection.
+ * Uses the cached address+zip reverse index. Returns null if no storefront
+ * matches — the frontend filters those candidates out of the hero card.
+ */
+function resolveStorefrontIdForOcmRecord(
+  index: StorefrontIndex | null,
+  record: OcmLicenseRecord,
+): string | null {
+  if (!index) return null;
+  const key = normalizeAddressZipKey(record.address, record.zip_code);
+  if (!key) return null;
+  return index.byAddressZip.get(key) ?? null;
+}
+
+/** Test-only: clear the reverse index between test cases. */
+export function clearSiblingResolverIndexForTests(): void {
+  if (process.env.NODE_ENV !== 'test') return;
+  storefrontIndexState = null;
+  storefrontIndexInFlight = null;
+}
 
 export async function discoverSiblingLocations(
   primaryDispensaryId: string,
@@ -141,15 +248,21 @@ export async function discoverSiblingLocations(
   }
 
   const primaryLicenseNumber = primaryOcmRecord.license_number;
-  const siblings: SiblingCandidate[] = allRecordsForEntity
-    .filter((record) => record.license_number !== primaryLicenseNumber)
-    .map((record) => ({
-      ocmRecord: record,
-      active: isActiveOcmLicenseStatus(record.license_status),
-      // Deferred to PR-D — resolving OCM record → storefrontId requires
-      // a Firestore query on licenseNumber that doesn't exist today.
-      dispensaryId: null,
-    }));
+  const siblingRecords = allRecordsForEntity.filter(
+    (record) => record.license_number !== primaryLicenseNumber,
+  );
+
+  // Resolve each sibling OCM record back to a storefrontId via the cached
+  // address+zip reverse index. Siblings whose OCM record has no matching
+  // storefront in our directory surface as `dispensaryId: null` — the
+  // frontend hero card filters those out so we never offer to claim a
+  // shop the owner can't actually load.
+  const index = await getStorefrontIndex();
+  const siblings: SiblingCandidate[] = siblingRecords.map((record) => ({
+    ocmRecord: record,
+    active: isActiveOcmLicenseStatus(record.license_status),
+    dispensaryId: resolveStorefrontIdForOcmRecord(index, record),
+  }));
 
   return {
     primaryDispensaryId,

@@ -222,6 +222,10 @@ const OwnerPortalQuickClaimScreen = lazyScreen(
   () => import('../screens/OwnerPortalQuickClaimScreen'),
   'OwnerPortalQuickClaimScreen',
 );
+const OwnerPortalTaxVerificationScreen = lazyScreen(
+  () => import('../screens/OwnerPortalTaxVerificationScreen'),
+  'OwnerPortalTaxVerificationScreen',
+);
 
 /* ── Admin screens — lazy ── */
 const AdminRuntimePanelScreen = lazyScreen(
@@ -410,6 +414,7 @@ export type RootStackParamList = {
     storefrontDisplayName?: string;
   };
   OwnerPortalQuickClaim: undefined;
+  OwnerPortalTaxVerification: undefined;
   Settings: undefined;
   SavedStorefronts: undefined;
   BadgeGallery: undefined;
@@ -629,6 +634,11 @@ export const stackScreens = [
   {
     name: 'OwnerPortalQuickClaim',
     component: gateReviewSurface(OwnerPortalQuickClaimScreen, supportsOwnerWorkspaceUi),
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalTaxVerification',
+    component: gateReviewSurface(OwnerPortalTaxVerificationScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {

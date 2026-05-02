@@ -4,10 +4,14 @@ import type { StorefrontSummaryApiDocument } from '../types';
 import { backendStorefrontSource } from '../sources';
 import { clearOcmLicenseCacheForTests, verifyAgainstCache } from './ocmLicenseCacheService';
 import type { OcmLicenseRecord } from './ocmLicenseLookupService';
-import { discoverSiblingLocations } from './siblingLocationDiscoveryService';
+import {
+  clearSiblingResolverIndexForTests,
+  discoverSiblingLocations,
+} from './siblingLocationDiscoveryService';
 
 const originalFetch = global.fetch;
 const originalGetSummariesByIds = backendStorefrontSource.getSummariesByIds;
+const originalGetAllSummaries = backendStorefrontSource.getAllSummaries;
 const BASE_TIME_MS = Date.UTC(2026, 4, 2, 12, 0, 0);
 
 function createRetailRecord(overrides: Partial<OcmLicenseRecord> = {}): OcmLicenseRecord {
@@ -81,13 +85,20 @@ function mockOcmFetch(records: OcmLicenseRecord[]) {
 beforeEach(() => {
   process.env.NODE_ENV = 'test';
   clearOcmLicenseCacheForTests();
+  clearSiblingResolverIndexForTests();
   mock.method(Date, 'now', () => BASE_TIME_MS);
+  // Default getAllSummaries to empty so legacy tests that don't care about
+  // dispensaryId resolution still see all-null results. Tests that care
+  // about resolution override per-test.
+  backendStorefrontSource.getAllSummaries = async () => [];
 });
 
 afterEach(() => {
   global.fetch = originalFetch;
   backendStorefrontSource.getSummariesByIds = originalGetSummariesByIds;
+  backendStorefrontSource.getAllSummaries = originalGetAllSummaries;
   clearOcmLicenseCacheForTests();
+  clearSiblingResolverIndexForTests();
   mock.reset();
 });
 
@@ -194,6 +205,87 @@ test('discoverSiblingLocations returns storefront_not_found when directory has n
 test('discoverSiblingLocations returns empty result for blank id', async () => {
   const result = await discoverSiblingLocations('');
   assert.equal(result.reason, 'storefront_not_found');
+});
+
+test('discoverSiblingLocations resolves sibling dispensaryId when storefront exists in directory', async () => {
+  mockOcmFetch([
+    createRetailRecord({
+      license_number: 'OCM-RETL-24-000053',
+      address: '501 Exchange St',
+      zip_code: '14456',
+    }),
+    createRetailRecord({
+      license_number: 'OCM-RETL-26-000485',
+      address: '4123 State Route 96',
+      city: 'Manchester',
+      zip_code: '14504',
+    }),
+    createRetailRecord({
+      license_number: 'OCM-RETL-26-000495',
+      address: '2 E Main St',
+      city: 'Bloomfield',
+      zip_code: '14469',
+    }),
+  ]);
+  await verifyAgainstCache({ licenseNumber: 'OCM-RETL-24-000053' });
+  backendStorefrontSource.getSummariesByIds = async () => [createSummary()];
+  // Two of three siblings exist in our directory; the third (Bloomfield)
+  // doesn't and should surface as dispensaryId: null.
+  backendStorefrontSource.getAllSummaries = async () => [
+    createSummary(),
+    createSummary({
+      id: 'shop-manchester',
+      addressLine1: '4123 State Route 96',
+      zip: '14504',
+      displayName: 'Twisted Cannabis Manchester',
+    }),
+  ];
+
+  const result = await discoverSiblingLocations('shop-primary');
+  assert.equal(result.siblings.length, 2);
+  const manchester = result.siblings.find(
+    (s) => s.ocmRecord.license_number === 'OCM-RETL-26-000485',
+  );
+  const bloomfield = result.siblings.find(
+    (s) => s.ocmRecord.license_number === 'OCM-RETL-26-000495',
+  );
+  assert.equal(manchester?.dispensaryId, 'shop-manchester');
+  assert.equal(bloomfield?.dispensaryId, null);
+});
+
+test('discoverSiblingLocations resolver matches addresses across casing/punctuation differences', async () => {
+  mockOcmFetch([
+    createRetailRecord({
+      license_number: 'OCM-RETL-24-000053',
+      address: '501 Exchange St',
+      zip_code: '14456',
+    }),
+    createRetailRecord({
+      license_number: 'OCM-RETL-26-000485',
+      // OCM record uses "Street", our directory uses "St" — the resolver
+      // must normalize both to the same key.
+      address: '4123 State Route 96',
+      city: 'Manchester',
+      zip_code: '14504',
+    }),
+  ]);
+  await verifyAgainstCache({ licenseNumber: 'OCM-RETL-24-000053' });
+  backendStorefrontSource.getSummariesByIds = async () => [createSummary()];
+  backendStorefrontSource.getAllSummaries = async () => [
+    createSummary(),
+    createSummary({
+      id: 'shop-manchester',
+      addressLine1: '4123 STATE ROUTE 96.',
+      zip: '14504-1234',
+      displayName: 'Twisted Cannabis Manchester',
+    }),
+  ];
+
+  const result = await discoverSiblingLocations('shop-primary');
+  const manchester = result.siblings.find(
+    (s) => s.ocmRecord.license_number === 'OCM-RETL-26-000485',
+  );
+  assert.equal(manchester?.dispensaryId, 'shop-manchester');
 });
 
 test('discoverSiblingLocations returns empty siblings list for single-location entity', async () => {
