@@ -125,16 +125,54 @@ export function useStorefrontRemoteProfileHydration({
           currentProfile,
           hydrationStartProfile,
         );
-        const resolvedSavedStorefrontIds = canApplyRemoteRouteState
-          ? areStringArraysEqual(currentSavedStorefrontIds, hydrationStartSavedStorefrontIds)
-            ? remoteSavedStorefrontIds
-            : mergeOrderedStringIds(currentSavedStorefrontIds, remoteSavedStorefrontIds)
-          : currentSavedStorefrontIds;
-        const resolvedRecentStorefrontIds = canApplyRemoteRouteState
-          ? areStringArraysEqual(currentRecentStorefrontIds, hydrationStartRecentStorefrontIds)
-            ? remoteRecentStorefrontIds
-            : mergeOrderedStringIds(currentRecentStorefrontIds, remoteRecentStorefrontIds)
-          : currentRecentStorefrontIds;
+        // BUGFIX (May 2 2026): when remote returns an empty
+        // savedStorefrontIds AND the local state has saves, we used to
+        // overwrite local with the empty remote — wiping every
+        // authenticated user's saved shops on every hydration. Combined
+        // with the 750ms debounce on the persistence hook, this also
+        // raced with new save taps: remote hydration would land first,
+        // reset state to [], cancel the pending save's setTimeout, and
+        // the new save would never reach the backend. Result: every
+        // authenticated user showed 0 saves in route_state platform-
+        // wide, even ones who saved 4-5 shops on device. Fix: when
+        // remote is empty but local has data, MERGE (which produces
+        // local + [] = local, preserving the saves). The merge path
+        // also runs when local mutated during the roundtrip, so this
+        // change just extends the merge case to "local has data and
+        // remote is empty," fixing the data loss without changing
+        // the well-behaved cases (both empty, both equal, etc.).
+        function resolveRouteList(
+          local: string[],
+          localStartSnapshot: string[],
+          remote: string[],
+        ): string[] {
+          if (!canApplyRemoteRouteState) return local;
+          // Local mutated during the network call — merge to avoid
+          // losing the new mutation.
+          if (!areStringArraysEqual(local, localStartSnapshot)) {
+            return mergeOrderedStringIds(local, remote);
+          }
+          // Local has data, remote is empty — never overwrite a
+          // populated local list with an empty remote (would wipe the
+          // user's saves; backend hasn't been populated yet because of
+          // historic sync issues, see the commit referenced above).
+          if (local.length > 0 && remote.length === 0) {
+            return local;
+          }
+          // Both equal-or-remote-has-data: trust remote as the latest
+          // authoritative state.
+          return remote;
+        }
+        const resolvedSavedStorefrontIds = resolveRouteList(
+          currentSavedStorefrontIds,
+          hydrationStartSavedStorefrontIds,
+          remoteSavedStorefrontIds,
+        );
+        const resolvedRecentStorefrontIds = resolveRouteList(
+          currentRecentStorefrontIds,
+          hydrationStartRecentStorefrontIds,
+          remoteRecentStorefrontIds,
+        );
 
         if (remoteProfile && shouldApplyRemoteProfile) {
           setAppProfile((current) =>

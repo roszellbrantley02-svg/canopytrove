@@ -177,4 +177,114 @@ describe('useStorefrontRemoteProfileHydration', () => {
     expect(capture.current?.appProfile?.id).toBe('profile-current');
     expect(capture.current?.hasHydratedRemoteProfileState).toBe(true);
   });
+
+  // Regression test for the May 2 2026 bugfix in
+  // useStorefrontRemoteProfileHydration.ts:
+  //
+  //   When local has savedStorefrontIds (from AsyncStorage hydration)
+  //   and the remote returns savedStorefrontIds: [], the hydration code
+  //   used to overwrite local with the empty remote — wiping every
+  //   authenticated user's saved shops.
+  //
+  //   Fix: when local has data and remote is empty, prefer local (the
+  //   merge produces local + [] = local, no data loss).
+  it('does not overwrite non-empty local saves with an empty remote response', async () => {
+    const deferred = createDeferred<{
+      profile: AppProfile;
+      routeState: { savedStorefrontIds: string[]; recentStorefrontIds: string[] };
+      gamificationState: ReturnType<typeof createDefaultGamificationState>;
+    } | null>();
+
+    remoteProfileMocks.loadRemoteStorefrontProfileState.mockReturnValue(deferred.promise);
+
+    const capture: {
+      current: {
+        savedStorefrontIds: string[];
+        recentStorefrontIds: string[];
+      } | null;
+    } = { current: null };
+
+    function HookHarness() {
+      const [appProfile, setAppProfile] = React.useState<AppProfile | null>(
+        createProfile('profile-1', 'account-1'),
+      );
+      const [profileId, setProfileId] = React.useState('profile-1');
+      // Local state already has saves (mirroring AsyncStorage hydration
+      // having run before remote hydration).
+      const [savedStorefrontIds, setSavedStorefrontIds] = React.useState<string[]>([
+        'local-save-1',
+        'local-save-2',
+      ]);
+      const [recentStorefrontIds, setRecentStorefrontIds] = React.useState<string[]>([
+        'local-recent-1',
+      ]);
+      const [gamificationState, setGamificationState] = React.useState(
+        createDefaultGamificationState('profile-1', '2026-04-01T00:00:00.000Z'),
+      );
+      const [, setHasHydratedRemoteProfileState] = React.useState(false);
+      const gamificationStateRef = React.useRef(gamificationState);
+      const latestAppProfileRef = React.useRef(appProfile);
+      const latestSavedStorefrontIdsRef = React.useRef(savedStorefrontIds);
+      const latestRecentStorefrontIdsRef = React.useRef(recentStorefrontIds);
+      const lastSavedRemoteStatePayloadRef = React.useRef<string | null>(null);
+      const lastRemoteHydrationAtRef = React.useRef(0);
+      const remoteHydrationInFlightRef = React.useRef<Promise<void> | null>(null);
+
+      gamificationStateRef.current = gamificationState;
+      latestAppProfileRef.current = appProfile;
+      latestSavedStorefrontIdsRef.current = savedStorefrontIds;
+      latestRecentStorefrontIdsRef.current = recentStorefrontIds;
+
+      capture.current = { savedStorefrontIds, recentStorefrontIds };
+
+      useStorefrontRemoteProfileHydration({
+        appProfile,
+        gamificationStateRef,
+        hasHydratedPreferences: true,
+        latestAppProfileRef,
+        latestRecentStorefrontIdsRef,
+        latestSavedStorefrontIdsRef,
+        profileId,
+        setAppProfile,
+        setGamificationState,
+        setHasHydratedRemoteProfileState,
+        setProfileId,
+        setRecentStorefrontIds,
+        setSavedStorefrontIds,
+        shouldSyncRemoteProfileState: true,
+        lastSavedRemoteStatePayloadRef,
+        lastRemoteHydrationAtRef,
+        remoteHydrationInFlightRef,
+      });
+
+      return null;
+    }
+
+    act(() => {
+      renderer = create(<HookHarness />);
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Remote returns empty saved+recent — would have wiped local pre-fix.
+    await act(async () => {
+      deferred.resolve({
+        profile: createProfile('profile-1', 'account-1'),
+        routeState: {
+          savedStorefrontIds: [],
+          recentStorefrontIds: [],
+        },
+        gamificationState: createDefaultGamificationState('profile-1', '2026-04-01T00:00:00.000Z'),
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(capture.current?.savedStorefrontIds).toEqual(['local-save-1', 'local-save-2']);
+    expect(capture.current?.recentStorefrontIds).toEqual(['local-recent-1']);
+  });
 });
