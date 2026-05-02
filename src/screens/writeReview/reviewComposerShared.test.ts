@@ -7,11 +7,18 @@ import {
 } from './reviewComposerShared';
 
 describe('reviewComposerShared', () => {
-  it('requires twenty characters by default for new reviews', () => {
-    expect(getReviewValidationError(12, '', 0)).toBe('Add at least 8 more characters to submit.');
+  // Lowered from 20 → 10 on May 2 2026 to match the backend's
+  // checkContentQuality minimum and unblock legit short reviews
+  // ("Great place!", "Helpful staff"). The test was previously
+  // asserting a 12-char input fell short of 20 by 8 chars; now 12
+  // exceeds the 10-char floor and is valid.
+  it('requires ten characters by default for new reviews', () => {
+    expect(getReviewValidationError(5, '', 0)).toBe('Add at least 5 more characters to submit.');
+    expect(getReviewValidationError(10, '', 0)).toBeNull();
+    expect(getReviewValidationError(12, '', 0)).toBeNull();
   });
 
-  it('allows shorter existing reviews to be edited at the backend threshold', () => {
+  it('allows existing reviews to be edited at the backend threshold', () => {
     expect(getReviewValidationError(12, '', 0, MIN_EDIT_REVIEW_TEXT_LENGTH)).toBeNull();
   });
 

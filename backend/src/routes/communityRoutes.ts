@@ -118,6 +118,13 @@ communityRoutes.post(
     const input: StorefrontReviewSubmissionInput = {
       storefrontId,
       profileId: body.profileId,
+      // accountId comes from the verified ID token (ensureProfileWriteAccess
+      // above). The route already gates on accountId being present, so this
+      // is always a real Firebase Auth uid for new submissions. Captured on
+      // the review record so we can correlate reviews to accounts in
+      // analytics, owner-side "verified user" badges, deal-digest signals,
+      // and gamification — none of which were possible before this commit.
+      authorAccountId: accountId,
       authorName: getSafePublicDisplayName(body.authorName, 'Canopy Trove member'),
       rating: body.rating,
       text: body.text,
@@ -267,6 +274,10 @@ communityRoutes.put(
     const input: StorefrontReviewSubmissionInput = {
       storefrontId,
       profileId: body.profileId,
+      // Same accountId capture as the create-review route — the update
+      // path also gates on a verified ID token, so accountId is always
+      // a real Firebase Auth uid here.
+      authorAccountId: accountId,
       authorName: getSafePublicDisplayName(body.authorName, 'Canopy Trove member'),
       rating: body.rating,
       text: body.text,

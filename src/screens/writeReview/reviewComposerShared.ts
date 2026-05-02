@@ -1,4 +1,11 @@
-export const MIN_REVIEW_TEXT_LENGTH = 20;
+// Lowered May 2 2026 from 20 to match the backend's content-quality
+// minimum of 10 (`backend/src/routes/communityRoutes.ts` checkContentQuality).
+// The 20-char floor was stopping legit short reviews ("Great place!", "Loved
+// the vibe", "Helpful staff and good prices") from submitting at all, and
+// our analytics show 90% of users who tap "Write review" never submit. The
+// 10-char minimum keeps the spam floor (single emoji or "ok" still rejected)
+// without locking out fast-positive reactions.
+export const MIN_REVIEW_TEXT_LENGTH = 10;
 export const MIN_EDIT_REVIEW_TEXT_LENGTH = 10;
 
 export const REVIEW_TAGS = ['Helpful staff', 'Good parking', 'Selection', 'Easy to find'] as const;

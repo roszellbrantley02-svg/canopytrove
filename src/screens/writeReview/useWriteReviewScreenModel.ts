@@ -125,18 +125,34 @@ export function useWriteReviewScreenModel(input: {
             : hasPendingReviewPhotoUpload
               ? 'Your photos are still uploading. Wait for them to finish before posting.'
               : null;
-  const validationError =
-    getReviewValidationError(
-      textLength,
-      gifUrlInput,
-      readyReviewPhotoCount,
-      minimumReviewTextLength,
-    ) ?? reviewPhotoValidationError;
+  // Suppress the "Add N more characters to submit" error VISUALLY
+  // until the user has actually started typing. Showing a red error on
+  // a blank form before the user has done anything was contributing
+  // to the 90% review-screen-bounce rate — users opened the form, saw
+  // what looked like a complaint about their not-yet-existent text,
+  // and backed out. The form is "neutral" on first paint; once the
+  // user touches anything (text/gif/photo), the validation error
+  // shows normally to guide them.
+  //
+  // IMPORTANT: this is a DISPLAY-only suppression. Submit is still
+  // gated by `submitGateError` below, which is the same logic without
+  // the empty-form suppression. Empty forms cannot submit.
+  const rawValidationError = getReviewValidationError(
+    textLength,
+    gifUrlInput,
+    readyReviewPhotoCount,
+    minimumReviewTextLength,
+  );
+  const isFormUntouched = textLength === 0 && !gifUrlInput.trim() && readyReviewPhotoCount === 0;
+  const validationError = isFormUntouched
+    ? reviewPhotoValidationError
+    : (rawValidationError ?? reviewPhotoValidationError);
+  const submitGateError = rawValidationError ?? reviewPhotoValidationError;
   const validationHint = hasAcceptedGuidelines
     ? getReviewValidationHint(textLength, readyReviewPhotoCount, minimumReviewTextLength)
     : 'Review and accept the community guidelines before posting.';
   const canSubmit =
-    !isSubmitting && !validationError && hasAcceptedGuidelines && !hasPendingReviewPhotoUpload;
+    !isSubmitting && !submitGateError && hasAcceptedGuidelines && !hasPendingReviewPhotoUpload;
   const gifRequestVersionRef = React.useRef(0);
 
   React.useEffect(() => {
@@ -719,7 +735,7 @@ export function useWriteReviewScreenModel(input: {
   );
 
   const submit = React.useCallback(async () => {
-    if (isSubmitting || validationError || !hasAcceptedGuidelines || hasPendingReviewPhotoUpload) {
+    if (isSubmitting || submitGateError || !hasAcceptedGuidelines || hasPendingReviewPhotoUpload) {
       return;
     }
 
@@ -815,7 +831,7 @@ export function useWriteReviewScreenModel(input: {
     trackReviewSubmittedReward,
     hasAcceptedGuidelines,
     hasPendingReviewPhotoUpload,
-    validationError,
+    submitGateError,
   ]);
 
   return {
