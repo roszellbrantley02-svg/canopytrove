@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { serverConfig } from '../config';
 import { createRateLimitMiddleware } from '../http/rateLimit';
 import { parseProfileIdParam } from '../http/validation';
+import { logger } from '../observability/logger';
 import { ensureProfileWriteAccess } from '../services/profileAccessService';
 import { getProfile, saveProfile } from '../services/profileService';
 import {
@@ -10,6 +11,8 @@ import {
   reviewUsernameRequest,
   submitUsernameChangeRequest,
 } from '../services/usernameRequestService';
+import { evaluateUsernameAutoApproval } from '../services/usernameAutoApprovalService';
+import { sweepPendingUsernameRequests } from '../services/usernameAutoApprovalSweep';
 import { ensureAdminApiKeyMatch } from '../http/adminAccess';
 
 export const usernameRequestRoutes = Router();
@@ -73,9 +76,56 @@ usernameRequestRoutes.post('/profiles/:profileId/username-requests', async (requ
       requestedDisplayName,
     );
 
+    // Auto-approval: real users picking non-offensive, non-impersonating
+    // names should get their display name immediately, not sit waiting
+    // for an admin who may never look. Anything that trips a guardrail
+    // (reserved name, profanity, already-taken, weird format) stays
+    // 'pending' for human review — same behavior as before this change
+    // for those edge cases.
+    const autoApproval = await evaluateUsernameAutoApproval({
+      profileId,
+      requestedDisplayName,
+    });
+
+    if (autoApproval.decision === 'auto_approved') {
+      try {
+        const reviewed = await reviewUsernameRequest(result.id, 'approved');
+        if (reviewed) {
+          await saveProfile({
+            ...profile,
+            displayName: reviewed.requestedDisplayName,
+            updatedAt: new Date().toISOString(),
+          });
+          logger.info('[usernameRequest] Auto-approved', {
+            requestId: reviewed.id,
+            profileId,
+            displayName: reviewed.requestedDisplayName,
+          });
+          response.status(201).json({ ok: true, request: reviewed, autoApproved: true });
+          return;
+        }
+      } catch (autoErr) {
+        // Fall through to the normal pending response — admin can
+        // approve manually. Don't fail the user's request because the
+        // auto-approval optimization tripped.
+        logger.warn('[usernameRequest] Auto-approval failed — leaving pending', {
+          requestId: result.id,
+          profileId,
+          error: autoErr instanceof Error ? autoErr.message : String(autoErr),
+        });
+      }
+    } else {
+      logger.info('[usernameRequest] Queued for manual review', {
+        requestId: result.id,
+        profileId,
+        reason: autoApproval.decision === 'queued_for_review' ? autoApproval.reason : 'unknown',
+      });
+    }
+
     response.status(201).json({
       ok: true,
       request: result,
+      autoApproved: false,
     });
   } catch (error) {
     response.status(409).json({
@@ -107,6 +157,43 @@ usernameRequestRoutes.get(
   async (_request, response) => {
     const requests = await listPendingRequests(50);
     response.json({ items: requests, total: requests.length });
+  },
+);
+
+/**
+ * Admin: One-shot sweep of all pending username requests through the
+ * auto-approval evaluator. Anything that passes the guardrails (no
+ * profanity, no reserved name, not already taken, valid format) gets
+ * auto-approved and the user's profile.displayName is set immediately.
+ *
+ * Safe to call repeatedly — idempotent. Useful right after deploy to
+ * unblock legacy pending requests that piled up before auto-approval
+ * shipped.
+ */
+usernameRequestRoutes.post(
+  '/admin/username-requests/sweep',
+  ensureAdminApiKeyMatch,
+  async (request, response) => {
+    const body = (request.body && typeof request.body === 'object' ? request.body : {}) as {
+      maxToProcess?: unknown;
+    };
+    const maxToProcess =
+      typeof body.maxToProcess === 'number' && body.maxToProcess > 0 && body.maxToProcess <= 1000
+        ? body.maxToProcess
+        : 200;
+
+    try {
+      const result = await sweepPendingUsernameRequests(maxToProcess);
+      response.json(result);
+    } catch (error) {
+      logger.error('[usernameRequest] Sweep failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      response.status(500).json({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Sweep failed.',
+      });
+    }
   },
 );
 
