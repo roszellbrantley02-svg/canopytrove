@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "usernameChangeRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "storefront_app_reviews",
       "queryScope": "COLLECTION",
       "fields": [
