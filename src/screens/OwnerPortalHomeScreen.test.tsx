@@ -21,14 +21,7 @@ const monitoringMocks = vi.hoisted(() => ({
   captureMonitoringException: vi.fn(),
 }));
 
-const authMocks = vi.hoisted(() => ({
-  signOutCanopyTroveSession: vi.fn(),
-}));
-
 vi.mock('react-native', () => ({
-  Alert: {
-    alert: vi.fn(),
-  },
   Platform: {
     OS: 'web' as const,
   },
@@ -115,10 +108,6 @@ vi.mock('./ownerPortal/useOwnerPortalHomeScreenModel', () => ({
 
 vi.mock('./ownerPortal/useOwnerPortalWorkspace', () => ({
   useOwnerPortalWorkspace: workspaceMocks.useOwnerPortalWorkspace,
-}));
-
-vi.mock('../services/canopyTroveAuthService', () => ({
-  signOutCanopyTroveSession: authMocks.signOutCanopyTroveSession,
 }));
 
 vi.mock('../services/sentryMonitoringService', () => ({
