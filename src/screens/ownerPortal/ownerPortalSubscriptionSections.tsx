@@ -27,7 +27,11 @@ import type { OwnerPortalStageItem } from './OwnerPortalStageList';
 import { OwnerPortalStageList } from './OwnerPortalStageList';
 
 const PREMIUM_FEATURES = [
-  'Review replies and report inbox',
+  // Text-only review replies are FREE for any claimed owner. The paid
+  // "premium" value here is the report inbox + moderation workflow on
+  // top of the free reply tool — keep this line about that, not about
+  // the free reply itself.
+  'Report inbox and review moderation tools',
   Platform.OS === 'android'
     ? 'Owner update scheduling with performance results'
     : 'Promotion scheduling with performance results',
@@ -41,7 +45,7 @@ const BUSINESS_SERVICE_NOTES = [
   'This plan is for licensed dispensary operators or approved staff managing a claimed storefront.',
   Platform.OS === 'android'
     ? 'Android shows billing status and eligibility only. Live checkout stays outside the Android app.'
-    : 'Checkout covers storefront management tools, verification follow-up, review replies, and promotional controls.',
+    : 'Checkout covers storefront management tools, verification follow-up, report inbox moderation, and promotional controls.',
   'Customer discovery stays separate. Canopy Trove does not sell cannabis products inside this billing flow.',
 ];
 
@@ -491,7 +495,6 @@ export function OwnerPortalTierCards({
                 <View style={styles.planFeatureList}>
                   <TierLockedFeature label="Storefront editing (Verified+)" />
                   <TierLockedFeature label="Hours management (Verified+)" />
-                  <TierLockedFeature label="Review replies (Verified+)" />
                   <TierLockedFeature label="Analytics (Verified+)" />
                   <TierLockedFeature label="Promotions (Growth+)" />
                   <TierLockedFeature label="AI tools (Pro)" />
