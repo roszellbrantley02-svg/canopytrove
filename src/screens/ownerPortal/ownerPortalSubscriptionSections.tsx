@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MotionInView } from '../../components/MotionInView';
 import { SectionCard } from '../../components/SectionCard';
 import { ScreenShell } from '../../components/ScreenShell';
@@ -540,11 +540,7 @@ export function OwnerPortalTierCards({
                   style={[
                     styles.planPriceCaption,
                     styles.planPriceCaptionSmall,
-                    {
-                      textDecorationLine: 'line-through',
-                      opacity: 0.6,
-                      marginBottom: -4,
-                    },
+                    promoStyles.regularPriceStrike,
                   ]}
                   accessibilityLabel={`Regular price ${regularPrice}, currently discounted`}
                 >
@@ -557,7 +553,7 @@ export function OwnerPortalTierCards({
                   style={[
                     styles.planPriceCaption,
                     styles.planPriceCaptionSmall,
-                    { color: '#00F58C', fontWeight: '700' },
+                    promoStyles.promoLockNote,
                   ]}
                 >
                   {promoLockNote}
@@ -627,3 +623,18 @@ export function OwnerPortalTierCards({
     </View>
   );
 }
+
+// Local styles for the launch-promo strikethrough + lock-in callout.
+// Kept here (not in the shared ownerPortalStyles) so they don't
+// pollute the shared style surface used by every owner-portal screen.
+const promoStyles = StyleSheet.create({
+  regularPriceStrike: {
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
+    marginBottom: -4,
+  },
+  promoLockNote: {
+    color: '#00F58C',
+    fontWeight: '700',
+  },
+});
