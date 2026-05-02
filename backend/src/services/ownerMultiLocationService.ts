@@ -128,7 +128,7 @@ export async function addOwnerLocation(
   const tierLimits = getTierLimits(tier);
   if (!tierLimits.multiLocationEnabled) {
     throw new TierAccessError(
-      'Multi-location management requires the Pro ($249/mo) plan. Upgrade to unlock this feature.',
+      'Multi-location management requires the Pro plan ($249.99/mo launch pricing — regular $499.99/mo). Upgrade to unlock this feature.',
       'pro',
       tier,
     );

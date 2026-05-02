@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MotionInView } from '../../components/MotionInView';
 import { SectionCard } from '../../components/SectionCard';
 import { ScreenShell } from '../../components/ScreenShell';
@@ -58,6 +58,25 @@ export function isVerifiedStatus(value: string | null | undefined) {
 
 export function formatDateLabel(value: string | null | undefined) {
   return formatOwnerDateLabel(value);
+}
+
+/**
+ * Friendly date for the launch-promo deadline. Falls back to the raw
+ * ISO if parsing fails so we never show "Invalid Date" to a user.
+ */
+export function formatPromoEndDate(value: string | null | undefined): string {
+  if (!value) return '';
+  try {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return parsed.toLocaleDateString(undefined, {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return value;
+  }
 }
 
 export function PremiumFeatureList() {
@@ -468,6 +487,25 @@ export function OwnerPortalTierCards({
             : billingCycle === 'annual'
               ? `$${Math.round(tierDef.annualPrice / 12)}/mo`
               : `$${tierDef.monthlyPrice}/mo`;
+          // When a tier is on launch promo (Pro right now), show the
+          // regular "list" price as a strikethrough above the current
+          // discounted price so the deal feels real.
+          const regularPrice =
+            !isFree && tierDef.isPromoPricing
+              ? billingCycle === 'annual'
+                ? tierDef.regularAnnualPrice
+                  ? `$${Math.round(tierDef.regularAnnualPrice / 12)}/mo`
+                  : null
+                : tierDef.regularMonthlyPrice
+                  ? `$${tierDef.regularMonthlyPrice}/mo`
+                  : null
+              : null;
+          const promoLockMonths = tierDef.promoLockMonths;
+          const promoEndsAt = tierDef.promoEndsAt;
+          const promoLockNote =
+            !isFree && tierDef.isPromoPricing && promoLockMonths
+              ? `Lock in this rate for ${promoLockMonths} months — promo ends ${formatPromoEndDate(promoEndsAt)}`
+              : null;
           const billedNote = isFree
             ? 'No credit card required'
             : billingCycle === 'annual'
@@ -497,7 +535,30 @@ export function OwnerPortalTierCards({
             >
               <Text style={styles.sectionEyebrow}>{tierDef.label}</Text>
               <Text style={styles.planPriceCaption}>{tierDef.tagline}</Text>
+              {regularPrice ? (
+                <Text
+                  style={[
+                    styles.planPriceCaption,
+                    styles.planPriceCaptionSmall,
+                    promoStyles.regularPriceStrike,
+                  ]}
+                  accessibilityLabel={`Regular price ${regularPrice}, currently discounted`}
+                >
+                  {regularPrice}
+                </Text>
+              ) : null}
               <Text style={styles.planPrice}>{price}</Text>
+              {promoLockNote ? (
+                <Text
+                  style={[
+                    styles.planPriceCaption,
+                    styles.planPriceCaptionSmall,
+                    promoStyles.promoLockNote,
+                  ]}
+                >
+                  {promoLockNote}
+                </Text>
+              ) : null}
               <Text style={[styles.planPriceCaption, styles.planPriceCaptionSmall]}>
                 {billedNote}
               </Text>
@@ -562,3 +623,18 @@ export function OwnerPortalTierCards({
     </View>
   );
 }
+
+// Local styles for the launch-promo strikethrough + lock-in callout.
+// Kept here (not in the shared ownerPortalStyles) so they don't
+// pollute the shared style surface used by every owner-portal screen.
+const promoStyles = StyleSheet.create({
+  regularPriceStrike: {
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
+    marginBottom: -4,
+  },
+  promoLockNote: {
+    color: '#00F58C',
+    fontWeight: '700',
+  },
+});
