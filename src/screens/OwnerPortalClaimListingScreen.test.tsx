@@ -21,6 +21,28 @@ const serviceMocks = vi.hoisted(() => ({
   submitOwnerDispensaryClaim: vi.fn(),
 }));
 
+const configMocks = vi.hoisted(() => ({
+  ownerPortalBulkClaimQueueEnabled: false,
+}));
+
+const bulkQueueMocks = vi.hoisted(() => ({
+  toggleSelection: vi.fn(),
+  resetSlot: vi.fn(),
+  submitAll: vi.fn(),
+  submitCodeFor: vi.fn(),
+  clearSelection: vi.fn(),
+  selectedIds: [] as string[],
+  isAtCapacity: false,
+  hasInFlightWork: false,
+  slots: [] as Array<{
+    storefrontId: string;
+    displayName: string;
+    phase: string;
+    errorMessage: string | null;
+    errorCode: string | null;
+  }>,
+}));
+
 vi.mock('react-native', () => ({
   Pressable: 'Pressable',
   Text: 'Text',
@@ -72,6 +94,21 @@ vi.mock('../hooks/useStorefrontSummaryData', () => ({
 
 vi.mock('../services/ownerPortalService', () => ({
   submitOwnerDispensaryClaim: serviceMocks.submitOwnerDispensaryClaim,
+}));
+
+vi.mock('../config/ownerPortalConfig', () => ({
+  get ownerPortalBulkClaimQueueEnabled() {
+    return configMocks.ownerPortalBulkClaimQueueEnabled;
+  },
+}));
+
+vi.mock('../hooks/useBulkClaimSubmission', () => ({
+  BULK_CLAIM_MAX_SLOTS: 3,
+  useBulkClaimSubmission: () => bulkQueueMocks,
+}));
+
+vi.mock('./ownerPortal/BulkClaimQueueChips', () => ({
+  BulkClaimQueueChips: 'BulkClaimQueueChips',
 }));
 
 vi.mock('./ownerPortal/OwnerPortalHeroPanel', () => ({
@@ -130,6 +167,11 @@ describe('OwnerPortalClaimListingScreen', () => {
       isLoading: false,
     });
     serviceMocks.submitOwnerDispensaryClaim.mockResolvedValue(undefined);
+    configMocks.ownerPortalBulkClaimQueueEnabled = false;
+    bulkQueueMocks.selectedIds = [];
+    bulkQueueMocks.isAtCapacity = false;
+    bulkQueueMocks.hasInFlightWork = false;
+    bulkQueueMocks.slots = [];
   });
 
   it('uses preview results and routes to preview verification without submitting a live claim', async () => {
@@ -169,6 +211,99 @@ describe('OwnerPortalClaimListingScreen', () => {
     expect(serviceMocks.submitOwnerDispensaryClaim).not.toHaveBeenCalled();
     expect(navigationMocks.replace).toHaveBeenCalledWith('OwnerPortalBusinessVerification', {
       preview: true,
+    });
+  });
+
+  it('renders the existing per-tile Claim Listing button when bulk queue flag is OFF (regression guard)', async () => {
+    configMocks.ownerPortalBulkClaimQueueEnabled = false;
+    navigationMocks.routeParams = {};
+    summaryMocks.useBrowseSummaries.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 'shop-1',
+            displayName: 'Shop One',
+            addressLine1: '1 Main St',
+            city: 'Albany',
+            state: 'NY',
+            zip: '12207',
+          },
+        ],
+      },
+      isLoading: false,
+    });
+
+    await act(async () => {
+      renderer = create(<OwnerPortalClaimListingScreen />);
+    });
+    if (!renderer) throw new Error('Expected renderer.');
+
+    const searchInput = renderer.root.findByType(TextInput as any);
+    await act(async () => {
+      searchInput.props.onChangeText('shop');
+    });
+    const searchButton = renderer.root.findAllByType(Pressable as any)[0];
+    await act(async () => {
+      searchButton.props.onPress();
+    });
+
+    const buttonText = renderer.root
+      .findAllByType(Text as any)
+      .flatMap((node) => node.props.children)
+      .join(' ');
+    expect(buttonText).toContain('Claim Listing');
+    expect(buttonText).not.toContain('Add to queue');
+    expect(bulkQueueMocks.toggleSelection).not.toHaveBeenCalled();
+  });
+
+  it('shows Add to queue and wires toggleSelection when bulk queue flag is ON', async () => {
+    configMocks.ownerPortalBulkClaimQueueEnabled = true;
+    navigationMocks.routeParams = {};
+    summaryMocks.useBrowseSummaries.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 'shop-1',
+            displayName: 'Shop One',
+            addressLine1: '1 Main St',
+            city: 'Albany',
+            state: 'NY',
+            zip: '12207',
+          },
+        ],
+      },
+      isLoading: false,
+    });
+
+    await act(async () => {
+      renderer = create(<OwnerPortalClaimListingScreen />);
+    });
+    if (!renderer) throw new Error('Expected renderer.');
+
+    const searchInput = renderer.root.findByType(TextInput as any);
+    await act(async () => {
+      searchInput.props.onChangeText('shop');
+    });
+    const searchButton = renderer.root.findAllByType(Pressable as any)[0];
+    await act(async () => {
+      searchButton.props.onPress();
+    });
+
+    const buttonText = renderer.root
+      .findAllByType(Text as any)
+      .flatMap((node) => node.props.children)
+      .join(' ');
+    expect(buttonText).toContain('Add to queue');
+    expect(buttonText).not.toContain('Claim Listing');
+
+    const queueToggle = renderer.root.findAllByType(Pressable as any)[1];
+    await act(async () => {
+      queueToggle.props.onPress();
+    });
+
+    expect(bulkQueueMocks.toggleSelection).toHaveBeenCalledWith({
+      id: 'shop-1',
+      displayName: 'Shop One',
     });
   });
 });

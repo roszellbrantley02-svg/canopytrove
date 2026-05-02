@@ -384,6 +384,98 @@ export async function reviewOwnerClaim(
   };
 }
 
+export type BatchClaimReviewOutcome = {
+  ownerUid: string | null;
+  /** Per-claim results keyed by claimId. */
+  results: Map<string, { ok: true; status: ReviewDecision } | { ok: false; error: string }>;
+  approvedCount: number;
+  rejectedCount: number;
+  failedCount: number;
+};
+
+/**
+ * Phase 3 — admin batch claim review. Lets an admin approve/reject N
+ * claim IDs in one request. Calls the existing `reviewOwnerClaim` per
+ * claim sequentially (same per-claim atomicity, same audit trail).
+ *
+ * Use cases:
+ *   - Approve all claims sharing a `bulkClaimBatchId` from Phase 2 that
+ *     didn't auto-approve (e.g., dual-OTP not satisfied; admin verified
+ *     out-of-band)
+ *   - Approve a hand-picked set of claims for a chain operator the admin
+ *     has vetted via separate documentation (corporate filings, etc.)
+ *
+ * Per-claim sequencing is intentional. Each `reviewOwnerClaim` call is
+ * already its own atomic write group; partial success is the desired
+ * behavior — if 4 of 5 approvals succeed and 1 fails, the 4 stay approved
+ * and the 1 stays pending for the admin to retry.
+ *
+ * Hard cap on batch size to prevent runaway requests.
+ */
+const MAX_BATCH_CLAIM_REVIEW = 25;
+
+export async function reviewOwnerClaimsBatch(input: {
+  claimIds: string[];
+  body: ReturnType<typeof parseAdminReviewBody>;
+}): Promise<BatchClaimReviewOutcome> {
+  const distinctIds = Array.from(
+    new Set(input.claimIds.filter((id): id is string => typeof id === 'string' && id.length > 0)),
+  );
+  if (distinctIds.length === 0) {
+    throw new Error('claimIds is required and must contain at least one non-empty string.');
+  }
+  if (distinctIds.length > MAX_BATCH_CLAIM_REVIEW) {
+    throw new Error(
+      `Batch claim review is capped at ${MAX_BATCH_CLAIM_REVIEW} claims per request.`,
+    );
+  }
+
+  const results = new Map<
+    string,
+    { ok: true; status: ReviewDecision } | { ok: false; error: string }
+  >();
+  let approvedCount = 0;
+  let rejectedCount = 0;
+  let failedCount = 0;
+  let ownerUid: string | null = null;
+
+  for (const claimId of distinctIds) {
+    try {
+      const outcome = await reviewOwnerClaim(claimId, input.body);
+      results.set(claimId, { ok: true, status: outcome.status });
+      if (outcome.status === 'approved') approvedCount += 1;
+      else rejectedCount += 1;
+      // Capture the ownerUid from the first successful review for logging
+      // (all batch claims should belong to one owner, but we don't enforce
+      // that — admins occasionally batch across owners).
+      if (!ownerUid) {
+        const db = getAdminReviewDb();
+        const claimSnap = await db.collection(DISPENSARY_CLAIMS_COLLECTION).doc(claimId).get();
+        const data = claimSnap.exists ? (claimSnap.data() as { ownerUid?: string }) : null;
+        ownerUid = data?.ownerUid ?? null;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      results.set(claimId, { ok: false, error: message });
+      failedCount += 1;
+      logger.warn('[adminReviewService] Batch claim review failure', {
+        claimId,
+        error: message,
+      });
+    }
+  }
+
+  logger.info('[adminReviewService] Batch claim review complete', {
+    ownerUid,
+    requested: distinctIds.length,
+    approved: approvedCount,
+    rejected: rejectedCount,
+    failed: failedCount,
+  });
+
+  return { ownerUid, results, approvedCount, rejectedCount, failedCount };
+}
+
 export async function reviewBusinessVerification(
   ownerUid: string,
   body: { status: ReviewDecision; reviewNotes: string | null },

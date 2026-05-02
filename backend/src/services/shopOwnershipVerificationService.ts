@@ -722,10 +722,42 @@ export async function confirmShopOwnershipVerificationCode(
   // claims and shouldn't sit in the admin queue waiting for a human
   // rubber-stamp. Lazy import keeps the cold-start surface narrow and
   // avoids a circular dep with adminReviewService.
+  //
+  // For bulk-cluster members (the verified claim has a bulkClaimBatchId),
+  // we ALSO try the cluster auto-approval path. The chain may approve
+  // sibling locations that haven't been individually OTP-verified yet
+  // (2-shop cluster: one OTP unlocks both; 3+ shop cluster: two OTPs
+  // unlock all). Both calls are idempotent and fail-soft.
   void (async () => {
     try {
-      const { tryAutoApproveClaim } = await import('./claimAutoApprovalService');
+      const { tryAutoApproveClaim, tryAutoApproveClaimsBatch } =
+        await import('./claimAutoApprovalService');
       await tryAutoApproveClaim({ ownerUid, dispensaryId: storefrontId });
+
+      // Cluster trigger — load this claim doc to see if it's part of a batch.
+      const claimSnap = await db.collection(DISPENSARY_CLAIMS_COLLECTION).doc(claimId).get();
+      const bulkClaimBatchId = claimSnap.exists
+        ? ((claimSnap.data() as { bulkClaimBatchId?: string })?.bulkClaimBatchId ?? null)
+        : null;
+      if (bulkClaimBatchId) {
+        const { BULK_VERIFICATION_BATCHES_COLLECTION } = await import('../constants/collections');
+        const batchSnap = await db
+          .collection(BULK_VERIFICATION_BATCHES_COLLECTION)
+          .doc(bulkClaimBatchId)
+          .get();
+        const batchClaimIds = batchSnap.exists
+          ? ((batchSnap.data() as { claimIds?: string[] })?.claimIds ?? [])
+          : [];
+        if (batchClaimIds.length > 1) {
+          await tryAutoApproveClaimsBatch({
+            ownerUid,
+            // Put the just-verified claim first so it's the primary anchor
+            // in the chain evaluation (its OCM record drives the
+            // entity_name match for siblings).
+            claimIds: [claimId, ...batchClaimIds.filter((id: string) => id !== claimId)],
+          });
+        }
+      }
     } catch (error) {
       // Auto-approval is opportunistic — never let its failures bubble
       // up to the OTP-confirm response. The claim stays pending for

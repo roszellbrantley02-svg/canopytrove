@@ -49,6 +49,9 @@ export const COLLECTIONS = {
   // Operations
   RATE_LIMIT_BUCKETS: 'ops_rate_limit_buckets',
   RUNTIME_MONITORING: 'ops_runtime_monitoring',
+
+  // Multi-location bulk claim (Phase 2 of cluster auto-claim feature)
+  BULK_VERIFICATION_BATCHES: 'bulkVerificationBatches',
 } as const;
 
 // Derive constants for backward compatibility with existing code
@@ -81,3 +84,4 @@ export const STOREFRONT_SUMMARY_COLLECTION = COLLECTIONS.STOREFRONT_SUMMARIES;
 export const ROUTE_STATE_COLLECTION = COLLECTIONS.ROUTE_STATE;
 export const PAYMENT_METHOD_DECLARATIONS_COLLECTION = COLLECTIONS.PAYMENT_METHOD_DECLARATIONS;
 export const PAYMENT_METHOD_REPORTS_COLLECTION = COLLECTIONS.PAYMENT_METHOD_REPORTS;
+export const BULK_VERIFICATION_BATCHES_COLLECTION = COLLECTIONS.BULK_VERIFICATION_BATCHES;

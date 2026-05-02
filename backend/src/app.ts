@@ -40,6 +40,8 @@ import { appStoreNotificationRoutes } from './routes/appStoreNotificationRoutes'
 import { phoneVerificationRoutes } from './routes/phoneVerificationRoutes';
 import { shopOwnershipVerificationRoutes } from './routes/shopOwnershipVerificationRoutes';
 import { shopClaimNotificationRoutes } from './routes/shopClaimNotificationRoutes';
+import { ownerPortalBulkClaimRoutes } from './routes/ownerPortalBulkClaimRoutes';
+import { ownerPortalTaxVerificationRoutes } from './routes/ownerPortalTaxVerificationRoutes';
 import { stripeIdentityWebhookHandler } from './routes/stripeIdentityRoutes';
 import { ownerPortalAiRoutes } from './routes/ownerPortalAiRoutes';
 import { ownerWelcomeEmailRoutes } from './routes/ownerWelcomeEmailRoutes';
@@ -375,6 +377,8 @@ export function createApp() {
   app.use('/', phoneVerificationRoutes);
   app.use('/', shopOwnershipVerificationRoutes);
   app.use('/', shopClaimNotificationRoutes);
+  app.use('/', ownerPortalBulkClaimRoutes);
+  app.use('/', ownerPortalTaxVerificationRoutes);
   app.use('/', ownerPortalAiRoutes);
   app.use('/', ownerWelcomeEmailRoutes);
   app.use('/', ownerPortalWorkspaceRoutes);

@@ -15,7 +15,9 @@ import {
   isOwnerShopVerificationError,
   sendShopVerificationCode,
 } from '../services/ownerPortalShopVerificationService';
+import { ownerPortalBulkClaimQueueEnabled } from '../config/ownerPortalConfig';
 import { OwnerPortalHeroPanel } from './ownerPortal/OwnerPortalHeroPanel';
+import { SiblingLocationsHeroCard } from './ownerPortal/SiblingLocationsHeroCard';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
 
 const ONBOARDING_STEPS = [
@@ -65,6 +67,13 @@ function OwnerPortalShopOwnershipVerificationScreenInner() {
   const [callsRemainingToday, setCallsRemainingToday] = React.useState<number | null>(null);
   const [cooldownEndsAtMs, setCooldownEndsAtMs] = React.useState<number | null>(null);
   const [now, setNow] = React.useState<number>(() => Date.now());
+  /**
+   * Flips to true after the OTP confirms successfully. While true, the
+   * sibling-locations hero card mounts and self-discovers OCM siblings.
+   * If the flag is off OR the entity has no siblings, the card hides
+   * itself silently.
+   */
+  const [didVerify, setDidVerify] = React.useState(false);
 
   const canConfirmCode = !isSubmitting && /^\d{6}$/.test(code.trim());
 
@@ -130,6 +139,16 @@ function OwnerPortalShopOwnershipVerificationScreenInner() {
     setErrorText(null);
     try {
       await confirmShopVerificationCode(storefrontId, code.trim());
+      // If bulk-claim queue is enabled, give the sibling-discovery card a
+      // chance to mount before navigating away. The card self-hides when
+      // the entity has no siblings, so the typical owner sees no extra
+      // delay. When it does mount, owner gets the "Add N siblings" CTA
+      // before continuing to the owner home.
+      if (ownerPortalBulkClaimQueueEnabled) {
+        setDidVerify(true);
+        setIsSubmitting(false);
+        return;
+      }
       navigation.replace('OwnerPortalHome');
     } catch (error) {
       if (isOwnerShopVerificationError(error)) {
@@ -391,6 +410,30 @@ function OwnerPortalShopOwnershipVerificationScreenInner() {
           </View>
         </SectionCard>
       </MotionInView>
+
+      {didVerify && ownerPortalBulkClaimQueueEnabled ? (
+        <MotionInView delay={150}>
+          <SectionCard
+            title="Looking for sibling locations"
+            body="If the OCM legal entity behind this storefront also runs other licensed locations, you can add them in one tap below."
+          >
+            <SiblingLocationsHeroCard
+              primaryDispensaryId={storefrontId}
+              onBulkSubmissionComplete={() => {
+                // Stay on the screen so owner sees the confirmation.
+                // They can manually navigate to OwnerPortalHome from here
+                // or use the listing-screen queue to verify each sibling.
+              }}
+            />
+            <Pressable
+              onPress={() => navigation.replace('OwnerPortalHome')}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>Continue to Owner Home</Text>
+            </Pressable>
+          </SectionCard>
+        </MotionInView>
+      ) : null}
 
       <MotionInView delay={180}>
         <SectionCard

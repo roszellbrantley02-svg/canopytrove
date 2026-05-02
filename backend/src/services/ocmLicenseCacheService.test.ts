@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, mock, test } from 'node:test';
 import type { OcmLicenseRecord } from './ocmLicenseLookupService';
-import { clearOcmLicenseCacheForTests, verifyAgainstCache } from './ocmLicenseCacheService';
+import {
+  clearOcmLicenseCacheForTests,
+  findOcmRecordsByLicenseeName,
+  normalizeLicenseeNameKey,
+  verifyAgainstCache,
+} from './ocmLicenseCacheService';
 
 const originalFetch = global.fetch;
 const BASE_TIME_MS = Date.UTC(2026, 3, 20, 12, 0, 0);
@@ -91,6 +96,104 @@ test('verifyAgainstCache reuses a fresh cache entry inside the one-hour TTL', as
   assert.equal(secondMatch.licensed, true);
   assert.equal(secondMatch.confidence, 'exact');
   assert.equal(calls.length, 1);
+});
+
+test('normalizeLicenseeNameKey uppercases and trims for cluster lookup', () => {
+  assert.equal(normalizeLicenseeNameKey('Twisted Cannabis FLX LLC'), 'TWISTED CANNABIS FLX LLC');
+  assert.equal(normalizeLicenseeNameKey('  flynnstoned corporation  '), 'FLYNNSTONED CORPORATION');
+  assert.equal(normalizeLicenseeNameKey(''), null);
+  assert.equal(normalizeLicenseeNameKey(null), null);
+  assert.equal(normalizeLicenseeNameKey(undefined), null);
+});
+
+test('findOcmRecordsByLicenseeName returns every retail record under the same legal entity', async () => {
+  const calls: string[] = [];
+  mock.method(Date, 'now', () => BASE_TIME_MS);
+  mockOcmFetch(
+    [
+      // Twisted Cannabis FLX LLC — 3 retail siblings
+      createRetailRecord({
+        license_number: 'OCM-RETL-24-000053',
+        licensee_name: 'Twisted Cannabis FLX LLC',
+        address: '501 Exchange St',
+        city: 'Geneva',
+        zip_code: '14456',
+      }),
+      createRetailRecord({
+        license_number: 'OCM-RETL-26-000485',
+        licensee_name: 'Twisted Cannabis FLX LLC',
+        address: '4123 State Route 96',
+        city: 'Manchester',
+        zip_code: '14504',
+      }),
+      createRetailRecord({
+        license_number: 'OCM-RETL-26-000495',
+        licensee_name: 'Twisted Cannabis FLX LLC',
+        address: '2 E Main St',
+        city: 'Bloomfield',
+        zip_code: '14469',
+      }),
+      // Different entity — should NOT show up in the cluster
+      createRetailRecord({
+        license_number: 'OCM-RETL-24-OTHER',
+        licensee_name: 'Some Other LLC',
+        address: '1 Other St',
+        city: 'Albany',
+        zip_code: '12207',
+      }),
+      // Cultivator with same licensee_name — should NOT show up
+      // (filtered out by isConsumerFacingRetailType in the cache build)
+      createRetailRecord({
+        license_number: 'OCM-CULT-24-FAKE',
+        license_type: 'Adult-Use Cultivator',
+        licensee_name: 'Twisted Cannabis FLX LLC',
+        address: '999 Farm Rd',
+      }),
+    ],
+    calls,
+  );
+
+  // Trigger a cache fill
+  await verifyAgainstCache({ licenseNumber: 'OCM-RETL-24-000053' });
+
+  const cluster = await findOcmRecordsByLicenseeName('Twisted Cannabis FLX LLC');
+  assert.equal(cluster.length, 3, 'should return 3 retail siblings, not the cultivator');
+  const numbers = cluster.map((r) => r.license_number).sort();
+  assert.deepEqual(numbers, ['OCM-RETL-24-000053', 'OCM-RETL-26-000485', 'OCM-RETL-26-000495']);
+});
+
+test('findOcmRecordsByLicenseeName treats casing differences as the same cluster', async () => {
+  const calls: string[] = [];
+  mock.method(Date, 'now', () => BASE_TIME_MS);
+  mockOcmFetch(
+    [
+      createRetailRecord({
+        license_number: 'A',
+        licensee_name: 'FLYNNSTONED CORPORATION',
+      }),
+      createRetailRecord({
+        license_number: 'B',
+        licensee_name: 'FLYNNSTONED CORPORATION',
+        address: '999 Other St',
+      }),
+    ],
+    calls,
+  );
+  await verifyAgainstCache({ licenseNumber: 'A' });
+
+  // Caller passes a mixed-case input — the cache normalizes both sides.
+  const cluster = await findOcmRecordsByLicenseeName('FlynnStoned Corporation');
+  assert.equal(cluster.length, 2);
+});
+
+test('findOcmRecordsByLicenseeName returns [] for unknown entities and empty inputs', async () => {
+  const calls: string[] = [];
+  mock.method(Date, 'now', () => BASE_TIME_MS);
+  mockOcmFetch([createRetailRecord()], calls);
+  await verifyAgainstCache({ licenseNumber: 'RDIS-123456' });
+
+  assert.deepEqual(await findOcmRecordsByLicenseeName('Nobody LLC'), []);
+  assert.deepEqual(await findOcmRecordsByLicenseeName(''), []);
 });
 
 test('verifyAgainstCache serves stale data while a refresh fails inside the stale window', async () => {
