@@ -36,6 +36,21 @@ const EXEMPT_PATH_PREFIXES = [
   '/owner-billing/stripe/webhook',
   '/email/webhooks/resend',
   '/identity-verification/stripe/webhook',
+  // Admin routes are gated by ADMIN_API_KEY in ensureAdminApiKeyMatch
+  // — that's a stronger guarantee than App Check (server-side secret
+  // vs client-side attestation). Exempting prevents the GitHub Actions
+  // crons (refresh-ocm-seed, dispatch-deal-digests, deploy-backend-now,
+  // etc.) from being rejected when APP_CHECK_ENFORCEMENT=enforce flips
+  // on. Without this exemption every cron run today shows up in the
+  // [app-check] missing-token logs.
+  '/admin/',
+  // Analytics events come from anywhere — web app (no App Check setup
+  // since web push isn't wired), pre-auth native sessions, server-to-
+  // server smoke tests. Blocking them would lose all web analytics
+  // and break the daily session-volume metrics (analytics_daily_app_
+  // metrics). The endpoint is rate-limited by IP elsewhere; that's
+  // the right defense for unauthenticated event ingest.
+  '/analytics/events',
 ];
 
 function readEnforcementMode(): AppCheckEnforcementMode {

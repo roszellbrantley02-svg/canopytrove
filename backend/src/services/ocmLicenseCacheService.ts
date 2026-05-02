@@ -116,6 +116,54 @@ async function ensureRefresh(): Promise<CacheEntry | null> {
   return promise;
 }
 
+/**
+ * The current data.ny.gov SODA schema for `jskf-tt3q` uses these
+ * field names. State changed the schema sometime before May 2 2026
+ * and we kept reading the old names (`address`, `licensee_name`,
+ * `dba_name`, `issue_date`) which all came back undefined — silently
+ * leaving every storefront unverified. Re-confirmed against the live
+ * API on May 2 2026 by curling
+ * https://data.ny.gov/resource/jskf-tt3q.json?$limit=1.
+ */
+export type RawSodaOcmRecord = {
+  license_number?: string;
+  license_type?: string;
+  license_status?: string;
+  entity_name?: string;
+  dba?: string;
+  address_line_1?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  issued_date?: string;
+  expiration_date?: string;
+  // Tolerant fallbacks for the OLD field names in case state ever
+  // restores them or returns mixed shapes during a transition.
+  licensee_name?: string;
+  dba_name?: string;
+  address?: string;
+  issue_date?: string;
+};
+
+export function normalizeRawSodaRecord(raw: RawSodaOcmRecord): OcmLicenseRecord | null {
+  // license_number is the one field that's stable across every schema
+  // shape we've seen. If it's missing, the record isn't useful.
+  if (!raw.license_number) return null;
+  return {
+    license_number: raw.license_number,
+    license_type: raw.license_type ?? '',
+    license_status: raw.license_status ?? '',
+    licensee_name: raw.entity_name ?? raw.licensee_name ?? '',
+    dba_name: raw.dba ?? raw.dba_name,
+    address: raw.address_line_1 ?? raw.address,
+    city: raw.city,
+    state: raw.state,
+    zip_code: raw.zip_code,
+    issue_date: raw.issued_date ?? raw.issue_date,
+    expiration_date: raw.expiration_date,
+  };
+}
+
 async function fetchAndIndex(): Promise<CacheEntry> {
   const records: OcmLicenseRecord[] = [];
   for (let page = 0; page < PAGE_LIMIT; page += 1) {
@@ -123,7 +171,7 @@ async function fetchAndIndex(): Promise<CacheEntry> {
     const url = `${OCM_SODA_ENDPOINT}?$limit=${PAGE_SIZE}&$offset=${offset}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    let batch: OcmLicenseRecord[] = [];
+    let rawBatch: RawSodaOcmRecord[] = [];
     try {
       const response = await fetch(url, {
         headers: { Accept: 'application/json' },
@@ -132,12 +180,18 @@ async function fetchAndIndex(): Promise<CacheEntry> {
       if (!response.ok) {
         throw new Error(`OCM SODA returned ${response.status}`);
       }
-      batch = (await response.json()) as OcmLicenseRecord[];
+      rawBatch = (await response.json()) as RawSodaOcmRecord[];
     } finally {
       clearTimeout(timeout);
     }
-    records.push(...batch);
-    if (batch.length < PAGE_SIZE) break;
+    // Map every raw record into our internal shape. Skips records
+    // missing license_number (rare but possible during state's data
+    // entry workflow).
+    for (const raw of rawBatch) {
+      const normalized = normalizeRawSodaRecord(raw);
+      if (normalized) records.push(normalized);
+    }
+    if (rawBatch.length < PAGE_SIZE) break;
   }
 
   const byLicenseNumber = new Map<string, OcmLicenseRecord>();

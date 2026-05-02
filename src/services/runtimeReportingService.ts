@@ -64,6 +64,30 @@ async function postRuntimeReport(payload: RuntimeErrorReport) {
   }
 }
 
+/**
+ * Returns true for errors that represent normal mid-flight cancellation
+ * rather than a real failure. These are expected when:
+ * - A screen unmounts while a fetch is in flight (React Navigation
+ *   abort signal fires)
+ * - A user pulls-to-refresh and the previous request is cancelled
+ * - A debounced request gets superseded by a newer one
+ *
+ * Reporting these to Sentry/Cloud Logging creates noise that drowns
+ * out real errors. Filtered out as of May 2 2026 after the
+ * platform-error-log review.
+ */
+function isBenignCancellation(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (error.name === 'AbortError') return true;
+  if (error.name === 'CanceledError') return true;
+  // expo-fetch / fetch on RN sometimes throw this exact message text
+  // for aborts that don't carry the AbortError name correctly.
+  if (error.message === 'Aborted' || error.message === 'The operation was aborted.') {
+    return true;
+  }
+  return false;
+}
+
 export function reportRuntimeError(
   error: unknown,
   context?: Omit<RuntimeErrorReport, 'message'>,
@@ -73,6 +97,12 @@ export function reportRuntimeError(
     error instanceof Error
       ? error
       : new Error(typeof error === 'string' ? error : 'Unknown runtime error');
+
+  // Drop benign abort-style errors at the source. Saves a Sentry
+  // event + a backend log entry per cancelled request.
+  if (isBenignCancellation(normalizedError)) {
+    return;
+  }
 
   if (options?.captureToMonitoring !== false) {
     captureMonitoringException(normalizedError, {

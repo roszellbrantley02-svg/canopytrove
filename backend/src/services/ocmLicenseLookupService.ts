@@ -12,6 +12,7 @@
  */
 
 import { logger } from '../observability/logger';
+import { normalizeRawSodaRecord, type RawSodaOcmRecord } from './ocmLicenseCacheService';
 
 const OCM_SODA_ENDPOINT = 'https://data.ny.gov/resource/jskf-tt3q.json';
 const LOOKUP_TIMEOUT_MS = 10_000;
@@ -83,7 +84,16 @@ export async function lookupOcmLicense(licenseNumber: string): Promise<OcmLookup
       };
     }
 
-    const records: OcmLicenseRecord[] = await response.json();
+    // Normalize the raw SODA shape (which uses `entity_name`,
+    // `dba`, `address_line_1`, `issued_date`) into our internal
+    // OcmLicenseRecord shape (`licensee_name`, `dba_name`, `address`,
+    // `issue_date`). Same bug fix as ocmLicenseCacheService — the
+    // state's SODA schema renamed fields and we kept reading the old
+    // names. See normalizeRawSodaRecord for the field map.
+    const rawRecords = (await response.json()) as RawSodaOcmRecord[];
+    const records = rawRecords
+      .map((raw) => normalizeRawSodaRecord(raw))
+      .filter((record): record is OcmLicenseRecord => record !== null);
 
     if (!records.length) {
       return { found: false, active: false, record: null, matchScore: null, error: null };
