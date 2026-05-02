@@ -1,0 +1,80 @@
+name: Dispatch Daily Deal Digest Emails
+
+on:
+  # Runs at 13:00 UTC every day = 9:00 AM EDT (April-November) /
+  # 8:00 AM EST (November-March). The product audience is NY-only per
+  # current scope, so a single ET-anchored time is fine. The cron is
+  # the rate limit — the dispatch endpoint is idempotent per UTC day,
+  # so even if a manual workflow_dispatch fires the same day, no user
+  # gets a second email.
+  schedule:
+    - cron: '0 13 * * *'
+  # Allows manual trigger from Actions tab for testing or recovery.
+  workflow_dispatch:
+
+# Prevent two runs from overlapping. If the previous run is still in
+# flight when the next 13:00 UTC tick arrives (shouldn't happen but
+# defense in depth), GitHub will queue the new one.
+concurrency:
+  group: dispatch-deal-digests
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BACKEND_BASE_URL: https://api.canopytrove.com
+
+    steps:
+      - name: Wait for backend /readyz
+        run: |
+          set -euo pipefail
+          for ATTEMPT in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.BACKEND_BASE_URL }}/readyz" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Backend is ready (status $STATUS on attempt $ATTEMPT)."
+              break
+            fi
+            echo "Backend not ready (status $STATUS on attempt $ATTEMPT) — sleeping 10s..."
+            sleep 10
+          done
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.BACKEND_BASE_URL }}/readyz" || echo "000")
+          if [ "$STATUS" != "200" ]; then
+            echo "Backend not ready after retries (status $STATUS) — aborting dispatch."
+            exit 1
+          fi
+
+      - name: Trigger deal-digest dispatch
+        env:
+          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ADMIN_API_KEY}" ]; then
+            echo "ADMIN_API_KEY secret is not set — cannot trigger dispatch."
+            exit 1
+          fi
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "x-admin-api-key: ${ADMIN_API_KEY}" \
+            -H "Content-Type: application/json" \
+            "${{ env.BACKEND_BASE_URL }}/admin/dispatch-deal-digests")
+
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          STATUS=$(echo "$RESPONSE" | tail -n1)
+
+          echo "Dispatch response status: $STATUS"
+          echo "Dispatch response body: $BODY"
+
+          if [ "$STATUS" != "200" ]; then
+            echo "Dispatch request failed with status $STATUS."
+            exit 1
+          fi
+
+          # Surface a quick summary into the workflow run log so the
+          # Actions UI shows something useful at a glance.
+          echo "$BODY" | python3 -c "import sys, json; d = json.load(sys.stdin); print(f'Enabled: {d.get(\"enabled\")}  Scanned: {d.get(\"totalProfilesScanned\")}  Sent: {d.get(\"digestsSent\")}  Errors: {len(d.get(\"errors\", []))}  Skips: {d.get(\"skipsByReason\")}')" || true
