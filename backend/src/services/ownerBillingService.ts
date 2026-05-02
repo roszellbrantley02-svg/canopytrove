@@ -6,6 +6,7 @@ import {
   getBackendFirebaseDb,
   hasBackendFirebaseConfig,
 } from '../firebase';
+import { logger } from '../observability/logger';
 import {
   getOwnerAuthorizationState,
   isVerifiedOwnerStatus,
@@ -372,8 +373,34 @@ function createNow() {
   return new Date().toISOString();
 }
 
+/**
+ * Annual billing is disabled platform-wide until the misconfigured
+ * Stripe annual prices are rebuilt. The current "annual" prices in
+ * Stripe Dashboard are set to interval=month at the annual dollar
+ * amount (e.g. $2,490/mo for Pro instead of $2,490/yr). Routing any
+ * customer to those prices would catastrophically overcharge.
+ *
+ * Defense-in-depth: even if a stale client (an OTA-cached older
+ * frontend, a curl test, etc.) sends `billingCycle: 'annual'`, we
+ * silently downgrade to monthly here so the broken prices never get
+ * picked. Re-enable by:
+ *   1. Archiving the broken annual prices in Stripe Dashboard
+ *   2. Creating new annual prices with interval=year
+ *   3. Updating Cloud Run STRIPE_*_ANNUAL_PRICE_ID env vars
+ *   4. Setting ANNUAL_BILLING_DISABLED below to false
+ *
+ * See docs/STRIPE_DASHBOARD_SETUP.md Section 1.
+ */
+const ANNUAL_BILLING_DISABLED = true;
+
 function parseOwnerBillingCycle(value: unknown): OwnerBillingCycle {
   if (value === 'annual') {
+    if (ANNUAL_BILLING_DISABLED) {
+      // Silently coerce to monthly. Logging at info so we can see if
+      // anyone's still trying to hit annual.
+      logger.info('[ownerBilling] annual billing requested but disabled — coercing to monthly');
+      return 'monthly';
+    }
     return 'annual';
   }
 

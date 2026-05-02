@@ -90,6 +90,16 @@ function OwnerPortalSubscriptionScreenInner() {
     null,
   );
   const [statusText, setStatusText] = React.useState<string | null>(null);
+  // Annual billing is disabled platform-wide until the misconfigured
+  // Stripe annual prices are rebuilt (they're set to interval=month at
+  // the annual dollar amount, which would charge customers ~$2,490/mo
+  // for Pro instead of $2,490/yr). See docs/STRIPE_DASHBOARD_SETUP.md
+  // Section 1. Re-enable by:
+  //   1. Archiving the broken annual prices in Stripe Dashboard
+  //   2. Creating new annual prices with interval=year
+  //   3. Updating Cloud Run STRIPE_*_ANNUAL_PRICE_ID env vars
+  //   4. Reverting this constant to false
+  const ANNUAL_BILLING_DISABLED = true;
   const [billingCycle, setBillingCycle] = React.useState<OwnerTierBillingCycle>('monthly');
   const [appleStoreReady, setAppleStoreReady] = React.useState(false);
   const [appleProductsByTier, setAppleProductsByTier] = React.useState<
@@ -632,11 +642,12 @@ function OwnerPortalSubscriptionScreenInner() {
                   : null
               }
               billingTemporarilyPaused={billingTemporarilyPaused}
-              showBillingCycleToggle={!isAppleNative}
+              showBillingCycleToggle={!isAppleNative && !ANNUAL_BILLING_DISABLED}
               onSelectTier={(tier) => {
                 void handleOpenCheckout(tier);
               }}
               onToggleBillingCycle={() => {
+                if (ANNUAL_BILLING_DISABLED) return;
                 setBillingCycle((prev) => (prev === 'monthly' ? 'annual' : 'monthly'));
               }}
             />
