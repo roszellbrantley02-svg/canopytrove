@@ -107,18 +107,39 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
     async (
       session: CanopyTroveAuthSession,
       existingDisplayName: string | null | undefined,
-    ): Promise<AppProfile | null> => {
+    ): Promise<
+      | { status: 'found'; profile: AppProfile }
+      | { status: 'not_found' }
+      | { status: 'transient_error' }
+    > => {
       if (session.status !== 'authenticated') {
-        return null;
+        return { status: 'not_found' };
       }
 
+      // Distinguish 404 (genuinely no canonical profile yet — first-time
+      // signup) from any other error (network blip, 5xx, timeout). On
+      // transient errors we MUST NOT mint a fresh profile; doing so was
+      // the root cause of the multi-profile leak (Daniellett had 16
+      // profile docs because every flaky-network sign-in triggered a
+      // duplicate-profile mint via this catch path). When in doubt,
+      // defer — repair will be retried on the next session.
+      let canonicalProfile: AppProfile | null;
       try {
-        const canonicalProfile = await getStorefrontBackendCanonicalProfile();
-        if (!canonicalProfile || canonicalProfile.accountId !== session.uid) {
-          return null;
+        canonicalProfile = await getStorefrontBackendCanonicalProfile();
+      } catch (error) {
+        if (error instanceof Error && /failed with 404/i.test(error.message)) {
+          return { status: 'not_found' };
         }
+        return { status: 'transient_error' };
+      }
 
-        return {
+      if (!canonicalProfile || canonicalProfile.accountId !== session.uid) {
+        return { status: 'not_found' };
+      }
+
+      return {
+        status: 'found',
+        profile: {
           ...canonicalProfile,
           kind: 'authenticated',
           accountId: session.uid,
@@ -126,10 +147,8 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
             session,
             canonicalProfile.displayName ?? existingDisplayName,
           ),
-        };
-      } catch {
-        return null;
-      }
+        },
+      };
     },
     [getPreferredDisplayName],
   );
@@ -139,14 +158,27 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
       return appProfile;
     }
 
-    const canonicalProfile = await resolveCanonicalAuthenticatedProfile(
+    const resolution = await resolveCanonicalAuthenticatedProfile(
       authSession,
       appProfile?.displayName ?? null,
     );
 
-    // If canonical lookup returned null but we already have a profile for this
-    // account, keep it rather than minting a duplicate. Only create fresh when
-    // there's genuinely no profile to work with.
+    // CRITICAL: on transient errors (network/5xx/timeout) we MUST NOT
+    // mint a fresh profile. Doing so created the multi-profile leak —
+    // every flaky sign-in spawned a duplicate profile doc that was
+    // never reconciled with the canonical. Bail out and let the next
+    // session retry. The user keeps their current profile in the
+    // meantime; nothing breaks visually.
+    if (resolution.status === 'transient_error') {
+      return appProfile;
+    }
+
+    const canonicalProfile = resolution.status === 'found' ? resolution.profile : null;
+
+    // If canonical lookup returned a definitive "no canonical exists"
+    // (404) but we already have a profile for this account, keep it
+    // rather than minting a duplicate. Only mint fresh when there's
+    // genuinely no profile to work with (true first-time auth).
     const nextProfile =
       canonicalProfile ??
       (appProfile?.accountId === authSession.uid ? appProfile : null) ??
@@ -171,11 +203,18 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
       return appProfile;
     }
 
-    const canonicalProfile = await resolveCanonicalAuthenticatedProfile(
+    const resolution = await resolveCanonicalAuthenticatedProfile(
       authSession,
       appProfile?.displayName ?? null,
     );
-    if (!canonicalProfile || areProfilesEquivalent(appProfile, canonicalProfile)) {
+    // Transient or not_found: nothing to reconcile (reconcile only acts
+    // when we KNOW the canonical and it differs from local). Mint-on-
+    // not-found is the repair path's job, not reconcile's.
+    if (resolution.status !== 'found') {
+      return appProfile;
+    }
+    const canonicalProfile = resolution.profile;
+    if (areProfilesEquivalent(appProfile, canonicalProfile)) {
       return appProfile;
     }
 

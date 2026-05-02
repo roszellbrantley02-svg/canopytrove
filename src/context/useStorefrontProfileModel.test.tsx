@@ -108,8 +108,12 @@ describe('useStorefrontProfileModel', () => {
     appProfileMocks.saveAppProfile.mockImplementation(async (profile: AppProfile) => {
       appProfileMocks.getCachedAppProfile.mockReturnValue(profile);
     });
+    // Default to 404-shaped error so existing "first-time signup mints
+    // fresh profile" tests still pass after the May 2 2026 leak fix
+    // (transient errors no longer mint duplicates; only a confirmed
+    // 404 mints fresh).
     backendProfileMocks.getStorefrontBackendCanonicalProfile.mockRejectedValue(
-      new Error('not available'),
+      new Error('Backend request failed with 404'),
     );
     authMocks.getInitialCanopyTroveAuthSession.mockReturnValue({
       status: 'signed-out',
@@ -362,5 +366,102 @@ describe('useStorefrontProfileModel', () => {
 
     expect(latestValue?.profileId).toBe('cached-authenticated-profile');
     expect(appProfileMocks.createAppProfileId).not.toHaveBeenCalled();
+  });
+
+  // Regression test for the May 2 2026 multi-profile leak fix.
+  //
+  // Before the fix: when the canonical-profile endpoint failed with a
+  // transient error (network blip, 5xx, timeout — anything other than
+  // 404), the catch in resolveCanonicalAuthenticatedProfile silently
+  // returned null. repairProfileForCurrentSession then minted a fresh
+  // profile id, creating a duplicate profile doc in Firestore. Every
+  // flaky-network sign-in spawned one duplicate, which is why
+  // beta-tester Daniellett accumulated 16 profile docs under a single
+  // accountId.
+  //
+  // After the fix: transient errors return { status: 'transient_error' }
+  // and repair short-circuits without minting. The user keeps their
+  // current profile; repair retries on the next session. Only confirmed
+  // 404s (= no canonical exists yet) trigger a fresh mint.
+  it('does NOT mint a duplicate profile when the canonical fetch fails with a transient (non-404) error', async () => {
+    const cachedProfile = createProfile('cached-anon-profile');
+    appProfileMocks.getCachedAppProfile.mockReturnValue(cachedProfile);
+    appProfileMocks.createAppProfileId.mockReturnValue('would-be-duplicate-profile');
+
+    // Simulate a 500 (transient backend error), NOT a 404.
+    backendProfileMocks.getStorefrontBackendCanonicalProfile.mockRejectedValue(
+      new Error('Backend request failed with 500'),
+    );
+
+    act(() => {
+      renderer = create(<HookHarness />);
+    });
+
+    act(() => {
+      authMocks.emit({
+        status: 'authenticated',
+        uid: 'user-flaky',
+        isAnonymous: false,
+        displayName: 'Real User',
+        email: 'flaky@example.com',
+      });
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+    await act(async () => {
+      await flushPromises();
+    });
+
+    // No duplicate profile minted.
+    expect(appProfileMocks.createAppProfileId).not.toHaveBeenCalled();
+    // saveAppProfile was not called for a fresh authenticated profile.
+    const saveCalls = appProfileMocks.saveAppProfile.mock.calls.map(([p]) => p);
+    const mintedAuthenticatedSave = saveCalls.find(
+      (p: AppProfile) => p.id === 'would-be-duplicate-profile',
+    );
+    expect(mintedAuthenticatedSave).toBeUndefined();
+  });
+
+  it('DOES mint a fresh profile when the canonical fetch returns a confirmed 404 (true first-time signup)', async () => {
+    const cachedProfile = createProfile('cached-anon-profile');
+    appProfileMocks.getCachedAppProfile.mockReturnValue(cachedProfile);
+    appProfileMocks.createAppProfileId.mockReturnValue('first-time-mint');
+
+    // 404 = no canonical exists yet, this is true first-time auth.
+    backendProfileMocks.getStorefrontBackendCanonicalProfile.mockRejectedValue(
+      new Error('Backend request failed with 404'),
+    );
+
+    act(() => {
+      renderer = create(<HookHarness />);
+    });
+
+    act(() => {
+      authMocks.emit({
+        status: 'authenticated',
+        uid: 'user-fresh',
+        isAnonymous: false,
+        displayName: 'New User',
+        email: 'new@example.com',
+      });
+    });
+
+    await act(async () => {
+      await flushPromises();
+    });
+    await act(async () => {
+      await flushPromises();
+    });
+
+    expect(appProfileMocks.createAppProfileId).toHaveBeenCalled();
+    expect(appProfileMocks.saveAppProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'first-time-mint',
+        kind: 'authenticated',
+        accountId: 'user-fresh',
+      }),
+    );
   });
 });
