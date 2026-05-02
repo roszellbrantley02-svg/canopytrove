@@ -106,6 +106,13 @@ function applyDailyAppMetrics(writeBatch: WriteBatch, event: AnalyticsEventDocum
   incrementIfNeeded(payload, 'signInCount', event.eventType === 'signin');
   incrementIfNeeded(payload, 'signupStartedCount', event.eventType === 'signup_started');
   incrementIfNeeded(payload, 'signupCompletedCount', event.eventType === 'signup_completed');
+  // Track signup failures so we can break down WHY signups drop off,
+  // not just THAT they do. Pairs with the friendly-error-mapper on
+  // the frontend (added May 2 2026 in the same PR), which emits
+  // `signup_failed` with an errorCode metadata field. The aggregate
+  // here is a simple count; per-code breakdown lives in the raw
+  // analytics_events collection if we need to dig deeper.
+  incrementIfNeeded(payload, 'signupFailedCount', event.eventType === 'signup_failed');
   incrementIfNeeded(
     payload,
     'passwordResetRequestCount',

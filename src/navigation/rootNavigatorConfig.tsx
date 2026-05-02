@@ -309,7 +309,16 @@ export type RootStackParamList = {
       }
     | undefined;
   OwnerSignIn: undefined;
-  CanopyTroveSignIn: undefined;
+  CanopyTroveSignIn:
+    | {
+        // Pre-fills the email field on the sign-in screen. Used by the
+        // signup-flow recovery CTA when a user tries to create an
+        // account with an email that already exists — we route them
+        // here with their email already typed so they don't have to
+        // re-enter it.
+        prefilledEmail?: string;
+      }
+    | undefined;
   CanopyTroveSignUp: undefined;
   CanopyTroveForgotPassword: undefined;
   OwnerPortalAccess:

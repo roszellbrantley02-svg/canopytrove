@@ -9,6 +9,12 @@ export const ANALYTICS_EVENT_TYPES = [
   'screen_view',
   'signup_started',
   'signup_completed',
+  // Fires when a signup attempt fails after passing client-side
+  // validation (i.e. between signup_started and signup_completed).
+  // Carries `errorCode` metadata (e.g. 'auth/email-already-in-use')
+  // so we can break down the funnel drop-off by reason. Added May 2
+  // 2026 to investigate the 14→6 signup completion gap.
+  'signup_failed',
   'signin',
   'password_reset_requested',
   'location_prompt_shown',
