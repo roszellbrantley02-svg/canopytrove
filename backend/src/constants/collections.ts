@@ -29,6 +29,9 @@ export const COLLECTIONS = {
   DAILY_SEARCH_METRICS: 'analytics_daily_search_metrics',
   DAILY_SIGNUP_METRICS: 'analytics_daily_signup_metrics',
   DAILY_QUERY_METRICS: 'analytics_daily_query_metrics',
+  // Per-storefront-per-hour route-start counter, drives the heat-glow
+  // visual on storefront cards. Doc id = `{storefrontId}__{YYYYMMDDHH}`.
+  HOURLY_STOREFRONT_ROUTES: 'analytics_hourly_storefront_routes',
 
   // Gamification
   GAMIFICATION_STATE: 'gamification_state',
@@ -71,6 +74,7 @@ export const DAILY_DEAL_METRICS_COLLECTION = COLLECTIONS.DAILY_DEAL_METRICS;
 export const DAILY_SEARCH_METRICS_COLLECTION = COLLECTIONS.DAILY_SEARCH_METRICS;
 export const DAILY_SIGNUP_METRICS_COLLECTION = COLLECTIONS.DAILY_SIGNUP_METRICS;
 export const DAILY_QUERY_METRICS_COLLECTION = COLLECTIONS.DAILY_QUERY_METRICS;
+export const HOURLY_STOREFRONT_ROUTES_COLLECTION = COLLECTIONS.HOURLY_STOREFRONT_ROUTES;
 export const GAMIFICATION_STATE_COLLECTION = COLLECTIONS.GAMIFICATION_STATE;
 export const PROFILE_TOOLS_COLLECTION = COLLECTIONS.PROFILE_TOOLS;
 export const SUBSCRIPTIONS_COLLECTION = COLLECTIONS.SUBSCRIPTIONS;

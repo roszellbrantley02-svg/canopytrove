@@ -38,6 +38,10 @@ import {
   attachOcmVerificationToSummaries,
 } from './services/storefrontOcmEnrichment';
 import {
+  attachRouteHeatToDetail,
+  attachRouteHeatToSummaries,
+} from './services/storefrontRouteHeatService';
+import {
   attachPaymentMethodsToDetail,
   attachPaymentMethodsToSummaries,
 } from './services/paymentMethodsService';
@@ -397,10 +401,11 @@ export async function getStorefrontSummaries(
 
   const itemsWithOcm = await attachOcmVerificationToSummaries(payload.items);
   const itemsWithPayments = await attachPaymentMethodsToSummaries(itemsWithOcm);
+  const itemsWithHeat = await attachRouteHeatToSummaries(itemsWithPayments);
 
   return {
     ...payload,
-    items: itemsWithPayments,
+    items: itemsWithHeat,
   };
 }
 
@@ -425,7 +430,8 @@ export async function getStorefrontSummariesByIds(
     result.status === 'fulfilled' ? [result.value] : [],
   );
   const withOcm = await attachOcmVerificationToSummaries(items);
-  return attachPaymentMethodsToSummaries(withOcm);
+  const withPayments = await attachPaymentMethodsToSummaries(withOcm);
+  return attachRouteHeatToSummaries(withPayments);
 }
 
 export async function resolveStorefrontBySlug(slug: string) {
@@ -584,7 +590,8 @@ export async function getStorefrontDetail(
       DETAIL_ENHANCEMENT_TIMEOUT_MS,
     );
     const withOcm = await attachOcmVerificationToDetail(enhancedDetail, summary);
-    return attachPaymentMethodsToDetail(withOcm, summary);
+    const withPayments = await attachPaymentMethodsToDetail(withOcm, summary);
+    return attachRouteHeatToDetail(withPayments);
   };
 
   if (summary && hasGooglePlacesConfig() && !shouldAwaitGoogleEnrichment) {

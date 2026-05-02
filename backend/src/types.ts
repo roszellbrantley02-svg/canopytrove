@@ -187,6 +187,14 @@ export type StorefrontSummaryApiDocument = {
    * declaration + community reports. Rendered as a blue badge on cards.
    */
   paymentMethods?: PaymentMethodsApiDocument | null;
+  /**
+   * Route-start count for the current clock hour (UTC). Drives the
+   * heat-glow animated visual on storefront cards. Populated by
+   * storefrontRouteHeatService from the per-hour analytics rollup;
+   * absent when the shop has zero starts this hour or when the
+   * counter lookup failed (always treated as 0 client-side).
+   */
+  routeStartsPerHour?: number | null;
 };
 
 export type OcmVerificationApiDocument = {
@@ -288,6 +296,12 @@ export type StorefrontDetailApiDocument = {
    * screen renders the full section; cards render a compact badge.
    */
   paymentMethods?: PaymentMethodsApiDocument | null;
+  /**
+   * Route-start count for the current clock hour (UTC). Drives the
+   * heat-glow animated visual on the storefront detail hero. Same
+   * semantics as the StorefrontSummaryApiDocument field.
+   */
+  routeStartsPerHour?: number | null;
 };
 
 export type StorefrontSummarySortKey = 'distance' | 'rating' | 'reviews';
