@@ -34,6 +34,7 @@ import { productReviewRoutes } from './routes/productReviewRoutes';
 import { marketAreaRoutes } from './routes/marketAreaRoutes';
 import { memberEmailRoutes } from './routes/memberEmailRoutes';
 import { emailUnsubscribeRoutes } from './routes/emailUnsubscribeRoutes';
+import { emailVerificationRoutes } from './routes/emailVerificationRoutes';
 import { ownerBillingRoutes, ownerBillingWebhookHandler } from './routes/ownerBillingRoutes';
 import { appStoreNotificationRoutes } from './routes/appStoreNotificationRoutes';
 import { phoneVerificationRoutes } from './routes/phoneVerificationRoutes';
@@ -368,6 +369,7 @@ export function createApp() {
   app.use('/', marketAreaRoutes);
   app.use('/', memberEmailRoutes);
   app.use('/', emailUnsubscribeRoutes);
+  app.use('/', emailVerificationRoutes);
   app.use('/', ownerBillingRoutes);
   app.use('/', appStoreNotificationRoutes);
   app.use('/', phoneVerificationRoutes);

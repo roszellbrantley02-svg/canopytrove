@@ -247,7 +247,37 @@ export async function signUpCanopyTroveEmailPassword(
     }
   }
 
+  // Fire-and-forget: kick off the branded verification email via our
+  // backend (which generates the Firebase verification link, then
+  // sends it through Resend with a Canopy-Trove-styled template
+  // instead of the default Firebase noreply branding). We don't await
+  // this — signup completes regardless of email-send success, and the
+  // user can re-trigger via "Resend verification email" later.
+  void requestBrandedVerificationEmail(credential.user).catch(() => {
+    // Silent fail. The user may not yet have a backend session ID
+    // token if Firebase hasn't finished the auth handshake. The
+    // resend affordance covers this.
+  });
+
   return mapAuthUser(credential.user);
+}
+
+async function requestBrandedVerificationEmail(user: {
+  getIdToken: (forceRefresh?: boolean) => Promise<string>;
+}): Promise<void> {
+  const idToken = await user.getIdToken(true);
+  // Use the same backend host the rest of the app uses. Importing the
+  // shared http client would create a circular dep with the auth
+  // service, so we make a one-shot fetch here instead.
+  const baseUrl = process.env.EXPO_PUBLIC_STOREFRONT_BACKEND_URL || 'https://api.canopytrove.com';
+  await fetch(`${baseUrl.replace(/\/+$/, '')}/auth/send-verification-email`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: '{}',
+  });
 }
 
 export async function sendCanopyTrovePasswordReset(email: string) {
