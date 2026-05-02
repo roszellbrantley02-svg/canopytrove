@@ -22,8 +22,19 @@ export type UseStorefrontRemoteProfileSyncArgs = {
   setGamificationState: React.Dispatch<React.SetStateAction<StorefrontGamificationState>>;
 };
 
-export function getShouldSyncRemoteProfileState(authSession: CanopyTroveAuthSession) {
-  return storefrontSourceMode === 'api' && authSession.status === 'authenticated';
+export function getShouldSyncRemoteProfileState(_authSession: CanopyTroveAuthSession) {
+  // Previously this gate required `authSession.status === 'authenticated'`,
+  // which meant anonymous users' saves (savedStorefrontIds) lived only in
+  // AsyncStorage on device and never reached the backend. As a result the
+  // backend `route_state` collection was empty platform-wide, owners saw
+  // 0 followers in their portal even when real saves existed, and the
+  // public storefront detail page also showed 0. Anonymous users already
+  // have a stable install-id-based profileId (same one used for product
+  // scans), so their save state can persist remotely under that id and
+  // migrate cleanly to an authenticated profile id on signup via the
+  // existing canonical-profile resolver. Drop the auth gate so saves
+  // sync for everyone in api mode.
+  return storefrontSourceMode === 'api';
 }
 
 export function createFallbackRemoteProfile(profileId: string) {
