@@ -9,6 +9,7 @@ import {
   seedBackendFirestoreCollections,
 } from '../services/firestoreSeedService';
 import { dispatchFavoriteDealAlertsForAllProfiles } from '../services/favoriteDealAlertService';
+import { dispatchDealDigestEmails } from '../services/dealDigestEmailService';
 import {
   clearStorefrontBackendCache,
   invalidateCachedStorefrontDetail,
@@ -133,6 +134,27 @@ adminRoutes.post('/admin/seed-firestore', async (request, response) => {
     response.status(500).json({
       ok: false,
       error: error instanceof Error ? error.message : 'Unknown seed failure',
+    });
+  }
+});
+
+// Daily deal-digest cron entrypoint. Called by .github/workflows/
+// dispatch-deal-digests.yml at 13:00 UTC (≈ 9 AM ET) every day.
+// Returns 200 with full counts even when nothing was sent (the cron
+// logs the body for monitoring). Honors EMAIL_DEAL_DIGESTS_ENABLED
+// flag — when false, the inner orchestrator no-ops and we surface
+// `enabled: false` to the cron.
+adminRoutes.post('/admin/dispatch-deal-digests', async (_request, response) => {
+  try {
+    const result = await dispatchDealDigestEmails();
+    response.json({
+      ok: true,
+      ...result,
+    });
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown deal-digest dispatch failure',
     });
   }
 });

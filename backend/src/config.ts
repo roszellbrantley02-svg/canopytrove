@@ -76,6 +76,27 @@ export type TransactionalEmailRuntimeConfig = {
   emailFromAddress: string | null;
   emailReplyToAddress: string | null;
   welcomeEmailsEnabled: boolean;
+  // Deal-digest daily email pipeline. dealDigestsEnabled is the master
+  // feature flag — leave false until smoke-tested on yourself, then flip
+  // to true on Cloud Run to start sending to real users via the cron.
+  dealDigestsEnabled: boolean;
+  // Mailing address printed in every digest email footer for CAN-SPAM
+  // compliance. Required if dealDigestsEnabled is true. Multi-line value
+  // with literal \n separators (e.g. "Canopy Trove\n5942 ... \nWolcott,
+  // NY 14590"). The footer renderer splits on \n.
+  emailFooterAddress: string | null;
+  // HMAC secret for signing one-click unsubscribe tokens. Required if
+  // dealDigestsEnabled is true. Rotate by appending the new secret as
+  // ` ${old}|${new}` and the verify path will accept either; pure single
+  // value supported here for simplicity.
+  emailUnsubscribeTokenSecret: string | null;
+  // Public URL base used to build the unsubscribe link in emails. Should
+  // point to the backend host (api.canopytrove.com) since that's where
+  // the unsubscribe routes live.
+  emailUnsubscribeBaseUrl: string | null;
+  // Public URL base for the web app — used in deal-digest emails to deep
+  // link to a storefront detail page (`{webAppBaseUrl}/storefronts/{id}`).
+  webAppBaseUrl: string | null;
 };
 
 export function getTransactionalEmailRuntimeConfig(): TransactionalEmailRuntimeConfig {
@@ -86,6 +107,13 @@ export function getTransactionalEmailRuntimeConfig(): TransactionalEmailRuntimeC
     emailFromAddress: readConfiguredValue(process.env.EMAIL_FROM_ADDRESS),
     emailReplyToAddress: readConfiguredValue(process.env.EMAIL_REPLY_TO_ADDRESS),
     welcomeEmailsEnabled: parseBoolean(process.env.WELCOME_EMAILS_ENABLED, true),
+    dealDigestsEnabled: parseBoolean(process.env.EMAIL_DEAL_DIGESTS_ENABLED, false),
+    emailFooterAddress: readConfiguredValue(process.env.EMAIL_FOOTER_ADDRESS),
+    emailUnsubscribeTokenSecret: readConfiguredValue(process.env.EMAIL_UNSUBSCRIBE_TOKEN_SECRET),
+    emailUnsubscribeBaseUrl:
+      readConfiguredValue(process.env.EMAIL_UNSUBSCRIBE_BASE_URL) ?? 'https://api.canopytrove.com',
+    webAppBaseUrl:
+      readConfiguredValue(process.env.WEB_APP_BASE_URL) ?? 'https://app.canopytrove.com',
   };
 }
 
@@ -106,6 +134,11 @@ export const serverConfig = {
   emailFromAddress: transactionalEmailRuntimeConfig.emailFromAddress,
   emailReplyToAddress: transactionalEmailRuntimeConfig.emailReplyToAddress,
   welcomeEmailsEnabled: transactionalEmailRuntimeConfig.welcomeEmailsEnabled,
+  dealDigestsEnabled: transactionalEmailRuntimeConfig.dealDigestsEnabled,
+  emailFooterAddress: transactionalEmailRuntimeConfig.emailFooterAddress,
+  emailUnsubscribeTokenSecret: transactionalEmailRuntimeConfig.emailUnsubscribeTokenSecret,
+  emailUnsubscribeBaseUrl: transactionalEmailRuntimeConfig.emailUnsubscribeBaseUrl,
+  webAppBaseUrl: transactionalEmailRuntimeConfig.webAppBaseUrl,
   // Twilio Verify — owner phone verification
   // TWILIO_AUTH_TOKEN should be loaded via Secret Manager in production.
   twilioAccountSid: readConfiguredValue(process.env.TWILIO_ACCOUNT_SID),

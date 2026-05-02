@@ -31,6 +31,12 @@ type MemberEmailSubscriptionRecord = {
   lastDeliveryEventType: string | null;
   lastDeliveryEventAt: string | null;
   lastDeliveryEventSummary: string | null;
+  // Per-channel opt-outs (added May 2 2026 with the deal-digest pipeline).
+  // Default false = the user receives the channel. One-click unsubscribe
+  // links flip the relevant flag to true. The global `subscribed` flag
+  // still wins — if subscribed=false, no channel sends regardless.
+  dealDigestOptOut?: boolean;
+  dealDigestOptOutAt?: string | null;
 };
 
 export type MemberEmailSubscriptionStatus = {
@@ -99,6 +105,8 @@ function normalizeRecord(record: MemberEmailSubscriptionRecord): MemberEmailSubs
     lastDeliveryEventType: normalizeDeliveryEventType(record.lastDeliveryEventType),
     lastDeliveryEventAt: normalizeIsoDate(record.lastDeliveryEventAt),
     lastDeliveryEventSummary: normalizeDeliveryEventSummary(record.lastDeliveryEventSummary),
+    dealDigestOptOut: Boolean(record.dealDigestOptOut),
+    dealDigestOptOutAt: normalizeIsoDate(record.dealDigestOptOutAt),
   };
 }
 
@@ -323,6 +331,121 @@ export async function recordMemberWelcomeEmailDeliveryEvent(input: {
       lastDeliveryEventSummary: normalizeDeliveryEventSummary(input.summary),
     }),
   );
+}
+
+/**
+ * Returns the eligibility profile for the daily deal-digest email.
+ *
+ * - eligible: true only when there is a stored email AND the global
+ *   `subscribed` flag is true AND the per-channel `dealDigestOptOut`
+ *   flag is false. This intentionally requires explicit global opt-in;
+ *   simply having an email on Firebase Auth is not enough.
+ * - email + displayName are echoed back so the orchestrator can render
+ *   the email without a second lookup.
+ *
+ * Returns `null` if the account has no record at all (never subscribed
+ * to anything) — orchestrator skips silently.
+ */
+export async function getDealDigestEligibility(accountId: string): Promise<{
+  accountId: string;
+  email: string;
+  displayName: string | null;
+  eligible: boolean;
+  reason: 'eligible' | 'no_email' | 'globally_unsubscribed' | 'deal_digest_opt_out';
+} | null> {
+  const collectionRef = getCollection();
+  if (collectionRef) {
+    const snapshot = await collectionRef.doc(accountId).get();
+    if (!snapshot.exists) return null;
+    const record = normalizeRecord(snapshot.data() as MemberEmailSubscriptionRecord);
+    return computeDealDigestEligibility(record);
+  }
+
+  const memoryRecord = memberEmailSubscriptionStore.get(accountId);
+  if (!memoryRecord) return null;
+  return computeDealDigestEligibility(normalizeRecord(memoryRecord));
+}
+
+function computeDealDigestEligibility(record: MemberEmailSubscriptionRecord) {
+  if (!record.email) {
+    return {
+      accountId: record.accountId,
+      email: '',
+      displayName: record.displayName,
+      eligible: false,
+      reason: 'no_email' as const,
+    };
+  }
+  if (!record.subscribed) {
+    return {
+      accountId: record.accountId,
+      email: record.email,
+      displayName: record.displayName,
+      eligible: false,
+      reason: 'globally_unsubscribed' as const,
+    };
+  }
+  if (record.dealDigestOptOut) {
+    return {
+      accountId: record.accountId,
+      email: record.email,
+      displayName: record.displayName,
+      eligible: false,
+      reason: 'deal_digest_opt_out' as const,
+    };
+  }
+  return {
+    accountId: record.accountId,
+    email: record.email,
+    displayName: record.displayName,
+    eligible: true,
+    reason: 'eligible' as const,
+  };
+}
+
+/**
+ * Flips the per-channel deal-digest opt-out for an account. Used by
+ * the one-click unsubscribe route (`POST /email/unsubscribe`).
+ *
+ * Returns:
+ * - { ok: true, alreadyOptedOut: false } if we just opted them out
+ * - { ok: true, alreadyOptedOut: true } if they were already out
+ * - { ok: false, reason: 'not_found' } if no subscription record exists
+ *   (rare — would mean the unsubscribe token references an account that
+ *   never subscribed; treat as no-op success from the user's POV)
+ */
+export async function optOutOfDealDigest(
+  accountId: string,
+): Promise<{ ok: true; alreadyOptedOut: boolean } | { ok: false; reason: 'not_found' }> {
+  const collectionRef = getCollection();
+  let record: MemberEmailSubscriptionRecord | null = null;
+
+  if (collectionRef) {
+    const snapshot = await collectionRef.doc(accountId).get();
+    if (!snapshot.exists) {
+      return { ok: false, reason: 'not_found' };
+    }
+    record = normalizeRecord(snapshot.data() as MemberEmailSubscriptionRecord);
+  } else {
+    const stored = memberEmailSubscriptionStore.get(accountId);
+    if (!stored) {
+      return { ok: false, reason: 'not_found' };
+    }
+    record = normalizeRecord(stored);
+  }
+
+  if (record.dealDigestOptOut) {
+    return { ok: true, alreadyOptedOut: true };
+  }
+
+  const now = getNowIso();
+  await saveRecord({
+    ...record,
+    updatedAt: now,
+    dealDigestOptOut: true,
+    dealDigestOptOutAt: now,
+  });
+  return { ok: true, alreadyOptedOut: false };
 }
 
 export async function getMemberEmailSubscriptionStatus(input: {
