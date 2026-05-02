@@ -101,13 +101,15 @@ export async function listPendingRequests(limit = 50): Promise<UsernameChangeReq
   const collectionRef = getCollection();
 
   if (collectionRef) {
-    const snapshot = await collectionRef
-      .where('status', '==', 'pending')
-      .orderBy('createdAt', 'asc')
-      .limit(limit)
-      .get();
-
-    return snapshot.docs.map((doc) => doc.data() as UsernameChangeRequest);
+    // Note: orderBy('createdAt') removed because it requires a composite
+    // Firestore index (status + createdAt) that's not configured. Sorting
+    // is done in JS below — fine for a queue this size (admin review +
+    // auto-approval sweep cap at a few hundred docs at most). If the
+    // queue ever gets large enough that in-memory sort becomes a problem,
+    // add the composite index in firestore.indexes.json.
+    const snapshot = await collectionRef.where('status', '==', 'pending').limit(limit).get();
+    const items = snapshot.docs.map((doc) => doc.data() as UsernameChangeRequest);
+    return items.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
   return Array.from(requestStore.values())
