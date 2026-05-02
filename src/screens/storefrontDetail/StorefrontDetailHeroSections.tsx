@@ -8,11 +8,6 @@ import { SectionCard } from '../../components/SectionCard';
 import { colors } from '../../theme/tokens';
 import type { StorefrontSummary } from '../../types/storefront';
 import type { StorefrontRatingDisplay } from '../../utils/storefrontRatings';
-import {
-  getHeatColor,
-  getHeatLabel,
-  routeStartsToHeatLevel,
-} from '../../components/storefrontRouteCard/StorefrontHeatGlow';
 import { styles } from './storefrontDetailStyles';
 
 type OperationalRow = {
@@ -60,11 +55,6 @@ export function DetailTopBar({
 }
 
 export function DetailHero({ storefront, ratingDisplay }: DetailHeroProps) {
-  const heatLevel = routeStartsToHeatLevel(storefront.routeStartsPerHour ?? 0);
-  const heatLabel = getHeatLabel(heatLevel);
-  const heatColor = getHeatColor(heatLevel);
-  const heatChipBorderStyle = heatLabel ? { borderColor: `${heatColor}33` } : undefined;
-  const heatTextColorStyle = heatLabel ? { color: heatColor } : undefined;
   const summaryItems = [
     {
       id: 'rating',
@@ -146,14 +136,6 @@ export function DetailHero({ storefront, ratingDisplay }: DetailHeroProps) {
             {storefront.distanceMiles.toFixed(1)} mi away
           </Text>
         </View>
-        {heatLabel ? (
-          <View style={[styles.metaChip, heatChipBorderStyle]}>
-            <AppUiIcon name="flame" size={12} color={heatColor} />
-            <Text numberOfLines={1} style={[styles.metaText, heatTextColorStyle]}>
-              {heatLabel}
-            </Text>
-          </View>
-        ) : null}
       </View>
 
       {ratingDisplay.helperLabel ? (

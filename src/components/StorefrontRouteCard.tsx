@@ -7,10 +7,6 @@ import {
   getStorefrontRouteCardState,
 } from './storefrontRouteCard/storefrontRouteCardState';
 import { StorefrontRouteCardBody } from './storefrontRouteCard/StorefrontRouteCardSections';
-import {
-  StorefrontHeatGlow,
-  routeStartsToHeatLevel,
-} from './storefrontRouteCard/StorefrontHeatGlow';
 import { StorefrontRouteCardSkiaOverlay } from './storefrontRouteCard/StorefrontRouteCardSkiaOverlay';
 import { styles } from './storefrontRouteCard/storefrontRouteCardStyles';
 import type { StorefrontCardVisualLane } from './storefrontRouteCard/storefrontRouteCardVisualState';
@@ -87,7 +83,6 @@ function StorefrontRouteCardComponent({
     isOperationalStatusPending,
     hasPublishedHours,
   });
-  const heatLevel = routeStartsToHeatLevel(storefront.routeStartsPerHour ?? 0);
   const promotionAvailabilityLabel = supportsStorefrontPromotionUi
     ? hasPromotion
       ? 'Live deal available.'
@@ -111,7 +106,6 @@ function StorefrontRouteCardComponent({
         pressed && styles.cardPressed,
       ]}
     >
-      <StorefrontHeatGlow heatLevel={heatLevel} />
       <StorefrontRouteCardBody
         storefront={storefront}
         compact={compact}
@@ -170,7 +164,6 @@ function areStorefrontCardsEqual(
     previous.storefront.ownerCardSummary === next.storefront.ownerCardSummary &&
     previous.storefront.premiumCardVariant === next.storefront.premiumCardVariant &&
     previous.storefront.thumbnailUrl === next.storefront.thumbnailUrl &&
-    previous.storefront.routeStartsPerHour === next.storefront.routeStartsPerHour &&
     (previous.storefront.ocmVerification?.licensed ?? null) ===
       (next.storefront.ocmVerification?.licensed ?? null) &&
     (previous.storefront.ocmVerification?.asOf ?? null) ===

@@ -15,27 +15,12 @@ import {
   formatStorefrontPromotionExpiry,
   getStorefrontPromotionBadges,
 } from '../../utils/storefrontPromotions';
-import {
-  getHeatColor,
-  getHeatLabel,
-  routeStartsToHeatLevel,
-  type HeatLevel,
-} from './StorefrontHeatGlow';
 import { styles } from './storefrontRouteCardStyles';
 import type { StorefrontCardVisualLane } from './storefrontRouteCardVisualState';
 import {
   getStorefrontCardHeroLabel,
   getStorefrontCardPreviewTone,
 } from './storefrontRouteCardVisualState';
-
-const heatChipTextStyleMap: Record<HeatLevel, typeof styles.heatChipText1 | null> = {
-  0: null,
-  1: styles.heatChipText1,
-  2: styles.heatChipText2,
-  3: styles.heatChipText3,
-  4: styles.heatChipText4,
-  5: styles.heatChipText5,
-};
 
 type StorefrontRouteCardBodyProps = {
   storefront: StorefrontSummary;
@@ -87,9 +72,6 @@ export function StorefrontRouteCardBody({
     : 0;
   const hasLiveDeals = activePromotionCount > 0;
   const ownerFeaturedBadges = (storefront.ownerFeaturedBadges ?? []).slice(0, 4);
-  const heatLevel = routeStartsToHeatLevel(storefront.routeStartsPerHour ?? 0);
-  const heatLabel = getHeatLabel(heatLevel);
-  const heatColor = getHeatColor(heatLevel);
   const ratingDisplay = getStorefrontRatingDisplay({
     publishedRating: storefront.rating,
     publishedReviewCount: storefront.reviewCount,
@@ -166,17 +148,6 @@ export function StorefrontRouteCardBody({
               style={styles.kickerMetricText}
             >{`${storefront.city}, ${storefront.state}`}</Text>
           </View>
-          {heatLabel ? (
-            <View style={styles.heatChip}>
-              <AppUiIcon name="flame" size={13} color={heatColor} />
-              <Text
-                numberOfLines={1}
-                style={[styles.kickerMetricText, heatChipTextStyleMap[heatLevel]]}
-              >
-                {heatLabel}
-              </Text>
-            </View>
-          ) : null}
         </View>
 
         <View style={styles.titleRow}>

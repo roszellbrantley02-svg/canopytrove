@@ -129,8 +129,6 @@ export type StorefrontSummary = {
   promotionPlacementScope?: OwnerPromotionPlacementScope | null;
   placeId?: string;
   thumbnailUrl?: string | null;
-  /** Route starts per hour — drives the heat glow visual on cards. */
-  routeStartsPerHour?: number | null;
   /**
    * Public OCM licensing signal sourced from data.ny.gov (refreshed hourly).
    * Drives the "Verified licensed" badge on cards and the detail screen.

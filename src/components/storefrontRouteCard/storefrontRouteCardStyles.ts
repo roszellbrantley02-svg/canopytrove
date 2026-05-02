@@ -379,14 +379,4 @@ export const styles = StyleSheet.create({
     color: colors.text,
     letterSpacing: 0.3,
   },
-  heatChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  heatChipText1: { color: '#FFB450' },
-  heatChipText2: { color: '#FFA032' },
-  heatChipText3: { color: '#FF7820' },
-  heatChipText4: { color: '#FF5014' },
-  heatChipText5: { color: '#FF320A' },
 });
