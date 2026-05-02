@@ -335,60 +335,13 @@ export function OwnerPortalSubscriptionBillingSummary({
   );
 }
 
-export function OwnerPortalSubscriptionPlanOptions({
-  monthlyPriceLabel,
-  annualPriceLabel,
-  disableButtons,
-  onOpenMonthly,
-  onOpenAnnual,
-  monthlyButtonLabel,
-  annualButtonLabel,
-}: {
-  monthlyPriceLabel: string;
-  annualPriceLabel: string;
-  disableButtons: boolean;
-  onOpenMonthly: () => void;
-  onOpenAnnual: () => void;
-  monthlyButtonLabel: string;
-  annualButtonLabel: string;
-}) {
-  return (
-    <View style={styles.planGrid}>
-      <View style={styles.planTile}>
-        <Text style={styles.sectionEyebrow}>Monthly</Text>
-        <Text style={styles.planPrice}>{monthlyPriceLabel}</Text>
-        <Text style={styles.planPriceCaption}>
-          Flexible monthly access for private storefront business tools.
-        </Text>
-        <PremiumFeatureList />
-        <Pressable
-          disabled={disableButtons}
-          onPress={onOpenMonthly}
-          style={[styles.primaryButton, disableButtons && styles.buttonDisabled]}
-        >
-          <Text style={styles.primaryButtonText}>{monthlyButtonLabel}</Text>
-        </Pressable>
-      </View>
-
-      <View style={[styles.planTile, styles.planTileFeatured]}>
-        <Text style={styles.sectionEyebrow}>Annual</Text>
-        <Text style={styles.planPrice}>{annualPriceLabel}</Text>
-        <Text style={styles.planPriceCaption}>
-          Best-value private business path for storefronts planning to stay active all year.
-        </Text>
-        <PremiumFeatureList />
-        <Text style={styles.valueCallout}>Best long-term storefront setup</Text>
-        <Pressable
-          disabled={disableButtons}
-          onPress={onOpenAnnual}
-          style={[styles.primaryButton, disableButtons && styles.buttonDisabled]}
-        >
-          <Text style={styles.primaryButtonText}>{annualButtonLabel}</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
+// OwnerPortalSubscriptionPlanOptions was a dead Monthly-vs-Annual side-by-
+// side preview component. Removed in the "kill annual" sweep — annual
+// billing is disabled platform-wide (see OwnerPortalSubscriptionScreen
+// ANNUAL_BILLING_DISABLED comment + docs/STRIPE_DASHBOARD_SETUP.md). The
+// in-app subscription screen renders OwnerPortalTierCards directly. If
+// annual is ever reinstated and a side-by-side preview becomes useful
+// again, restore from git history.
 
 function TierFeatureList({ features }: { features: string[] }) {
   return (
@@ -413,13 +366,17 @@ function TierLockedFeature({ label }: { label: string }) {
 }
 
 export function OwnerPortalTierCards({
-  billingCycle,
+  // billingCycle and onToggleBillingCycle are kept on the public type
+  // but are unused while annual billing is disabled platform-wide. The
+  // call site (OwnerPortalSubscriptionScreen) still passes them so that
+  // restoring annual is a one-flag flip — see ANNUAL_BILLING_DISABLED.
+  billingCycle: _billingCycle,
   currentTier,
   disableButtons,
   isSubmitting,
   billingTemporarilyPaused,
   onSelectTier,
-  onToggleBillingCycle,
+  onToggleBillingCycle: _onToggleBillingCycle,
   showBillingCycleToggle = true,
 }: {
   billingCycle: OwnerTierBillingCycle;
@@ -434,45 +391,17 @@ export function OwnerPortalTierCards({
   return (
     <View style={styles.sectionStack}>
       {showBillingCycleToggle ? (
+        // Annual toggle was removed in the "kill annual" sweep — the
+        // misconfigured Stripe annual prices made the toggle dangerous
+        // (would charge customers ~$2,490/mo for Pro instead of /yr).
+        // Keeping a single Monthly indicator chip for visual continuity
+        // while the toggle stays disabled. When annual is reinstated
+        // (see OwnerPortalSubscriptionScreen ANNUAL_BILLING_DISABLED
+        // comment), restore the Annual tab next to this one.
         <View style={styles.billingCycleRow}>
-          <Pressable
-            onPress={onToggleBillingCycle}
-            style={[
-              styles.billingCycleTab,
-              billingCycle === 'monthly'
-                ? styles.billingCycleTabActive
-                : styles.billingCycleTabInactive,
-            ]}
-          >
-            <Text
-              style={
-                billingCycle === 'monthly'
-                  ? styles.billingCycleTabTextActive
-                  : styles.billingCycleTabTextInactive
-              }
-            >
-              Monthly
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={onToggleBillingCycle}
-            style={[
-              styles.billingCycleTab,
-              billingCycle === 'annual'
-                ? styles.billingCycleTabActive
-                : styles.billingCycleTabInactive,
-            ]}
-          >
-            <Text
-              style={
-                billingCycle === 'annual'
-                  ? styles.billingCycleTabTextActive
-                  : styles.billingCycleTabTextInactive
-              }
-            >
-              Annual (save ~17%)
-            </Text>
-          </Pressable>
+          <View style={[styles.billingCycleTab, styles.billingCycleTabActive]}>
+            <Text style={styles.billingCycleTabTextActive}>Monthly</Text>
+          </View>
         </View>
       ) : null}
 
@@ -482,23 +411,17 @@ export function OwnerPortalTierCards({
           const isCurrentTier = currentTier === tierKey;
           const isFree = tierKey === 'free';
           const isFeatured = tierKey === 'pro';
-          const price = isFree
-            ? 'Free'
-            : billingCycle === 'annual'
-              ? `$${Math.round(tierDef.annualPrice / 12)}/mo`
-              : `$${tierDef.monthlyPrice}/mo`;
+          // billingCycle is forced to 'monthly' platform-wide while
+          // annual billing is disabled. Reading tierDef.monthlyPrice
+          // directly here — no annual branch — so the dead annual
+          // code path can't accidentally render.
+          const price = isFree ? 'Free' : `$${tierDef.monthlyPrice}/mo`;
           // When a tier is on launch promo (Pro right now), show the
           // regular "list" price as a strikethrough above the current
           // discounted price so the deal feels real.
           const regularPrice =
-            !isFree && tierDef.isPromoPricing
-              ? billingCycle === 'annual'
-                ? tierDef.regularAnnualPrice
-                  ? `$${Math.round(tierDef.regularAnnualPrice / 12)}/mo`
-                  : null
-                : tierDef.regularMonthlyPrice
-                  ? `$${tierDef.regularMonthlyPrice}/mo`
-                  : null
+            !isFree && tierDef.isPromoPricing && tierDef.regularMonthlyPrice
+              ? `$${tierDef.regularMonthlyPrice}/mo`
               : null;
           const promoLockMonths = tierDef.promoLockMonths;
           const promoEndsAt = tierDef.promoEndsAt;
@@ -506,11 +429,7 @@ export function OwnerPortalTierCards({
             !isFree && tierDef.isPromoPricing && promoLockMonths
               ? `Lock in this rate for ${promoLockMonths} months — promo ends ${formatPromoEndDate(promoEndsAt)}`
               : null;
-          const billedNote = isFree
-            ? 'No credit card required'
-            : billingCycle === 'annual'
-              ? `Billed $${tierDef.annualPrice}/yr`
-              : 'Billed monthly';
+          const billedNote = isFree ? 'No credit card required' : 'Billed monthly';
 
           const buttonLabel = isFree
             ? isCurrentTier
