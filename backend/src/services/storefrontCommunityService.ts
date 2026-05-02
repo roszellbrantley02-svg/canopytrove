@@ -21,6 +21,10 @@ type StoredAppReviewRecord = {
   id: string;
   storefrontId: string;
   profileId: string;
+  // Firebase Auth uid of the submitter, captured server-side from the
+  // verified ID token. Optional because reviews predating May 2 2026
+  // don't carry it. New submissions always do.
+  authorAccountId?: string | null;
   authorName: string;
   rating: number;
   text: string;
@@ -335,6 +339,10 @@ function normalizeHelpfulVoterIds(value: unknown) {
 function normalizeStoredReviewRecord(review: StoredAppReviewRecord): StoredAppReviewRecord {
   return {
     ...review,
+    // authorAccountId may be missing on legacy records (pre-May 2 2026).
+    // Coerce undefined → null so consumers don't have to special-case
+    // the gap; they can do `record.authorAccountId ?? null` and trust it.
+    authorAccountId: review.authorAccountId?.trim() || null,
     helpfulCount:
       typeof review.helpfulCount === 'number' && Number.isFinite(review.helpfulCount)
         ? Math.max(0, Math.floor(review.helpfulCount))
@@ -607,6 +615,7 @@ export async function submitStorefrontAppReview(
     id: createId('review'),
     storefrontId: input.storefrontId,
     profileId: input.profileId,
+    authorAccountId: input.authorAccountId?.trim() || null,
     authorName: getSafePublicDisplayName(input.authorName, 'Canopy Trove member'),
     rating: normalizeRating(input.rating),
     text: input.text.trim(),
@@ -685,6 +694,12 @@ export async function updateStorefrontAppReview(
 
   const nextReview: StoredAppReviewRecord = {
     ...currentReview,
+    // Backfill authorAccountId on update if the original record was
+    // created before the May 2 2026 fix and is missing it. The route
+    // handler always passes a real accountId, so this lets edits of
+    // legacy reviews reattach the account-link without a separate
+    // backfill script.
+    authorAccountId: input.authorAccountId?.trim() || currentReview.authorAccountId || null,
     authorName: getSafePublicDisplayName(
       input.authorName,
       getSafePublicDisplayName(currentReview.authorName, 'Canopy Trove member'),
