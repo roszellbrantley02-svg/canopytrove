@@ -6,6 +6,7 @@ import {
 import { getBackendFirebaseDb } from '../firebase';
 import { StorefrontDetailApiDocument, StorefrontSummaryApiDocument } from '../types';
 import { getStorefrontAppReviewAggregates } from '../services/storefrontCommunityService';
+import { ROUTE_STATE_COLLECTION } from '../constants/collections';
 import {
   applyOriginMetrics,
   createNearbySummaryCacheKey,
@@ -24,6 +25,50 @@ const DETAILS_COLLECTION = 'storefront_details';
 const SCOPED_SUMMARY_TTL_MS = 20_000;
 const MATERIALIZED_SUMMARY_TTL_MS = 15 * 60_000;
 const NEARBY_SUMMARY_TTL_MS = 90_000;
+
+// Live follower count is computed by querying route_state for profiles
+// whose savedStorefrontIds array contains the storefront. The stored
+// `favoriteFollowerCount` field on storefront_summaries is never
+// incremented anywhere in the codebase, so reading it directly always
+// returned null/0 even when real saves existed. Cache the live count
+// for 5 min so storefront detail requests don't hammer route_state.
+const FOLLOWER_COUNT_TTL_MS = 5 * 60_000;
+const followerCountCache = new Map<string, { expiresAt: number; count: number }>();
+const followerCountInFlight = new Map<string, Promise<number>>();
+
+async function fetchLiveFollowerCount(storefrontId: string): Promise<number> {
+  const db = getBackendFirebaseDb();
+  if (!db) return 0;
+  const snapshot = await db
+    .collection(ROUTE_STATE_COLLECTION)
+    .where('savedStorefrontIds', 'array-contains', storefrontId)
+    .get();
+  return snapshot.size;
+}
+
+async function getLiveFollowerCount(storefrontId: string): Promise<number> {
+  const now = Date.now();
+  const cached = followerCountCache.get(storefrontId);
+  if (cached && cached.expiresAt > now) {
+    return cached.count;
+  }
+  const inFlight = followerCountInFlight.get(storefrontId);
+  if (inFlight) return inFlight;
+  const promise = (async () => {
+    try {
+      const count = await fetchLiveFollowerCount(storefrontId);
+      followerCountCache.set(storefrontId, {
+        expiresAt: Date.now() + FOLLOWER_COUNT_TTL_MS,
+        count,
+      });
+      return count;
+    } finally {
+      followerCountInFlight.delete(storefrontId);
+    }
+  })();
+  followerCountInFlight.set(storefrontId, promise);
+  return promise;
+}
 const scopedSummaryCache = new Map<
   string,
   { expiresAt: number; items: StorefrontSummaryApiDocument[] }
@@ -46,6 +91,8 @@ type StorefrontVisibilityScopedDocument = {
 };
 
 export function clearFirestoreStorefrontSourceCache() {
+  followerCountCache.clear();
+  followerCountInFlight.clear();
   scopedSummaryCache.clear();
   scopedSummaryInFlight.clear();
   nearbySummaryCache.clear();
@@ -518,7 +565,23 @@ export const firestoreStorefrontSource: StorefrontBackendSource = {
       return null;
     }
 
-    return toDetailDocument(snapshot.id, data);
+    // Live-compute favoriteFollowerCount via route_state (5-min cache).
+    // The stored `favoriteFollowerCount` field on storefront_details is
+    // never written, so without this the public storefront detail page
+    // shows null forever for every shop. Fail-soft: if the count query
+    // throws, fall back to the stored value (still null in practice).
+    let liveFollowerCount: number | null = null;
+    try {
+      liveFollowerCount = await getLiveFollowerCount(snapshot.id);
+    } catch {
+      liveFollowerCount = null;
+    }
+    const enriched: StorefrontDetailDocument = {
+      ...data,
+      favoriteFollowerCount: liveFollowerCount ?? data.favoriteFollowerCount ?? null,
+    };
+
+    return toDetailDocument(snapshot.id, enriched);
   },
 };
 
