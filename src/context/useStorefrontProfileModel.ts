@@ -328,6 +328,26 @@ export function useStorefrontProfileModel({ cachedProfileId }: UseStorefrontProf
       authSession.status === 'authenticated' &&
       (appProfile.kind !== 'authenticated' || appProfile.accountId !== authSession.uid)
     ) {
+      // OPTIMISTIC FLIP — synchronously update the local profile to
+      // 'authenticated' BEFORE kicking off the async canonical-profile
+      // fetch. Without this, if repairProfileForCurrentSession hits a
+      // transient network error, the local profile.kind stays
+      // 'anonymous' and surfaces like ProfileHeroCard render the user
+      // as "Guest access" even though authSession.status is
+      // 'authenticated'. The canonical fetch below will overwrite this
+      // with richer server-side data when it succeeds; this guarantees
+      // UI consistency in the meantime.
+      const optimisticProfile: AppProfile = {
+        ...appProfile,
+        kind: 'authenticated',
+        accountId: authSession.uid,
+        displayName: getPreferredDisplayName(authSession, appProfile.displayName),
+        updatedAt: new Date().toISOString(),
+      };
+      if (!areProfilesEquivalent(appProfile, optimisticProfile)) {
+        setAppProfile(optimisticProfile);
+        void saveAppProfile(optimisticProfile);
+      }
       void repairProfileForCurrentSession();
       return;
     }

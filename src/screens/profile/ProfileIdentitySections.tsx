@@ -52,6 +52,22 @@ export function ProfileHeroCard({
     `${visitedCount} ${visitedCount === 1 ? 'storefront' : 'storefronts'} visited`,
     `${joinedDays} ${joinedDays === 1 ? 'day' : 'days'} on ${brand.productName}`,
   ].filter(Boolean) as string[];
+
+  // Defense-in-depth signed-in detection.
+  //
+  // Background: there's a known race condition where appProfile.kind can stay
+  // 'anonymous' for a few hundred ms (or longer if the canonical-profile
+  // network sync hits a transient error) AFTER Firebase Auth has already
+  // signaled authenticated. Other surfaces in the app correctly key off
+  // authSessionStatus; this hero card was the outlier — it keyed only off
+  // appProfile.kind, so a signed-in user could see the "Guest access" badge.
+  //
+  // Treat the user as authenticated if EITHER signal says so. The profile
+  // model's optimistic flip + canonical reconcile usually catches up within
+  // milliseconds, but this guard ensures the user never sees the wrong label
+  // even when the profile sync is in-flight or failed silently.
+  const isAuthenticated =
+    authSessionStatus === 'authenticated' || appProfile?.kind === 'authenticated';
   const heroHighlights = [
     { label: 'Standing', value: rank > 0 ? `#${rank}` : 'New' },
     { label: 'Visited', value: String(visitedCount) },
@@ -74,7 +90,7 @@ export function ProfileHeroCard({
           <View style={styles.heroTitleRow}>
             <View style={styles.heroKickerRow}>
               <Text style={styles.heroKicker}>
-                {appProfile?.kind === 'authenticated' ? 'Member profile' : 'Guest access'}
+                {isAuthenticated ? 'Member profile' : 'Guest access'}
               </Text>
               <View style={styles.heroMiniChip}>
                 <Text style={styles.heroMiniChipText}>{levelTitle}</Text>
@@ -90,16 +106,12 @@ export function ProfileHeroCard({
             </Text>
             <View style={styles.heroBadge}>
               <AppUiIcon
-                name={
-                  appProfile?.kind === 'authenticated'
-                    ? 'shield-checkmark'
-                    : 'person-circle-outline'
-                }
+                name={isAuthenticated ? 'shield-checkmark' : 'person-circle-outline'}
                 size={12}
                 color={colors.primary}
               />
               <Text style={styles.heroBadgeText}>
-                {appProfile?.kind === 'authenticated' ? 'Verified member' : 'Guest access'}
+                {isAuthenticated ? 'Verified member' : 'Guest access'}
               </Text>
             </View>
           </View>
