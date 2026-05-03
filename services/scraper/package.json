@@ -1,0 +1,18 @@
+{
+  "name": "canopytrove-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Headless-browser scraper Cloud Run service for the AI Shop Bootstrap flow. See README.md.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "playwright": "^1.50.0"
+  }
+}

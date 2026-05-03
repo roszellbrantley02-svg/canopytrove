@@ -9,6 +9,10 @@ const ownerPortalLinkingScreens = supportsOwnerWorkspaceUi
       OwnerPortalSignIn: 'owner-portal/sign-in',
       OwnerPortalSignUp: 'owner-portal/sign-up',
       OwnerPortalForgotPassword: 'owner-portal/forgot-password',
+      // AI Shop Bootstrap — owner pastes their existing dispensary
+      // website URL and the AI fills out their Canopy Trove listing
+      // automatically. See docs/AI_SHOP_BOOTSTRAP.md.
+      OwnerPortalShopBootstrap: 'owner-portal/shop-bootstrap',
 
       // Owner Portal — workspace screens
       OwnerPortalHome: 'owner-portal/home',
