@@ -330,6 +330,51 @@ export const styles = StyleSheet.create({
   operationalStatusTextUnavailable: {
     color: colors.textSoft,
   },
+  // Pressed-state subtle dim for tappable rows. iOS gets this via the
+  // pressed prop on Pressable; Android also gets the native ripple.
+  operationalRowPressed: {
+    opacity: 0.78,
+  },
+  // Trailing cluster on each row — holds the status pill + (when expandable)
+  // the chevron icon. Stacked horizontally so the chevron sits to the right
+  // of the pill without breaking the row's flex layout.
+  operationalRowTrailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  // Hours-row expanded block: rendered below the row when the user taps to
+  // expand. Each line is a single day → hours pair.
+  operationalExpandedBlock: {
+    marginTop: spacing.sm,
+    marginLeft: spacing.xl,
+    paddingLeft: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingRight: spacing.md,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.borderStrong,
+    gap: spacing.xs,
+  },
+  operationalExpandedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  operationalExpandedDay: {
+    ...textStyles.caption,
+    color: colors.textSoft,
+    letterSpacing: 0.12,
+    minWidth: 96,
+  },
+  operationalExpandedValue: {
+    ...textStyles.bodyStrong,
+    color: colors.text,
+    fontSize: 13,
+    flex: 1,
+    textAlign: 'right',
+  },
   infoNoticeCard: {
     borderRadius: radii.lg,
     borderWidth: 1,

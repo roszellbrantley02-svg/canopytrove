@@ -98,6 +98,53 @@ export function useStorefrontDetailScreenModel(
     };
   }, []);
 
+  // Hours expand/collapse state for the operational rows. Local-to-this-screen
+  // since it doesn't survive nav-away. Default = collapsed (today's summary
+  // only); tap to expand into the full week beneath the row.
+  const [hoursExpanded, setHoursExpanded] = React.useState(false);
+
+  // Compose the full operational rows with action handlers + the expandable
+  // hours behavior. Pure data rows come from derivedState.operationalRows;
+  // we layer the action handlers on top here because actions live at the
+  // model layer (one level down would create a circular dep).
+  const operationalRowsWithActions = React.useMemo(() => {
+    return derivedState.operationalRows.map((row) => {
+      if (row.id === 'phone' && derivedState.hasPhone) {
+        return { ...row, onPress: actions.callStore, accessibilityHint: 'Starts a phone call.' };
+      }
+      if (row.id === 'website' && derivedState.hasWebsite) {
+        return { ...row, onPress: actions.openWebsite, accessibilityHint: 'Opens the website.' };
+      }
+      if (row.id === 'menu' && derivedState.hasMenu) {
+        return { ...row, onPress: actions.openMenu, accessibilityHint: 'Opens the menu.' };
+      }
+      if (row.id === 'hours' && derivedState.hasHours) {
+        return {
+          ...row,
+          onPress: () => setHoursExpanded((current) => !current),
+          expandable: true,
+          expanded: hoursExpanded,
+          expandedLines: derivedState.detailData.hours,
+          accessibilityHint: hoursExpanded
+            ? 'Collapses the full weekly hours.'
+            : 'Expands the full weekly hours.',
+        };
+      }
+      return row;
+    });
+  }, [
+    actions.callStore,
+    actions.openMenu,
+    actions.openWebsite,
+    derivedState.detailData.hours,
+    derivedState.hasHours,
+    derivedState.hasMenu,
+    derivedState.hasPhone,
+    derivedState.hasWebsite,
+    derivedState.operationalRows,
+    hoursExpanded,
+  ]);
+
   return {
     detailData: {
       ...derivedState.detailData,
@@ -120,9 +167,10 @@ export function useStorefrontDetailScreenModel(
     isSaved,
     navigation,
     operationalCardBody: derivedState.operationalCardBody,
-    operationalRows: derivedState.operationalRows,
+    operationalRows: operationalRowsWithActions,
     pendingHelpfulReviewId: actions.pendingHelpfulReviewId,
     pendingReviewReportId: actions.pendingReviewReportId,
+    markedHelpfulReviewIds: actions.markedHelpfulReviewIds,
     previewStatusLabel: derivedState.previewStatusLabel,
     previewStatusTone: derivedState.previewStatusTone,
     previewTone: derivedState.previewTone,

@@ -15,6 +15,7 @@ export function DetailReviewsSection({
   pendingHelpfulReviewId,
   pendingReviewReportId,
   reviewModerationStatusText,
+  markedHelpfulReviewIds,
   onShowHiddenReviews,
   onMarkHelpful,
   onBlockAuthor,
@@ -25,6 +26,13 @@ export function DetailReviewsSection({
   pendingHelpfulReviewId: string | null;
   pendingReviewReportId: string | null;
   reviewModerationStatusText: string | null;
+  /**
+   * Set of review IDs the current user has marked helpful in this session.
+   * Drives the optimistic "Helpful ✓" button state + count bump so the user
+   * sees instant feedback without waiting for the API round-trip + cache
+   * invalidation. Cache eventually catches up via primeStorefrontDetails.
+   */
+  markedHelpfulReviewIds: Set<string>;
   onShowHiddenReviews: () => void;
   onMarkHelpful: (reviewId: string, isOwnReview?: boolean) => void;
   onBlockAuthor: (reviewAuthorProfileId: string | null) => void;
@@ -179,38 +187,74 @@ export function DetailReviewsSection({
               <View style={styles.reviewActionRow}>
                 <View style={styles.reviewActionMeta}>
                   <AppUiIcon name="thumbs-up-outline" size={12} color={colors.cyan} />
-                  <Text style={styles.reviewActionMetaText}>{review.helpfulCount} helpful</Text>
+                  <Text style={styles.reviewActionMetaText}>
+                    {/*
+                     * Optimistic count: bump by 1 if the user marked it
+                     * helpful in this session AND the server hasn't yet
+                     * reflected the increment in helpfulCount. Math.max
+                     * handles the in-between window where the cache has
+                     * already updated (count already includes the +1) and
+                     * we don't want to double-count.
+                     */}
+                    {Math.max(
+                      review.helpfulCount,
+                      markedHelpfulReviewIds.has(review.id)
+                        ? review.helpfulCount + 1
+                        : review.helpfulCount,
+                    )}{' '}
+                    helpful
+                  </Text>
                 </View>
                 <View style={styles.reviewActionButtons}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      review.isOwnReview
-                        ? 'Your own review cannot be marked helpful'
-                        : `Mark review by ${reviewAuthorName} as helpful`
-                    }
-                    accessibilityHint="Adds your helpful vote to this review."
-                    disabled={pendingHelpfulReviewId === review.id || review.isOwnReview}
-                    onPress={() => {
-                      onMarkHelpful(review.id, review.isOwnReview);
-                    }}
-                    style={[
-                      styles.reviewHelpfulButton,
-                      (pendingHelpfulReviewId === review.id || review.isOwnReview) &&
-                        styles.reviewHelpfulButtonDisabled,
-                    ]}
-                  >
-                    {pendingHelpfulReviewId === review.id ? (
-                      <ActivityIndicator size="small" color={colors.background} />
-                    ) : (
-                      <>
-                        <AppUiIcon name="thumbs-up-outline" size={14} color={colors.background} />
-                        <Text style={styles.reviewHelpfulButtonText}>
-                          {review.isOwnReview ? 'Your review' : 'Mark helpful'}
-                        </Text>
-                      </>
-                    )}
-                  </Pressable>
+                  {(() => {
+                    const hasMarked = markedHelpfulReviewIds.has(review.id);
+                    const isPending = pendingHelpfulReviewId === review.id;
+                    const isDisabled = isPending || review.isOwnReview || hasMarked;
+                    const buttonLabel = review.isOwnReview
+                      ? 'Your review'
+                      : hasMarked
+                        ? 'Helpful ✓'
+                        : 'Mark helpful';
+                    return (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          review.isOwnReview
+                            ? 'Your own review cannot be marked helpful'
+                            : hasMarked
+                              ? `You marked review by ${reviewAuthorName} as helpful`
+                              : `Mark review by ${reviewAuthorName} as helpful`
+                        }
+                        accessibilityHint={
+                          hasMarked
+                            ? 'You have already marked this review as helpful.'
+                            : 'Adds your helpful vote to this review.'
+                        }
+                        accessibilityState={{ disabled: isDisabled, selected: hasMarked }}
+                        disabled={isDisabled}
+                        onPress={() => {
+                          onMarkHelpful(review.id, review.isOwnReview);
+                        }}
+                        style={[
+                          styles.reviewHelpfulButton,
+                          isDisabled && styles.reviewHelpfulButtonDisabled,
+                        ]}
+                      >
+                        {isPending ? (
+                          <ActivityIndicator size="small" color={colors.background} />
+                        ) : (
+                          <>
+                            <AppUiIcon
+                              name="thumbs-up-outline"
+                              size={14}
+                              color={colors.background}
+                            />
+                            <Text style={styles.reviewHelpfulButtonText}>{buttonLabel}</Text>
+                          </>
+                        )}
+                      </Pressable>
+                    );
+                  })()}
                   {review.authorProfileId && !review.isOwnReview ? (
                     <Pressable
                       accessibilityRole="button"

@@ -22,7 +22,6 @@ import { styles } from './storefrontDetail/storefrontDetailStyles';
 import {
   DetailComplianceWarningSection,
   DetailHero,
-  DetailHoursSection,
   DetailLockedLiveDealsSection,
   DetailLockedPhotosSection,
   DetailLiveDealsSection,
@@ -180,15 +179,13 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
           </MotionInView>
 
           <MotionInView delay={180}>
-            <DetailPrimaryActions
-              onGoNow={model.goNow}
-              hasWebsite={model.hasWebsite}
-              hasMenu={model.hasMenu}
-              hasPhone={model.hasPhone}
-              onOpenWebsite={model.openWebsite}
-              onOpenMenu={model.openMenu}
-              onCall={model.callStore}
-            />
+            {/*
+             * Phone / Website / Menu actions used to live here as separate
+             * buttons. They moved into the operational rows above (each row
+             * is now a tap target). Directions stays here because it has no
+             * equivalent display row.
+             */}
+            <DetailPrimaryActions onGoNow={model.goNow} />
           </MotionInView>
 
           <MotionInView delay={220}>
@@ -233,11 +230,13 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
             </MotionInView>
           ) : null}
 
-          {model.hasHours ? (
-            <MotionInView delay={410}>
-              <DetailHoursSection hours={model.detailData.hours} />
-            </MotionInView>
-          ) : null}
+          {/*
+           * Standalone DetailHoursSection removed — the full week is now
+           * reachable by tapping the Hours row in DetailOperationalSection
+           * above (it expands inline). Keeping the component file in place
+           * so other consumers (admin views, future surfaces) can still
+           * import it if needed.
+           */}
 
           {model.detailData.hasOwnerClaim ? (
             <MotionInView delay={440}>
@@ -253,6 +252,7 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
                 pendingHelpfulReviewId={model.pendingHelpfulReviewId}
                 pendingReviewReportId={model.pendingReviewReportId}
                 reviewModerationStatusText={model.reviewModerationStatusText}
+                markedHelpfulReviewIds={model.markedHelpfulReviewIds}
                 onShowHiddenReviews={model.showHiddenReviews}
                 onMarkHelpful={model.markReviewHelpful}
                 onBlockAuthor={model.blockReviewAuthor}

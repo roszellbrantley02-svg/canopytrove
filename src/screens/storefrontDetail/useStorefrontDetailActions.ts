@@ -91,6 +91,14 @@ export function useStorefrontDetailActions({
 }: UseStorefrontDetailActionsArgs) {
   const { trackRouteStartedReward } = useStorefrontRewardsController();
   const [pendingHelpfulReviewId, setPendingHelpfulReviewId] = React.useState<string | null>(null);
+  // Local set of review IDs the user has marked helpful in this session.
+  // Drives the optimistic "Helpful ✓" button state so the user sees instant
+  // feedback. We don't persist across reloads — on reload, the server's
+  // helpfulCount + helpfulVoterIds reflect the truth and the button starts
+  // fresh (the backend's "already voted" guard prevents a second increment).
+  const [markedHelpfulReviewIds, setMarkedHelpfulReviewIds] = React.useState<Set<string>>(
+    () => new Set<string>(),
+  );
   const [pendingReviewReportId, setPendingReviewReportId] = React.useState<string | null>(null);
   const safeOutboundLinks = React.useMemo(
     () =>
@@ -270,12 +278,27 @@ export function useStorefrontDetailActions({
       if (isOwnReview) {
         return;
       }
+      // Optimistic short-circuit: if we already marked this review helpful in
+      // this session, ignore the second tap. The button is also disabled in
+      // the UI for this case, this is just defense in depth.
+      if (markedHelpfulReviewIds.has(reviewId)) {
+        return;
+      }
       if (authSession.status !== 'authenticated') {
         promptCommunitySignIn('Mark this review as helpful');
         return;
       }
 
+      // Optimistic UI update — flip the button to "Helpful ✓" + bump the
+      // count immediately. The user sees instant feedback while the API
+      // call rides in the background. If the call fails, we roll back.
+      setMarkedHelpfulReviewIds((current) => {
+        const next = new Set(current);
+        next.add(reviewId);
+        return next;
+      });
       setPendingHelpfulReviewId(reviewId);
+
       try {
         await submitStorefrontReviewHelpful({
           storefrontId: storefront.id,
@@ -283,11 +306,31 @@ export function useStorefrontDetailActions({
           profileId,
           isOwnReview,
         });
+      } catch (err) {
+        // Rollback the optimistic flip so the button returns to "Mark
+        // helpful" and the user can retry. The pending state cleanup is
+        // handled in the `finally` below.
+        setMarkedHelpfulReviewIds((current) => {
+          if (!current.has(reviewId)) return current;
+          const next = new Set(current);
+          next.delete(reviewId);
+          return next;
+        });
+        // Re-throw so callers / global error reporters see it. The button
+        // will already show its non-pending state via finally.
+        throw err;
       } finally {
         setPendingHelpfulReviewId((current) => (current === reviewId ? null : current));
       }
     },
-    [authSession.status, pendingHelpfulReviewId, profileId, promptCommunitySignIn, storefront.id],
+    [
+      authSession.status,
+      markedHelpfulReviewIds,
+      pendingHelpfulReviewId,
+      profileId,
+      promptCommunitySignIn,
+      storefront.id,
+    ],
   );
 
   const submitReviewReport = React.useCallback(
@@ -390,6 +433,7 @@ export function useStorefrontDetailActions({
   return {
     pendingHelpfulReviewId,
     pendingReviewReportId,
+    markedHelpfulReviewIds,
     callStore: () => {
       void callStore();
     },

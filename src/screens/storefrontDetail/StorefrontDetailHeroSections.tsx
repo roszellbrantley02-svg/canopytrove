@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { LocationPinIcon } from '../../icons/AppIcons';
 import type { AppUiIconName } from '../../icons/AppUiIcon';
 import { AppUiIcon } from '../../icons/AppUiIcon';
@@ -21,6 +21,27 @@ type OperationalRow = {
   label: string;
   value: string;
   status: 'available' | 'checking' | 'unavailable';
+  /**
+   * When set, the entire row becomes tappable. Used to make Phone /
+   * Website / Menu rows perform their action directly (call, open URL,
+   * open menu) so the redundant button row below is no longer needed.
+   * For Hours, used to toggle expanded state.
+   */
+  onPress?: () => void;
+  /**
+   * When true, the row renders a chevron and (when `expanded` is true)
+   * unfolds `expandedLines` directly below the row. Used by the Hours
+   * row so the full week is reachable from a single tap.
+   */
+  expandable?: boolean;
+  expanded?: boolean;
+  expandedLines?: string[];
+  /**
+   * Accessibility label override — when the row's `value` is a phone
+   * number or URL, screen readers benefit from something more
+   * descriptive than the value alone.
+   */
+  accessibilityHint?: string;
 };
 
 type DetailHeroProps = {
@@ -189,97 +210,166 @@ export function DetailOperationalSection({ body, rows }: { body: string; rows: O
     <SectionCard title="Before you go" body={body}>
       <View style={styles.operationalList}>
         {rows.map((row) => (
-          <View key={row.id} style={styles.operationalRow}>
-            <View style={styles.operationalRowMain}>
-              <View
-                style={[
-                  styles.operationalIconWrap,
-                  row.status === 'available' && styles.operationalIconWrapActive,
-                  row.status === 'checking' && styles.operationalIconWrapChecking,
-                ]}
-              >
-                <AppUiIcon
-                  name={row.icon}
-                  size={15}
-                  color={
-                    row.status === 'available'
-                      ? colors.primary
-                      : row.status === 'checking'
-                        ? colors.warning
-                        : colors.textSoft
-                  }
-                />
-              </View>
-              <View style={styles.operationalCopy}>
-                <Text numberOfLines={1} style={styles.operationalLabel}>
-                  {row.label}
-                </Text>
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.operationalValue,
-                    row.status !== 'available' && styles.operationalValueMuted,
-                  ]}
-                >
-                  {row.value}
-                </Text>
-              </View>
-            </View>
-            <View
-              style={[
-                styles.operationalStatusPill,
-                row.status === 'available'
-                  ? styles.operationalStatusAvailable
-                  : row.status === 'checking'
-                    ? styles.operationalStatusChecking
-                    : styles.operationalStatusUnavailable,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.operationalStatusText,
-                  row.status === 'available'
-                    ? styles.operationalStatusTextAvailable
-                    : row.status === 'checking'
-                      ? styles.operationalStatusTextChecking
-                      : styles.operationalStatusTextUnavailable,
-                ]}
-              >
-                {row.status === 'available'
-                  ? 'Available'
-                  : row.status === 'checking'
-                    ? 'Checking'
-                    : 'Not listed'}
-              </Text>
-            </View>
-          </View>
+          <OperationalRowItem key={row.id} row={row} />
         ))}
       </View>
     </SectionCard>
   );
 }
 
-export function DetailPrimaryActions({
-  onGoNow,
-  hasWebsite,
-  hasMenu,
-  hasPhone,
-  onOpenWebsite,
-  onOpenMenu,
-  onCall,
-}: {
-  onGoNow: () => void;
-  hasWebsite: boolean;
-  hasMenu: boolean;
-  hasPhone: boolean;
-  onOpenWebsite: () => void;
-  onOpenMenu: () => void;
-  onCall: () => void;
-}) {
-  if (!hasWebsite && !hasPhone && !hasMenu) {
-    return null;
-  }
+/**
+ * Single row in the "Before you go" section. When `row.onPress` is set the
+ * whole row becomes a Pressable target; when `row.expandable` is set a
+ * chevron is rendered and the expanded lines unfold below the row.
+ *
+ * Three visual states for the leading status pill:
+ *   - available  (green)  — has data + actionable
+ *   - checking   (warm)   — data still loading
+ *   - unavailable (gray)  — data confirmed missing
+ *
+ * For tappable rows, the pill text changes to a verb ("Tap to call",
+ * "Tap to open", "Show hours") so the user understands the row is
+ * interactive even before reading the value.
+ */
+function OperationalRowItem({ row }: { row: OperationalRow }) {
+  const isPressable = Boolean(row.onPress);
+  const showExpanded = Boolean(row.expandable && row.expanded);
+  const pillLabel = getOperationalPillLabel(row);
 
+  const inner = (
+    <View style={styles.operationalRow}>
+      <View style={styles.operationalRowMain}>
+        <View
+          style={[
+            styles.operationalIconWrap,
+            row.status === 'available' && styles.operationalIconWrapActive,
+            row.status === 'checking' && styles.operationalIconWrapChecking,
+          ]}
+        >
+          <AppUiIcon
+            name={row.icon}
+            size={15}
+            color={
+              row.status === 'available'
+                ? colors.primary
+                : row.status === 'checking'
+                  ? colors.warning
+                  : colors.textSoft
+            }
+          />
+        </View>
+        <View style={styles.operationalCopy}>
+          <Text numberOfLines={1} style={styles.operationalLabel}>
+            {row.label}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.operationalValue,
+              row.status !== 'available' && styles.operationalValueMuted,
+            ]}
+          >
+            {row.value}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.operationalRowTrailing}>
+        <View
+          style={[
+            styles.operationalStatusPill,
+            row.status === 'available'
+              ? styles.operationalStatusAvailable
+              : row.status === 'checking'
+                ? styles.operationalStatusChecking
+                : styles.operationalStatusUnavailable,
+          ]}
+        >
+          <Text
+            style={[
+              styles.operationalStatusText,
+              row.status === 'available'
+                ? styles.operationalStatusTextAvailable
+                : row.status === 'checking'
+                  ? styles.operationalStatusTextChecking
+                  : styles.operationalStatusTextUnavailable,
+            ]}
+          >
+            {pillLabel}
+          </Text>
+        </View>
+        {row.expandable ? (
+          <AppUiIcon
+            name={showExpanded ? 'chevron-down' : 'chevron-forward'}
+            size={14}
+            color={colors.textSoft}
+          />
+        ) : null}
+      </View>
+    </View>
+  );
+
+  return (
+    <View>
+      {isPressable ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${row.label}: ${row.value}`}
+          accessibilityHint={row.accessibilityHint}
+          accessibilityState={row.expandable ? { expanded: showExpanded } : undefined}
+          onPress={row.onPress}
+          android_ripple={{ color: 'rgba(0, 245, 140, 0.10)' }}
+          style={({ pressed }) => [pressed && styles.operationalRowPressed]}
+        >
+          {inner}
+        </Pressable>
+      ) : (
+        inner
+      )}
+      {showExpanded && row.expandedLines && row.expandedLines.length > 0 ? (
+        <View style={styles.operationalExpandedBlock}>
+          {row.expandedLines.map((line, index) => {
+            const [day, ...rest] = line.split(': ');
+            const value = rest.join(': ');
+            return (
+              <View key={`${row.id}-line-${index}`} style={styles.operationalExpandedRow}>
+                <Text style={styles.operationalExpandedDay}>{day}</Text>
+                <Text style={styles.operationalExpandedValue}>{value || '—'}</Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function getOperationalPillLabel(row: OperationalRow): string {
+  if (row.status === 'checking') return 'Checking';
+  if (row.status === 'unavailable') return 'Not listed';
+  // status === 'available'
+  if (row.expandable) {
+    return row.expanded ? 'Hide' : 'Show';
+  }
+  if (!row.onPress) return 'Available';
+  switch (row.id) {
+    case 'phone':
+      return 'Tap to call';
+    case 'website':
+      return 'Tap to open';
+    case 'menu':
+      return 'Tap to open';
+    default:
+      return 'Tap to open';
+  }
+}
+
+export function DetailPrimaryActions({ onGoNow }: { onGoNow: () => void }) {
+  // Simplified to Directions only. Phone, Website, and Menu used to live
+  // here as separate buttons but are now reachable directly by tapping
+  // the corresponding row in DetailOperationalSection above. Directions
+  // stays here because it has no equivalent display row — there is no
+  // "Address" row on this section, and the Get Directions affordance is
+  // the highest-intent action on the page.
   return (
     <View style={styles.ctaRow}>
       <Pressable
@@ -292,50 +382,6 @@ export function DetailPrimaryActions({
         <AppUiIcon name="navigate" size={16} color={colors.backgroundDeep} />
         <Text style={styles.primaryButtonText}>Directions</Text>
       </Pressable>
-      {hasMenu ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            Platform.OS === 'android' ? 'Open storefront website' : 'Open storefront menu'
-          }
-          accessibilityHint={
-            Platform.OS === 'android'
-              ? 'Opens the website link for this storefront.'
-              : 'Opens the menu link for this storefront.'
-          }
-          onPress={onOpenMenu}
-          style={styles.primaryButton}
-        >
-          <AppUiIcon name="restaurant-outline" size={16} color={colors.backgroundDeep} />
-          <Text style={styles.primaryButtonText}>
-            {Platform.OS === 'android' ? 'Website' : 'Menu'}
-          </Text>
-        </Pressable>
-      ) : null}
-      {hasWebsite ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open storefront website"
-          accessibilityHint="Opens the website link for this storefront."
-          onPress={onOpenWebsite}
-          style={styles.primaryButton}
-        >
-          <AppUiIcon name="globe-outline" size={16} color={colors.backgroundDeep} />
-          <Text style={styles.primaryButtonText}>Website</Text>
-        </Pressable>
-      ) : null}
-      {hasPhone ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Call storefront"
-          accessibilityHint="Starts a phone call to this storefront."
-          onPress={onCall}
-          style={styles.secondaryButton}
-        >
-          <AppUiIcon name="call-outline" size={16} color={colors.text} />
-          <Text style={styles.secondaryButtonText}>Call</Text>
-        </Pressable>
-      ) : null}
     </View>
   );
 }
