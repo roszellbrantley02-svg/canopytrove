@@ -1,14 +1,16 @@
 import { colors } from '../theme/tokens';
 import React from 'react';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import { MotionInView } from '../components/MotionInView';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionCard } from '../components/SectionCard';
 import { withScreenErrorBoundary } from '../components/withScreenErrorBoundary';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { mapFirebaseAuthError } from '../services/firebaseAuthErrorMapper';
 import { signInOwnerPortalAccount } from '../services/ownerPortalService';
 import { OwnerPortalHeroPanel } from './ownerPortal/OwnerPortalHeroPanel';
 import { ownerPortalStyles as styles } from './ownerPortal/ownerPortalStyles';
@@ -17,25 +19,38 @@ const ACCESS_STEPS = ['Access', 'Sign In', 'Onboarding', 'Verification'];
 
 function OwnerPortalSignInScreenInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [email, setEmail] = React.useState('');
+  const route = useRoute<RouteProp<RootStackParamList, 'OwnerPortalSignIn'>>();
+  // Pre-fill from the recovery CTA on the owner-signup screen
+  // ("This email is already registered. Sign in to use it instead").
+  const [email, setEmail] = React.useState(route.params?.prefilledEmail ?? '');
   const [password, setPassword] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorText, setErrorText] = React.useState<string | null>(null);
+  // Synchronous in-flight guard — prevents the rapid-tap race where
+  // multiple onPress events fire before isSubmitting state propagates
+  // to the next render.
+  const isSubmittingRef = React.useRef(false);
   const canSubmit = !isSubmitting && Boolean(email.trim()) && Boolean(password);
 
   const handleSubmit = async () => {
-    if (isSubmitting) {
+    if (isSubmittingRef.current) {
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setErrorText(null);
     try {
       await signInOwnerPortalAccount(email, password);
       navigation.replace('Tabs', { screen: 'Profile' });
     } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Unable to sign in.');
+      // Translate raw Firebase auth errors into a friendly message —
+      // wrong-password, user-not-found, too-many-requests etc. all
+      // get plain-English copy with a recovery hint.
+      const friendly = mapFirebaseAuthError(error, email);
+      setErrorText(friendly.message);
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

@@ -342,7 +342,15 @@ export type RootStackParamList = {
         preview?: boolean;
       }
     | undefined;
-  OwnerPortalSignIn: undefined;
+  // Owner portal sign-in accepts an optional pre-filled email so the
+  // owner-signup recovery flow ("This email is already registered.
+  // Sign in to use it instead") can route the user here without
+  // making them retype their email.
+  OwnerPortalSignIn:
+    | {
+        prefilledEmail?: string;
+      }
+    | undefined;
   OwnerPortalSignUp: undefined;
   OwnerPortalForgotPassword: undefined;
   OwnerPortalHome:
