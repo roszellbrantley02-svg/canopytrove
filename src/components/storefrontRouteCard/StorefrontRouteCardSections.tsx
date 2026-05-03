@@ -193,9 +193,19 @@ export function StorefrontRouteCardBody({
           ) : null}
         </View>
 
-        {storefront.ocmVerification?.licensed ? (
-          <LicensedBadge verification={storefront.ocmVerification} variant="inline" />
-        ) : null}
+        {/*
+         * Render the licensed badge whenever EITHER the dynamic OCM match
+         * succeeded (`ocmVerification.licensed`) OR the storefront was
+         * registry-ingested (`isVerified`). The dynamic match is fragile —
+         * 1500ms enrichment timeout, address normalization quirks — so the
+         * fallback keeps the badge stable for every registry-ingested shop.
+         * LicensedBadge returns null internally when neither path is true.
+         */}
+        <LicensedBadge
+          verification={storefront.ocmVerification}
+          isVerifiedFallback={storefront.isVerified}
+          variant="inline"
+        />
         {storefront.paymentMethods ? (
           <PaymentMethodsBadge paymentMethods={storefront.paymentMethods} variant="inline" />
         ) : null}

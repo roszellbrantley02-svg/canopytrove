@@ -6,6 +6,18 @@ import type { OcmVerification } from '../types/storefrontBaseTypes';
 
 type LicensedBadgeProps = {
   verification: OcmVerification | null | undefined;
+  /**
+   * Trustworthy fallback signal: the storefront was ingested from the OCM
+   * registry pipeline (`isVerified === true` on the summary). When the
+   * dynamic on-the-fly OCM match fails (address normalization mismatches,
+   * 1500ms enrichment timeout, transient cache miss), this fallback keeps
+   * the badge stable for every registry-ingested shop. The badge is
+   * deliberately simpler in fallback mode — no license number, no freshness
+   * date — because we don't have those details available without the
+   * dynamic match. Pass false / omit when the badge should ONLY appear if
+   * the dynamic verification succeeded (e.g. user-entered Verify form).
+   */
+  isVerifiedFallback?: boolean;
   /** "full" shows the verified record + freshness; "inline" is a compact pill. */
   variant?: 'full' | 'inline';
 };
@@ -23,10 +35,15 @@ function formatAsOf(asOfIso: string | null | undefined): string | null {
   return asOfDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export function LicensedBadge({ verification, variant = 'full' }: LicensedBadgeProps) {
-  if (!verification || !verification.licensed) return null;
+export function LicensedBadge({
+  verification,
+  isVerifiedFallback = false,
+  variant = 'full',
+}: LicensedBadgeProps) {
+  const dynamicallyVerified = Boolean(verification?.licensed);
+  if (!dynamicallyVerified && !isVerifiedFallback) return null;
 
-  const freshness = formatAsOf(verification.asOf);
+  const freshness = dynamicallyVerified ? formatAsOf(verification?.asOf) : null;
   const subtitle = freshness
     ? `Per OCM public records, updated ${freshness}.`
     : 'Per OCM public records.';
@@ -58,7 +75,7 @@ export function LicensedBadge({ verification, variant = 'full' }: LicensedBadgeP
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
       </View>
-      {verification.licenseNumber ? (
+      {verification?.licenseNumber ? (
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>License</Text>
           <Text style={styles.metaValue} numberOfLines={1} ellipsizeMode="middle">
@@ -66,7 +83,7 @@ export function LicensedBadge({ verification, variant = 'full' }: LicensedBadgeP
           </Text>
         </View>
       ) : null}
-      {verification.licenseType ? (
+      {verification?.licenseType ? (
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>Type</Text>
           <Text style={styles.metaValue} numberOfLines={1}>

@@ -128,14 +128,22 @@ function StorefrontDetailContent({ navigation, storefront }: StorefrontDetailCon
             />
           </MotionInView>
 
-          {(model.detailData.ocmVerification ?? storefront.ocmVerification)?.licensed ? (
-            <MotionInView delay={140}>
-              <LicensedBadge
-                verification={model.detailData.ocmVerification ?? storefront.ocmVerification}
-                variant="full"
-              />
-            </MotionInView>
-          ) : null}
+          {(() => {
+            // Same fallback pattern as the listing card: dynamic OCM match
+            // OR static `isVerified` field set by the registry-ingest pipeline.
+            // LicensedBadge returns null internally if neither is true, so we
+            // can render unconditionally and let it gate.
+            const verification = model.detailData.ocmVerification ?? storefront.ocmVerification;
+            return (
+              <MotionInView delay={140}>
+                <LicensedBadge
+                  verification={verification}
+                  isVerifiedFallback={storefront.isVerified}
+                  variant="full"
+                />
+              </MotionInView>
+            );
+          })()}
 
           {(model.detailData.paymentMethods ?? storefront.paymentMethods) ? (
             <MotionInView delay={150}>
