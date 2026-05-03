@@ -3,6 +3,8 @@
 //
 // Source list (extend this as more dispensaries publish their calendars):
 //   1. yerbabuena.nyc/events — Yerba Buena Brooklyn brand activations
+//   2. domesdispensary.com/events — Domes Dispensary Kingston (Hudson Valley)
+//   3. fingerlakescannamarket.org/events-1 — Ithaca / Finger Lakes events
 //
 // Removed sources:
 //   - cannabis.ny.gov/cannabis-control-board-meetings (2026-05-04)
@@ -296,6 +298,190 @@ type Source = {
   parse: (html: string) => EventDoc[];
 };
 
+// ─── Domes Dispensary parser (Kingston, Hudson Valley) ───────────────
+// Domes uses a wp-block-template style listing with brand name, date string,
+// and time window. Same shape as Yerba Buena's page but slightly different
+// markup. We share the date/time helpers.
+type DomesEvent = {
+  brand: string;
+  startsAt: string;
+  endsAt: string;
+};
+
+function parseDomesDispensary(html: string): DomesEvent[] {
+  const events: DomesEvent[] = [];
+  const cardSplits = html.split(/<article|<div class="event|<li class="event/i).slice(1);
+  for (const card of cardSplits) {
+    // Domes titles are like "Eureka Pop-up" / "Ruby Farms Pop-up" / "Foy Pop-up"
+    const titleMatch = card.match(/>\s*([A-Za-z0-9&'\-. ]+?)\s*Pop-?up\s*</i);
+    const dateMatch = card.match(
+      /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,?\s+(\d{4}))?/,
+    );
+    const timeMatch = card.match(
+      /(\d{1,2}:?\d{0,2})\s*(AM|PM)\s*[–—\-]\s*(\d{1,2}:?\d{0,2})\s*(AM|PM)/i,
+    );
+    if (!titleMatch || !dateMatch || !timeMatch) continue;
+
+    const brand = titleMatch[1]!.trim();
+    const month = monthIndex(dateMatch[1]!);
+    const day = Number(dateMatch[2]);
+    const year = dateMatch[3] ? Number(dateMatch[3]) : new Date().getUTCFullYear();
+    const start = composeIso(year, month, day, timeMatch[1]!, timeMatch[2]!);
+    const end = composeIso(year, month, day, timeMatch[3]!, timeMatch[4]!);
+    if (!start || !end) continue;
+
+    events.push({ brand, startsAt: start, endsAt: end });
+  }
+  return events;
+}
+
+function buildDomesEventDoc(e: DomesEvent): EventDoc {
+  const date = e.startsAt.slice(0, 10);
+  const brandSlug = e.brand
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return {
+    id: `domes-${brandSlug}-popup-${date}`,
+    title: `${e.brand} Brand Pop-up @ Domes Dispensary`,
+    summary: `Featured ${e.brand} brand showcase at Domes Dispensary in Kingston. Sample, learn, and shop with reps on-site.`,
+    description: `Brand pop-up at Domes Dispensary in Kingston featuring ${e.brand} — sample the line, ask the reps, and pick up product the same afternoon. Domes is right off Exit 19 in Kingston, easy from 87 + 28.\n\nIngested automatically from domesdispensary.com/events on ${NOW_ISO.slice(0, 10)}.`,
+    category: 'brand_activation',
+    startsAt: e.startsAt,
+    endsAt: e.endsAt,
+    timezone: 'America/New_York',
+    allDay: false,
+    isMultiDay: false,
+    venueName: 'Domes Dispensary',
+    addressLine1: '268 Forest Hill Drive',
+    city: 'Kingston',
+    region: 'Hudson Valley',
+    state: 'NY',
+    zip: '12401',
+    placeId: null,
+    latitude: 41.9379,
+    longitude: -74.0285,
+    hasDrivableLocation: true,
+    organizerName: 'Domes Dispensary',
+    websiteUrl: 'https://www.domesdispensary.com/events/',
+    ticketUrl: null,
+    isFree: true,
+    priceLabel: 'Free entry',
+    ageRestriction: '21+',
+    photoUrl: null,
+    tags: ['Brand activation', 'Hudson Valley', 'Kingston', 'Free', e.brand],
+    source: 'imported',
+    hidden: false,
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+  };
+}
+
+// ─── FingerLakes CannaMarket parser (Ithaca / Finger Lakes) ──────────
+// FL CannaMarket lists named recurring events (Ithaca CannaMarket, Joints
+// And Jokes, Puff and Paint, Floating Session, Green Saturday, etc.) with
+// date + time. The parser picks up any of those names. Slug-derived id
+// keeps reruns idempotent.
+type FlCannaMarketEvent = {
+  name: string;
+  startsAt: string;
+  endsAt: string;
+};
+
+function parseFlCannaMarket(html: string): FlCannaMarketEvent[] {
+  const events: FlCannaMarketEvent[] = [];
+  // Recognized FL event name patterns. Keep the regex anchored on "known
+  // name strings" so we don't over-match unrelated text.
+  const nameRe =
+    /(Ithaca\s+CannaMarket|Joints\s+And\s+Jokes|Puff\s+and\s+Paint|The\s+Midweek\s+Session|The\s+Floating\s+Session(?:[^<]*)?|Green\s+Saturday|Lake\s+Monster\s+Comedy)/gi;
+  let nameMatch: RegExpExecArray | null;
+  while ((nameMatch = nameRe.exec(html)) !== null) {
+    const window = html.slice(nameMatch.index, nameMatch.index + 360);
+    const dateMatch = window.match(
+      /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,?\s+(\d{4}))?/,
+    );
+    const timeMatch = window.match(
+      /(\d{1,2}:?\d{0,2})\s*(AM|PM)(?:\s*[–—\-]\s*(\d{1,2}:?\d{0,2})\s*(AM|PM))?/i,
+    );
+    if (!dateMatch || !timeMatch) continue;
+
+    const name = nameMatch[1]!.trim().replace(/\s+/g, ' ');
+    const month = monthIndex(dateMatch[1]!);
+    const day = Number(dateMatch[2]);
+    const year = dateMatch[3] ? Number(dateMatch[3]) : new Date().getUTCFullYear();
+    const start = composeIso(year, month, day, timeMatch[1]!, timeMatch[2]!);
+    if (!start) continue;
+    // If no end time given, default to +3h
+    let end: string | null;
+    if (timeMatch[3] && timeMatch[4]) {
+      end = composeIso(year, month, day, timeMatch[3], timeMatch[4]);
+    } else {
+      const startMs = new Date(start).getTime();
+      end = new Date(startMs + 3 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, '-04:00');
+    }
+    if (!end) continue;
+
+    // Dedupe — same name + same start
+    if (events.some((e) => e.name === name && e.startsAt === start)) continue;
+    events.push({ name, startsAt: start, endsAt: end });
+  }
+  return events;
+}
+
+function buildFlCannaMarketEventDoc(e: FlCannaMarketEvent): EventDoc {
+  const date = e.startsAt.slice(0, 10);
+  const slug = e.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const isComedy = /jokes|comedy/i.test(e.name);
+  const isCruise = /floating|session/i.test(e.name);
+  const isMarket = /cannamarket|saturday/i.test(e.name);
+  const isWorkshop = /paint/i.test(e.name);
+  const category: EventDoc['category'] = isWorkshop
+    ? 'workshop'
+    : isComedy || isCruise || isMarket
+      ? 'consumer'
+      : 'consumer';
+  return {
+    id: `fl-${slug}-${date}`,
+    title: e.name.replace(/^The\s+/i, '').replace(/\s+/g, ' '),
+    summary: `${e.name} from FingerLakes CannaMarket — a recurring Ithaca cannabis community event. 21+.`,
+    description: `${e.name} is part of FingerLakes CannaMarket's recurring Ithaca series — a community-anchored format that brings local NY growers, brands, and consumers together in the Finger Lakes region.\n\nIngested automatically from fingerlakescannamarket.org on ${NOW_ISO.slice(0, 10)}. Check the organizer page for venue + ticket details.`,
+    category,
+    startsAt: e.startsAt,
+    endsAt: e.endsAt,
+    timezone: 'America/New_York',
+    allDay: false,
+    isMultiDay: false,
+    venueName: 'FingerLakes CannaMarket — Ithaca',
+    addressLine1: null,
+    city: 'Ithaca',
+    region: 'Finger Lakes',
+    state: 'NY',
+    zip: '14850',
+    placeId: null,
+    latitude: 42.4406,
+    longitude: -76.4969,
+    hasDrivableLocation: true,
+    organizerName: 'FingerLakes CannaMarket',
+    websiteUrl: 'https://www.fingerlakescannamarket.org/events-1',
+    ticketUrl: 'https://www.fingerlakescannamarket.org/events-1',
+    isFree: false,
+    priceLabel: 'See organizer',
+    ageRestriction: '21+',
+    photoUrl: null,
+    tags: ['Finger Lakes', 'Ithaca', 'Community', 'CannaMarket'],
+    source: 'imported',
+    hidden: false,
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+  };
+}
+
+// Active sources only. Disabled sources sit in DISABLED_SOURCES below — their
+// parser code lives in this file but they're not run until the parser is
+// proven correct against the real HTML.
 const SOURCES: Source[] = [
   {
     key: 'yerba-buena',
@@ -303,6 +489,37 @@ const SOURCES: Source[] = [
     parse: (html) => parseYerbaBuena(html).map(buildYerbaBuenaEventDoc),
   },
 ];
+
+// Parser-ready but pull-disabled sources. Why disabled today (2026-05-04):
+//
+//   - 'domes': Hudson Valley dispensary calendar. The parser correctly
+//     extracts brand names + dates + times, but the page lays out brand
+//     names and dates in different sections so the pairing is wrong (e.g.
+//     parser pairs "Ruby Farms" with the Eureka date). Need to look at
+//     actual DOM structure and refine the card-boundary heuristic before
+//     enabling.
+//   - 'fl-cannamarket': Finger Lakes calendar. Parser is stricter on event
+//     names but the live page returned 0 upcoming events on first run — could
+//     be that "upcoming" filter doesn't surface events with no explicit year.
+//     Need to confirm date-string handling against a bigger sample.
+//
+// Manually-curated entries for both regions are already live in production
+// (added by backend/scripts/add-upstate-events.ts on 2026-05-04). Re-enable
+// these sources once their parsers are tightened.
+const DISABLED_SOURCES: Source[] = [
+  {
+    key: 'domes',
+    url: 'https://www.domesdispensary.com/events/',
+    parse: (html) => parseDomesDispensary(html).map(buildDomesEventDoc),
+  },
+  {
+    key: 'fl-cannamarket',
+    url: 'https://www.fingerlakescannamarket.org/events-1',
+    parse: (html) => parseFlCannaMarket(html).map(buildFlCannaMarketEventDoc),
+  },
+];
+// Reference DISABLED_SOURCES so unused-export lint doesn't strip the parser code.
+void DISABLED_SOURCES;
 
 type IngestSourceResult = {
   written: number;
