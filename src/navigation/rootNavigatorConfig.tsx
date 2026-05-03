@@ -200,6 +200,10 @@ const OwnerPortalSignUpScreen = lazyScreen(
   () => import('../screens/OwnerPortalSignUpScreen'),
   'OwnerPortalSignUpScreen',
 );
+const OwnerPortalShopBootstrapScreen = lazyScreen(
+  () => import('../screens/OwnerPortalShopBootstrapScreen'),
+  'OwnerPortalShopBootstrapScreen',
+);
 const OwnerPortalSubscriptionScreen = lazyScreen(
   () => import('../screens/OwnerPortalSubscriptionScreen'),
   'OwnerPortalSubscriptionScreen',
@@ -353,6 +357,10 @@ export type RootStackParamList = {
     | undefined;
   OwnerPortalSignUp: undefined;
   OwnerPortalForgotPassword: undefined;
+  // AI Shop Bootstrap — owner pastes their existing dispensary website URL
+  // and the AI fills out their Canopy Trove listing in 60 seconds. See
+  // docs/AI_SHOP_BOOTSTRAP.md.
+  OwnerPortalShopBootstrap: undefined;
   OwnerPortalHome:
     | {
         preview?: boolean;
@@ -571,6 +579,11 @@ export const stackScreens = [
   {
     name: 'OwnerPortalForgotPassword',
     component: gateReviewSurface(OwnerPortalForgotPasswordScreen, supportsOwnerWorkspaceUi),
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalShopBootstrap',
+    component: gateReviewSurface(OwnerPortalShopBootstrapScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {

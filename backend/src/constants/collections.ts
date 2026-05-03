@@ -67,6 +67,15 @@ export const COLLECTIONS = {
   // backend/src/types/event.ts; admin or seed scripts populate. Frontend
   // reads via GET /events.
   EVENTS: 'events',
+
+  // AI Shop Bootstrap (May 3 2026 onward) — owner pastes their existing
+  // dispensary website URL and the AI extracts a complete Canopy Trove
+  // listing draft via headless-browser scrape + Claude Sonnet 4.5 vision.
+  // Doc shape: see backend/src/types/aiShopBootstrap.ts. Spec lives in
+  // docs/AI_SHOP_BOOTSTRAP.md. The draft persists across the scraping →
+  // parsing → ready → published lifecycle so the owner can return to a
+  // half-finished bootstrap without losing state.
+  SHOP_BOOTSTRAP_DRAFTS: 'shopBootstrapDrafts',
 } as const;
 
 // Derive constants for backward compatibility with existing code
@@ -103,3 +112,4 @@ export const PAYMENT_METHOD_REPORTS_COLLECTION = COLLECTIONS.PAYMENT_METHOD_REPO
 export const BULK_VERIFICATION_BATCHES_COLLECTION = COLLECTIONS.BULK_VERIFICATION_BATCHES;
 export const OWNER_WEB_PUSH_SUBSCRIPTIONS_COLLECTION = COLLECTIONS.OWNER_WEB_PUSH_SUBSCRIPTIONS;
 export const EVENTS_COLLECTION_NAME = COLLECTIONS.EVENTS;
+export const SHOP_BOOTSTRAP_DRAFTS_COLLECTION = COLLECTIONS.SHOP_BOOTSTRAP_DRAFTS;
