@@ -10,8 +10,21 @@ export const clientRuntimeRoutes = Router();
 const clientErrorRateLimiter = createRateLimitMiddleware({
   name: 'client-errors',
   windowMs: 60_000,
-  max: 10,
+  // 60/min/IP. The previous 10/min cap was easy to trip during a real
+  // bug burst (a buggy screen rendering 11 errors in one minute would
+  // accumulate enough abuse points to globally flag the IP for 30 min,
+  // then every other POST from that user 429s — including normal
+  // /analytics/events and /profile-state writes from the same session).
+  // Diagnostic ingestion is more valuable than aggressive throttling
+  // here; abuse is bounded by the cap itself.
+  max: 60,
   methods: ['POST'],
+  // Don't escalate client-error 429s into the global IP-flag scoring.
+  // Crash reports are noisy by nature; a user whose app is misbehaving
+  // shouldn't be punished by a 30-min global block on every other
+  // write endpoint just because their app is firing too many error
+  // reports at once.
+  abuseSignalPoints: 0,
 });
 
 clientRuntimeRoutes.get('/runtime/status', async (_request, response) => {

@@ -14,6 +14,10 @@ favoriteDealAlertRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],
+    // Auto-sync is fired on every saved-storefront change; bursty by
+    // design when a user toggles several favorites in quick succession.
+    // The per-route cap is plenty; don't escalate to global IP flag.
+    abuseSignalPoints: 0,
   }),
 );
 

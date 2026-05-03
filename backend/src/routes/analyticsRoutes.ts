@@ -13,6 +13,14 @@ analyticsRoutes.use(
     windowMs: 60_000,
     max: serverConfig.writeRateLimitPerMinute,
     methods: ['POST'],
+    // Telemetry is high-volume by design (every keystroke, every screen
+    // render, every interaction can fire an event). The per-route 180/min
+    // cap stops genuine spam, but a heavy real user shouldn't accumulate
+    // abuse points that promote them to the 30-min global IP flag — a
+    // search-as-you-type session for "ontario" easily fires 7+ events
+    // per second and would otherwise cascade into 429s on every other
+    // write endpoint they touch.
+    abuseSignalPoints: 0,
   }),
 );
 
