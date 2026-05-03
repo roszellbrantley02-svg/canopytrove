@@ -3,7 +3,14 @@
 //
 // Source list (extend this as more dispensaries publish their calendars):
 //   1. yerbabuena.nyc/events — Yerba Buena Brooklyn brand activations
-//   2. cannabis.ny.gov/cannabis-control-board-meetings — OCM CCB monthly meetings
+//
+// Removed sources:
+//   - cannabis.ny.gov/cannabis-control-board-meetings (2026-05-04)
+//     Removed because public CCB meetings are policy/regulator content that
+//     doesn't appeal to the average consumer using the Travel & Events tab.
+//     The parser code (parseOcmCcb + buildOcmCcbEventDoc) is left in the
+//     file for future reuse if we ever build an "owner news" or "industry
+//     calendar" surface.
 //
 // The script fetches each source's HTML, extracts events with a small per-source
 // parser, normalizes them into the EventDoc shape, and upserts each event by a
@@ -295,28 +302,30 @@ const SOURCES: Source[] = [
     url: 'https://yerbabuena.nyc/events',
     parse: (html) => parseYerbaBuena(html).map(buildYerbaBuenaEventDoc),
   },
-  {
-    key: 'ocm-ccb',
-    url: 'https://cannabis.ny.gov/cannabis-control-board-meetings',
-    parse: (html) => parseOcmCcb(html).map(buildOcmCcbEventDoc),
-  },
 ];
 
-async function ingestSource(source: Source) {
+type IngestSourceResult = {
+  written: number;
+  skipped: number;
+  parsed: number;
+  respectedManual: number;
+};
+
+async function ingestSource(source: Source): Promise<IngestSourceResult> {
   console.log(`\n[source: ${source.key}]  fetching ${source.url}`);
   let html: string;
   try {
     html = await fetchHtml(source.url);
   } catch (err) {
     console.log(`  [fail] fetch failed: ${err instanceof Error ? err.message : String(err)}`);
-    return { written: 0, skipped: 0, parsed: 0 };
+    return { written: 0, skipped: 0, parsed: 0, respectedManual: 0 };
   }
   let parsed: EventDoc[];
   try {
     parsed = source.parse(html);
   } catch (err) {
     console.log(`  [fail] parser threw: ${err instanceof Error ? err.message : String(err)}`);
-    return { written: 0, skipped: 0, parsed: 0 };
+    return { written: 0, skipped: 0, parsed: 0, respectedManual: 0 };
   }
 
   // Filter past events out at ingest time — sweeper will handle drift later.

@@ -50,7 +50,10 @@ async function main() {
   console.log('');
 
   const snap = await db.collection(EVENTS_COLLECTION_NAME).get();
-  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as EventRow) }));
+  const all: EventRow[] = snap.docs.map((d) => ({
+    ...(d.data() as EventRow),
+    id: d.id, // doc id wins over any stored `id` field
+  }));
 
   let alreadyHidden = 0;
   let willHide = 0;
