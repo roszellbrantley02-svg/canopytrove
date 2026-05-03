@@ -52,7 +52,12 @@ export async function startShopBootstrap(input: {
   websiteUrl: string;
   claimedStorefrontId?: string;
 }): Promise<ShopBootstrapDraft> {
-  const validation = validateScrapeUrl(input.websiteUrl);
+  // Auto-prepend https:// if the caller submitted a bare domain
+  // ("example.com" or "www.example.com" without a scheme). URL
+  // parsing requires a scheme; auto-fix is friendlier than rejecting.
+  const trimmedUrl = input.websiteUrl.trim();
+  const normalizedUrl = /^https?:\/\//i.test(trimmedUrl) ? trimmedUrl : `https://${trimmedUrl}`;
+  const validation = validateScrapeUrl(normalizedUrl);
   if (!validation.ok) {
     throw new Error(`Invalid website URL (${validation.reason ?? 'unknown'}): ${input.websiteUrl}`);
   }
@@ -62,7 +67,7 @@ export async function startShopBootstrap(input: {
   const draft: ShopBootstrapDraft = {
     draftId,
     ownerUid: input.ownerUid,
-    websiteUrl: input.websiteUrl.trim(),
+    websiteUrl: normalizedUrl,
     status: 'scraping',
     scrapedAt: null,
     parsedAt: null,

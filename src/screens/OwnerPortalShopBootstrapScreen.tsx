@@ -50,11 +50,15 @@ function OwnerPortalShopBootstrapScreenInner() {
       setErrorText('Paste your dispensary website URL to begin.');
       return;
     }
+    // Auto-prepend https:// if the user typed "www.example.com" or
+    // "example.com" without a scheme. URL parsing requires it; auto-fix
+    // is friendlier than asking the owner to type it themselves.
+    const normalized = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     setErrorText(null);
     try {
-      const result = await startShopBootstrap({ websiteUrl: trimmed });
+      const result = await startShopBootstrap({ websiteUrl: normalized });
       setDraft(result.draft);
       setStep('waiting');
     } catch (error) {
