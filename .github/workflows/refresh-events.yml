@@ -1,0 +1,122 @@
+name: Refresh Events (sweep + ingest)
+
+# Travel & Events tab housekeeping. Runs daily and on-demand to:
+#   1. Sweep stale events — set `hidden: true` on anything that ended
+#      more than 7 days ago. Keeps the public list fresh without
+#      manual cleanup.
+#   2. Ingest new events from configured public sources
+#      (Yerba Buena calendar + OCM CCB schedule today, more later).
+#      Skips upserts when a manual-curated entry exists for the same id
+#      so hand-verified times/details aren't clobbered.
+#
+# Both scripts write directly to the production Firestore `events`
+# collection — no Cloud Run deploy or repo commit needed.
+
+on:
+  # 09:00 UTC = 05:00 EDT / 04:00 EST. Daily — events change frequently.
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      skip_sweep:
+        description: 'Skip the stale-event sweep step'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      skip_ingest:
+        description: 'Skip the auto-ingestion step'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      stale_days:
+        description: 'Hide events whose endsAt is older than N days (default 7)'
+        required: false
+        default: '7'
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GCP_PROJECT_ID: canopy-trove
+  FIREBASE_DATABASE_ID: canopytrove
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --no-audit --no-fund
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Sweep stale events
+        if: github.event.inputs.skip_sweep != 'true'
+        working-directory: backend
+        env:
+          STALE_DAYS: ${{ github.event.inputs.stale_days || '7' }}
+        run: |
+          set -euo pipefail
+          npx tsx scripts/sweep-stale-events.ts --execute --days="$STALE_DAYS" \
+            | tee /tmp/sweep.out
+          # Surface the summary to the workflow page
+          {
+            echo "## Stale-event sweep"
+            echo
+            echo '```'
+            tail -n 12 /tmp/sweep.out
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ingest events from configured sources
+        if: github.event.inputs.skip_ingest != 'true'
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          npx tsx scripts/ingest-events.ts --execute \
+            | tee /tmp/ingest.out
+          {
+            echo
+            echo "## Auto-ingestion"
+            echo
+            echo '```'
+            tail -n 30 /tmp/ingest.out
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run summary
+        if: always()
+        run: |
+          {
+            echo
+            echo "Run completed at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo
+            echo "Daily cron: 09:00 UTC. Manual triggers via the Actions tab."
+          } >> "$GITHUB_STEP_SUMMARY"
