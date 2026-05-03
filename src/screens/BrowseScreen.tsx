@@ -21,7 +21,6 @@ import { storefrontRepository } from '../repositories/storefrontRepository';
 import {
   classifyLocationInput,
   trackAnalyticsEvent,
-  trackPaymentMethodsBadgeImpressions,
   trackStorefrontPromotionImpressions,
   trackStorefrontImpressions,
 } from '../services/analyticsService';
@@ -262,12 +261,12 @@ function BrowseScreenInner() {
       return;
     }
 
-    trackStorefrontImpressions(
-      items.map((storefront) => storefront.id),
-      'Browse',
-    );
+    // Pass full summary objects so payment-methods metadata folds into
+    // the impression event (ex: paymentMethodsAcceptedCount) instead of
+    // firing a separate badge_shown event in lockstep. May 3 2026
+    // cleanup — was ~30% of analytics volume with zero added signal.
+    trackStorefrontImpressions(items, 'Browse');
     trackStorefrontPromotionImpressions(items, 'Browse');
-    trackPaymentMethodsBadgeImpressions(items, 'Browse');
   }, [items]);
 
   React.useEffect(() => {

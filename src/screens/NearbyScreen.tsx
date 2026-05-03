@@ -19,7 +19,6 @@ import { spacing } from '../theme/tokens';
 import {
   classifyLocationInput,
   trackAnalyticsEvent,
-  trackPaymentMethodsBadgeImpressions,
   trackStorefrontPromotionImpressions,
   trackStorefrontImpressions,
 } from '../services/analyticsService';
@@ -93,12 +92,11 @@ function NearbyScreenInner() {
       return;
     }
 
-    trackStorefrontImpressions(
-      visibleData.map((storefront) => storefront.id),
-      'Nearby',
-    );
+    // Pass full summary objects so payment-methods metadata folds into
+    // the impression event (paymentMethodsAcceptedCount + …) instead of
+    // firing a separate badge_shown event in lockstep — see analyticsService.
+    trackStorefrontImpressions(visibleData, 'Nearby');
     trackStorefrontPromotionImpressions(visibleData, 'Nearby');
-    trackPaymentMethodsBadgeImpressions(visibleData, 'Nearby');
   }, [visibleData]);
 
   React.useEffect(() => {
