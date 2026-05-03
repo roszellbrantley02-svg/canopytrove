@@ -17,7 +17,14 @@ type TabIconProps = {
   accentColor?: string;
 };
 
-type TabGlyphName = 'nearby' | 'browse' | 'hotDeals' | 'verify' | 'owner' | 'profile';
+type TabGlyphName =
+  | 'nearby'
+  | 'browse'
+  | 'hotDeals'
+  | 'verify'
+  | 'owner'
+  | 'travelEvents'
+  | 'profile';
 
 export function AppTabIconV4c({
   name,
@@ -38,6 +45,11 @@ export function AppTabIconV4c({
       return <V4cIcon asset="AppNav_Verify" size={iconSize} opacity={opacity} />;
     case 'owner':
       return <V4cIcon asset="AppNav_Home" size={iconSize} opacity={opacity} />;
+    case 'travelEvents':
+      // Compass conveys both travel + exploration; closest semantic in the v4c
+      // pack to "Events / Travel". Swap to a dedicated calendar/events glyph
+      // when one is added to the icon pack.
+      return <V4cIcon asset="AppNav_Compass" size={iconSize} opacity={opacity} />;
     case 'profile':
       return <V4cIcon asset="AppNav_Profile" size={iconSize} opacity={opacity} />;
   }

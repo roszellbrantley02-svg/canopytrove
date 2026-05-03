@@ -34,7 +34,14 @@ type ScreenShellProps = PropsWithChildren<{
   resetScrollOnFocus?: boolean;
 }>;
 
-const TAB_ROUTE_NAMES = new Set(['Nearby', 'Browse', 'HotDeals', 'Verify', 'Profile']);
+const TAB_ROUTE_NAMES = new Set([
+  'Nearby',
+  'Browse',
+  'HotDeals',
+  'Verify',
+  'TravelEvents',
+  'Profile',
+]);
 const MANUAL_BACK_ROUTES = new Set(['Leaderboard']);
 export function ScreenShell({
   eyebrow,

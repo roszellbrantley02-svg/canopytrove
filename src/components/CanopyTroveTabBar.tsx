@@ -15,17 +15,19 @@ const TAB_LABELS: Record<keyof RootTabParamList, string> = {
   Browse: 'Browse',
   HotDeals: supportsStorefrontPromotionUi ? 'Hot Deals' : 'Featured',
   Verify: 'Verify',
+  TravelEvents: 'Events',
   Profile: 'Profile',
 };
 
 const TAB_ICONS: Record<
   keyof RootTabParamList,
-  'nearby' | 'browse' | 'hotDeals' | 'verify' | 'profile'
+  'nearby' | 'browse' | 'hotDeals' | 'verify' | 'travelEvents' | 'profile'
 > = {
   Nearby: 'nearby',
   Browse: 'browse',
   HotDeals: 'hotDeals',
   Verify: 'verify',
+  TravelEvents: 'travelEvents',
   Profile: 'profile',
 };
 
@@ -36,7 +38,7 @@ type TabBarItemProps = {
   accessibilityLabel?: string;
   focused: boolean;
   label: string;
-  iconName: 'nearby' | 'browse' | 'hotDeals' | 'verify' | 'profile';
+  iconName: 'nearby' | 'browse' | 'hotDeals' | 'verify' | 'travelEvents' | 'profile';
   accentColor?: string;
   onLongPress: () => void;
   onPress: () => void;

@@ -141,6 +141,16 @@ const CanopyTroveForgotPasswordScreen = lazyScreen(
   'CanopyTroveForgotPasswordScreen',
 );
 
+/* ── Travel & Events tab + detail (lazy — both newer screens, low priority on first paint) ── */
+const TravelEventsScreen = lazyScreen(
+  () => import('../screens/TravelEventsScreen').then((m) => ({ default: m.TravelEventsScreen })),
+  'TravelEventsScreen',
+);
+const EventDetailScreen = lazyScreen(
+  () => import('../screens/EventDetailScreen').then((m) => ({ default: m.EventDetailScreen })),
+  'EventDetailScreen',
+);
+
 /* ── Owner portal screens — lazy (heaviest chunk, never needed for public browse) ── */
 const OwnerPortalAccessScreen = lazyScreen(
   () => import('../screens/OwnerPortalAccessScreen'),
@@ -247,6 +257,7 @@ export type RootTabParamList = {
   Browse: undefined;
   HotDeals: undefined;
   Verify: undefined;
+  TravelEvents: undefined;
   Profile: undefined;
 };
 
@@ -294,6 +305,7 @@ export type RootStackParamList = {
     entryMode?: 'general_report' | 'suggest_edit' | 'report_closed';
   };
   VerifyManualEntry: undefined;
+  EventDetail: { eventId: string };
   ScanResult: ScanResultRouteParams;
   ScanCamera: {
     mode: 'product' | 'shop';
@@ -696,6 +708,11 @@ export const stackScreens = [
     component: AdminClaimReviewScreen,
     options: workspaceFlowScreenOptions,
   },
+  {
+    name: 'EventDetail',
+    component: EventDetailScreen,
+    options: detailFlowScreenOptions,
+  },
 ] as const;
 
 export const tabScreens = [
@@ -703,5 +720,6 @@ export const tabScreens = [
   { name: 'Browse', component: BrowseScreen },
   { name: 'HotDeals', component: HotDealsScreen },
   { name: 'Verify', component: VerifyScreen },
+  { name: 'TravelEvents', component: TravelEventsScreen },
   { name: 'Profile', component: ProfileScreen },
 ] as const;

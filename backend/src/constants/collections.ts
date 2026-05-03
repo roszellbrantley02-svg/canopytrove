@@ -61,6 +61,12 @@ export const COLLECTIONS = {
 
   // Multi-location bulk claim (Phase 2 of cluster auto-claim feature)
   BULK_VERIFICATION_BATCHES: 'bulkVerificationBatches',
+
+  // Travel & Events tab — curated NY cannabis events (festivals, parades,
+  // conventions, dispensary-hosted activations). Doc shape lives in
+  // backend/src/types/event.ts; admin or seed scripts populate. Frontend
+  // reads via GET /events.
+  EVENTS: 'events',
 } as const;
 
 // Derive constants for backward compatibility with existing code
@@ -96,3 +102,4 @@ export const PAYMENT_METHOD_DECLARATIONS_COLLECTION = COLLECTIONS.PAYMENT_METHOD
 export const PAYMENT_METHOD_REPORTS_COLLECTION = COLLECTIONS.PAYMENT_METHOD_REPORTS;
 export const BULK_VERIFICATION_BATCHES_COLLECTION = COLLECTIONS.BULK_VERIFICATION_BATCHES;
 export const OWNER_WEB_PUSH_SUBSCRIPTIONS_COLLECTION = COLLECTIONS.OWNER_WEB_PUSH_SUBSCRIPTIONS;
+export const EVENTS_COLLECTION_NAME = COLLECTIONS.EVENTS;

@@ -47,6 +47,7 @@ import { ownerPortalAiRoutes } from './routes/ownerPortalAiRoutes';
 import { ownerWelcomeEmailRoutes } from './routes/ownerWelcomeEmailRoutes';
 import { ownerPortalWorkspaceRoutes } from './routes/ownerPortalWorkspaceRoutes';
 import { ownerPortalWebPushRoutes } from './routes/ownerPortalWebPushRoutes';
+import { eventRoutes } from './routes/eventRoutes';
 import { ownerMultiLocationRoutes } from './routes/ownerMultiLocationRoutes';
 import { opsRoutes } from './routes/opsRoutes';
 import { profileRoutes } from './routes/profileRoutes';
@@ -384,6 +385,7 @@ export function createApp() {
   app.use('/', ownerWelcomeEmailRoutes);
   app.use('/', ownerPortalWorkspaceRoutes);
   app.use('/', ownerPortalWebPushRoutes);
+  app.use('/', eventRoutes);
   app.use('/', ownerMultiLocationRoutes);
   app.use('/', opsRoutes);
   app.use('/', adminRoutes);

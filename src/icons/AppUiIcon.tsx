@@ -325,6 +325,38 @@ const iconRenderers = {
       />
     </>
   ),
+  'calendar-outline': ({ color, strokeWidth }) => (
+    <>
+      {/* Calendar body */}
+      <Path
+        d="M5 6.5h14a1.5 1.5 0 0 1 1.5 1.5v11a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V8A1.5 1.5 0 0 1 5 6.5z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      {/* Top divider line */}
+      <Line x1="3.5" y1="10.5" x2="20.5" y2="10.5" stroke={color} strokeWidth={strokeWidth} />
+      {/* Two binder rings */}
+      <Line
+        x1="8"
+        y1="4"
+        x2="8"
+        y2="8"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Line
+        x1="16"
+        y1="4"
+        x2="16"
+        y2="8"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </>
+  ),
   'sparkles-outline': ({ color, strokeWidth }) => (
     <>
       <Path
