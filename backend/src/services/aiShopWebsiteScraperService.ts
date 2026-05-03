@@ -49,26 +49,150 @@ const DEFAULT_TIMEOUT_MS = 90_000;
 /**
  * Submit a URL to the scraper service and wait for the rendered content.
  *
- * Phase 1 implementation plan:
- * - POST to `https://canopytrove-scraper-XXXX.run.app/render`
- *   with body `{ websiteUrl, respectRobotsTxt }`
- * - Service-to-service auth via Cloud Run audience token
- * - Returns ScrapedWebsiteContent or a structured failure
+ * Service-to-service auth: when running on Cloud Run, we mint an
+ * audience token via the metadata server. Locally (for testing),
+ * setting SCRAPER_ALLOW_UNAUTH=1 skips auth.
  *
- * Until the scraper service exists, this throws so any caller that
- * wires it up prematurely fails loudly instead of returning fake data.
+ * Env vars consumed:
+ *   SCRAPER_SERVICE_URL    — base URL of canopytrove-scraper Cloud Run service
+ *   SCRAPER_ALLOW_UNAUTH   — '1' to skip ID-token minting (local dev only)
  */
-export async function scrapeWebsite(_options: ScrapeWebsiteOptions): Promise<ScrapeWebsiteResult> {
-  // TODO(phase-1): wire to canopytrove-scraper service.
-  //   1. Get the scraper service URL from env var SCRAPER_SERVICE_URL
-  //   2. Mint a Cloud Run service-to-service ID token
-  //   3. POST /render with the URL
-  //   4. Map response to ScrapeWebsiteResult
-  //   5. On 5xx, retry once with exponential backoff
-  //   6. On 4xx, surface as 'invalid_url' or 'antibot_blocked'
-  throw new Error(
-    'aiShopWebsiteScraperService.scrapeWebsite: not implemented yet — see docs/AI_SHOP_BOOTSTRAP.md phase 1',
-  );
+export async function scrapeWebsite(options: ScrapeWebsiteOptions): Promise<ScrapeWebsiteResult> {
+  const validation = validateScrapeUrl(options.websiteUrl);
+  if (!validation.ok) {
+    return {
+      ok: false,
+      reason: 'invalid_url',
+      message: `Invalid URL (${validation.reason ?? 'unknown'}).`,
+    };
+  }
+
+  const baseUrl = (process.env.SCRAPER_SERVICE_URL ?? '').replace(/\/+$/, '');
+  if (!baseUrl) {
+    return {
+      ok: false,
+      reason: 'service_unavailable',
+      message: 'SCRAPER_SERVICE_URL is not configured.',
+    };
+  }
+
+  const renderUrl = `${baseUrl}/render`;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
+  let authHeader: Record<string, string> = {};
+  if (process.env.SCRAPER_ALLOW_UNAUTH !== '1') {
+    try {
+      const idToken = await mintCloudRunIdToken(baseUrl);
+      authHeader = { Authorization: `Bearer ${idToken}` };
+    } catch (error) {
+      return {
+        ok: false,
+        reason: 'service_unavailable',
+        message: `Failed to mint scraper auth token: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let response: Response;
+  try {
+    response = await fetch(renderUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader,
+      },
+      body: JSON.stringify({
+        websiteUrl: options.websiteUrl,
+        respectRobotsTxt: options.respectRobotsTxt !== false,
+      }),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    clearTimeout(timeout);
+    const message = error instanceof Error ? error.message : String(error);
+    if (/aborted/i.test(message)) {
+      return { ok: false, reason: 'timeout', message };
+    }
+    return { ok: false, reason: 'service_unavailable', message };
+  }
+  clearTimeout(timeout);
+
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch (error) {
+    return {
+      ok: false,
+      reason: 'service_unavailable',
+      message: `Scraper returned non-JSON response (${response.status}).`,
+    };
+  }
+
+  if (!response.ok) {
+    const payload = json as { reason?: string; message?: string; error?: string };
+    const reason = mapHttpReason(response.status, payload.reason);
+    return {
+      ok: false,
+      reason,
+      message: payload.message || payload.error || `Scraper returned ${response.status}`,
+    };
+  }
+
+  const payload = json as { ok: boolean; content?: ScrapedWebsiteContent };
+  if (!payload.ok || !payload.content) {
+    return {
+      ok: false,
+      reason: 'unknown',
+      message: 'Scraper returned ok=false without content.',
+    };
+  }
+
+  return { ok: true, content: payload.content };
+}
+
+type ScrapeFailureReason = Extract<ScrapeWebsiteResult, { ok: false }>['reason'];
+
+function mapHttpReason(status: number, serverReason: string | undefined): ScrapeFailureReason {
+  if (serverReason === 'robots_blocked') return 'robots_blocked';
+  if (serverReason === 'timeout') return 'timeout';
+  if (serverReason === 'antibot_blocked') return 'antibot_blocked';
+  if (serverReason === 'unreachable') return 'unreachable';
+  if (status === 422) return 'unreachable';
+  if (status === 403) return 'antibot_blocked';
+  if (status === 400) return 'invalid_url';
+  if (status >= 500) return 'service_unavailable';
+  return 'unknown';
+}
+
+/**
+ * Mint a Cloud Run-style ID token for service-to-service auth. On
+ * Cloud Run / GCE this hits the metadata server; off-cloud (local dev),
+ * uses application default credentials. Lazy-loads google-auth-library
+ * so the dependency is only required when the auth path actually runs.
+ */
+async function mintCloudRunIdToken(targetAudience: string): Promise<string> {
+  // Dynamic import keeps google-auth-library out of the cold-start path
+  // for non-scraper code paths.
+  const { GoogleAuth } = await import('google-auth-library');
+  const auth = new GoogleAuth();
+  const client = await auth.getIdTokenClient(targetAudience);
+  const headers = (await client.getRequestHeaders(targetAudience)) as unknown;
+  // google-auth-library returns either a plain object or a Headers
+  // instance depending on version; normalize either way.
+  let authHeader = '';
+  if (headers && typeof (headers as Headers).get === 'function') {
+    authHeader = (headers as Headers).get('Authorization') ?? '';
+  } else if (headers && typeof headers === 'object') {
+    const obj = headers as Record<string, string>;
+    authHeader = obj['Authorization'] ?? obj['authorization'] ?? '';
+  }
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!token) {
+    throw new Error('GoogleAuth returned empty Authorization header.');
+  }
+  return token;
 }
 
 /**

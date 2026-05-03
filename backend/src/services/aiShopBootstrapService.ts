@@ -25,6 +25,8 @@ import type {
   ShopBootstrapStatus,
 } from '../types/aiShopBootstrap';
 import { scrapeWebsite, validateScrapeUrl } from './aiShopWebsiteScraperService';
+import { parseScrapedContentWithClaudeVision } from './aiShopBootstrapVisionParser';
+import { verifyAgainstCache } from './ocmLicenseCacheService';
 
 function getCollection() {
   return getOptionalFirestoreCollection<ShopBootstrapDraft>(SHOP_BOOTSTRAP_DRAFTS_COLLECTION);
@@ -161,28 +163,77 @@ export async function runScrapeAndParse(draftId: string): Promise<void> {
 
 /**
  * Hand the scraped content (screenshot + text) to Claude Sonnet 4.5
- * vision and get back the structured AiShopBootstrapDraftPayload.
- *
- * Phase 1 status: SCAFFOLD ONLY — this is the next thing to build out.
- * Plan:
- *   1. Download the screenshot from Cloud Storage to base64
- *   2. Send to Anthropic API with the extractStorefrontDraft tool definition
- *   3. Map tool_use response → AiShopBootstrapDraftPayload
- *   4. Run OCM cross-reference on the detected name+address
- *   5. Return the payload
+ * vision and get back the structured AiShopBootstrapDraftPayload,
+ * then enrich with the OCM cross-reference (license number + matched
+ * dispensary ID) so the owner-portal review step can show the trust
+ * signal alongside the AI's draft.
  */
 export async function parseScrapedContentWithVision(
-  _content: ScrapedWebsiteContent,
+  content: ScrapedWebsiteContent,
 ): Promise<AiShopBootstrapDraftPayload> {
-  // TODO(phase-1): wire Anthropic SDK with vision + tool calling.
-  //   - Model: claude-sonnet-4-5 (latest)
-  //   - System prompt anchors on "NY-licensed cannabis dispensary website"
-  //   - Tool: extractStorefrontDraft with the AiShopBootstrapDraftPayload schema
-  //   - Response validation: every nullable field stays nullable; AI sets
-  //     fields to null if not confident
-  throw new Error(
-    'aiShopBootstrapService.parseScrapedContentWithVision: not implemented yet — see docs/AI_SHOP_BOOTSTRAP.md phase 1',
-  );
+  const draft = await parseScrapedContentWithClaudeVision(content);
+  const ocmMatch = await crossReferenceOcm(draft);
+  return { ...draft, ocmMatch };
+}
+
+/**
+ * Cross-reference the AI-extracted name/address against the OCM
+ * license cache. Returns a structured match indicator the review UI
+ * uses to show a green/yellow/red trust pill, plus a candidate
+ * matchedDispensaryId we can auto-link the listing to on publish.
+ *
+ * `verifyAgainstCache.confidence` rubric:
+ *   exact:   license number match
+ *   address: address+zip match
+ *   name:    name+city match
+ *   fuzzy:   weak signals
+ *   none:    no match at all
+ *
+ * We map onto the draft's narrower 'high'|'medium'|'low'|'none'
+ * rubric so the UI surface is consistent.
+ */
+async function crossReferenceOcm(
+  draft: AiShopBootstrapDraftPayload,
+): Promise<AiShopBootstrapDraftPayload['ocmMatch']> {
+  const verifyInput = {
+    address: draft.detectedAddress ?? undefined,
+    city: draft.detectedCity ?? undefined,
+    zip: draft.detectedZip ?? undefined,
+    name: draft.detectedName ?? undefined,
+  };
+  // No fields to match on — skip the lookup.
+  if (!verifyInput.address && !verifyInput.city && !verifyInput.zip && !verifyInput.name) {
+    return null;
+  }
+
+  let result;
+  try {
+    result = await verifyAgainstCache(verifyInput);
+  } catch {
+    // OCM cache lookup failures must not block the bootstrap. Surface
+    // as no-match; the owner can still publish.
+    return null;
+  }
+
+  const confidence: 'high' | 'medium' | 'low' | 'none' =
+    result.confidence === 'exact'
+      ? 'high'
+      : result.confidence === 'address'
+        ? 'high'
+        : result.confidence === 'name'
+          ? 'medium'
+          : result.confidence === 'fuzzy'
+            ? 'low'
+            : 'none';
+
+  return {
+    licenseNumber: result.record?.license_number ?? null,
+    matchConfidence: confidence,
+    // The OCM record's license_number is the canonical handle; the
+    // existing storefront pipeline maps from licenseNumber → existing
+    // storefront doc, which we'll resolve in publishDraft below.
+    matchedDispensaryId: result.record?.license_number ?? null,
+  };
 }
 
 async function markFailed(draftId: string, reason: string, message: string): Promise<void> {
