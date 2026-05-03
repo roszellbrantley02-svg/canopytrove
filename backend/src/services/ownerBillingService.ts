@@ -77,6 +77,10 @@ type StripeSubscription = {
   metadata?: Record<string, string> | null;
   items?: {
     data?: Array<{
+      /** Subscription-item ID (`si_...`). Required to update or delete the item later. */
+      id?: string;
+      /** Current quantity for quantity-based prices (per-extra-location seat). */
+      quantity?: number;
       price?: {
         id?: string | null;
         recurring?: {
@@ -594,6 +598,150 @@ async function getOwnerSubscription(ownerUid: string) {
   }
 
   return snapshot.data() as OwnerSubscriptionRecord;
+}
+
+// ============================================================================
+// Per-extra-location seat billing
+// ============================================================================
+
+export type AdditionalLocationBillingSyncResult =
+  | { ok: true; action: 'noop' | 'added' | 'updated' | 'removed'; quantity: number }
+  | { ok: false; reason: 'no_subscription' | 'not_stripe' | 'not_active' | 'not_configured' }
+  | { ok: false; reason: 'stripe_error'; message: string };
+
+/**
+ * Sync the per-extra-location seat quantity on the owner's Stripe subscription
+ * to match the current count of `additionalLocationIds`. Idempotent — safe to
+ * call repeatedly with the same target count (no-op when already in sync).
+ *
+ * Add path: when an owner adds a new location, target = N+1, this function
+ * adds the additional-location item to the subscription (if not present) or
+ * bumps its quantity (if present). Stripe pro-rates the partial period.
+ *
+ * Remove path: when an owner removes a location, target = N-1. If target = 0
+ * and the item exists, it's deleted (refund credit pro-rated). Otherwise the
+ * quantity is decremented.
+ *
+ * Fail-soft for non-Stripe subscriptions (Apple IAP, internal_prelaunch) —
+ * those provider paths don't support quantity-based add-ons, so we return
+ * `{ ok: false, reason: 'not_stripe' }` and the caller logs but proceeds.
+ *
+ * Hard-fail on Stripe API errors so the calling multi-location operation
+ * can roll back the Firestore write rather than leave the owner with an
+ * unbilled extra location.
+ */
+export async function syncAdditionalLocationBilling(input: {
+  ownerUid: string;
+  targetCount: number;
+}): Promise<AdditionalLocationBillingSyncResult> {
+  const stripeSecretKey = serverConfig.stripeSecretKey;
+  const additionalLocationPriceId = serverConfig.stripeAdditionalLocationPriceId;
+  if (!stripeSecretKey || !additionalLocationPriceId) {
+    logger.warn(
+      '[ownerBilling] syncAdditionalLocationBilling: Stripe not fully configured for per-location seat',
+      {
+        ownerUid: input.ownerUid,
+        hasSecret: Boolean(stripeSecretKey),
+        hasAdditionalLocationPriceId: Boolean(additionalLocationPriceId),
+      },
+    );
+    return { ok: false, reason: 'not_configured' };
+  }
+
+  const subscription = await getOwnerSubscription(input.ownerUid);
+  if (!subscription) {
+    return { ok: false, reason: 'no_subscription' };
+  }
+  if (subscription.provider !== 'stripe' || !subscription.externalSubscriptionId) {
+    // Apple IAP and internal_prelaunch don't support per-seat add-ons.
+    return { ok: false, reason: 'not_stripe' };
+  }
+  if (subscription.status !== 'active' && subscription.status !== 'trial') {
+    return { ok: false, reason: 'not_active' };
+  }
+
+  // Fetch the live Stripe subscription so we know whether the item already
+  // exists on it — and if so, what the current quantity is and what
+  // subscription-item ID to address. Cheap (one GET; cached at Stripe edge).
+  let stripeSub: StripeSubscription;
+  try {
+    stripeSub = await stripeGetJson<StripeSubscription>(
+      stripeSecretKey,
+      `/subscriptions/${encodeURIComponent(subscription.externalSubscriptionId)}`,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.warn('[ownerBilling] syncAdditionalLocationBilling: Stripe GET failed', {
+      ownerUid: input.ownerUid,
+      subscriptionId: subscription.externalSubscriptionId,
+      error: message,
+    });
+    return { ok: false, reason: 'stripe_error', message };
+  }
+
+  const existingItem = stripeSub.items?.data?.find(
+    (item) => item?.price?.id === additionalLocationPriceId,
+  );
+  const existingQuantity = existingItem?.quantity ?? 0;
+  const targetCount = Math.max(0, Math.floor(input.targetCount));
+
+  // No-op short-circuits
+  if (targetCount === existingQuantity && (targetCount === 0 || existingItem)) {
+    return { ok: true, action: 'noop', quantity: targetCount };
+  }
+
+  // Build the params for the subscription update. Stripe accepts items[] as
+  // form-encoded indexed parameters. proration_behavior=create_prorations
+  // means the owner is charged/credited for the partial billing period
+  // immediately, which matches the value-delivery instant.
+  const params = new URLSearchParams();
+  params.set('proration_behavior', 'create_prorations');
+
+  if (targetCount === 0 && existingItem?.id) {
+    // Remove the item entirely.
+    params.set('items[0][id]', existingItem.id);
+    params.set('items[0][deleted]', 'true');
+  } else if (existingItem?.id) {
+    // Update quantity on existing item.
+    params.set('items[0][id]', existingItem.id);
+    params.set('items[0][quantity]', String(targetCount));
+  } else {
+    // Add the item to the subscription for the first time.
+    params.set('items[0][price]', additionalLocationPriceId);
+    params.set('items[0][quantity]', String(targetCount));
+  }
+
+  try {
+    await stripePostForm<StripeSubscription>(
+      stripeSecretKey,
+      `/subscriptions/${encodeURIComponent(subscription.externalSubscriptionId)}`,
+      params,
+      `addl-loc-sync:${input.ownerUid}:${targetCount}`,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('[ownerBilling] syncAdditionalLocationBilling: Stripe update failed', {
+      ownerUid: input.ownerUid,
+      subscriptionId: subscription.externalSubscriptionId,
+      targetCount,
+      existingQuantity,
+      error: message,
+    });
+    return { ok: false, reason: 'stripe_error', message };
+  }
+
+  const action: 'added' | 'updated' | 'removed' =
+    targetCount === 0 ? 'removed' : existingItem ? 'updated' : 'added';
+
+  logger.info('[ownerBilling] syncAdditionalLocationBilling complete', {
+    ownerUid: input.ownerUid,
+    subscriptionId: subscription.externalSubscriptionId,
+    action,
+    quantity: targetCount,
+    previousQuantity: existingQuantity,
+  });
+
+  return { ok: true, action, quantity: targetCount };
 }
 
 function mapStripeSubscriptionStatus(status: string): OwnerSubscriptionStatus {

@@ -24,6 +24,9 @@ describe('getTierLimits', () => {
     const limits = getTierLimits('verified');
     assert.equal(limits.maxPromotions, 0);
     assert.equal(limits.aiEnabled, false);
+    // Multi-location is Pro-only. Per-location billing ($99.99/mo seat)
+    // rides on top of the Pro base price — Verified and Growth owners
+    // upgrade to Pro before they can add extras.
     assert.equal(limits.multiLocationEnabled, false);
     assert.equal(limits.fullAnalyticsEnabled, false);
   });
