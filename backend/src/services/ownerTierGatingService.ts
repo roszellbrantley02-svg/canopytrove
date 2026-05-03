@@ -43,11 +43,7 @@ const TIER_LIMITS: Record<OwnerSubscriptionTier, TierFeatureLimits> = {
     maxFeaturedPhotos: 0,
     maxFollowerMessages: 0,
     aiEnabled: false,
-    // Multi-location is open to every paid tier as of the per-location
-    // billing model. Each extra location is billed at $99.99/mo via the
-    // STRIPE_ADDITIONAL_LOCATION_PRICE_ID seat regardless of base tier —
-    // Pro is no longer the gate, paying-anything is.
-    multiLocationEnabled: true,
+    multiLocationEnabled: false,
     fullAnalyticsEnabled: false,
     weeklyEmailEnabled: false,
     badgeCustomizationEnabled: false,
@@ -59,7 +55,7 @@ const TIER_LIMITS: Record<OwnerSubscriptionTier, TierFeatureLimits> = {
     maxFeaturedPhotos: 3,
     maxFollowerMessages: 4,
     aiEnabled: false,
-    multiLocationEnabled: true,
+    multiLocationEnabled: false,
     fullAnalyticsEnabled: true,
     weeklyEmailEnabled: true,
     badgeCustomizationEnabled: true,

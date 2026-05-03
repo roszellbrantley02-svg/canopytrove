@@ -1,7 +1,7 @@
 /**
  * Owner Multi-Location Service
  *
- * Manages additional storefront locations for paid-tier owners.
+ * Manages additional storefront locations for Pro-tier owners.
  *
  * Data model:
  *   - ownerProfile.dispensaryId  → primary location (unchanged)
@@ -9,10 +9,11 @@
  *   - dispensaries/{storefrontId}.ownerUid → links storefront back to owner
  *
  * Constraints:
- *   - Requires Verified+ tier (any paid plan)
+ *   - Requires Pro tier — multi-location is Pro-gated
  *   - $99.99/month per additional location, billed as a quantity-based
- *     seat on the owner's Stripe subscription via
- *     syncAdditionalLocationBilling. Bills pro-rate the partial period.
+ *     seat on the owner's Stripe subscription (on top of the Pro base
+ *     price) via syncAdditionalLocationBilling. Bills pro-rate the
+ *     partial period.
  *   - Primary location cannot be removed (only transferred)
  *   - Additional locations need admin-approved claims like the primary
  *
@@ -139,14 +140,15 @@ export async function addOwnerLocation(
     throw new Error('Database not available.');
   }
 
-  // 1. Enforce paid-tier (any tier above free unlocks multi-location now
-  //    that per-location billing is metered separately at $99.99/mo).
+  // 1. Enforce Pro tier. Multi-location is Pro-only; the per-extra-location
+  //    seat ($99.99/mo via STRIPE_ADDITIONAL_LOCATION_PRICE_ID) bills on
+  //    top of the Pro base price.
   const tier = await resolveOwnerTier(ownerUid);
   const tierLimits = getTierLimits(tier);
   if (!tierLimits.multiLocationEnabled) {
     throw new TierAccessError(
-      'Adding additional locations requires an active subscription. Upgrade to Verified ($49/mo) or higher — each extra location is then $99.99/mo on top of your base plan.',
-      'verified',
+      'Multi-location management requires the Pro plan ($249.99/mo launch — regular $499.99/mo). Each additional location is then $99.99/mo on top of the Pro base. Upgrade to unlock.',
+      'pro',
       tier,
     );
   }
