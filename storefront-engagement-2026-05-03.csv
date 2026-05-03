@@ -1,0 +1,267 @@
+storefrontId,displayName,city,state,phone,impressions,opens,directions,phoneTaps,websiteTaps,menuTaps,reviewsStarted,reviewsSubmitted,uniqueDevicesEngaged,uniqueDevicesOpened,uniqueDevicesDirections,uniqueDevicesPhoneTap,firstSeen,lastSeen
+ocm-14590-wolcott-the-coughie-shop,"The Coughie Shop",Wolcott,NY,(315) 401-5517,1001,220,169,3,0,0,44,1,69,39,13,2,2026-03-30,2026-05-03
+ocm-13143-red-creek-victory-road-farm,"Victory Road Farm",Red Creek,NY,(315) 256-0999,998,64,18,1,0,0,8,1,66,18,7,1,2026-03-30,2026-05-03
+ocm-14513-newark-haze-and-harvest,"Haze and Harvest",Newark,NY,(315) 332-8189,998,59,13,0,1,0,13,2,66,21,4,0,2026-03-30,2026-05-03
+ocm-13069-fulton-leafy-wonders-llc,"Leafy Wonders LLC",Fulton,NY,(315) 887-1900,365,17,5,0,1,0,2,1,53,8,1,0,2026-03-31,2026-05-03
+ocm-13126-oswego-flynnstoned-oswego,"FlynnStoned Oswego",Oswego,NY,(315) 207-2420,328,4,6,0,1,0,0,0,50,4,5,0,2026-03-31,2026-05-03
+ocm-13021-auburn-wild-flower-dispensary,"Wild Flower Dispensary",Auburn,NY,(315) 730-4483,325,4,0,0,0,0,0,0,50,4,0,0,2026-03-31,2026-05-03
+ocm-13021-auburn-48-genesee-st-dispensary,"48 Genesee St Dispensary",Auburn,NY,(315) 515-3636,326,2,0,0,0,0,0,0,50,2,0,0,2026-03-31,2026-05-03
+ocm-14456-geneva-twisted-cannabis-flx,"Twisted Cannabis FLX",Geneva,NY,(315) 325-2241,119,13,1,0,2,0,1,1,30,7,1,0,2026-03-31,2026-05-03
+ocm-14502-macedon-native-haze-cannabis-co,"Native Haze Cannabis Co",Macedon,NY,(877) 420-4293,87,1,1,0,0,0,0,0,30,1,1,0,2026-03-31,2026-05-03
+ocm-14456-geneva-high-points-dispensary,"High Points Dispensary",Geneva,NY,(585) 905-1141,70,1,0,0,0,0,0,0,26,1,0,0,2026-03-31,2026-05-03
+ocm-13041-clay-raven-dispensaries-llc-dba-raven-s-joint,"Raven Dispensaries LLC (dba Raven's Joint)",Clay,NY,(315) 409-4600,64,1,1,0,1,0,0,0,21,1,1,0,2026-03-31,2026-05-03
+ocm-13090-liverpool-tj-s-cannabis-corp,"TJ's Cannabis Corp.",Liverpool,NY,(315) 314-6776,61,3,1,0,0,0,0,0,20,2,1,0,2026-03-31,2026-05-03
+ocm-13152-skaneateles-tap-root-station,"Tap Root Station",Skaneateles,NY,(315) 554-8001,61,2,0,0,0,0,0,0,21,2,0,0,2026-03-31,2026-05-03
+ocm-10001-new-york-culture-house,"Culture House",New York,NY,(212) 704-8080,52,5,0,0,2,0,0,0,17,3,0,0,2026-04-02,2026-05-03
+ocm-13209-syracuse-flynnstoned-state-fair-blvd,"FlynnStoned State Fair Blvd",Syracuse,NY,(315) 849-5600,57,1,0,0,0,0,0,0,20,1,0,0,2026-03-31,2026-05-01
+ocm-10001-new-york-housing-works-cannabis-co-nomad,"Housing Works Cannabis Co NoMad",New York,NY,(646) 370-1820,53,2,0,0,1,0,0,0,17,2,0,0,2026-04-02,2026-05-03
+ocm-14580-rochester-flynnstoned-baytowne,"FlynnStoned Baytowne",Rochester,NY,(585) 347-4103,34,2,1,0,0,0,0,0,11,2,1,0,2026-04-02,2026-05-03
+ocm-14424-canandaigua-good-life-collective-finger-lakes,"Good Life Collective Finger Lakes",Canandaigua,NY,(585) 412-6174,35,0,0,0,0,0,0,0,14,0,0,0,2026-03-31,2026-05-01
+ocm-14564-victor-flower-city-dispensary,"Flower City Dispensary",Victor,NY,(585) 559-2837,32,0,2,0,0,0,0,0,14,0,2,0,2026-03-31,2026-05-03
+ocm-14564-victor-fingerlakes-cannabis-co,"FingerLakes Cannabis Co",Victor,NY,(585) 407-8000,33,0,1,0,0,0,0,0,13,0,1,0,2026-04-02,2026-05-01
+ocm-13219-syracuse-joe-s-buds,"Joe's Buds",Syracuse,NY,(315) 883-0033,29,2,0,0,0,0,0,0,10,2,0,0,2026-03-31,2026-05-01
+ocm-14445-rochester-sessco-cannabis-dispensary,"Sessco Cannabis Dispensary",Rochester,NY,(585) 603-3516,30,0,1,0,0,0,0,0,12,0,1,0,2026-04-02,2026-05-01
+ocm-13212-north-syracuse-flynnstoned-north-syracuse,"FlynnStoned North Syracuse",North Syracuse,NY,(315) 214-8148,29,0,0,0,0,0,0,0,10,0,0,0,2026-03-31,2026-05-01
+ocm-13212-north-syracuse-herb-z,"Herb-Z",North Syracuse,NY,(315) 904-5007,28,0,0,0,0,0,0,0,9,0,0,0,2026-04-02,2026-05-01
+ocm-10001-new-york-the-alchemy,"The Alchemy",New York,NY,(646) 819-4143,26,0,0,0,0,0,0,0,13,0,0,0,2026-04-02,2026-05-03
+ocm-10001-new-york-vereleaf,"Vereleaf",New York,NY,(646) 368-1130,24,0,0,0,0,0,0,0,11,0,0,0,2026-04-02,2026-05-03
+ocm-10002-new-york-conbud-llc,"CONBUD LLC",New York,NY,(646) 449-0809,23,0,0,0,0,0,0,0,11,0,0,0,2026-04-02,2026-05-03
+ocm-13224-syracuse-vedaleaf,"VedaLeaf",Syracuse,NY,(315) 214-3553,19,0,2,0,0,0,0,0,8,0,1,0,2026-04-03,2026-05-01
+ocm-14609-rochester-browncroft-budz,"Browncroft Budz",Rochester,NY,(585) 563-6012,20,0,0,0,0,0,0,0,8,0,0,0,2026-04-03,2026-05-01
+ocm-14609-rochester-cannabis-corner,"Cannabis Corner",Rochester,NY,(585) 576-4706,20,0,0,0,0,0,0,0,8,0,0,0,2026-04-03,2026-05-01
+ocm-14092-lewiston-stonedhouse-dispensary,"Stonedhouse Dispensary",Lewiston,NY,(716) 306-3500,20,0,0,0,0,0,0,0,17,0,0,0,2026-04-09,2026-05-01
+ocm-14305-niagara-falls-la-ffoca,"LA FFOCA",Niagara Falls,NY,(716) 215-6192,20,0,0,0,0,0,0,0,17,0,0,0,2026-04-09,2026-05-01
+ocm-14701-jamestown-bob-natural-cannabis-dispensary,"Bob Natural Cannabis Dispensary",Jamestown,NY,(716) 488-7027,20,0,0,0,0,0,0,0,17,0,0,0,2026-04-09,2026-05-01
+ocm-14701-jamestown-buzzwny,"BuzzWNY",Jamestown,NY,(716) 710-7202,20,0,0,0,0,0,0,0,17,0,0,0,2026-04-09,2026-05-01
+ocm-14701-jamestown-lifted,"Lifted",Jamestown,NY,(716) 489-3022,20,0,0,0,0,0,0,0,17,0,0,0,2026-04-09,2026-05-01
+ocm-14701-jamestown-liquid-monkey-dispensary,"Liquid Monkey Dispensary",Jamestown,NY,(716) 490-5374,20,0,0,0,0,0,0,0,17,0,0,0,2026-04-09,2026-05-01
+ocm-14701-jamestown-yeti-greenery,"Yeti Greenery",Jamestown,NY,(716) 543-9384,20,0,0,0,0,0,0,0,17,0,0,0,2026-04-09,2026-05-01
+ocm-10002-new-york-kushklub-nyc,"KushKlub NYC",New York,NY,(646) 988-3762,19,0,0,0,0,0,0,0,7,0,0,0,2026-04-02,2026-05-03
+ocm-13224-syracuse-diamond-tree-dispensary,"Diamond Tree Dispensary",Syracuse,NY,(315) 652-9560,19,0,0,0,0,0,0,0,8,0,0,0,2026-04-03,2026-05-01
+ocm-14445-east-rochester-grass-roots-wellness,"Grass Roots Wellness",East Rochester,NY,(585) 267-7015,18,1,0,0,0,0,0,0,9,1,0,0,2026-04-03,2026-05-01
+ocm-10002-new-york-mighty-lucky-inc,"Mighty Lucky Inc",New York,NY,(646) 901-6399,18,0,0,0,0,0,0,0,7,0,0,0,2026-04-02,2026-05-03
+ocm-13202-syracuse-the-higher-co,"The Higher Co.",Syracuse,NY,(315) 870-7140,16,1,0,0,1,0,0,0,7,1,0,0,2026-04-03,2026-05-01
+ocm-14607-rochester-good-life-collective,"Good Life Collective",Rochester,NY,(585) 360-2031,18,0,0,0,0,0,0,0,8,0,0,0,2026-04-04,2026-05-01
+ocm-14736-findley-lake-organic-blooms,"Organic Blooms",Findley Lake,NY,(716) 769-2001,17,0,1,0,0,0,0,0,16,0,1,0,2026-04-09,2026-04-29
+ocm-13210-syracuse-dazed-syracuse,"Dazed Syracuse",Syracuse,NY,(917) 232-9869,16,0,1,0,0,0,0,0,7,0,1,0,2026-04-03,2026-05-01
+ocm-13202-syracuse-flynnstoned-corporation,"Flynnstoned Corporation",Syracuse,NY,(315) 299-9334,16,0,0,0,0,0,0,0,7,0,0,0,2026-04-03,2026-05-01
+ocm-14604-rochester-6-point-cannabis,"6 Point Cannabis",Rochester,NY,(585) 601-0010,16,0,0,0,0,0,0,0,6,0,0,0,2026-04-07,2026-05-01
+ocm-14614-rochester-flynnstoned-rochester,"FlynnStoned Rochester",Rochester,NY,(585) 270-5558,16,0,0,0,0,0,0,0,6,0,0,0,2026-04-07,2026-05-01
+ocm-13224-syracuse-thrive-syracuse,"Thrive Syracuse",Syracuse,NY,(315) 207-7935,14,0,0,0,0,0,0,0,7,0,0,0,2026-04-04,2026-05-01
+ocm-10007-new-york-alto-on-chambers,"Alto on Chambers",New York,NY,(212) 933-4737,12,1,0,0,0,0,0,0,6,1,0,0,2026-04-09,2026-05-03
+ocm-13057-east-syracuse-verilife-east-syracuse,"Verilife East Syracuse",East Syracuse,NY,(315) 666-1185,11,0,1,0,0,0,0,0,6,0,1,0,2026-04-04,2026-05-01
+ocm-14607-rochester-flynnstoned-rochester-n-goodman-st,"FlynnStoned Rochester; N Goodman St",Rochester,NY,(585) 340-6897,12,0,0,0,0,0,0,0,7,0,0,0,2026-04-04,2026-05-01
+ocm-14607-rochester-wicked-reserve-dispensary,"Wicked Reserve Dispensary",Rochester,NY,(585) 402-9712,12,0,0,0,0,0,0,0,7,0,0,0,2026-04-04,2026-05-01
+ocm-10002-new-york-the-flowery-chinatown,"The Flowery Chinatown",New York,NY,(718) 554-4109,12,0,0,0,0,0,0,0,7,0,0,0,2026-04-08,2026-05-03
+ocm-10038-new-york-dankley-fidi,"Dankley FiDi",New York,NY,(646) 370-4317,12,0,0,0,0,0,0,0,6,0,0,0,2026-04-09,2026-05-03
+ocm-10038-new-york-le-flora-cannabis,"Le Flora Cannabis",New York,NY,(646) 448-4835,12,0,0,0,0,0,0,0,6,0,0,0,2026-04-09,2026-05-03
+ocm-13057-east-syracuse-rise-dispensary-east-syracuse,"RISE Dispensary East Syracuse",East Syracuse,NY,(315) 230-0008,11,0,0,0,0,0,0,0,6,0,0,0,2026-04-04,2026-05-01
+ocm-13214-syracuse-loudpack-exotics,"Loudpack Exotics",Syracuse,NY,(315) 299-4323,11,0,0,0,0,0,0,0,6,0,0,0,2026-04-04,2026-05-01
+ocm-14620-rochester-green-comfort-dispensary,"Green Comfort Dispensary",Rochester,NY,(585) 603-8883,11,0,0,0,0,0,0,0,6,0,0,0,2026-04-04,2026-05-01
+ocm-12748-jeffersonville-the-green-house,"The Green House",Jeffersonville,NY,(845) 524-9655,7,2,1,0,1,0,0,0,2,1,1,0,2026-04-27,2026-05-01
+ocm-14623-rochester-mj-dispensary,"MJ Dispensary",Rochester,NY,(585) 222-9333,10,0,0,0,0,0,0,0,5,0,0,0,2026-04-05,2026-05-01
+ocm-14623-rochester-roc-dispensary,"ROC Dispensary",Rochester,NY,(585) 278-8205,9,1,0,0,0,0,0,0,5,1,0,0,2026-04-05,2026-05-01
+ocm-14615-rochester-pure-wellness-dispensary,"Pure Wellness Dispensary",Rochester,NY,(585) 270-8782,9,1,0,0,0,0,0,0,4,1,0,0,2026-04-07,2026-05-01
+ocm-14623-rochester-fiorello-pharmaceuticals-inc-dba-rise,"Fiorello Pharmaceuticals; Inc. (dba RISE)",Rochester,NY,(585) 242-0203,9,0,0,0,0,0,0,0,5,0,0,0,2026-04-05,2026-05-01
+ocm-14623-rochester-misfits-dispensary,"Misfits Dispensary",Rochester,NY,(585) 601-2350,9,0,0,0,0,0,0,0,5,0,0,0,2026-04-05,2026-05-01
+ocm-14527-penn-yan-bloom-cannabis-dispensary,"Bloom Cannabis Dispensary",Penn Yan,NY,(315) 694-7098,9,0,0,0,0,0,0,0,4,0,0,0,2026-04-07,2026-05-01
+ocm-14608-rochester-rochester-s-finest-cannabis-dispensary,"Rochester's Finest Cannabis Dispensary",Rochester,NY,(585) 286-9995,9,0,0,0,0,0,0,0,4,0,0,0,2026-04-07,2026-05-01
+ocm-14620-rochester-happy-goat-dispensary,"Happy Goat Dispensary",Rochester,NY,(585) 287-5264,9,0,0,0,0,0,0,0,4,0,0,0,2026-04-07,2026-05-01
+ocm-13104-manlius-just-breathe-syracuse,"Just Breathe Syracuse",Manlius,NY,(315) 692-2131,8,0,0,0,0,0,0,0,4,0,0,0,2026-04-07,2026-05-02
+ocm-13142-pulaski-salmon-river-cannabis-company,"Salmon River Cannabis Company",Pulaski,NY,(315) 384-8779,8,0,0,0,0,0,0,0,4,0,0,0,2026-04-07,2026-05-01
+ocm-14485-lima-the-chosen-pot,"The Chosen Pot",Lima,NY,(585) 497-7100,7,1,0,0,0,0,0,0,4,1,0,0,2026-04-07,2026-05-02
+ocm-14606-rochester-buddeez,"Buddeez",Rochester,NY,(585) 270-5620,8,0,0,0,0,0,0,0,4,0,0,0,2026-04-07,2026-05-01
+ocm-14615-rochester-flynnstoned-rochester-west-ridge-rd,"FlynnStoned Rochester; West Ridge Rd",Rochester,NY,(585) 286-9973,8,0,0,0,0,0,0,0,4,0,0,0,2026-04-07,2026-05-01
+ocm-14623-henrietta-the-shady-grove-dispensary,"The Shady Grove Dispensary",Henrietta,NY,(585) 270-4461,8,0,0,0,0,0,0,0,4,0,0,0,2026-04-07,2026-05-01
+ocm-14623-rochester-mango-cannabis,"Mango Cannabis",Rochester,NY,(585) 404-0194,8,0,0,0,0,0,0,0,4,0,0,0,2026-04-07,2026-05-01
+ocm-14850-ithaca-the-corner-house,"The Corner House",Ithaca,NY,(607) 379-6030,7,0,1,0,0,0,0,0,3,0,1,0,2026-04-07,2026-05-01
+ocm-10003-new-york-dazed,"Dazed",New York,NY,(917) 232-9869,7,1,0,0,0,0,0,0,2,1,0,0,2026-04-08,2026-05-03
+ocm-13077-homer-classy-canna,"Classy Canna",Homer,NY,(607) 218-7170,6,0,1,0,0,0,0,0,3,0,1,0,2026-04-07,2026-05-01
+ocm-14466-hemlock-hemplocks,"Hemplocks",Hemlock,NY,(585) 367-1035,7,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-14472-honeoye-falls-mj-dispensary-honeoye-falls,"MJ Dispensary Honeoye Falls",Honeoye Falls,NY,(585) 497-7090,7,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-14543-rush-canna-health-and-wellness,"Canna Health and Wellness",Rush,NY,(585) 533-4067,7,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-14559-spencerport-mj-dispensary-spencerport,"MJ Dispensary Spencerport",Spencerport,NY,(585) 488-2069,7,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-14886-trumansburg-royal-buds-llc,"Royal Buds LLC",Trumansburg,NY,(607) 483-4683,7,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-10003-new-york-gotham-caurd-llc,"Gotham CAURD LLC",New York,NY,(646) 217-4544,7,0,0,0,0,0,0,0,2,0,0,0,2026-04-08,2026-05-03
+ocm-12754-liberty-joint-jungle,"Joint Jungle",Liberty,NY,(845) 539-9333,7,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-01
+ocm-12786-white-lake-bethel-buds,"Bethel Buds",White Lake,NY,(845) 250-4145,7,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-01
+ocm-14201-buffalo-best-budz,"Best Budz",Buffalo,NY,(716) 259-8630,7,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-03
+ocm-14201-buffalo-public-flower,"Public Flower",Buffalo,NY,(716) 201-0711,7,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-03
+ocm-14203-buffalo-dank-716-llc,"Dank 716 LLC",Buffalo,NY,(716) 277-8493,7,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-03
+ocm-13413-new-hartford-mills-cannabis,"Mills Cannabis",New Hartford,NY,(315) 316-0190,6,0,0,0,0,0,0,0,2,0,0,0,2026-04-06,2026-05-01
+ocm-13413-new-hartford-the-village-green-dispensary,"The Village Green Dispensary",New Hartford,NY,(315) 316-0823,6,0,0,0,0,0,0,0,2,0,0,0,2026-04-06,2026-05-01
+ocm-13495-yorkville-ganja-express-dispensary,"Ganja Express Dispensary",Yorkville,NY,(315) 507-2577,6,0,0,0,0,0,0,0,2,0,0,0,2026-04-06,2026-05-01
+ocm-13045-cortland-lakehouse-cannabis,"LakeHouse Cannabis",Cortland,NY,(607) 249-3254,6,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-13053-dryden-geneva-naturals-llc-dba-dryden-dispensary,"Geneva Naturals LLC (dba Dryden Dispensary)",Dryden,NY,(607) 708-4151,6,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-14052-east-aurora-buffalo-kind,"Buffalo Kind",East Aurora,NY,(716) 345-2374,6,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-03
+ocm-14850-ithaca-aspire,"Aspire",Ithaca,NY,(607) 319-4382,6,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-14850-ithaca-collegetown-dispensary,"Collegetown Dispensary",Ithaca,NY,(607) 241-9138,6,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-14850-ithaca-the-highly-connected-dispensary,"The Highly Connected Dispensary",Ithaca,NY,(607) 319-0420,6,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-14850-ithaca-upstate-haze,"Upstate Haze",Ithaca,NY,(607) 793-8000,6,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-14850-ithaca-william-jane-corporation,"William Jane Corporation",Ithaca,NY,(607) 319-0118,6,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-01
+ocm-13617-canton-northern-lights-dispensary,"Northern Lights Dispensary",Canton,NY,(315) 386-4200,6,0,0,0,0,0,0,0,3,0,0,0,2026-04-27,2026-05-03
+ocm-13669-ogdensburg-green-door-dispensary,"Green Door Dispensary",Ogdensburg,NY,(315) 375-3004,6,0,0,0,0,0,0,0,3,0,0,0,2026-04-27,2026-05-03
+ocm-13676-potsdam-the-firehaus-ny,"The Firehaus NY",Potsdam,NY,(315) 261-4021,6,0,0,0,0,0,0,0,3,0,0,0,2026-04-27,2026-05-03
+ocm-10923-garnerville-202-cannabis-co,"202 Cannabis Co.",Garnerville,NY,(845) 915-7003,3,2,1,0,0,0,0,0,1,1,1,0,2026-05-03,2026-05-03
+ocm-13354-holland-patent-brookie-s-cookies,"Brookie's Cookies",Holland Patent,NY,(315) 749-6451,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13440-rome-luxus-botanica,"Luxus Botanica",Rome,NY,(315) 314-9333,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13501-utica-exit-31-exotic,"Exit 31 Exotic",Utica,NY,(315) 982-4274,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13501-utica-puff-theory-cannabis,"Puff Theory Cannabis",Utica,NY,(315) 275-7833,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13502-utica-air-city-cannabis,"Air City Cannabis",Utica,NY,(315) 269-8013,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13619-carthage-black-river-supply-company,"Black River Supply Company",Carthage,NY,(315) 519-1161,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13691-theresa-high-falls-garden,"High Falls Garden",Theresa,NY,(315) 628-3033,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13743-waverly-hazy-daze,"Hazy Daze",Waverly,NY,(607) 249-6007,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13901-binghamton-just-breathe,"Just Breathe",Binghamton,NY,(607) 677-0073,5,0,0,0,0,0,0,0,3,0,0,0,2026-04-07,2026-05-02
+ocm-14020-batavia-mrs-green-cannary,"Mrs. Green CANNAry",Batavia,NY,(585) 356-1647,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14052-east-aurora-east-leaf-dispensary-east-aurora,"East Leaf Dispensary East Aurora",East Aurora,NY,(716) 714-6266,4,1,0,0,0,0,0,0,2,1,0,0,2026-04-07,2026-05-01
+ocm-14420-brockport-evergreen-retail,"Evergreen Retail",Brockport,NY,(585) 391-3474,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14437-dansville-dansville-dispesnary,"Dansville Dispesnary",Dansville,NY,(585) 649-6213,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14481-leicester-nautical-blaze-dispensary,"Nautical Blaze Dispensary",Leicester,NY,(585) 382-5010,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14830-corning-canna-culture-co,"Canna Culture Co.",Corning,NY,(607) 542-2708,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14830-corning-union-chill,"Union Chill",Corning,NY,(607) 654-4115,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14845-horseheads-archie-s-cannabis-company,"Archie's Cannabis Company",Horseheads,NY,(607) 215-0560,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14850-ithaca-altitude-ithaca,"Altitude Ithaca",Ithaca,NY,(607) 219-3310,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14894-wellsburg-rocky-river-remedies,"Rocky River Remedies",Wellsburg,NY,(607) 483-1185,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14901-elmira-the-dabbery-hashery,"The Dabbery Hashery",Elmira,NY,(607) 398-0150,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14901-elmira-the-goodie-bag,"The Goodie Bag",Elmira,NY,(607) 442-0042,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-10013-new-york-elevate-soho-cannabis,"Elevate Soho Cannabis",New York,NY,(516) 498-7753,5,0,0,0,0,0,0,0,5,0,0,0,2026-04-09,2026-04-13
+ocm-10038-new-york-green-klub,"Green Klub",New York,NY,(646) 220-0576,5,0,0,0,0,0,0,0,5,0,0,0,2026-04-09,2026-04-13
+ocm-12455-margaretville-lively-harvest,"Lively Harvest",Margaretville,NY,(845) 586-6797,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-01
+ocm-13754-deposit-canna-vibes-ny,"Canna Vibes NY",Deposit,NY,(607) 467-1039,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-01
+ocm-13783-hancock-knotweed-farm,"Knotweed Farm",Hancock,NY,(518) 542-9632,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-01
+ocm-14043-depew-the-smoking-buffalo,"The Smoking Buffalo",Depew,NY,(716) 288-7845,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-03
+ocm-14201-buffalo-buffalo-dreams,"Buffalo Dreams",Buffalo,NY,(716) 466-2351,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-03
+ocm-14204-buffalo-mammoth-cannabis,"Mammoth Cannabis",Buffalo,NY,(716) 339-5647,5,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-03
+ocm-13350-herkimer-budd-barn,"Budd Barn",Herkimer,NY,(315) 619-9333,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13790-johnson-city-greenery-spot-llc,"Greenery Spot LLC",Johnson City,NY,(607) 788-1189,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13850-vestal-exscape-inc-dba-sacred-bloom,"Exscape INC (dba Sacred Bloom)",Vestal,NY,(607) 444-3085,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13850-vestal-skalz,"Skalz",Vestal,NY,(607) 217-4301,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13901-binghamton-blissful-buds,"Blissful Buds",Binghamton,NY,(607) 217-5010,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-13904-binghamton-cotton-mouth-dispensary,"Cotton Mouth Dispensary",Binghamton,NY,(607) 217-4043,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14008-appleton-innocence-cannabis,"Innocence Cannabis",Appleton,NY,(716) 638-4222,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14051-east-amherst-realistic-health-and-wellness,"Realistic Health & Wellness",East Amherst,NY,(716) 276-8074,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14086-lancaster-kushmart-lancaster,"Kushmart Lancaster",Lancaster,NY,(716) 601-7012,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14094-lockport-grow716,"Grow716",Lockport,NY,(716) 202-8191,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14094-lockport-peace-love-and-bud,"Peace; Love; & Bud",Lockport,NY,(716) 346-6589,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-14221-williamsville-cloudfather,"Cloudfather",Williamsville,NY,(716) 276-8456,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-07,2026-05-01
+ocm-12701-monticello-canna-planet-monticello,"Canna Planet Monticello",Monticello,NY,(845) 720-9333,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-01
+ocm-12775-rock-hill-platinum-leaf,"Platinum Leaf",Rock Hill,NY,(845) 796-0418,4,0,0,0,0,0,0,0,2,0,0,0,2026-04-27,2026-05-01
+ocm-12790-wurtsboro-woodstock-oasis,"Woodstock Oasis",Wurtsboro,NY,(845) 498-7286,2,1,1,0,0,0,0,0,1,1,1,0,2026-04-27,2026-05-01
+ocm-12901-plattsburgh-the-herb-cave,"The Herb Cave",Plattsburgh,NY,(518) 310-0349,3,1,0,0,0,0,0,0,2,1,0,0,2026-05-02,2026-05-03
+ocm-12010-amsterdam-amsterdam-cannabis-inc,"Amsterdam Cannabis; Inc.",Amsterdam,NY,(518) 212-2280,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12020-ballston-spa-leaf-and-fog-dispensary,"Leaf & Fog Dispensary",Ballston Spa,NY,(518) 309-3380,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12020-ballston-spa-sashies-dispensary,"Sashies Dispensary",Ballston Spa,NY,(518) 288-3158,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12095-johnstown-ganja-palace-dispensary,"Ganja Palace Dispensary",Johnstown,NY,(518) 705-4282,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12303-schenectady-grass-and-goodness,"Grass & Goodness",Schenectady,NY,(518) 901-7107,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12305-schenectady-cannabicity-schenectady,"Cannabicity Schenectady",Schenectady,NY,(518) 777-2262,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12305-schenectady-madame-jane-cannabis-dispensary,"Madame Jane Cannabis Dispensary",Schenectady,NY,(518) 320-7666,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12305-schenectady-ripe-cannabis,"Ripe Cannabis",Schenectady,NY,(518) 777-7473,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12305-schenectady-the-people-s-joint,"The People's Joint",Schenectady,NY,(518) 414-0726,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12306-schenectady-electric-city-cannabis,"Electric City Cannabis",Schenectady,NY,(518) 579-0031,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12306-schenectady-flower-bnk,"Flower BNK",Schenectady,NY,(518) 333-0000,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12309-schenectady-cloud-9-dispensary,"Cloud 9 Dispensary",Schenectady,NY,(518) 280-0450,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12309-schenectady-upstate-canna-co,"Upstate Canna Co",Schenectady,NY,(518) 280-4289,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-13820-oneonta-dosha-farms-llc-dba-dosha,"Dosha Farms LLC (dba Dosha)",Oneonta,NY,(607) 267-4488,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-13849-unadilla-greens-greenery,"Greens Greenery",Unadilla,NY,(607) 610-4037,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14006-angola-village-one-stop,"Village One Stop",Angola,NY,(716) 549-0393,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14034-depew-dream-daze,"Dream Daze",Depew,NY,(716) 288-7138,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14043-cheektowaga-cloud-9-dispensary,"Cloud 9 Dispensary",Cheektowaga,NY,(716) 420-8063,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14043-depew-herbal-iq,"Herbal IQ",Depew,NY,(716) 288-7353,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14043-depew-the-phinest-buds,"The Phinest Buds",Depew,NY,(716) 329-4326,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14075-hamburg-716-cannabis-llc,"716 Cannabis LLC",Hamburg,NY,(716) 584-3123,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14075-hamburg-cannaspace,"CannaSpace",Hamburg,NY,(716) 428-5730,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14086-lancaster-high-tide-dispensary,"High Tide Dispensary",Lancaster,NY,(716) 329-6725,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14120-north-tonawanda-aroma-cannabis,"Aroma Cannabis",North Tonawanda,NY,(716) 260-1539,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14120-north-tonawanda-love-nug,"Love Nug",North Tonawanda,NY,(716) 260-1318,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14120-north-tonawanda-satisfied-mind,"Satisfied Mind",North Tonawanda,NY,(716) 766-7659,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14209-buffalo-secret-garden-716,"Secret Garden 716",Buffalo,NY,(716) 235-8693,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14210-buffalo-the-cannabis-vault,"The Cannabis Vault",Buffalo,NY,(716) 314-5399,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14211-buffalo-toke-lane,"Toke Lane",Buffalo,NY,(888) 484-1073,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14214-buffalo-high-cloudz-buffalo,"High Cloudz Buffalo",Buffalo,NY,(716) 248-2522,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14215-cheektowaga-happy-times-cannabis-co,"Happy Times Cannabis Co.",Cheektowaga,NY,(716) 322-0104,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14216-buffalo-82-j-cannabis-company,"82-J Cannabis Company",Buffalo,NY,(716) 262-0036,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14216-buffalo-premier-earth-corp,"Premier Earth Corp.",Buffalo,NY,(716) 830-5555,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14217-kenmore-honey-kenmore-nickel-city-green-llc,"Honey Kenmore (Nickel City Green LLC)",Kenmore,NY,(716) 200-1551,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14217-kenmore-the-kokoro-way-cannabis,"The Kokoro Way Cannabis",Kenmore,NY,(716) 322-0327,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14218-lackawanna-kushmart-lackawanna,"KushMart Lackawanna",Lackawanna,NY,(716) 248-2787,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14218-lackawanna-yeti-canna,"Yeti Canna",Lackawanna,NY,(716) 262-0662,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14219-blasdell-command-cannabis-dispensary,"Command Cannabis Dispensary",Blasdell,NY,(716) 248-2437,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14220-buffalo-the-cannabis-store,"The Cannabis Store",Buffalo,NY,(716) 381-8004,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14221-amherst-herbalwai,"Herbalwai",Amherst,NY,(716) 242-1080,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14222-buffalo-canterra,"Canterra",Buffalo,NY,(716) 544-5751,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14222-buffalo-good-life-buffalo,"Good Life Buffalo",Buffalo,NY,(716) 322-0114,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14222-buffalo-the-joint,"The Joint",Buffalo,NY,(716) 248-2285,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14223-buffalo-star-buds,"Star Buds",Buffalo,NY,(716) 829-7235,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14223-tonawanda-mary-janes-a-legacy-2-legal-dispensary,"Mary Janes - A Legacy 2 Legal Dispensary",Tonawanda,NY,(716) 331-3056,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14224-cheektowaga-east-leaf-dispensary,"East Leaf Dispensary",Cheektowaga,NY,(716) 322-0062,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14224-west-seneca-devil-s-lettuce,"Devil's Lettuce",West Seneca,NY,(716) 671-8500,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14224-west-seneca-green-philosophy-716,"Green Philosophy 716",West Seneca,NY,(716) 796-0040,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14225-buffalo-ether,"Ether",Buffalo,NY,(716) 331-5403,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14225-cheektowaga-king-of-budz-cannabis-company,"King of Budz Cannabis Company",Cheektowaga,NY,(716) 377-9914,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14226-amherst-leaf-plug,"Leaf Plug",Amherst,NY,(716) 259-9004,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14227-cheektowaga-happy-times-cheektowaga,"Happy Times Cheektowaga",Cheektowaga,NY,(716) 473-5019,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14228-amherst-the-hive,"The Hive",Amherst,NY,(716) 260-2332,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14228-amherst-treehead-culture,"TreeHead Culture",Amherst,NY,(716) 260-2295,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14304-niagara-falls-carry-on-cannabis,"Carry-On Cannabis",Niagara Falls,NY,(716) 236-7014,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14304-niagara-falls-happy-times-cannabis-co-niagara-falls,"Happy Times Cannabis Co. Niagara Falls",Niagara Falls,NY,(716) 299-0004,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14304-niagara-falls-the-flavor-factory,"The Flavor Factory",Niagara Falls,NY,(716) 263-3222,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14304-niagara-falls-upstate-exotics,"Upstate Exotics",Niagara Falls,NY,(716) 205-8506,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14731-ellicottville-enchanted-mountains-cannabis-company,"Enchanted Mountains Cannabis Company",Ellicottville,NY,(716) 699-1142,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-14760-olean-jupiter-cafe,"Jupiter Cafe",Olean,NY,(716) 790-8019,3,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12901-plattsburgh-curaleaf-plattsburgh,"Curaleaf Plattsburgh",Plattsburgh,NY,(518) 930-4340,3,0,0,0,0,0,0,0,2,0,0,0,2026-05-02,2026-05-03
+ocm-12953-malone-p-nuggs,"P. Nuggs",Malone,NY,(518) 319-4456,3,0,0,0,0,0,0,0,2,0,0,0,2026-05-02,2026-05-03
+ocm-10003-new-york-housing-works-cannabis-llc,"Housing Works Cannabis; LLC",New York,NY,(646) 669-7238,2,0,0,0,0,0,0,0,2,0,0,0,2026-04-08,2026-04-11
+ocm-10012-new-york-dagmar-cannabis-soho,"Dagmar Cannabis SoHo",New York,NY,(212) 933-4457,2,0,0,0,0,0,0,0,2,0,0,0,2026-04-09,2026-04-11
+ocm-12047-cohoes-the-bakery-cannabis-dispensary,"The Bakery Cannabis Dispensary",Cohoes,NY,(518) 213-7714,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12065-clifton-park-cannabis-central,"Cannabis Central",Clifton Park,NY,(518) 280-1960,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12065-clifton-park-capital-district-cannabis-clifton-park,"Capital District Cannabis Clifton Park",Clifton Park,NY,(518) 901-0010,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12065-halfmoon-evexia-cannabis,"Evexia Cannabis",Halfmoon,NY,(518) 357-3059,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12110-latham-green-leaf-wellness,"Green Leaf Wellness",Latham,NY,(518) 213-7719,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12110-latham-state-of-mind-dispensary,"State of Mind Dispensary",Latham,NY,(518) 330-9673,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12110-latham-verilife-albany,"Verilife Albany",Latham,NY,(518) 216-0140,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12144-rensselaer-high-frequency,"High Frequency",Rensselaer,NY,(866) 547-6653,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12180-troy-casa-verde-dispensary,"Casa Verde Dispensary",Troy,NY,(518) 953-0070,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12180-troy-humble-county-llc-dba-420-bliss,"Humble County LLC (dba 420 Bliss)",Troy,NY,(518) 629-9511,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12180-troy-misty-bleu-farm-llc-dba-400-river-dispensary,"Misty Bleu Farm LLC (dba 400 River Dispensary)",Troy,NY,(518) 400-2278,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12180-troy-no-name-cannabis-co,"No Name Cannabis Co.",Troy,NY,(518) 560-0886,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12180-troy-the-greenhouse-cannabis-dispensary,"The Greenhouse Cannabis Dispensary",Troy,NY,(518) 286-7555,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12182-troy-transcend-wellness,"Transcend Wellness",Troy,NY,(518) 874-1244,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12188-waterford-leafy-peaks,"Leafy Peaks",Waterford,NY,(518) 500-2065,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12203-albany-route-20-cannabis,"Route 20 Cannabis",Albany,NY,(518) 250-5122,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12203-albany-silver-cannabis-company-albany,"Silver Cannabis Company Albany",Albany,NY,(518) 977-3770,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12204-albany-royale-flower,"Royale Flower",Albany,NY,(518) 380-3738,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12204-menands-bloom-brothers,"Bloom Brothers",Menands,NY,(518) 776-4024,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12205-albany-brownies-dispensary-llc,"Brownies Dispensary LLC",Albany,NY,(518) 608-1010,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12205-albany-capital-district-cannabis-and-wellness-inc,"Capital District Cannabis & Wellness Inc.",Albany,NY,(518) 487-4591,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12205-albany-legacy-dispensary,"Legacy Dispensary",Albany,NY,(518) 387-3310,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12205-albany-robinson-s-cannabis,"Robinson's Cannabis",Albany,NY,(838) 267-0669,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12205-albany-the-highend-dispensary,"The Highend Dispensary",Albany,NY,(518) 728-9598,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12205-colonie-mister-greens,"Mister Greens",Colonie,NY,(518) 451-9330,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12207-albany-dark-horse-cannabis-dispensary,"Dark Horse Cannabis Dispensary",Albany,NY,(518) 512-3135,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12207-albany-higher-tolerance,"Higher Tolerance",Albany,NY,(518) 313-1339,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12207-albany-mr-good-vybz,"Mr Good Vybz",Albany,NY,(518) 451-9290,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12209-albany-cannabicity-albany,"Cannabicity Albany",Albany,NY,(518) 415-3440,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12209-albany-state-of-mind-albany-dispensary,"State of Mind Albany Dispensary",Albany,NY,(518) 330-9673,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12210-albany-hold-up-roll-up-llc,"Hold Up Roll Up; LLC",Albany,NY,(518) 521-8324,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12304-schenectady-cussin-s-cannabis,"Cussin's Cannabis",Schenectady,NY,(518) 313-4200,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12428-ellenville-canna-planet-ellenville,"Canna Planet Ellenville",Ellenville,NY,(845) 599-9333,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12801-glens-falls-rr-legacy-dispensary,"RR Legacy Dispensary",Glens Falls,NY,(518) 338-3074,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12801-glens-falls-windy-hill-wellness,"Windy Hill Wellness",Glens Falls,NY,(518) 223-0369,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12803-south-glens-falls-third-rock-cannabis,"Third Rock Cannabis",South Glens Falls,NY,(518) 223-0530,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12804-queensbury-high-rollers-cannabis,"High Rollers Cannabis",Queensbury,NY,(518) 853-7070,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12839-hudson-falls-high-society-dispensary,"High Society Dispensary",Hudson Falls,NY,(518) 769-4907,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12866-saratoga-springs-high-peaks-canna,"High Peaks Canna",Saratoga Springs,NY,(518) 430-2042,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12866-saratoga-springs-silver-cannabis-company-saratoga-springs,"Silver Cannabis Company Saratoga Springs",Saratoga Springs,NY,(518) 306-4249,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12871-schuylerville-canna-cabana,"Canna Cabana",Schuylerville,NY,(518) 507-6199,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12871-schuylerville-roots-farm-dispensary,"Roots Farm Dispensary",Schuylerville,NY,(518) 681-7165,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12885-warrensburg-hudson-and-main-cannabis-company,"Hudson & Main Cannabis Company",Warrensburg,NY,(518) 504-4202,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12946-lake-placid-the-mellow-moose,"The Mellow Moose",Lake Placid,NY,(518) 302-5226,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-12983-saranac-lake-north-county-roots-inc-dba-elevate-adk,"North County Roots; Inc. (dba Elevate ADK)",Saranac Lake,NY,(518) 565-0065,2,0,0,0,0,0,0,0,1,0,0,0,2026-04-27,2026-05-01
+ocm-10003-new-york-green-genius-nyc,"Green Genius NYC",New York,NY,(646) 410-0088,1,0,0,0,0,0,0,0,1,0,0,0,2026-04-08,2026-04-08
+ocm-10012-new-york-alta-dispensary,"Alta Dispensary",New York,NY,(646) 707-0190,1,0,0,0,0,0,0,0,1,0,0,0,2026-04-09,2026-04-09
+ocm-10012-new-york-the-travel-agency-soho,"The Travel Agency SoHo",New York,NY,(212) 830-7420,1,0,0,0,0,0,0,0,1,0,0,0,2026-04-09,2026-04-09
+ocm-10011-new-york-flynnstoned-chelsea,"FlynnStoned Chelsea",New York,NY,(646) 376-7777,1,0,0,0,0,0,0,0,1,0,0,0,2026-04-10,2026-04-10
+ocm-10011-new-york-soodaks-inc-dba-verdi,"SOODAKS; INC (dba VERDI)",New York,NY,(212) 933-4082,1,0,0,0,0,0,0,0,1,0,0,0,2026-04-10,2026-04-10
+ocm-10018-new-york-indoor-treez-fashion-avenue,"Indoor Treez Fashion Avenue",New York,NY,(646) 410-0240,1,0,0,0,0,0,0,0,1,0,0,0,2026-04-10,2026-04-10
+ocm-10011-new-york-chelsea-cannabis-co,"Chelsea Cannabis Co.",New York,NY,(917) 409-8056,1,0,0,0,0,0,0,0,1,0,0,0,2026-04-11,2026-04-11
+ocm-10017-new-york-cannabis-on-lex,"Cannabis on Lex",New York,NY,(646) 678-4633,1,0,0,0,0,0,0,0,1,0,0,0,2026-04-11,2026-04-11

@@ -71,6 +71,11 @@ function BrowseScreenInner() {
   // Which query identity does the current `items` list reflect? Used to drop
   // mid-flight data that belongs to a query the user has already moved on from.
   const itemsQueryIdentityRef = React.useRef<string>('');
+  // Per-instance rapid-tap guard for the Get Directions button. Caps
+  // the May 3 2026 forensic finding where one user fired 132
+  // go_now_tapped events to a single store in 30s while mashing the
+  // button. 3-second debounce window per storefront.
+  const lastDirectionsTapRef = React.useRef<{ storefrontId: string; at: number } | null>(null);
   const { authSession, profileId } = useStorefrontProfileController();
   const {
     activeLocationLabel,
@@ -415,6 +420,13 @@ function BrowseScreenInner() {
             navigation.navigate('StorefrontDetail', { storefrontId: item.id, storefront: item })
           }
           onGoNow={(item) => {
+            const now = Date.now();
+            const last = lastDirectionsTapRef.current;
+            if (last && last.storefrontId === item.id && now - last.at < 3000) {
+              return;
+            }
+            lastDirectionsTapRef.current = { storefrontId: item.id, at: now };
+
             trackAnalyticsEvent(
               'go_now_tapped',
               {

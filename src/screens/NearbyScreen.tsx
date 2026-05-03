@@ -155,8 +155,22 @@ function NearbyScreenInner() {
     void requestDeviceLocation();
   }, [requestDeviceLocation]);
 
+  // Per-instance rapid-tap guard so a single user mashing the
+  // Get Directions button doesn't fire dozens of go_now_tapped events
+  // (each of which also reattempts window.open). 3-second window per
+  // storefront. See useStorefrontDetailActions for the matching
+  // pattern + the May 3 2026 forensic that motivated it.
+  const lastDirectionsTapRef = React.useRef<{ storefrontId: string; at: number } | null>(null);
+
   const handleGoNow = React.useCallback(
     (store: (typeof visibleData)[number]) => {
+      const now = Date.now();
+      const last = lastDirectionsTapRef.current;
+      if (last && last.storefrontId === store.id && now - last.at < 3000) {
+        return;
+      }
+      lastDirectionsTapRef.current = { storefrontId: store.id, at: now };
+
       trackAnalyticsEvent(
         'go_now_tapped',
         {

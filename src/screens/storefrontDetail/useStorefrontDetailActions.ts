@@ -100,6 +100,33 @@ export function useStorefrontDetailActions({
     () => new Set<string>(),
   );
   const [pendingReviewReportId, setPendingReviewReportId] = React.useState<string | null>(null);
+  // Per-instance rapid-tap guard for outbound-link buttons (directions /
+  // phone / website / menu). The May 3 2026 forensic on the launch-week
+  // traffic showed one user firing 132 `go_now_tapped` events to a
+  // single store in ~30 seconds — a real human mashing the button
+  // because the popup didn't visibly open on web. Each tap also
+  // triggered a fresh window.open(), which compounded the popup-blocker
+  // problem. Debounce at 3s per (action, storefrontId) caps both the
+  // analytics inflation and the redundant popup attempts.
+  const lastOutboundTapRef = React.useRef<{
+    action: string;
+    storefrontId: string;
+    at: number;
+  } | null>(null);
+  const isRapidRetap = React.useCallback((action: string, storefrontIdForTap: string) => {
+    const now = Date.now();
+    const last = lastOutboundTapRef.current;
+    if (
+      last &&
+      last.action === action &&
+      last.storefrontId === storefrontIdForTap &&
+      now - last.at < 3000
+    ) {
+      return true;
+    }
+    lastOutboundTapRef.current = { action, storefrontId: storefrontIdForTap, at: now };
+    return false;
+  }, []);
   const safeOutboundLinks = React.useMemo(
     () =>
       getPlatformSafeStorefrontOutboundLinks({
@@ -154,6 +181,9 @@ export function useStorefrontDetailActions({
     if (!safeOutboundLinks.websiteUrl) {
       return;
     }
+    if (isRapidRetap('website', storefront.id)) {
+      return;
+    }
 
     trackAnalyticsEvent(
       'website_tapped',
@@ -167,10 +197,13 @@ export function useStorefrontDetailActions({
       },
     );
     await openUrl(safeOutboundLinks.websiteUrl);
-  }, [safeOutboundLinks.websiteUrl, storefront.activePromotionId, storefront.id]);
+  }, [isRapidRetap, safeOutboundLinks.websiteUrl, storefront.activePromotionId, storefront.id]);
 
   const callStore = React.useCallback(async () => {
     if (!detailData.phone) {
+      return;
+    }
+    if (isRapidRetap('phone', storefront.id)) {
       return;
     }
 
@@ -186,10 +219,13 @@ export function useStorefrontDetailActions({
       },
     );
     await openUrl(`tel:${detailData.phone}`);
-  }, [detailData.phone, storefront.activePromotionId, storefront.id]);
+  }, [detailData.phone, isRapidRetap, storefront.activePromotionId, storefront.id]);
 
   const openMenu = React.useCallback(async () => {
     if (!safeOutboundLinks.menuUrl) {
+      return;
+    }
+    if (isRapidRetap('menu', storefront.id)) {
       return;
     }
 
@@ -205,9 +241,12 @@ export function useStorefrontDetailActions({
       },
     );
     await openUrl(safeOutboundLinks.menuUrl);
-  }, [safeOutboundLinks.menuUrl, storefront.activePromotionId, storefront.id]);
+  }, [isRapidRetap, safeOutboundLinks.menuUrl, storefront.activePromotionId, storefront.id]);
 
   const goNow = React.useCallback(async () => {
+    if (isRapidRetap('directions', storefront.id)) {
+      return;
+    }
     trackAnalyticsEvent(
       'go_now_tapped',
       {
@@ -242,7 +281,14 @@ export function useStorefrontDetailActions({
       storefront,
       onRouteStarted: trackRouteStartedReward,
     });
-  }, [authSession.status, authSession.uid, profileId, storefront, trackRouteStartedReward]);
+  }, [
+    authSession.status,
+    authSession.uid,
+    isRapidRetap,
+    profileId,
+    storefront,
+    trackRouteStartedReward,
+  ]);
 
   const promptCommunitySignIn = React.useCallback(
     (actionLabel: string) => {

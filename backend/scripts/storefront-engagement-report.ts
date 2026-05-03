@@ -63,6 +63,18 @@ type Aggregated = {
   daysWithActivity: number;
   firstSeen: string | null;
   lastSeen: string | null;
+  // Defensible "real customer" metrics. Computed from raw analytics_events
+  // (one entry per install_id that touched this storefront) so they can't
+  // be inflated by a single tester hammering the same store. The May 3
+  // 2026 forensic on The Coughie Shop showed 169 directions taps —
+  // reading like real customer demand — but 132 of those came from one
+  // device on one day. uniqueDevicesEngaged + uniqueDevicesDirections
+  // strip that artifact: same store reads 50-60 distinct devices and
+  // 13 distinct directions tappers.
+  uniqueDevicesEngaged: number;
+  uniqueDevicesOpened: number;
+  uniqueDevicesDirections: number;
+  uniqueDevicesPhoneTap: number;
 };
 
 function fmt(n: number): string {
@@ -77,11 +89,83 @@ function pad(s: string, width: number, align: 'left' | 'right' = 'left'): string
   return align === 'right' ? space + s : s + space;
 }
 
+async function loadStorefrontUniques(): Promise<
+  Map<
+    string,
+    {
+      engaged: Set<string>;
+      opened: Set<string>;
+      directions: Set<string>;
+      phoneTap: Set<string>;
+    }
+  >
+> {
+  // Pull every event with a storefrontId set, accumulate distinct
+  // install IDs per storefront. ~20k events at the time of writing —
+  // takes a few seconds. Batches in 5k via cursor pagination.
+  const result = new Map<
+    string,
+    {
+      engaged: Set<string>;
+      opened: Set<string>;
+      directions: Set<string>;
+      phoneTap: Set<string>;
+    }
+  >();
+
+  let lastReceivedAt = '2020-01-01T00:00:00.000Z';
+  let scanned = 0;
+  while (true) {
+    const snap = await db
+      .collection('analytics_events')
+      .where('receivedAt', '>=', lastReceivedAt)
+      .orderBy('receivedAt', 'asc')
+      .limit(5000)
+      .get();
+    if (snap.empty) break;
+
+    for (const doc of snap.docs) {
+      const d = doc.data() as Record<string, unknown>;
+      const storefrontId = (d.storefrontId as string) ?? null;
+      const installId = (d.installId as string) ?? null;
+      const eventType = (d.eventType as string) ?? '';
+      if (!storefrontId || !installId) continue;
+
+      let bucket = result.get(storefrontId);
+      if (!bucket) {
+        bucket = {
+          engaged: new Set(),
+          opened: new Set(),
+          directions: new Set(),
+          phoneTap: new Set(),
+        };
+        result.set(storefrontId, bucket);
+      }
+      bucket.engaged.add(installId);
+      if (eventType === 'storefront_opened') bucket.opened.add(installId);
+      if (eventType === 'go_now_tapped') bucket.directions.add(installId);
+      if (eventType === 'phone_tapped') bucket.phoneTap.add(installId);
+    }
+
+    scanned += snap.size;
+    const lastDoc = snap.docs[snap.docs.length - 1].data() as Record<string, unknown>;
+    const newCursor = lastDoc.receivedAt as string;
+    if (newCursor === lastReceivedAt) break;
+    lastReceivedAt = newCursor;
+    if (snap.size < 5000) break;
+  }
+
+  // Log to stderr so the CSV-emit path on stdout stays clean.
+  console.error(`(scanned ${scanned} analytics_events for unique-device tallies)`);
+  return result;
+}
+
 async function main() {
-  const [summariesSnap, detailsSnap, metricsSnap] = await Promise.all([
+  const [summariesSnap, detailsSnap, metricsSnap, uniquesByStorefront] = await Promise.all([
     db.collection('storefront_summaries').get(),
     db.collection('storefront_details').get(),
     db.collection('analytics_daily_storefront_metrics').get(),
+    loadStorefrontUniques(),
   ]);
 
   // Index summaries (storefront name + location)
@@ -118,6 +202,7 @@ async function main() {
       state: '',
     };
 
+    const uniques = uniquesByStorefront.get(storefrontId);
     const existing =
       byStorefront.get(storefrontId) ??
       ({
@@ -137,6 +222,10 @@ async function main() {
         daysWithActivity: 0,
         firstSeen: null,
         lastSeen: null,
+        uniqueDevicesEngaged: uniques?.engaged.size ?? 0,
+        uniqueDevicesOpened: uniques?.opened.size ?? 0,
+        uniqueDevicesDirections: uniques?.directions.size ?? 0,
+        uniqueDevicesPhoneTap: uniques?.phoneTap.size ?? 0,
       } satisfies Aggregated);
 
     existing.impressions += (d.impressionCount as number) ?? 0;
@@ -177,6 +266,10 @@ async function main() {
         daysWithActivity: 0,
         firstSeen: null,
         lastSeen: null,
+        uniqueDevicesEngaged: 0,
+        uniqueDevicesOpened: 0,
+        uniqueDevicesDirections: 0,
+        uniqueDevicesPhoneTap: 0,
       });
     }
   }
@@ -213,6 +306,12 @@ async function main() {
       'menuTaps',
       'reviewsStarted',
       'reviewsSubmitted',
+      // Defensible "real customer" tallies — distinct install_ids, not
+      // raw event counts. Use these in owner-outreach pitches.
+      'uniqueDevicesEngaged',
+      'uniqueDevicesOpened',
+      'uniqueDevicesDirections',
+      'uniqueDevicesPhoneTap',
       'firstSeen',
       'lastSeen',
     ];
@@ -235,6 +334,10 @@ async function main() {
           r.menuTaps,
           r.reviewsStarted,
           r.reviewsSubmitted,
+          r.uniqueDevicesEngaged,
+          r.uniqueDevicesOpened,
+          r.uniqueDevicesDirections,
+          r.uniqueDevicesPhoneTap,
           r.firstSeen ?? '',
           r.lastSeen ?? '',
         ].join(','),
@@ -277,15 +380,18 @@ async function main() {
   console.log(`Storefront engagement report — ${filterDescription}`);
   console.log(`Generated ${new Date().toISOString()}\n`);
 
-  const colName = 36;
-  const colCity = 16;
+  const colName = 32;
+  const colCity = 14;
   const colPhone = 16;
-  const colNum = 7;
+  const colNum = 6;
 
   const header =
     pad('Store', colName) +
     pad('City', colCity) +
     pad('Phone', colPhone) +
+    pad('uDev', colNum, 'right') +
+    pad('uOpn', colNum, 'right') +
+    pad('uDir', colNum, 'right') +
     pad('Impr', colNum, 'right') +
     pad('Open', colNum, 'right') +
     pad('Direc', colNum, 'right') +
@@ -301,6 +407,9 @@ async function main() {
       pad(r.displayName, colName) +
         pad(r.city, colCity) +
         pad(r.phone ?? '(none)', colPhone) +
+        pad(fmt(r.uniqueDevicesEngaged), colNum, 'right') +
+        pad(fmt(r.uniqueDevicesOpened), colNum, 'right') +
+        pad(fmt(r.uniqueDevicesDirections), colNum, 'right') +
         pad(fmt(r.impressions), colNum, 'right') +
         pad(fmt(r.opens), colNum, 'right') +
         pad(fmt(r.directionsTaps), colNum, 'right') +
@@ -316,6 +425,9 @@ async function main() {
     pad(`TOTALS (${rows.length} stores)`, colName) +
       pad('', colCity) +
       pad('', colPhone) +
+      pad('', colNum, 'right') +
+      pad('', colNum, 'right') +
+      pad('', colNum, 'right') +
       pad(fmt(totals.impressions), colNum, 'right') +
       pad(fmt(totals.opens), colNum, 'right') +
       pad(fmt(totals.directionsTaps), colNum, 'right') +
@@ -325,7 +437,13 @@ async function main() {
       pad(fmt(totals.reviewsSubmitted), colNum, 'right'),
   );
 
-  console.log(`\nLegend:`);
+  console.log(`\nLegend (USE FOR OWNER PITCHES — distinct devices, not raw events):`);
+  console.log(`  uDev   = unique devices that touched this store at all`);
+  console.log(`  uOpn   = unique devices that opened the full detail page`);
+  console.log(
+    `  uDir   = unique devices that tapped "Get Directions"  ← defensible "real customers" number`,
+  );
+  console.log(`Raw event counts (DO NOT lead with these — easily inflated by one tester):`);
   console.log(`  Impr   = card impressions (storefront seen in browse/nearby/hot deals)`);
   console.log(`  Open   = full storefront detail page opened`);
   console.log(`  Direc  = "Get Directions" tapped (intent to visit)`);
