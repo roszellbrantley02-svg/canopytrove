@@ -13,6 +13,12 @@ const ownerPortalLinkingScreens = supportsOwnerWorkspaceUi
       // website URL and the AI fills out their Canopy Trove listing
       // automatically. See docs/AI_SHOP_BOOTSTRAP.md.
       OwnerPortalShopBootstrap: 'owner-portal/shop-bootstrap',
+      // AI Inventory — scan-to-add menu management + receipt-photo
+      // reconciliation. See docs/AI_INVENTORY.md.
+      OwnerPortalInventory: 'owner-portal/inventory',
+      OwnerPortalScanProduct: 'owner-portal/inventory/scan-product',
+      OwnerPortalReceiveShipment: 'owner-portal/inventory/receive-shipment',
+      OwnerPortalReconcileReceipt: 'owner-portal/inventory/reconcile-receipt',
 
       // Owner Portal — workspace screens
       OwnerPortalHome: 'owner-portal/home',

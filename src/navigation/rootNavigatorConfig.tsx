@@ -204,6 +204,22 @@ const OwnerPortalShopBootstrapScreen = lazyScreen(
   () => import('../screens/OwnerPortalShopBootstrapScreen'),
   'OwnerPortalShopBootstrapScreen',
 );
+const OwnerPortalInventoryScreen = lazyScreen(
+  () => import('../screens/OwnerPortalInventoryScreen'),
+  'OwnerPortalInventoryScreen',
+);
+const OwnerPortalScanProductScreen = lazyScreen(
+  () => import('../screens/OwnerPortalScanProductScreen'),
+  'OwnerPortalScanProductScreen',
+);
+const OwnerPortalReceiveShipmentScreen = lazyScreen(
+  () => import('../screens/OwnerPortalReceiveShipmentScreen'),
+  'OwnerPortalReceiveShipmentScreen',
+);
+const OwnerPortalReconcileReceiptScreen = lazyScreen(
+  () => import('../screens/OwnerPortalReconcileReceiptScreen'),
+  'OwnerPortalReconcileReceiptScreen',
+);
 const OwnerPortalSubscriptionScreen = lazyScreen(
   () => import('../screens/OwnerPortalSubscriptionScreen'),
   'OwnerPortalSubscriptionScreen',
@@ -361,6 +377,13 @@ export type RootStackParamList = {
   // and the AI fills out their Canopy Trove listing in 60 seconds. See
   // docs/AI_SHOP_BOOTSTRAP.md.
   OwnerPortalShopBootstrap: undefined;
+  // AI Inventory — owner-side menu management via vision AI scans.
+  // Phase 1.7: scan-to-add + receive-shipment. Phase 1.8: receipt-photo
+  // reconciliation. See docs/AI_INVENTORY.md.
+  OwnerPortalInventory: undefined;
+  OwnerPortalScanProduct: undefined;
+  OwnerPortalReceiveShipment: undefined;
+  OwnerPortalReconcileReceipt: undefined;
   OwnerPortalHome:
     | {
         preview?: boolean;
@@ -584,6 +607,26 @@ export const stackScreens = [
   {
     name: 'OwnerPortalShopBootstrap',
     component: gateReviewSurface(OwnerPortalShopBootstrapScreen, supportsOwnerWorkspaceUi),
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalInventory',
+    component: gateReviewSurface(OwnerPortalInventoryScreen, supportsOwnerWorkspaceUi),
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalScanProduct',
+    component: gateReviewSurface(OwnerPortalScanProductScreen, supportsOwnerWorkspaceUi),
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalReceiveShipment',
+    component: gateReviewSurface(OwnerPortalReceiveShipmentScreen, supportsOwnerWorkspaceUi),
+    options: workspaceFlowScreenOptions,
+  },
+  {
+    name: 'OwnerPortalReconcileReceipt',
+    component: gateReviewSurface(OwnerPortalReconcileReceiptScreen, supportsOwnerWorkspaceUi),
     options: workspaceFlowScreenOptions,
   },
   {

@@ -336,6 +336,57 @@ function OwnerPortalHomeScreenInner() {
           </Pressable>
         </MotionInView>
 
+        {/* 1e. AI Inventory CTAs — Phase 1.7 (build menu by scanning) +
+            Phase 1.8 (end-of-day reconcile). See docs/AI_INVENTORY.md.
+            Both route into the Inventory hub; the reconcile CTA links
+            straight to the receipt-photo flow once the owner has at
+            least one menu item. Phase 1.7 SCAFFOLD: both visible for
+            now; the conditional show-once-items-exist gating on the
+            reconcile CTA lands when the menu list is wired. */}
+        <MotionInView delay={96}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Build your menu by scanning products"
+            onPress={() => navigation.navigate('OwnerPortalInventory', undefined)}
+            style={localStyles.inventoryBanner}
+          >
+            <View style={localStyles.inventoryBannerIconWrap}>
+              <AppUiIcon name="sparkles-outline" size={20} color="#2ECC71" />
+            </View>
+            <View style={localStyles.inventoryBannerCopy}>
+              <Text style={localStyles.inventoryBannerTitle}>Build your menu by scanning</Text>
+              <Text style={localStyles.inventoryBannerBody}>
+                Snap a photo of any product on your shelf. Our AI reads the label and adds it to
+                your menu. Receive shipments by scanning the case + one unit.
+              </Text>
+            </View>
+            <AppUiIcon name="chevron-forward" size={18} color="#C4B8B0" />
+          </Pressable>
+        </MotionInView>
+
+        <MotionInView delay={100}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Reconcile end-of-day sales in 30 seconds"
+            onPress={() => navigation.navigate('OwnerPortalReconcileReceipt', undefined)}
+            style={localStyles.inventoryBanner}
+          >
+            <View style={localStyles.inventoryBannerIconWrap}>
+              <AppUiIcon name="document-text-outline" size={20} color="#2ECC71" />
+            </View>
+            <View style={localStyles.inventoryBannerCopy}>
+              <Text style={localStyles.inventoryBannerTitle}>
+                Reconcile end-of-day in 30 seconds
+              </Text>
+              <Text style={localStyles.inventoryBannerBody}>
+                Snap one photo of your POS summary or stack of receipts. Our AI updates your menu
+                inventory. No POS integration required.
+              </Text>
+            </View>
+            <AppUiIcon name="chevron-forward" size={18} color="#C4B8B0" />
+          </Pressable>
+        </MotionInView>
+
         {/* 2. Attention Bar - only show if there are items */}
         {attentionItems.length > 0 ? (
           <MotionInView delay={100}>
@@ -886,6 +937,42 @@ const localStyles = StyleSheet.create({
     fontWeight: '600',
   },
   bootstrapBannerBody: {
+    color: '#C4B8B0',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  // AI Inventory CTAs — green-tinted to differentiate from the gold
+  // shop-bootstrap banner. Same dimensions so the stack reads as a
+  // coherent set.
+  inventoryBanner: {
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(46, 204, 113, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(46, 204, 113, 0.25)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  inventoryBannerIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(46, 204, 113, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inventoryBannerCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  inventoryBannerTitle: {
+    color: '#FFFBF7',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  inventoryBannerBody: {
     color: '#C4B8B0',
     fontSize: 12,
     lineHeight: 16,

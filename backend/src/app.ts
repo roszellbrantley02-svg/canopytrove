@@ -45,6 +45,7 @@ import { ownerPortalTaxVerificationRoutes } from './routes/ownerPortalTaxVerific
 import { stripeIdentityWebhookHandler } from './routes/stripeIdentityRoutes';
 import { ownerPortalAiRoutes } from './routes/ownerPortalAiRoutes';
 import { aiShopBootstrapRoutes } from './routes/aiShopBootstrapRoutes';
+import { aiInventoryRoutes } from './routes/aiInventoryRoutes';
 import { ownerWelcomeEmailRoutes } from './routes/ownerWelcomeEmailRoutes';
 import { ownerPortalWorkspaceRoutes } from './routes/ownerPortalWorkspaceRoutes';
 import { ownerPortalWebPushRoutes } from './routes/ownerPortalWebPushRoutes';
@@ -384,6 +385,7 @@ export function createApp() {
   app.use('/', ownerPortalTaxVerificationRoutes);
   app.use('/', ownerPortalAiRoutes);
   app.use('/', aiShopBootstrapRoutes);
+  app.use('/', aiInventoryRoutes);
   app.use('/', ownerWelcomeEmailRoutes);
   app.use('/', ownerPortalWorkspaceRoutes);
   app.use('/', ownerPortalWebPushRoutes);

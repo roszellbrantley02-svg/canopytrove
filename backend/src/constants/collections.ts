@@ -76,6 +76,27 @@ export const COLLECTIONS = {
   // parsing → ready → published lifecycle so the owner can return to a
   // half-finished bootstrap without losing state.
   SHOP_BOOTSTRAP_DRAFTS: 'shopBootstrapDrafts',
+
+  // AI Inventory (May 3 2026 onward, Phases 1.7 + 1.8) — see
+  // docs/AI_INVENTORY.md.
+
+  // Shared cannabis-product catalog. First owner who scans a product
+  // contributes the entry; every subsequent owner gets an instant DB
+  // lookup with zero AI cost. Doc id is the canonical product
+  // identifier (UPC, sha256(coaUrl), or AI-generated slug). Schema in
+  // backend/src/types/aiInventory.ts.
+  PRODUCT_CATALOG: 'productCatalog',
+
+  // Per-owner inventory state. Subcollection structure:
+  //   ownerInventory/{ownerUid}/items/{itemId}
+  // Each item refs a productCatalog entry plus owner-specific
+  // retail price + stockLevel + isInStock.
+  OWNER_INVENTORY: 'ownerInventory',
+
+  // Audit log of every inventory adjustment (scan_add / receive_shipment
+  // / reconcile_sale / manual_edit / mark_sold_out). Sourced from any of
+  // the three Phase-1.7/1.8 flows. Schema in aiInventory.ts.
+  INVENTORY_ADJUSTMENTS: 'inventoryAdjustments',
 } as const;
 
 // Derive constants for backward compatibility with existing code
@@ -113,3 +134,6 @@ export const BULK_VERIFICATION_BATCHES_COLLECTION = COLLECTIONS.BULK_VERIFICATIO
 export const OWNER_WEB_PUSH_SUBSCRIPTIONS_COLLECTION = COLLECTIONS.OWNER_WEB_PUSH_SUBSCRIPTIONS;
 export const EVENTS_COLLECTION_NAME = COLLECTIONS.EVENTS;
 export const SHOP_BOOTSTRAP_DRAFTS_COLLECTION = COLLECTIONS.SHOP_BOOTSTRAP_DRAFTS;
+export const PRODUCT_CATALOG_COLLECTION = COLLECTIONS.PRODUCT_CATALOG;
+export const OWNER_INVENTORY_COLLECTION = COLLECTIONS.OWNER_INVENTORY;
+export const INVENTORY_ADJUSTMENTS_COLLECTION = COLLECTIONS.INVENTORY_ADJUSTMENTS;
