@@ -1100,13 +1100,27 @@ export async function createOwnerBillingCheckoutSession(
   }
 
   const now = createNow();
-  const launchTrialOffer = await resolveOwnerLaunchTrialOffer({
-    ownerUid,
-    storefrontId: storefrontId ?? '',
-    currentSubscription,
-    tier,
-    now,
-  });
+
+  // Launch trial deprecated 2026-05-04. The Stripe Dashboard is now the
+  // canonical surface for promotional offers (coupons + promotion codes).
+  // We hard-stub the offer to "no trial" rather than calling
+  // resolveOwnerLaunchTrialOffer so even if OWNER_LAUNCH_TRIAL_DAYS env
+  // var drifts back to a positive value, no in-app trial fires. To grant
+  // a free month, create a Stripe coupon (100% off, duration=once) +
+  // promotion code (e.g. WELCOME2026) and share the code with owners —
+  // they enter it on the Stripe Checkout page, which already has
+  // allow_promotion_codes=true wired below.
+  // Type matches the resolveOwnerLaunchTrialOffer return shape so the rest
+  // of this function (which writes claim metadata onto the subscription doc
+  // for legacy compatibility) keeps compiling without changes.
+  const launchTrialOffer: Awaited<ReturnType<typeof resolveOwnerLaunchTrialOffer>> = {
+    trialDays: 0,
+    claim: null,
+  };
+  // Reference the resolver so unused-import lint doesn't strip it; the
+  // launch program collections + helpers stay in the codebase for now in
+  // case we ever want to re-enable an in-app trial path quickly.
+  void resolveOwnerLaunchTrialOffer;
 
   const params = new URLSearchParams();
   params.set('mode', 'subscription');
@@ -1123,11 +1137,8 @@ export async function createOwnerBillingCheckoutSession(
   params.set('subscription_data[metadata][ownerUid]', ownerUid);
   params.set('subscription_data[metadata][dispensaryId]', storefrontId ?? '');
   params.set('subscription_data[metadata][tier]', tier);
-  if (launchTrialOffer.trialDays > 0) {
-    params.set('subscription_data[trial_period_days]', String(launchTrialOffer.trialDays));
-    params.set('metadata[launchTrialDays]', String(launchTrialOffer.trialDays));
-    params.set('subscription_data[metadata][launchTrialDays]', String(launchTrialOffer.trialDays));
-  }
+  // Deliberately NOT setting subscription_data[trial_period_days] — promo
+  // codes from Stripe Dashboard are the canonical free-month mechanism.
 
   if (currentSubscription?.externalCustomerId) {
     params.set('customer', currentSubscription.externalCustomerId);
