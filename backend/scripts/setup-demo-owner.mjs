@@ -1,12 +1,22 @@
 /**
- * Setup Demo Owner Portal Accounts
+ * Setup Demo Owner Portal Account
  *
- * Creates two owner portal accounts for Apple review:
- *   1. applereviewer@canopytrove.com — demo account for Apple's reviewer
- *   2. askushere@canopytrove.com    — your own owner account
+ * Creates ONE owner portal account for Apple App Review:
+ *   applereviewer@canopytrove.com — credential the founder hands to Apple if
+ *   the reviewer asks for owner-portal access.
  *
- * Uses the Firebase CLI's stored credentials (from `firebase login`),
- * so no gcloud auth is needed.
+ * The account is wired to a CLEARLY FAKE storefront ID
+ * (`demo-canopytrove-dispensary`) so it can't be confused with — or
+ * accidentally claim — any real OCM-licensed dispensary in Firestore.
+ *
+ * Earlier versions of this script targeted `ocm-10923-garnerville-202-...`,
+ * which IS a real OCM license number. Two test accounts ended up holding
+ * approved claims on that real shop in production until cleanup ran on
+ * 2026-05-03 (see backend/scripts/cleanup-test-claims-on-real-shop.ts).
+ * The OCM_PREFIX_GUARD below refuses to run if anyone re-points DEMO_STOREFRONT_ID
+ * back at a real OCM record.
+ *
+ * Uses gcloud Application Default Credentials.
  *
  * Usage:
  *   node scripts/setup-demo-owner.mjs
@@ -19,8 +29,14 @@ import { getFirestore } from 'firebase-admin/firestore';
 // ── Configuration ──────────────────────────────────────────────────────────
 
 const PROJECT_ID = 'canopy-trove';
-const DEMO_STOREFRONT_ID = 'ocm-10923-garnerville-202-cannabis-co';
-const DEMO_STOREFRONT_NAME = '202 Cannabis Co.';
+const DATABASE_ID = 'canopytrove';
+
+// CRITICAL: must NOT start with `ocm-` (OCM-licensed real shops use that
+// prefix). The OCM_PREFIX_GUARD below enforces this.
+const DEMO_STOREFRONT_ID = 'demo-canopytrove-dispensary';
+const DEMO_STOREFRONT_NAME = 'Canopy Demo Dispensary';
+const DEMO_STOREFRONT_CITY = 'Demo City';
+const DEMO_STOREFRONT_REGION = 'NY';
 
 const accounts = [
   {
@@ -28,18 +44,28 @@ const accounts = [
     email: 'applereviewer@canopytrove.com',
     displayName: 'Apple Reviewer',
     legalName: 'Apple Review Account',
-    companyName: 'Demo Dispensary LLC',
-  },
-  {
-    uid: 'HKT4iAJGR0h7OeufEoB7bp3nCY42',
-    email: 'askushere@canopytrove.com',
-    displayName: 'Canopy Trove Owner',
-    legalName: 'Canopy Trove Owner',
-    companyName: 'Canopy Trove',
+    companyName: 'Canopy Demo Dispensary LLC',
   },
 ];
 
-// ── Firebase init (uses gcloud ADC) ────────────────────────────────────────
+// ── Safety gate: refuse to seed onto a real OCM-licensed shop ──────────────
+
+function assertSafeStorefrontId(id) {
+  if (typeof id !== 'string' || !id.trim()) {
+    throw new Error('DEMO_STOREFRONT_ID must be a non-empty string.');
+  }
+  if (id.startsWith('ocm-')) {
+    throw new Error(
+      `Refusing to seed demo data onto "${id}". IDs starting with "ocm-" are real ` +
+        `OCM-licensed dispensaries pulled from the NY public registry. Pick a clearly ` +
+        `fake ID like "demo-..." or "test-...".`,
+    );
+  }
+}
+
+assertSafeStorefrontId(DEMO_STOREFRONT_ID);
+
+// ── Firebase init ──────────────────────────────────────────────────────────
 
 let app;
 try {
@@ -50,7 +76,7 @@ try {
   console.log('  Using Application Default Credentials (gcloud).');
 } catch (err) {
   console.error(
-    '\n❌  Firebase init failed: ' +
+    '\n[FAIL]  Firebase init failed: ' +
       err.message +
       '\n' +
       '   Run: gcloud auth application-default login\n',
@@ -59,7 +85,7 @@ try {
 }
 
 const auth = getAuth(app);
-const db = getFirestore(app, 'canopytrove');
+const db = getFirestore(app, DATABASE_ID);
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -137,91 +163,110 @@ function subscription(account) {
   };
 }
 
+function demoStorefrontSummary() {
+  return {
+    storefrontId: DEMO_STOREFRONT_ID,
+    name: DEMO_STOREFRONT_NAME,
+    city: DEMO_STOREFRONT_CITY,
+    region: DEMO_STOREFRONT_REGION,
+    state: 'NY',
+    address: '1 Demo Lane',
+    isDemo: true, // explicit flag so any future filtering can skip demos
+    hidden: true, // hide from public discovery — owners only see this in their portal
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 
 async function setupAccount(account) {
   const label = account.email;
-  console.log(`\n▸ Setting up ${label}…`);
+  console.log(`\n> Setting up ${label}...`);
 
-  // 1. Set custom claims (role: owner)
   try {
     await auth.setCustomUserClaims(account.uid, { role: 'owner' });
-    console.log(`  ✔ Custom claims set (role: owner)`);
+    console.log(`  [OK] Custom claims set (role: owner)`);
   } catch (err) {
-    console.error(`  ✖ Custom claims failed: ${err.message}`);
+    console.error(`  [FAIL] Custom claims failed: ${err.message}`);
   }
 
-  // 2. Owner profile
   try {
     await db.collection('ownerProfiles').doc(account.uid).set(ownerProfile(account));
-    console.log(`  ✔ Owner profile created`);
+    console.log(`  [OK] Owner profile created`);
   } catch (err) {
-    console.error(`  ✖ Owner profile failed: ${err.message}`);
+    console.error(`  [FAIL] Owner profile failed: ${err.message}`);
   }
 
-  // 3. Dispensary claim
   const claimId = `${account.uid}_${DEMO_STOREFRONT_ID}`;
   try {
     await db.collection('dispensaryClaims').doc(claimId).set(dispensaryClaim(account));
-    console.log(`  ✔ Dispensary claim created (${claimId})`);
+    console.log(`  [OK] Dispensary claim created (${claimId})`);
   } catch (err) {
-    console.error(`  ✖ Dispensary claim failed: ${err.message}`);
+    console.error(`  [FAIL] Dispensary claim failed: ${err.message}`);
   }
 
-  // 4. Business verification
   try {
     await db
       .collection('businessVerifications')
       .doc(account.uid)
       .set(businessVerification(account));
-    console.log(`  ✔ Business verification created`);
+    console.log(`  [OK] Business verification created`);
   } catch (err) {
-    console.error(`  ✖ Business verification failed: ${err.message}`);
+    console.error(`  [FAIL] Business verification failed: ${err.message}`);
   }
 
-  // 5. Identity verification
   try {
     await db
       .collection('identityVerifications')
       .doc(account.uid)
       .set(identityVerification(account));
-    console.log(`  ✔ Identity verification created`);
+    console.log(`  [OK] Identity verification created`);
   } catch (err) {
-    console.error(`  ✖ Identity verification failed: ${err.message}`);
+    console.error(`  [FAIL] Identity verification failed: ${err.message}`);
   }
 
-  // 6. Subscription (trial)
   try {
     await db.collection('subscriptions').doc(account.uid).set(subscription(account));
-    console.log(`  ✔ Trial subscription created (30 days)`);
+    console.log(`  [OK] Trial subscription created (30 days)`);
   } catch (err) {
-    console.error(`  ✖ Subscription failed: ${err.message}`);
+    console.error(`  [FAIL] Subscription failed: ${err.message}`);
+  }
+}
+
+async function ensureDemoStorefrontSummary() {
+  console.log(`\n> Ensuring demo storefront summary (${DEMO_STOREFRONT_ID})...`);
+  try {
+    await db.collection('storefront_summaries').doc(DEMO_STOREFRONT_ID).set(demoStorefrontSummary());
+    console.log(`  [OK] storefront_summaries/${DEMO_STOREFRONT_ID} written (isDemo=true, hidden=true)`);
+  } catch (err) {
+    console.error(`  [FAIL] storefront summary failed: ${err.message}`);
   }
 }
 
 async function main() {
-  console.log('╔══════════════════════════════════════════════════════╗');
-  console.log('║  Canopy Trove — Demo Owner Portal Setup             ║');
-  console.log('╚══════════════════════════════════════════════════════╝');
+  console.log('='.repeat(60));
+  console.log('Canopy Trove - Demo Owner Portal Setup');
+  console.log('='.repeat(60));
   console.log(`Project:    ${PROJECT_ID}`);
+  console.log(`Database:   ${DATABASE_ID}`);
   console.log(`Storefront: ${DEMO_STOREFRONT_NAME} (${DEMO_STOREFRONT_ID})`);
+
+  await ensureDemoStorefrontSummary();
 
   for (const account of accounts) {
     await setupAccount(account);
   }
 
-  console.log('\n────────────────────────────────────────────────────────');
+  console.log('\n' + '-'.repeat(60));
   console.log('Demo credentials for Apple review notes:\n');
   console.log('  Email:    applereviewer@canopytrove.com');
   console.log('  Password: CanopyReview2026!\n');
-  console.log('Your own account:\n');
-  console.log('  Email:    askushere@canopytrove.com');
-  console.log('  Password: CanopyOwner2026!\n');
-  console.log('────────────────────────────────────────────────────────');
-  console.log('✅  Done. Both accounts are ready for the Owner Portal.\n');
+  console.log('-'.repeat(60));
+  console.log('Done. Apple reviewer account is ready for the Owner Portal.\n');
 }
 
 main().catch((err) => {
-  console.error('\n❌  Setup failed:', err.message);
+  console.error('\n[FAIL]  Setup failed:', err.message);
   process.exit(1);
 });
