@@ -20,6 +20,10 @@ import { Pressable, Text, View } from 'react-native';
 import { AppUiIcon } from '../../icons/AppUiIcon';
 import { colors } from '../../theme/tokens';
 import {
+  ADDITIONAL_LOCATION_PRICE_LABEL,
+  formatAdditionalLocationCost,
+} from '../../config/ownerBilling';
+import {
   fetchSiblingLocations,
   submitBulkClaim,
   type SiblingCandidate,
@@ -137,6 +141,10 @@ export function SiblingLocationsHeroCard({ primaryDispensaryId, onBulkSubmission
               {state.siblingCount === 1 ? 'sibling location' : 'sibling locations'}.
             </Text>
             <Text style={styles.actionTileBody}>
+              Your subscription was updated by {formatAdditionalLocationCost(state.siblingCount)}{' '}
+              (pro-rated for the partial billing period).
+            </Text>
+            <Text style={styles.actionTileBody}>
               Verify each shop&apos;s phone next so the cluster can auto-approve.
             </Text>
           </View>
@@ -195,6 +203,29 @@ export function SiblingLocationsHeroCard({ primaryDispensaryId, onBulkSubmission
           <Text style={styles.actionTileBody}>…and {siblings.length - 4} more</Text>
         ) : null}
       </View>
+
+      {/* Pricing preview — shown before the Add button so the cost is never
+          a surprise. Per-location seat is metered separately from the base
+          subscription tier; pro-rated for the partial period at the moment
+          of confirm. */}
+      <View style={styles.statusPanel}>
+        <View style={styles.statusRow}>
+          <Text style={styles.statusLabel}>Per location</Text>
+          <Text style={styles.statusValue}>{ADDITIONAL_LOCATION_PRICE_LABEL}</Text>
+        </View>
+        <View style={styles.statusRow}>
+          <Text style={styles.statusLabel}>
+            {siblings.length === 1
+              ? 'Adds to your subscription'
+              : `Adds to your subscription (${siblings.length} × ${ADDITIONAL_LOCATION_PRICE_LABEL})`}
+          </Text>
+          <Text style={styles.statusValue}>{formatAdditionalLocationCost(siblings.length)}</Text>
+        </View>
+        <Text style={styles.fieldHint}>
+          Charged on top of your current base plan. Pro-rated for the partial billing period.
+        </Text>
+      </View>
+
       <Pressable
         disabled={isSubmitting}
         onPress={() => {
@@ -206,8 +237,8 @@ export function SiblingLocationsHeroCard({ primaryDispensaryId, onBulkSubmission
           {isSubmitting
             ? 'Adding...'
             : siblings.length === 1
-              ? 'Add this location'
-              : `Add all ${siblings.length} locations`}
+              ? `Add this location · ${ADDITIONAL_LOCATION_PRICE_LABEL}`
+              : `Add all ${siblings.length} locations · ${formatAdditionalLocationCost(siblings.length)}`}
         </Text>
       </Pressable>
     </View>

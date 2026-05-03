@@ -155,6 +155,13 @@ export const serverConfig = {
   stripeGrowthAnnualPriceId: readConfiguredValue(process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID),
   stripeProMonthlyPriceId: readConfiguredValue(process.env.STRIPE_PRO_MONTHLY_PRICE_ID),
   stripeProAnnualPriceId: readConfiguredValue(process.env.STRIPE_PRO_ANNUAL_PRICE_ID),
+  // Per-extra-location seat — quantity-based price ($99.99/month/location).
+  // Added to the owner's existing subscription as a separate line item with
+  // quantity == count of additionalLocationIds. Set this BEFORE owners can
+  // claim multiple locations or the multi-location flow refuses to add.
+  stripeAdditionalLocationPriceId: readConfiguredValue(
+    process.env.STRIPE_ADDITIONAL_LOCATION_PRICE_ID,
+  ),
   stripeOwnerSuccessUrl: readConfiguredValue(process.env.OWNER_BILLING_SUCCESS_URL),
   stripeOwnerCancelUrl: readConfiguredValue(process.env.OWNER_BILLING_CANCEL_URL),
   stripeOwnerPortalReturnUrl: readConfiguredValue(process.env.OWNER_BILLING_PORTAL_RETURN_URL),

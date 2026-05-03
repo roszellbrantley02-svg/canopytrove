@@ -35,4 +35,27 @@ describe('ownerBilling config', () => {
       'Public owner billing management is configured.',
     );
   });
+
+  it('formatAdditionalLocationCost returns $0.00/mo for zero or negative counts', async () => {
+    const config = await import('./ownerBilling');
+    expect(config.formatAdditionalLocationCost(0)).toBe('$0.00/mo');
+    expect(config.formatAdditionalLocationCost(-1)).toBe('$0.00/mo');
+    expect(config.formatAdditionalLocationCost(-100)).toBe('$0.00/mo');
+  });
+
+  it('formatAdditionalLocationCost multiplies $99.99 by the location count', async () => {
+    const config = await import('./ownerBilling');
+    expect(config.formatAdditionalLocationCost(1)).toBe('$99.99/mo');
+    expect(config.formatAdditionalLocationCost(2)).toBe('$199.98/mo');
+    expect(config.formatAdditionalLocationCost(3)).toBe('$299.97/mo');
+    expect(config.formatAdditionalLocationCost(5)).toBe('$499.95/mo');
+  });
+
+  it('exposes the canonical price label that matches the Stripe price', async () => {
+    const config = await import('./ownerBilling');
+    // If you change ADDITIONAL_LOCATION_PRICE_PER_MONTH_USD, this test
+    // forces you to update the Stripe price too (or vice versa).
+    expect(config.ADDITIONAL_LOCATION_PRICE_PER_MONTH_USD).toBe(99.99);
+    expect(config.ADDITIONAL_LOCATION_PRICE_LABEL).toBe('$99.99/mo');
+  });
 });

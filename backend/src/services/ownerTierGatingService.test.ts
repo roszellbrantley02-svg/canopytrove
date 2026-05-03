@@ -20,22 +20,24 @@ describe('getTierLimits', () => {
     assert.equal(limits.badgeCustomizationEnabled, false);
   });
 
-  test('verified tier has zero promotions and no AI', () => {
+  test('verified tier has zero promotions and no AI but allows multi-location (per-seat $99.99/mo billing)', () => {
     const limits = getTierLimits('verified');
     assert.equal(limits.maxPromotions, 0);
     assert.equal(limits.aiEnabled, false);
-    assert.equal(limits.multiLocationEnabled, false);
+    // Multi-location is open to every paid tier — per-extra-location seat
+    // is billed separately via STRIPE_ADDITIONAL_LOCATION_PRICE_ID.
+    assert.equal(limits.multiLocationEnabled, true);
     assert.equal(limits.fullAnalyticsEnabled, false);
   });
 
-  test('growth tier enables promotions and full analytics', () => {
+  test('growth tier enables promotions and full analytics + multi-location (per-seat billing)', () => {
     const limits = getTierLimits('growth');
     assert.equal(limits.maxPromotions, 2);
     assert.equal(limits.fullAnalyticsEnabled, true);
     assert.equal(limits.weeklyEmailEnabled, true);
     assert.equal(limits.badgeCustomizationEnabled, true);
     assert.equal(limits.aiEnabled, false);
-    assert.equal(limits.multiLocationEnabled, false);
+    assert.equal(limits.multiLocationEnabled, true);
   });
 
   test('pro tier enables all features', () => {

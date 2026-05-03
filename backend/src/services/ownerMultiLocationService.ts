@@ -1,7 +1,7 @@
 /**
  * Owner Multi-Location Service
  *
- * Manages additional storefront locations for Pro-tier owners.
+ * Manages additional storefront locations for paid-tier owners.
  *
  * Data model:
  *   - ownerProfile.dispensaryId  → primary location (unchanged)
@@ -9,14 +9,30 @@
  *   - dispensaries/{storefrontId}.ownerUid → links storefront back to owner
  *
  * Constraints:
- *   - Requires Pro tier
- *   - $99/month per additional location (tracked via Stripe quantity)
+ *   - Requires Verified+ tier (any paid plan)
+ *   - $99.99/month per additional location, billed as a quantity-based
+ *     seat on the owner's Stripe subscription via
+ *     syncAdditionalLocationBilling. Bills pro-rate the partial period.
  *   - Primary location cannot be removed (only transferred)
  *   - Additional locations need admin-approved claims like the primary
+ *
+ * Add-flow billing safety:
+ *   - We write Firestore first, then sync Stripe. If the Stripe sync fails
+ *     (and the failure is something other than the owner not having a
+ *     Stripe sub), we roll back the Firestore write so the owner is never
+ *     left with an unbilled extra location.
+ *
+ * Remove-flow billing safety:
+ *   - We write Firestore first, then sync Stripe. If Stripe sync fails on
+ *     remove, we DO NOT roll back the Firestore write — the owner asked
+ *     to escape billing for that location and we must honor it. The
+ *     Stripe sync failure is logged loudly for admin reconciliation.
  */
 
 import { getBackendFirebaseDb } from '../firebase';
+import { logger } from '../observability/logger';
 import { resolveOwnerTier, getTierLimits, TierAccessError } from './ownerTierGatingService';
+import { syncAdditionalLocationBilling } from './ownerBillingService';
 import { getOwnerProfile } from './ownerPortalWorkspaceData';
 import { backendStorefrontSource } from '../sources';
 import type { OwnerSubscriptionTier } from './ownerTierGatingService';
@@ -123,13 +139,14 @@ export async function addOwnerLocation(
     throw new Error('Database not available.');
   }
 
-  // 1. Enforce Pro tier
+  // 1. Enforce paid-tier (any tier above free unlocks multi-location now
+  //    that per-location billing is metered separately at $99.99/mo).
   const tier = await resolveOwnerTier(ownerUid);
   const tierLimits = getTierLimits(tier);
   if (!tierLimits.multiLocationEnabled) {
     throw new TierAccessError(
-      'Multi-location management requires the Pro plan ($249.99/mo launch pricing — regular $499.99/mo). Upgrade to unlock this feature.',
-      'pro',
+      'Adding additional locations requires an active subscription. Upgrade to Verified ($49/mo) or higher — each extra location is then $99.99/mo on top of your base plan.',
+      'verified',
       tier,
     );
   }
@@ -186,6 +203,66 @@ export async function addOwnerLocation(
     ),
   ]);
 
+  // 6. Sync billing — bump the per-extra-location seat quantity on the
+  //    owner's Stripe subscription. Hard-fail with rollback so the owner
+  //    is never left with an unbilled extra location.
+  const billingResult = await syncAdditionalLocationBilling({
+    ownerUid,
+    targetCount: updatedAdditional.length,
+  });
+
+  // The 'no_subscription' / 'not_stripe' / 'not_active' / 'not_configured'
+  // outcomes are EXPECTED for free-tier owners (shouldn't get this far
+  // because of the tier gate above), Apple-IAP owners, and dev environments
+  // without Stripe configured. We log + proceed — the location is added,
+  // billing reconciliation happens out-of-band when the owner upgrades or
+  // we manually back-fill. Hard-failing on these would lock out legitimate
+  // dev/test flows. The 'stripe_error' branch IS a real failure and rolls
+  // back.
+  if (!billingResult.ok && billingResult.reason === 'stripe_error') {
+    logger.error('[ownerMultiLocation] Billing sync failed — rolling back location add', {
+      ownerUid,
+      storefrontId,
+      billingError: billingResult.message,
+    });
+
+    // Roll back both Firestore writes. Best-effort; if the rollback itself
+    // fails we log loudly because the owner now has an inconsistent state.
+    try {
+      await Promise.all([
+        db.collection(OWNER_PROFILES_COLLECTION).doc(ownerUid).set(
+          {
+            additionalLocationIds: currentAdditional,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true },
+        ),
+        db.collection(DISPENSARIES_COLLECTION).doc(storefrontId).set(
+          {
+            ownerUid: null,
+            claimStatus: null,
+            isAdditionalLocation: null,
+          },
+          { merge: true },
+        ),
+      ]);
+    } catch (rollbackError) {
+      logger.error(
+        '[ownerMultiLocation] CRITICAL: rollback after billing failure also failed — owner state is inconsistent',
+        {
+          ownerUid,
+          storefrontId,
+          rollbackError:
+            rollbackError instanceof Error ? rollbackError.message : String(rollbackError),
+        },
+      );
+    }
+
+    throw new Error(
+      `Could not add this location because billing could not be updated: ${billingResult.message}. Try again, or contact support if the problem persists.`,
+    );
+  }
+
   return getOwnerLocations(ownerUid);
 }
 
@@ -236,6 +313,28 @@ export async function removeOwnerLocation(
       { merge: true },
     ),
   ]);
+
+  // Sync billing — decrement the per-extra-location seat quantity. Best-effort
+  // by design: if Stripe sync fails, we still complete the removal because the
+  // owner asked to escape billing for that location and we must honor it.
+  // The Stripe sync error is logged loudly so admin can manually reconcile
+  // (worst case: owner keeps being billed for one extra location until next
+  // billing cycle when reconciliation catches up).
+  const billingResult = await syncAdditionalLocationBilling({
+    ownerUid,
+    targetCount: updatedAdditional.length,
+  });
+  if (!billingResult.ok && billingResult.reason === 'stripe_error') {
+    logger.error(
+      '[ownerMultiLocation] Billing sync failed on remove — owner may be over-billed until reconciliation',
+      {
+        ownerUid,
+        storefrontId,
+        targetCount: updatedAdditional.length,
+        billingError: billingResult.message,
+      },
+    );
+  }
 
   return getOwnerLocations(ownerUid);
 }

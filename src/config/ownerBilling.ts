@@ -1,6 +1,23 @@
 export type OwnerBillingCycle = 'monthly' | 'annual';
 export type AppleOwnerPaidTier = 'verified' | 'growth' | 'pro';
 
+/**
+ * Per-extra-location seat — quantity-based price added to the owner's
+ * Stripe subscription as a separate line item. Mirrors the backend
+ * STRIPE_ADDITIONAL_LOCATION_PRICE_ID configuration. Display-only
+ * constant — actual billing is sourced from the live Stripe price ID
+ * server-side. If you change the Stripe amount, also bump this constant
+ * so the UI cost preview stays in sync.
+ */
+export const ADDITIONAL_LOCATION_PRICE_PER_MONTH_USD = 99.99;
+export const ADDITIONAL_LOCATION_PRICE_LABEL = '$99.99/mo';
+
+export function formatAdditionalLocationCost(extraLocationCount: number): string {
+  if (extraLocationCount <= 0) return '$0.00/mo';
+  const total = extraLocationCount * ADDITIONAL_LOCATION_PRICE_PER_MONTH_USD;
+  return `$${total.toFixed(2)}/mo`;
+}
+
 function readValue(name: string) {
   return process.env[name]?.trim() || null;
 }
