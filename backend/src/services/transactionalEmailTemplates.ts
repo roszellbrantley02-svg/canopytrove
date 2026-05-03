@@ -140,9 +140,9 @@ export function buildMemberWelcomeEmail(input: {
     eyebrow: 'Canopy Trove&trade;',
     title: 'Your Canopy Trove account is ready.',
     subtitle:
-      'Thanks for opting in. This is your confirmation that Canopy Trove is ready whenever you want to check licensed dispensaries in New York.',
+      'This is your account confirmation. Canopy Trove is ready whenever you want to check licensed dispensaries in New York.',
     paragraphs: [
-      `Hi ${recipientName}, thanks for joining Canopy Trove.`,
+      `Hi ${recipientName}, thanks for creating your Canopy Trove account.`,
       'You can now save dispensaries, keep your favorite storefronts close, and check live offers from participating stores when you want a faster read on what is active nearby.',
       'This email is your account confirmation and quick starting point. When you are ready, open Canopy Trove and start with the stores you already know or browse nearby.',
     ],
@@ -158,8 +158,14 @@ export function buildMemberWelcomeEmail(input: {
     },
     signoff:
       'If anything looks off with a storefront or you need help with your account, reply to this email and we will help.',
+    // Transactional account-confirmation footer. The opt-in language was
+    // moved out so this email can ship to every new signup (the previous
+    // wording implied marketing opt-in, which gated the send behind a
+    // checkbox that defaulted off — most real signups never received it).
+    // Marketing preferences (deal digests etc.) are managed separately
+    // from the profile screen.
     footer:
-      'You are receiving this because you opted in to Canopy Trove email updates. You can manage preferences from your profile at any time.',
+      'You are receiving this account confirmation because you created a Canopy Trove account. You can manage email preferences for deal digests and product updates from your profile at any time.',
   };
 
   return {

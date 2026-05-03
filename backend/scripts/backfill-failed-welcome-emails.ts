@@ -31,6 +31,7 @@
  * service would just write another "not_configured" record.
  */
 
+import * as admin from 'firebase-admin';
 import { syncMemberEmailSubscription } from '../src/services/memberEmailSubscriptionService';
 import { sendOwnerWelcomeEmailIfNeeded } from '../src/services/ownerWelcomeEmailService';
 
@@ -95,6 +96,27 @@ function assertEnv(name: string) {
   return v.trim();
 }
 
+/** Verify the Firebase Auth user still exists before sending — protects
+ * against the post-mortem finding that we re-sent a welcome to a user
+ * who had deleted their account (orphan member_email_subscriptions doc
+ * survived the auth deletion). Returns true if the uid resolves to an
+ * Auth user; false if it's been deleted or never existed.
+ */
+async function authUserStillExists(uid: string): Promise<boolean> {
+  if (!admin.apps.length) {
+    admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID });
+  }
+  try {
+    await admin.auth().getUser(uid);
+    return true;
+  } catch (error) {
+    if ((error as { code?: string }).code === 'auth/user-not-found') {
+      return false;
+    }
+    throw error;
+  }
+}
+
 async function main() {
   // Fail fast if Resend isn't wired up — without these, the service would
   // just write another "not_configured" record and we'd be no better off.
@@ -119,6 +141,23 @@ async function main() {
       target.kind === 'owner'
         ? `owner ${target.email} (${target.ownerUid})`
         : `member ${target.email} (${target.accountId})`;
+
+    // Foreign-key check: skip if the auth user is gone. Prevents a repeat
+    // of the May 3 2026 incident where outletproduction39 (deleted user
+    // with surviving subscription doc) got re-emailed during backfill.
+    const targetUid = target.kind === 'owner' ? target.ownerUid : target.accountId;
+    const exists = await authUserStillExists(targetUid);
+    if (!exists) {
+      console.log(`⊘ ${label}: SKIPPED (Firebase Auth user no longer exists)`);
+      results.push({
+        label,
+        state: 'skipped',
+        error: 'auth/user-not-found',
+        sentAt: null,
+        providerMessageId: null,
+      });
+      continue;
+    }
 
     if (DRY_RUN) {
       console.log(`[dry-run] would send → ${label}`);

@@ -167,6 +167,45 @@ test('does not send the welcome email as a side effect of a status read', async 
   assert.equal(fetchCalls.length, 0);
 });
 
+test('sends the welcome email even when the user did not opt into marketing (welcome is transactional)', async () => {
+  // Regression guard for the May 3 2026 bug where the welcome email was
+  // gated behind the marketing opt-in checkbox in CanopyTroveSignUpScreen.
+  // Real users who signed up without ticking the box (Alicia Smolinski +
+  // 3 Apple-relay accounts) silently got nothing. Welcome is transactional
+  // and must fire on first record creation regardless of `subscribed`.
+  process.env.EMAIL_DELIVERY_PROVIDER = 'resend';
+  process.env.RESEND_API_KEY = 're_test';
+  process.env.EMAIL_FROM_ADDRESS = 'hello@canopytrove.com';
+  clearBackendModuleCache();
+
+  const fetchCalls: Array<{ url: string }> = [];
+  global.fetch = (async (url: string | URL | Request) => {
+    fetchCalls.push({ url: typeof url === 'string' ? url : url.toString() });
+    return new Response(JSON.stringify({ id: 'email_transactional_1' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }) as typeof fetch;
+
+  const { syncMemberEmailSubscription } = await import('./memberEmailSubscriptionService');
+
+  const result = await syncMemberEmailSubscription({
+    accountId: 'member-no-marketing',
+    email: 'no-marketing@example.com',
+    displayName: 'Marketing Skeptic',
+    subscribed: false,
+    source: 'member_signup',
+  });
+
+  // Subscribed flag is stored as the user requested (no marketing
+  // opt-in), but the welcome still fired because it's transactional.
+  assert.equal(result.subscribed, false);
+  assert.equal(result.welcomeEmailState, 'sent');
+  assert.ok(result.welcomeEmailSentAt);
+  assert.equal(fetchCalls.length, 1);
+  assert.equal(fetchCalls[0]?.url, 'https://api.resend.com/emails');
+});
+
 test('refreshes consentedAt when a member unsubscribes and later opts back in', async () => {
   const { syncMemberEmailSubscription } = await import('./memberEmailSubscriptionService');
 

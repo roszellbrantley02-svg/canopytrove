@@ -75,18 +75,24 @@ function CanopyTroveSignUpScreenInner() {
         email_updates_opt_in: wantsEmailUpdates ? 'yes' : 'no',
       });
 
-      if (wantsEmailUpdates) {
-        try {
-          await syncMemberEmailSubscription({
-            subscribed: true,
-            source: 'member_signup',
-          });
-        } catch (error) {
-          reportRuntimeError(error, {
-            source: 'member-signup-email-opt-in',
-            screen: 'CanopyTroveSignUp',
-          });
-        }
+      // ALWAYS register the subscription on signup so the user gets a
+      // welcome email (transactional). The wantsEmailUpdates checkbox now
+      // only governs whether they're opted into ongoing marketing emails
+      // (deal digests etc.) — it no longer gates the welcome notice.
+      // Before May 3 2026 this was wrapped in `if (wantsEmailUpdates)`,
+      // which silently dropped every real signup that didn't tick the
+      // marketing checkbox (default off). Confirmed gap with Alicia
+      // Smolinski (yahoo.com) + 3 Apple-relay accounts.
+      try {
+        await syncMemberEmailSubscription({
+          subscribed: wantsEmailUpdates,
+          source: 'member_signup',
+        });
+      } catch (error) {
+        reportRuntimeError(error, {
+          source: 'member-signup-email-opt-in',
+          screen: 'CanopyTroveSignUp',
+        });
       }
 
       navigation.replace('Tabs', { screen: 'Profile' });

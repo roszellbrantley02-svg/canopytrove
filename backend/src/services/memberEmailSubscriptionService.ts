@@ -256,7 +256,14 @@ async function findRecordByProviderMessageId(providerMessageId: string) {
 }
 
 async function sendWelcomeEmailIfNeeded(record: MemberEmailSubscriptionRecord) {
-  if (!record.subscribed || record.welcomeEmailSentAt || !record.email) {
+  // Welcome email is TRANSACTIONAL — fires once per account on first
+  // record creation. The `subscribed` flag governs ongoing marketing
+  // emails (deal digests etc.), NOT the initial welcome notice. Before
+  // May 3 2026 this also required `subscribed === true`, which meant
+  // every signed-up user who didn't tick the marketing-opt-in checkbox
+  // got nothing — including real users (Alicia + 3 Apple-relay accts
+  // discovered during the post-mortem on the welcome-email backfill).
+  if (record.welcomeEmailSentAt || !record.email) {
     return record;
   }
 
@@ -502,10 +509,13 @@ export async function syncMemberEmailSubscription(input: {
     unsubscribedAt: input.subscribed ? null : now,
   });
 
-  const finalRecord =
-    input.subscribed && (!previousRecord.subscribed || !previousRecord.welcomeEmailSentAt)
-      ? await sendWelcomeEmailIfNeeded(nextRecord)
-      : nextRecord;
+  // Welcome is transactional, so it fires on first record creation
+  // regardless of whether the user opted into marketing. The
+  // `subscribed` flag still governs deal-digest sends downstream, so a
+  // user who declined marketing only gets the one-time welcome.
+  const finalRecord = !previousRecord.welcomeEmailSentAt
+    ? await sendWelcomeEmailIfNeeded(nextRecord)
+    : nextRecord;
 
   return toStatus(finalRecord);
 }
