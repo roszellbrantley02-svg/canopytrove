@@ -20,6 +20,12 @@ export const COLLECTIONS = {
   FAVORITE_DEAL_ALERTS: 'favorite_deal_alerts',
   MEMBER_EMAIL_SUBSCRIPTIONS: 'member_email_subscriptions',
   OPS_ALERT_SUBSCRIPTIONS: 'ops_alert_subscriptions',
+  // Web Push subscriptions for owner-portal browser notifications.
+  // Top-level docs are keyed by ownerUid; each contains a `subscriptions`
+  // subcollection where each browser/device endpoint is its own doc keyed
+  // by sha256(endpoint).slice(0, 32). Schema: { endpoint, p256dh, auth,
+  // createdAt, lastSeenAt, userAgent?, lastError? }.
+  OWNER_WEB_PUSH_SUBSCRIPTIONS: 'owner_web_push_subscriptions',
 
   // Analytics
   ANALYTICS_EVENTS: 'analytics_events',
@@ -89,3 +95,4 @@ export const ROUTE_STATE_COLLECTION = COLLECTIONS.ROUTE_STATE;
 export const PAYMENT_METHOD_DECLARATIONS_COLLECTION = COLLECTIONS.PAYMENT_METHOD_DECLARATIONS;
 export const PAYMENT_METHOD_REPORTS_COLLECTION = COLLECTIONS.PAYMENT_METHOD_REPORTS;
 export const BULK_VERIFICATION_BATCHES_COLLECTION = COLLECTIONS.BULK_VERIFICATION_BATCHES;
+export const OWNER_WEB_PUSH_SUBSCRIPTIONS_COLLECTION = COLLECTIONS.OWNER_WEB_PUSH_SUBSCRIPTIONS;

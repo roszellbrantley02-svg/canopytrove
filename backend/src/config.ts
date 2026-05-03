@@ -125,6 +125,16 @@ export const serverConfig = {
   corsOrigin: parseCorsOrigin(process.env.CORS_ORIGIN),
   rateLimitPepper: readConfiguredValue(process.env.RATE_LIMIT_PEPPER),
   expoAccessToken: readConfiguredValue(process.env.EXPO_ACCESS_TOKEN),
+  // Web Push (VAPID) — browser-based push notifications for owner-portal web users.
+  // Generate a key pair once via `npx web-push generate-vapid-keys` and persist:
+  //   WEB_PUSH_VAPID_PUBLIC_KEY  → also exposed to web client as EXPO_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY
+  //   WEB_PUSH_VAPID_PRIVATE_KEY → server-only, store via Secret Manager in prod
+  //   WEB_PUSH_VAPID_SUBJECT     → mailto:askmehere@canopytrove.com (or https://canopytrove.com)
+  // If any of the three are missing the web-push sender short-circuits to a no-op
+  // and only Expo (native) notifications continue to flow.
+  webPushVapidPublicKey: readConfiguredValue(process.env.WEB_PUSH_VAPID_PUBLIC_KEY),
+  webPushVapidPrivateKey: readConfiguredValue(process.env.WEB_PUSH_VAPID_PRIVATE_KEY),
+  webPushVapidSubject: readConfiguredValue(process.env.WEB_PUSH_VAPID_SUBJECT),
   adminApiKey: readConfiguredValue(process.env.ADMIN_API_KEY),
   openAiApiKey: readConfiguredValue(process.env.OPENAI_API_KEY),
   openAiModel: readConfiguredValue(process.env.OPENAI_MODEL) ?? 'gpt-4o-mini',

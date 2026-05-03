@@ -4,6 +4,11 @@ import { backendStorefrontSourceStatus } from '../sources';
 import { sendExpoPushMessages } from './expoPushService';
 import { syncOwnerRuntimeAlertSubscription } from './opsAlertSubscriptionService';
 import { getCanonicalOwnerUidForStorefront } from './ownerPortalAuthorizationService';
+import { sendWebPushNotifications, type WebPushPayload } from './webPushService';
+import {
+  listOwnerWebPushSubscriptions,
+  pruneExpiredWebPushSubscriptions,
+} from './webPushSubscriptionService';
 
 type OwnerPortalAlertRecord = {
   ownerUid: string;
@@ -128,6 +133,54 @@ export async function getOwnerPortalAlertStatus(ownerUid: string) {
   };
 }
 
+// Fan out a single notification to every browser/device subscription
+// registered by `ownerUid` via the web-push pipeline. Resolves with the
+// number of successful deliveries; expired subscriptions are pruned so we
+// don't keep hitting dead endpoints.
+async function fanOutWebPushForOwner(ownerUid: string, payload: WebPushPayload): Promise<number> {
+  let subscriptions: Awaited<ReturnType<typeof listOwnerWebPushSubscriptions>> = [];
+  try {
+    subscriptions = await listOwnerWebPushSubscriptions(ownerUid);
+  } catch (error) {
+    logger.warn('[ownerPortalAlertService] failed to load web push subscriptions', {
+      ownerUid,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return 0;
+  }
+
+  if (!subscriptions.length) {
+    return 0;
+  }
+
+  const results = await sendWebPushNotifications(
+    subscriptions.map((sub) => ({
+      endpoint: sub.endpoint,
+      p256dh: sub.p256dh,
+      auth: sub.auth,
+    })),
+    payload,
+  );
+
+  const expiredEndpoints = results
+    .filter((result) => result.status === 'expired')
+    .map((result) => result.endpoint)
+    .filter((endpoint) => Boolean(endpoint));
+
+  if (expiredEndpoints.length) {
+    try {
+      await pruneExpiredWebPushSubscriptions({ ownerUid, expiredEndpoints });
+    } catch (error) {
+      logger.warn('[ownerPortalAlertService] failed to prune expired web push subscriptions', {
+        ownerUid,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return results.filter((result) => result.status === 'ok').length;
+}
+
 export async function notifyOwnersOfStorefrontActivity(options: {
   storefrontId: string;
   title: string;
@@ -138,10 +191,50 @@ export async function notifyOwnersOfStorefrontActivity(options: {
   if (!ownerUids.length) {
     return {
       notifiedOwnerCount: 0,
+      webPushDeliveredCount: 0,
       storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
     };
   }
 
+  const webPushPayload: WebPushPayload = {
+    title: options.title,
+    body: options.body,
+    url:
+      options.data?.url ?? `/owner-portal?storefrontId=${encodeURIComponent(options.storefrontId)}`,
+    tag: `owner-portal-${options.storefrontId}`,
+    data: {
+      kind: 'owner_portal_alert',
+      storefrontId: options.storefrontId,
+      ...options.data,
+    },
+  };
+
+  // Fan out web push first — fire-and-forget'ed against the existing native
+  // pipeline so a stalled web-push request can't delay the native fan-out.
+  // Resolve their counts in parallel via Promise.all.
+  const [webPushDeliveredCount, expoResult] = await Promise.all([
+    Promise.all(ownerUids.map((ownerUid) => fanOutWebPushForOwner(ownerUid, webPushPayload))).then(
+      (counts) => counts.reduce((sum, count) => sum + count, 0),
+    ),
+    fanOutExpoPushForOwners(ownerUids, options),
+  ]);
+
+  return {
+    notifiedOwnerCount: expoResult.notifiedOwnerCount,
+    webPushDeliveredCount,
+    storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
+  };
+}
+
+async function fanOutExpoPushForOwners(
+  ownerUids: string[],
+  options: {
+    storefrontId: string;
+    title: string;
+    body: string;
+    data: Record<string, string>;
+  },
+): Promise<{ notifiedOwnerCount: number }> {
   const settledAlertRecords = await Promise.allSettled(
     ownerUids.map((ownerUid) => getOwnerPortalAlertRecord(ownerUid)),
   );
@@ -157,10 +250,7 @@ export async function notifyOwnersOfStorefrontActivity(options: {
   });
   const recordsWithTokens = ownerAlertRecords.filter((record) => record.devicePushToken);
   if (!recordsWithTokens.length) {
-    return {
-      notifiedOwnerCount: 0,
-      storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
-    };
+    return { notifiedOwnerCount: 0 };
   }
 
   const tickets = await sendExpoPushMessages(
@@ -200,7 +290,6 @@ export async function notifyOwnersOfStorefrontActivity(options: {
 
   return {
     notifiedOwnerCount: tickets.filter((ticket) => ticket.status === 'ok').length,
-    storage: backendStorefrontSourceStatus.activeMode === 'firestore' ? 'firestore' : 'memory',
   };
 }
 

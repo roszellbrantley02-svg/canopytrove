@@ -50,15 +50,11 @@ function loadStorefronts() {
   return vm.runInNewContext(arrayCode);
 }
 
-function renderSharedHead({ title, description, canonical, appArgument }) {
-  // Smart App Banner: iOS Safari surfaces a native "Get the App" prompt at
-  // the top of the page when this meta tag is present. `app-argument` is
-  // passed to the iOS app via Universal Link, so a Google search → Safari
-  // tap → App install or Open lands the user on the same storefront the
-  // page describes (canopytrove://storefronts/{slug}).
-  const smartBanner = appArgument
-    ? `\n    <meta name="apple-itunes-app" content="app-id=6762499234, app-argument=${escapeHtml(appArgument)}" />`
-    : '';
+function renderSharedHead({ title, description, canonical }) {
+  // Note: previously emitted an `apple-itunes-app` Smart App Banner pointing
+  // at the iOS App Store listing. Removed while the iOS app is unavailable
+  // for sale on the App Store — Safari would otherwise show a "Get the App"
+  // prompt that resolves to a Cannot Sell page.
   return `    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapeHtml(title)}</title>
@@ -76,20 +72,8 @@ function renderSharedHead({ title, description, canonical, appArgument }) {
     <meta name="twitter:image" content="https://canopytrove.com/media/og-image.png" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.png" type="image/png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />${smartBanner}
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="stylesheet" href="/styles.css" />`;
-}
-
-function renderIosBar() {
-  // Page-top announcement that Canopy Trove is now on iPhone. Same visual
-  // treatment as the homepage iOS bar so the brand reads consistently.
-  return `      <div class="webapp-bar webapp-bar-ios" role="banner" style="background:linear-gradient(90deg,#0a3a1f,#0f5b32);">
-        <div class="container webapp-bar-inner">
-          <span class="webapp-bar-badge" style="background:#ffd84d;color:#1a1a1a;">NEW</span>
-          <span class="webapp-bar-text">Canopy Trove is now on iPhone &mdash; download free from the App Store</span>
-          <a class="webapp-bar-cta" href="https://apps.apple.com/us/app/canopy-trove/id6762499234">Download on iOS &rarr;</a>
-        </div>
-      </div>`;
 }
 
 function renderSharedHeader() {
@@ -160,16 +144,15 @@ function renderSharedFooter() {
       </footer>`;
 }
 
-function renderShell({ title, description, canonical, body, jsonLd, appArgument }) {
+function renderShell({ title, description, canonical, body, jsonLd }) {
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
-${renderSharedHead({ title, description, canonical, appArgument })}
+${renderSharedHead({ title, description, canonical })}
     <script type="application/ld+json">${jsonLd}</script>
   </head>
   <body>
     <div class="page-shell">
-${renderIosBar()}
 ${renderSharedHeader()}
       <main>
 ${body}
@@ -520,7 +503,6 @@ ${renderFaqSection(storefront)}`;
     canonical,
     body,
     jsonLd: buildSchemaJsonLd(storefront, canonical),
-    appArgument: `canopytrove://storefronts/${slug}`,
   });
 }
 

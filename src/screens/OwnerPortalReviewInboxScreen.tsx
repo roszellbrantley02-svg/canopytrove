@@ -11,6 +11,7 @@ import { AppUiIcon } from '../icons/AppUiIcon';
 
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { OwnerPortalAnalyticsCard } from './ownerPortal/OwnerPortalAnalyticsCard';
+import { OwnerPortalWebPushToggle } from './ownerPortal/OwnerPortalWebPushToggle';
 import {
   clampProgress,
   formatCount,
@@ -262,10 +263,7 @@ function OwnerPortalReviewInboxScreenInner() {
                 : 'Push alerts are currently off for this device.'}
             </Text>
             {Platform.OS === 'web' ? (
-              <Text style={styles.helperText}>
-                Push alerts require the native iOS or Android app. Download the app to receive
-                instant review, report, and urgent business alerts on your device.
-              </Text>
+              <OwnerPortalWebPushToggle preview={preview} />
             ) : (
               <Pressable
                 disabled={preview || isSaving}
