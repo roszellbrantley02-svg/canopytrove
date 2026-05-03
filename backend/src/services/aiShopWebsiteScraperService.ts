@@ -131,12 +131,18 @@ export async function scrapeWebsite(options: ScrapeWebsiteOptions): Promise<Scra
   }
 
   if (!response.ok) {
-    const payload = json as { reason?: string; message?: string; error?: string };
+    const payload = json as { reason?: string; message?: string; error?: string; detail?: string };
     const reason = mapHttpReason(response.status, payload.reason);
+    // Surface `detail` when present — that's where the scraper puts
+    // the underlying exception text (e.g. "browserType.launch:
+    // Executable doesn't exist"). Without this, the API just sees
+    // a generic "render threw" and the owner has no actionable info.
+    const detailedMessage =
+      payload.detail || payload.message || payload.error || `Scraper returned ${response.status}`;
     return {
       ok: false,
       reason,
-      message: payload.message || payload.error || `Scraper returned ${response.status}`,
+      message: detailedMessage,
     };
   }
 

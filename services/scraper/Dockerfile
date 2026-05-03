@@ -9,7 +9,7 @@
 # preinstalled. We only use Chromium; staying on the official image is
 # easier than fighting the Playwright dependency tree ourselves.
 
-FROM mcr.microsoft.com/playwright:v1.50.0-noble
+FROM mcr.microsoft.com/playwright:v1.59.1-noble
 
 WORKDIR /app
 
