@@ -17,6 +17,7 @@ import { MotionInView } from '../components/MotionInView';
 import { AppUiIcon } from '../icons/AppUiIcon';
 import { useCanopyEventDetail } from '../hooks/useCanopyEvents';
 import { buildEventDirectionsUrl, openEventDirections } from '../services/eventsService';
+import { trackAnalyticsEvent } from '../services/analyticsService';
 import { colors, fontFamilies, radii, spacing, typography } from '../theme/tokens';
 import {
   formatEventCategoryLabel,
@@ -76,8 +77,47 @@ function EventBody({
     .filter((s): s is string => Boolean(s && s.trim()))
     .join(', ');
 
+  // Shared metadata stamped onto every event_* analytics call from this
+  // screen so we can pivot by city/region/category without joining tables.
+  const eventAnalyticsMeta = React.useMemo(
+    () => ({
+      sourceScreen: 'EventDetail',
+      eventId: event.id,
+      eventTitle: event.title,
+      eventCity: event.city,
+      eventRegion: event.region,
+      eventCategory: event.category,
+      eventOrganizer: event.organizerName,
+      eventIsFree: event.isFree,
+    }),
+    [event],
+  );
+
+  // Fire `event_opened` once per (event.id) mount. Tracks the funnel landing.
+  // Pairs with the same event_opened fired on the LIST tap so we can compute
+  // (taps from list) → (detail mounts that actually rendered) drop-off.
+  const lastFiredEventIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (lastFiredEventIdRef.current === event.id) return;
+    lastFiredEventIdRef.current = event.id;
+    trackAnalyticsEvent(
+      'event_opened',
+      { ...eventAnalyticsMeta, sourceScreen: 'EventDetail' },
+      { screen: 'EventDetail' },
+    );
+  }, [event.id, eventAnalyticsMeta]);
+
   const onDriveThere = async () => {
     if (!directionsUrl) return;
+    trackAnalyticsEvent(
+      'event_drive_there_tapped',
+      {
+        ...eventAnalyticsMeta,
+        venueName: event.venueName,
+        hasDrivableLocation: event.hasDrivableLocation,
+      },
+      { screen: 'EventDetail' },
+    );
     const opened = await openEventDirections(event);
     if (!opened && Platform.OS === 'web' && typeof window !== 'undefined') {
       // Fallback for web — open in a new tab
@@ -87,11 +127,21 @@ function EventBody({
 
   const onOpenWebsite = () => {
     if (!event.websiteUrl) return;
+    trackAnalyticsEvent(
+      'event_website_tapped',
+      { ...eventAnalyticsMeta, websiteUrl: event.websiteUrl },
+      { screen: 'EventDetail' },
+    );
     void Linking.openURL(event.websiteUrl);
   };
 
   const onOpenTickets = () => {
     if (!event.ticketUrl) return;
+    trackAnalyticsEvent(
+      'event_tickets_tapped',
+      { ...eventAnalyticsMeta, ticketUrl: event.ticketUrl },
+      { screen: 'EventDetail' },
+    );
     void Linking.openURL(event.ticketUrl);
   };
 

@@ -2,6 +2,7 @@ import type { AppStateStatus } from 'react-native';
 import type { AnalyticsMetadata } from '../types/analytics';
 import { createAnalyticsId } from './analyticsConfig';
 import type { AnalyticsRuntimeState } from './analyticsRuntimeState';
+import { getAcquisitionAttributionMetadata } from './acquisitionAttribution';
 
 export function startAnalyticsSession(
   state: AnalyticsRuntimeState,
@@ -12,10 +13,18 @@ export function startAnalyticsSession(
   state.currentSessionStartedAt = Date.now();
   state.storefrontImpressionKeys.clear();
   state.dealImpressionKeys.clear();
-  enqueueEvent('session_start', { reason });
+
+  // Web-only attribution: pull UTM params + document.referrer from the
+  // current page load, plus first-touch source from localStorage. Empty
+  // object on native, where attribution would come from store install
+  // referrers (Apple/Google) instead. Stamping these onto session_start
+  // means every session is tagged with its acquisition source.
+  const attribution = getAcquisitionAttributionMetadata();
+
+  enqueueEvent('session_start', { reason, ...attribution });
   if (!state.coldOpenTracked) {
     state.coldOpenTracked = true;
-    enqueueEvent('app_open', { reason: 'cold_start' });
+    enqueueEvent('app_open', { reason: 'cold_start', ...attribution });
   }
 }
 

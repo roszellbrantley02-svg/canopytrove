@@ -101,6 +101,14 @@ export const ANALYTICS_EVENT_TYPES = [
   'scan_coa_return_review_prompt_shown',
   'scan_coa_return_review_prompt_tapped',
   'scan_coa_return_review_prompt_dismissed',
+  // Travel & Events tab (added 2026-05-04). Mirrors the storefront engagement
+  // funnel — tab open → card impression → detail open → directional CTA tap.
+  'events_tab_opened',
+  'event_card_impression',
+  'event_opened',
+  'event_drive_there_tapped',
+  'event_website_tapped',
+  'event_tickets_tapped',
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];

@@ -14,6 +14,7 @@ import { ScreenShell } from '../components/ScreenShell';
 import { MotionInView } from '../components/MotionInView';
 import { EventSummaryCard } from '../components/events/EventSummaryCard';
 import { useCanopyEvents } from '../hooks/useCanopyEvents';
+import { trackAnalyticsEvent } from '../services/analyticsService';
 import { colors, fontFamilies, radii, spacing, typography } from '../theme/tokens';
 import type { CanopyEvent } from '../types/events';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -27,8 +28,47 @@ function TravelEventsScreenInner() {
   const navigation = useNavigation<Nav>();
   const { status, items, errorText, isRefreshing, reload } = useCanopyEvents('upcoming');
 
+  // Fire `events_tab_opened` once per (status: 'success') hydration so we
+  // know which sessions actually saw a populated list and what the soonest
+  // event was when they did. Skipped during loading/error so the metric
+  // counts "tab usefully viewed" rather than "tab opened-but-empty".
+  const hasFiredTabOpenedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (hasFiredTabOpenedRef.current) return;
+    if (status !== 'success' || !items.length) return;
+    hasFiredTabOpenedRef.current = true;
+    const soonest = items[0]!;
+    trackAnalyticsEvent(
+      'events_tab_opened',
+      {
+        sourceScreen: 'TravelEvents',
+        visibleEventCount: items.length,
+        soonestEventId: soonest.id,
+        soonestEventDate: soonest.startsAt,
+        soonestEventCity: soonest.city,
+        soonestEventRegion: soonest.region,
+      },
+      { screen: 'TravelEvents' },
+    );
+  }, [status, items]);
+
   const handleEventPress = React.useCallback(
     (event: CanopyEvent) => {
+      // Fire `event_opened` from the LIST side too — paired with the
+      // detail-screen mount fire below, this gives us a "card tap → detail
+      // mount" funnel even if the user navigates away mid-load.
+      trackAnalyticsEvent(
+        'event_opened',
+        {
+          sourceScreen: 'TravelEvents',
+          eventId: event.id,
+          eventTitle: event.title,
+          eventCity: event.city,
+          eventRegion: event.region,
+          eventCategory: event.category,
+        },
+        { screen: 'TravelEvents' },
+      );
       navigation.navigate('EventDetail', { eventId: event.id });
     },
     [navigation],
