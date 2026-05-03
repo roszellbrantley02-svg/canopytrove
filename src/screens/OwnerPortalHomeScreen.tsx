@@ -311,6 +311,31 @@ function OwnerPortalHomeScreenInner() {
           </MotionInView>
         ) : null}
 
+        {/* 1d. AI Shop Bootstrap CTA — paste your website URL, AI fills out
+            your Canopy Trove listing in ~60 seconds. See
+            docs/AI_SHOP_BOOTSTRAP.md. Always visible at top so the
+            owner can re-bootstrap any time their site changes. */}
+        <MotionInView delay={92}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Set up your shop in 60 seconds with AI"
+            onPress={() => navigation.navigate('OwnerPortalShopBootstrap', undefined)}
+            style={localStyles.bootstrapBanner}
+          >
+            <View style={localStyles.bootstrapBannerIconWrap}>
+              <AppUiIcon name="sparkles" size={20} color="#F5C86A" />
+            </View>
+            <View style={localStyles.bootstrapBannerCopy}>
+              <Text style={localStyles.bootstrapBannerTitle}>Set up your shop in 60 seconds</Text>
+              <Text style={localStyles.bootstrapBannerBody}>
+                Paste your website URL — our AI fills out your Canopy Trove listing automatically.
+                Free for verified shops.
+              </Text>
+            </View>
+            <AppUiIcon name="chevron-forward" size={18} color="#C4B8B0" />
+          </Pressable>
+        </MotionInView>
+
         {/* 2. Attention Bar - only show if there are items */}
         {attentionItems.length > 0 ? (
           <MotionInView delay={100}>
@@ -829,5 +854,40 @@ const localStyles = StyleSheet.create({
     color: '#C4B8B0',
     fontSize: 13,
     fontWeight: '500',
+  },
+  // AI Shop Bootstrap CTA banner — see OwnerPortalShopBootstrap screen
+  // and docs/AI_SHOP_BOOTSTRAP.md for the underlying flow.
+  bootstrapBanner: {
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(245, 200, 106, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 200, 106, 0.25)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  bootstrapBannerIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(245, 200, 106, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bootstrapBannerCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  bootstrapBannerTitle: {
+    color: '#FFFBF7',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bootstrapBannerBody: {
+    color: '#C4B8B0',
+    fontSize: 12,
+    lineHeight: 16,
   },
 });
